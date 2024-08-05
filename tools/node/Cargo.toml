@@ -11,7 +11,7 @@ pre-release-replacements = [
 ]
 
 [lib]
-crate-type = ['cdylib']
+crate-type = ["cdylib", "lib"]
 
 [dependencies]
 node_common = { path = "../../crates/node-common" }

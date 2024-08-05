@@ -2540,6 +2540,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "node_toolchain"
+version = "0.0.1"
+dependencies = [
+ "extism-pdk",
+ "moon_pdk",
+ "node_tool",
+ "serde",
+]
+
+[[package]]
 name = "nodejs_package_json"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
