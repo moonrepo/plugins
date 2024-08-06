@@ -17,6 +17,7 @@ crate-type = ["cdylib"]
 node_tool = { path = "../../tools/node" }
 extism-pdk = { workspace = true }
 moon_pdk = { workspace = true }
+schematic = { workspace = true }
 serde = { workspace = true }
 
 [features]

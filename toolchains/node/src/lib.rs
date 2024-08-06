@@ -1,3 +1,4 @@
+mod config;
 #[cfg(feature = "wasm")]
 mod moon;
 
