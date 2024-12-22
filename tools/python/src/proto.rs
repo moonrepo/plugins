@@ -108,7 +108,7 @@ pub fn download_prebuilt(
 
     let Some(release_triples) = version.as_version().and_then(|v| releases.get(v)) else {
         return Err(plugin_err!(
-            "No pre-built available for version <hash>{}</hash> (via <url>https://github.com/indygreg/python-build-standalone</url>)! Try installing another version for the time being.",
+            "No pre-built available for version <hash>{}</hash> (via <url>https://github.com/astral-sh/python-build-standalone</url>)! Try installing another version for the time being.",
             version
         ));
     };

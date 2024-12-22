@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Switched to `astral-sh/python-build-standalone` from `indygreg/python-build-standalone` for pre-built images.
+
 ## 0.12.1
 
 #### 🐞 Fixes

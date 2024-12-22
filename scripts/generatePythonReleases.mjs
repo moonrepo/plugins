@@ -3,7 +3,7 @@ import fs from "fs";
 const OPT_LEVELS = ["pgo+lto", "pgo", "lto", "noopt"];
 
 const response = await fetch(
-  "https://api.github.com/repos/indygreg/python-build-standalone/releases?per_page=100",
+  "https://api.github.com/repos/astral-sh/python-build-standalone/releases?per_page=100",
   {
     headers: {
       Accept: "application/vnd.github+json",
