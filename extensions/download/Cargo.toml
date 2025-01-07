@@ -1,5 +1,5 @@
 [package]
-name = "moon_download_extension"
+name = "download_extension"
 version = "0.0.7"
 edition = "2021"
 license = "MIT"
@@ -10,11 +10,11 @@ crate-type = ['cdylib']
 
 [package.metadata.release]
 pre-release-replacements = [
-	{ file = "./CHANGELOG.md", search = "Unreleased", replace = "{{version}}" },
+    { file = "./CHANGELOG.md", search = "Unreleased", replace = "{{version}}" },
 ]
 
 [dependencies]
-moon_extension_common = { path = "../common" }
+extension_common = { path = "../common" }
 extism-pdk = { workspace = true }
 moon_pdk = { workspace = true }
 

@@ -1,5 +1,5 @@
 ---
-source: crates/migrate-nx/tests/migrate_nx_test.rs
+source: extensions/migrate-nx/tests/migrate_nx_test.rs
 expression: "fs::read_to_string(sandbox.path().join(\"baz/moon.yml\")).unwrap()"
 ---
 fileGroups:
@@ -9,7 +9,6 @@ fileGroups:
   - '!jest.config.ts'
   - '!**/?(*.)+(spec|test).ts'
 language: javascript
-platform: node
 tasks:
   build:
     command: js tsc
@@ -29,3 +28,5 @@ tasks:
     args:
     - --tsConfig
     - $workspaceRoot/baz/tsconfig-prod.lib.json
+toolchain:
+  default: node

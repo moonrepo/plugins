@@ -2,7 +2,7 @@ use moon_pdk_test_utils::{create_extension, ExecuteExtensionInput};
 use starbase_sandbox::create_empty_sandbox;
 use std::fs;
 
-mod download {
+mod download_extension {
     use super::*;
 
     #[tokio::test(flavor = "multi_thread")]

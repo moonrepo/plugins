@@ -1,9 +1,8 @@
 ---
-source: crates/migrate-nx/tests/migrate_nx_test.rs
+source: extensions/migrate-nx/tests/migrate_nx_test.rs
 expression: "fs::read_to_string(sandbox.path().join(\"moon.yml\")).unwrap()"
 ---
 language: javascript
-platform: node
 tasks:
   noop:
     command: noop
@@ -13,25 +12,25 @@ tasks:
       BAR: abc
       FOO: '123'
       BAZ: 'true'
-    platform: system
+    toolchain: system
   run-env-file:
     command: echo 'foo'
     options:
       envFile: .env.production
-    platform: system
+    toolchain: system
   run-multiple:
     command: mkdir -p apps/frontend/scripts && touch apps/frontend/scripts/my-script.sh && chmod +x apps/frontend/scripts/my-script.sh
-    platform: system
+    toolchain: system
   run-single:
     command: ls apps/frontend/src
-    platform: system
+    toolchain: system
   run-with-cwd:
     command: mkdir -p scripts
     env:
       CWD: apps/frontend
     outputs:
     - scripts/**/*
-    platform: system
+    toolchain: system
   script:
     command: yarn run build
   script-alt:
@@ -39,3 +38,5 @@ tasks:
     outputs:
     - dist
     - docs
+toolchain:
+  default: node

@@ -1,5 +1,5 @@
 [package]
-name = "moon_migrate_turborepo_extension"
+name = "migrate_turborepo_extension"
 version = "0.1.4"
 edition = "2021"
 license = "MIT"
@@ -10,11 +10,11 @@ crate-type = ['cdylib']
 
 [package.metadata.release]
 pre-release-replacements = [
-	{ file = "./CHANGELOG.md", search = "Unreleased", replace = "{{version}}" },
+    { file = "./CHANGELOG.md", search = "Unreleased", replace = "{{version}}" },
 ]
 
 [dependencies]
-moon_extension_common = { path = "../common" }
+extension_common = { path = "../common" }
 extism-pdk = { workspace = true }
 moon_common = { workspace = true }
 moon_config = { workspace = true }

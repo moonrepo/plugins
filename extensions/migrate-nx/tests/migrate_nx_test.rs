@@ -2,7 +2,7 @@ use moon_pdk_test_utils::{create_extension, ExecuteExtensionInput};
 use starbase_sandbox::{assert_snapshot, create_empty_sandbox, create_sandbox};
 use std::fs;
 
-mod migrate_nx {
+mod migrate_nx_extension {
     use super::*;
 
     #[tokio::test(flavor = "multi_thread")]

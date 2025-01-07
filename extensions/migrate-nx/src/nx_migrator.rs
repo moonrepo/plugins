@@ -1,12 +1,13 @@
 use crate::nx_json::*;
 use crate::nx_project_json::*;
+use extension_common::migrator::*;
 use moon_common::Id;
 use moon_config::{
-    FilePath, InputPath, OutputPath, PartialProjectDependsOn, PartialProjectMetadataConfig,
-    PartialTaskArgs, PartialTaskConfig, PartialTaskDependency, PartialTaskOptionsConfig,
-    PartialVcsConfig, PartialWorkspaceProjects, PortablePath, ProjectType, TaskOptionEnvFile,
+    FilePath, InputPath, OneOrMany, OutputPath, PartialProjectDependsOn,
+    PartialProjectMetadataConfig, PartialTaskArgs, PartialTaskConfig, PartialTaskDependency,
+    PartialTaskOptionsConfig, PartialVcsConfig, PartialWorkspaceProjects, PortablePath,
+    ProjectType, TaskOptionEnvFile,
 };
-use moon_extension_common::migrator::*;
 use moon_pdk::{map_miette_error, AnyResult, MoonContext};
 use moon_target::Target;
 use rustc_hash::FxHashMap;
@@ -401,7 +402,10 @@ fn migrate_noop_task(nx_target: &NxTargetOptions) -> AnyResult<PartialTaskConfig
 
 // https://nx.dev/nx-api/nx/executors/run-commands
 fn migrate_run_commands_task(nx_target: &NxTargetOptions) -> AnyResult<PartialTaskConfig> {
-    let mut config = PartialTaskConfig::default();
+    let mut config = PartialTaskConfig {
+        toolchain: Some(OneOrMany::One(Id::raw("system"))),
+        ..PartialTaskConfig::default()
+    };
 
     // https://nx.dev/nx-api/nx/executors/run-commands#options
     if let Some(options) = &nx_target.options {

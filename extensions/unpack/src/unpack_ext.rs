@@ -1,6 +1,6 @@
+use extension_common::download::download_from_url;
+use extension_common::format_virtual_path;
 use extism_pdk::*;
-use moon_extension_common::download::download_from_url;
-use moon_extension_common::format_virtual_path;
 use moon_pdk::*;
 use starbase_archive::Archiver;
 use std::fs;

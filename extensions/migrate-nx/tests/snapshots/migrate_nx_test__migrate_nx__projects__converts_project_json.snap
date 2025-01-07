@@ -1,9 +1,8 @@
 ---
-source: crates/migrate-nx/tests/migrate_nx_test.rs
+source: extensions/migrate-nx/tests/migrate_nx_test.rs
 expression: "fs::read_to_string(sandbox.path().join(\"bar/moon.yml\")).unwrap()"
 ---
 language: javascript
-platform: node
 tasks:
   build:
     command: webpack
@@ -18,5 +17,6 @@ tasks:
     - --concurrency
     - '5'
     - --passWithNoTests
+toolchain:
+  default: node
 type: application
-

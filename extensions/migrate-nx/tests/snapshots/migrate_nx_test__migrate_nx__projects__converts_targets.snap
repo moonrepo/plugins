@@ -1,9 +1,8 @@
 ---
-source: crates/migrate-nx/tests/migrate_nx_test.rs
+source: extensions/migrate-nx/tests/migrate_nx_test.rs
 expression: "fs::read_to_string(sandbox.path().join(\"moon.yml\")).unwrap()"
 ---
 language: javascript
-platform: node
 tasks:
   build:
     command: esbuild
@@ -16,7 +15,7 @@ tasks:
     - $workspaceRoot/dist/app
   create-script:
     command: mkdir -p apps/frontend/scripts && touch apps/frontend/scripts/my-script.sh && chmod +x apps/frontend/scripts/my-script.sh
-    platform: system
+    toolchain: system
   dev:
     command: next server
     args:
@@ -35,7 +34,7 @@ tasks:
     - e2e
   ls-project-root:
     command: ls apps/frontend/src
-    platform: system
+    toolchain: system
   noop:
     command: noop
   run-script:
@@ -58,3 +57,5 @@ tasks:
     - --passWithNoTests
     - --jestConfig
     - $workspaceRoot/libs/my-lib/jest.config.ts
+toolchain:
+  default: node

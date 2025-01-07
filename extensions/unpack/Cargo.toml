@@ -1,5 +1,5 @@
 [package]
-name = "moon_unpack_extension"
+name = "unpack_extension"
 version = "0.0.3"
 edition = "2021"
 license = "MIT"
@@ -10,16 +10,16 @@ crate-type = ['cdylib']
 
 [package.metadata.release]
 pre-release-replacements = [
-	{ file = "./CHANGELOG.md", search = "Unreleased", replace = "{{version}}" },
+    { file = "./CHANGELOG.md", search = "Unreleased", replace = "{{version}}" },
 ]
 
 [dependencies]
-moon_extension_common = { path = "../common" }
+extension_common = { path = "../common" }
 extism-pdk = { workspace = true }
 moon_pdk = { workspace = true }
 starbase_archive = { version = "0.9.0", default-features = false, features = [
-	"tar-gz",
-	"zip",
+    "tar-gz",
+    "zip",
 ] }
 
 [dev-dependencies]

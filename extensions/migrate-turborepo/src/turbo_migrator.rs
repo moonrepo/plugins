@@ -1,11 +1,11 @@
 use crate::turbo_json::*;
+use extension_common::migrator::*;
 use moon_common::Id;
 use moon_config::{
     FilePath, InputPath, OutputPath, PartialTaskArgs, PartialTaskConfig, PartialTaskDependency,
     PartialTaskOptionsConfig, PartialWorkspaceProjects, PortablePath, TaskOptionEnvFile,
     TaskOutputStyle, TaskPreset,
 };
-use moon_extension_common::migrator::*;
 use moon_pdk::*;
 use moon_target::Target;
 use rustc_hash::FxHashSet;

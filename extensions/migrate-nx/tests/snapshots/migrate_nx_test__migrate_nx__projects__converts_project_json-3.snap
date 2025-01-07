@@ -1,11 +1,10 @@
 ---
-source: crates/migrate-nx/tests/migrate_nx_test.rs
+source: extensions/migrate-nx/tests/migrate_nx_test.rs
 expression: "fs::read_to_string(sandbox.path().join(\"foo/moon.yml\")).unwrap()"
 ---
 dependsOn:
 - bar
 language: javascript
-platform: node
 tasks:
   e2e:
     command: cypress
@@ -24,3 +23,5 @@ tasks:
     args:
     - --baseUrl
     - https://some-internal-url.example.com
+toolchain:
+  default: node

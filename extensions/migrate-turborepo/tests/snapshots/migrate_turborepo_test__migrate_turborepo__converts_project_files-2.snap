@@ -1,9 +1,8 @@
 ---
-source: crates/migrate-turborepo/tests/migrate_turborepo_test.rs
+source: extensions/migrate-turborepo/tests/migrate_turborepo_test.rs
 expression: "fs::read_to_string(sandbox.path().join(\"client/moon.yml\")).unwrap()"
 ---
 language: javascript
-platform: node
 tasks:
   build:
     command: yarn run build
@@ -15,4 +14,5 @@ tasks:
     command: yarn run typecheck
     deps:
     - ~:build
-
+toolchain:
+  default: node
