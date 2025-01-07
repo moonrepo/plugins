@@ -402,6 +402,44 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
+name = "clap"
+version = "4.5.23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3135e7ec2ef7b10c6ed8950f0f792ed96ee093fa088608f1c76e569722700c84"
+dependencies = [
+ "clap_builder",
+ "clap_derive",
+]
+
+[[package]]
+name = "clap_builder"
+version = "4.5.23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "30582fc632330df2bd26877bde0c1f4470d57c582bbc070376afcd04d8cb4838"
+dependencies = [
+ "anstyle",
+ "clap_lex",
+]
+
+[[package]]
+name = "clap_derive"
+version = "4.5.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4ac6a0c7b1a9e9a5186361f67dfa1b88213572f427fb9ab038efb2bd8c582dab"
+dependencies = [
+ "heck 0.5.0",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "clap_lex"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f46ad14479a25103f283c0f10005961cf086d8dc42205bb44c46ac563475dca6"
+
+[[package]]
 name = "clean-path"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -871,6 +909,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1aaf95b3e5c8f23aa320147307562d361db0ae0d51242340f558153b4eb2439b"
 
 [[package]]
+name = "dunce"
+version = "1.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "92773504d58c093f6de2459af4af33faa518c13451eb8f2b5698ed3d36e7c813"
+
+[[package]]
 name = "either"
 version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1229,6 +1273,7 @@ dependencies = [
  "once_cell",
  "regex",
  "smallvec",
+ "url",
 ]
 
 [[package]]
@@ -2105,6 +2150,81 @@ dependencies = [
 ]
 
 [[package]]
+name = "moon_common"
+version = "0.0.9"
+dependencies = [
+ "compact_str 0.8.0",
+ "dirs 5.0.1",
+ "miette 7.4.0",
+ "regex",
+ "relative-path",
+ "rustc-hash",
+ "schematic",
+ "serde",
+ "starbase_styles",
+ "thiserror 2.0.7",
+]
+
+[[package]]
+name = "moon_config"
+version = "0.0.11"
+dependencies = [
+ "indexmap",
+ "miette 7.4.0",
+ "moon_common",
+ "moon_target",
+ "once_cell",
+ "regex",
+ "rpkl",
+ "rustc-hash",
+ "schematic",
+ "semver",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "version_spec",
+ "warpgate_api",
+]
+
+[[package]]
+name = "moon_pdk"
+version = "0.0.11"
+dependencies = [
+ "clap",
+ "extism-pdk",
+ "moon_pdk_api",
+ "serde",
+ "warpgate_pdk",
+]
+
+[[package]]
+name = "moon_pdk_api"
+version = "0.0.11"
+dependencies = [
+ "moon_common",
+ "moon_config",
+ "rustc-hash",
+ "schematic",
+ "serde",
+ "warpgate_api",
+]
+
+[[package]]
+name = "moon_target"
+version = "0.0.8"
+dependencies = [
+ "compact_str 0.8.0",
+ "miette 7.4.0",
+ "moon_common",
+ "once_cell",
+ "regex",
+ "schematic",
+ "serde",
+ "thiserror 2.0.7",
+ "tracing",
+]
+
+[[package]]
 name = "nix"
 version = "0.27.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2157,17 +2277,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "node_toolchain"
+version = "0.0.1"
+dependencies = [
+ "extism-pdk",
+ "moon_pdk",
+ "node_tool",
+ "schematic",
+ "serde",
+]
+
+[[package]]
 name = "nodejs_package_json"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d5b1935bec0b4fb49c42f50bd6822a3171cbf55a0d9cd1810715baa2f319a1d7"
+checksum = "008b3dcf2b6ccd151efab4145717974b21588f105f2bc9004983b6cc2e00cf9e"
 dependencies = [
  "indexmap",
  "rustc-hash",
  "semver",
  "serde",
  "serde_json",
- "thiserror 1.0.69",
+ "thiserror 2.0.7",
 ]
 
 [[package]]
@@ -2773,6 +2904,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
 
 [[package]]
+name = "relative-path"
+version = "1.9.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba39f3699c378cd8970968dcbff9c43159ea4cfbd88d43c00b22f2ef10a435d2"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "reqwest"
 version = "0.12.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2892,6 +3032,28 @@ checksum = "52e599a477cf9840e92f2cde9a7189e67b42c57532749bf90aea6ec10facd4db"
 dependencies = [
  "byteorder",
  "rmp",
+ "serde",
+]
+
+[[package]]
+name = "rmpv"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "58450723cd9ee93273ce44a20b6ec4efe17f8ed2e3631474387bfdecf18bb2a9"
+dependencies = [
+ "num-traits",
+ "rmp",
+]
+
+[[package]]
+name = "rpkl"
+version = "0.3.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "90d4fb97471646d778a76c8009623e1303898fdf9f4ba9f404b02a0217b7dfb1"
+dependencies = [
+ "dunce",
+ "rmp-serde",
+ "rmpv",
  "serde",
 ]
 
@@ -3076,11 +3238,13 @@ dependencies = [
  "garde",
  "indexmap",
  "miette 7.4.0",
+ "rpkl",
  "schematic_macros",
  "schematic_types",
  "serde",
  "serde_json",
  "serde_path_to_error",
+ "serde_yaml",
  "starbase_styles",
  "thiserror 2.0.7",
  "toml",
@@ -3107,9 +3271,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f320deb050277c5bcc79213b01d749f8a847a63713e76d5748fdad654f47ed52"
 dependencies = [
  "indexmap",
+ "rpkl",
  "semver",
  "serde",
  "serde_json",
+ "serde_yaml",
  "toml",
  "url",
 ]
@@ -3495,6 +3661,7 @@ checksum = "81baa090153ac22b9e2666a01899a1797e88e4ae1fee84a0440862887d299219"
 dependencies = [
  "dirs 5.0.1",
  "owo-colors",
+ "relative-path",
  "supports-color",
 ]
 

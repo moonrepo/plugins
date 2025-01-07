@@ -1,16 +1,22 @@
 [workspace]
 resolver = "2"
-members = ["crates/*", "tools/*"]
+members = ["crates/*", "tools/*", "toolchains/*"]
 
 [workspace.dependencies]
+# moon
+moon_pdk = { path = "../moon/crates/pdk" }
+moon_pdk_api = { path = "../moon/crates/pdk-api" }
+
+# proto
+proto_pdk = { version = "0.25.5" }            # , path = "../proto/crates/pdk" }
+proto_pdk_api = { version = "0.24.5" }        # , path = "../proto/crates/pdk-api" }
+proto_pdk_test_utils = { version = "0.30.4" } # , path = "../proto/crates/pdk-test-utils" }
+
 # Common
 extism-pdk = { version = "1.3.0" }
-proto_pdk = { version = "0.25.5" } # , path = "../proto/crates/pdk" }
-proto_pdk_api = { version = "0.24.5" } # , path = "../proto/crates/pdk-api" }
-proto_pdk_test_utils = { version = "0.30.4" } # , path = "../proto/crates/pdk-test-utils" }
 regex = { version = "1.11.1", default-features = false, features = ["std"] }
 schematic = { version = "0.17.7", default-features = false, features = [
-    "schema",
+	"schema",
 ] }
 serde = "1.0.216"
 serde_json = "1.0.132"
@@ -20,7 +26,7 @@ tokio = { version = "1.42.0", features = ["full"] }
 toml = { version = "0.8.19", default-features = false, features = ["parse"] }
 
 # Node.js
-nodejs_package_json = "0.3.0"
+nodejs_package_json = "0.3.1"
 
 [profile.release]
 codegen-units = 1
