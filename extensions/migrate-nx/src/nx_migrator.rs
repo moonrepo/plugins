@@ -4,8 +4,7 @@ use moon_common::Id;
 use moon_config::{
     FilePath, InputPath, OutputPath, PartialProjectDependsOn, PartialProjectMetadataConfig,
     PartialTaskArgs, PartialTaskConfig, PartialTaskDependency, PartialTaskOptionsConfig,
-    PartialVcsConfig, PartialWorkspaceProjects, PlatformType, PortablePath, ProjectType,
-    TaskOptionEnvFile,
+    PartialVcsConfig, PartialWorkspaceProjects, PortablePath, ProjectType, TaskOptionEnvFile,
 };
 use moon_extension_common::migrator::*;
 use moon_pdk::{map_miette_error, AnyResult, MoonContext};
@@ -25,7 +24,7 @@ impl NxMigrator {
         let mut migrator = Migrator::new(&context.workspace_root)?;
 
         if bun {
-            migrator.platform = PlatformType::Bun;
+            migrator.toolchain = Id::raw("bun");
         }
 
         Ok(Self {
@@ -402,10 +401,7 @@ fn migrate_noop_task(nx_target: &NxTargetOptions) -> AnyResult<PartialTaskConfig
 
 // https://nx.dev/nx-api/nx/executors/run-commands
 fn migrate_run_commands_task(nx_target: &NxTargetOptions) -> AnyResult<PartialTaskConfig> {
-    let mut config = PartialTaskConfig {
-        platform: Some(PlatformType::System),
-        ..PartialTaskConfig::default()
-    };
+    let mut config = PartialTaskConfig::default();
 
     // https://nx.dev/nx-api/nx/executors/run-commands#options
     if let Some(options) = &nx_target.options {

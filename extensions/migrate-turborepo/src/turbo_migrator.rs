@@ -2,8 +2,8 @@ use crate::turbo_json::*;
 use moon_common::Id;
 use moon_config::{
     FilePath, InputPath, OutputPath, PartialTaskArgs, PartialTaskConfig, PartialTaskDependency,
-    PartialTaskOptionsConfig, PartialWorkspaceProjects, PlatformType, PortablePath,
-    TaskOptionEnvFile, TaskOutputStyle,
+    PartialTaskOptionsConfig, PartialWorkspaceProjects, PortablePath, TaskOptionEnvFile,
+    TaskOutputStyle, TaskPreset,
 };
 use moon_extension_common::migrator::*;
 use moon_pdk::*;
@@ -32,7 +32,7 @@ impl TurboMigrator {
         let mut migrator = Migrator::new(&context.workspace_root)?;
 
         if bun {
-            migrator.platform = PlatformType::Bun;
+            migrator.toolchain = Id::raw("bun");
         }
 
         // Load current packages
@@ -336,7 +336,7 @@ impl TurboMigrator {
         }
 
         if turbo_task.persistent == Some(true) {
-            config.local = turbo_task.persistent;
+            config.preset = Some(TaskPreset::Server);
         }
 
         Ok(config)

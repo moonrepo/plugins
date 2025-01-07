@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Switched to new toolchain system.
+- Updated dependencies.
+
 ## 0.0.7
 
 #### 🚀 Updates

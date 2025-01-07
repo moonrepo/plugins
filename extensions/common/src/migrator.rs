@@ -1,17 +1,16 @@
 use moon_common::Id;
 use moon_config::{
     LanguageType, PartialInheritedTasksConfig, PartialProjectConfig, PartialWorkspaceConfig,
-    PlatformType,
 };
 use moon_pdk::{AnyResult, VirtualPath};
 use rustc_hash::FxHashMap;
 use starbase_utils::yaml;
 
 pub struct Migrator {
-    pub platform: PlatformType,
     pub project_configs: FxHashMap<VirtualPath, PartialProjectConfig>,
     pub root: VirtualPath,
     pub tasks_configs: FxHashMap<VirtualPath, PartialInheritedTasksConfig>,
+    pub toolchain: Id,
     pub workspace_config: Option<PartialWorkspaceConfig>,
     pub workspace_config_path: VirtualPath,
 }
@@ -19,9 +18,9 @@ pub struct Migrator {
 impl Migrator {
     pub fn new(workspace_root: &VirtualPath) -> AnyResult<Self> {
         Ok(Self {
-            platform: PlatformType::Node,
             project_configs: FxHashMap::default(),
             tasks_configs: FxHashMap::default(),
+            toolchain: Id::raw("node"),
             workspace_config: None,
             workspace_config_path: workspace_root.join(".moon/workspace.yml"),
             root: workspace_root.to_owned(),
@@ -31,7 +30,7 @@ impl Migrator {
     pub fn detect_package_manager(&self) -> String {
         let mut package_manager = "npm";
 
-        if self.root.join("bun.lockb").exists() || matches!(self.platform, PlatformType::Bun) {
+        if self.root.join("bun.lockb").exists() || self.toolchain == "bun" {
             package_manager = "bun";
         } else if self.root.join("pnpm-lock.yaml").exists() {
             package_manager = "pnpm";
@@ -70,7 +69,6 @@ impl Migrator {
                                 LanguageType::JavaScript
                             },
                         ),
-                        platform: Some(self.platform),
                         ..PartialProjectConfig::default()
                     },
                 );
@@ -101,9 +99,7 @@ impl Migrator {
     }
 
     pub fn load_tasks_platform_config(&mut self) -> AnyResult<&mut PartialInheritedTasksConfig> {
-        let platform = self.platform.to_string();
-
-        self.load_tasks_config(&platform)
+        self.load_tasks_config(self.toolchain.clone().as_str())
     }
 
     pub fn load_workspace_config(&mut self) -> AnyResult<&mut PartialWorkspaceConfig> {

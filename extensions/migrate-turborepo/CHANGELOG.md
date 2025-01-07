@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Switched to new toolchain system.
+- Switched to `preset` from `local`.
+- Updated dependencies.
+
 ## 0.1.4
 
 #### 🚀 Updates
