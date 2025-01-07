@@ -6,6 +6,7 @@ members = ["crates/*", "extensions/*", "tools/*"]
 # Common
 extism-pdk = { version = "1.3.0" }
 regex = { version = "1.11.1", default-features = false, features = ["std"] }
+rustc-hash = "2.1.0"
 schematic = { version = "0.17.7", default-features = false, features = [
     "schema",
 ] }
@@ -13,8 +14,16 @@ serde = "1.0.216"
 serde_json = "1.0.132"
 serial_test = "3.2.0"
 starbase_sandbox = "0.8.0"
+starbase_utils = { version = "0.8.7", default-features = false }
 tokio = { version = "1.42.0", features = ["full"] }
 toml = { version = "0.8.19", default-features = false, features = ["parse"] }
+
+# moon
+moon_common = { version = "0.0.9" }          # , path = "../moon/crates/common" }
+moon_config = { version = "0.0.11" }         # , path = "../moon/crates/config" }
+moon_pdk = { version = "0.0.11" }            # , path = "../moon/crates/pdk" }
+moon_pdk_test_utils = { version = "0.0.12" } # , path = "../moon/crates/pdk-test-utils" }
+moon_target = { version = "0.0.8" }          # , path = "../moon/crates/target" }
 
 # proto
 proto_pdk = { version = "0.25.5" }            # , path = "../proto/crates/pdk" }
