@@ -216,7 +216,7 @@ dependencies = [
  "proto_pdk_test_utils",
  "schematic",
  "serde",
- "starbase_sandbox 0.8.0",
+ "starbase_sandbox",
  "tokio",
 ]
 
@@ -463,22 +463,9 @@ dependencies = [
 
 [[package]]
 name = "compact_str"
-version = "0.7.1"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f86b9c4c00838774a6d902ef931eff7470720c51d90c2e32cfe15dc304737b3f"
-dependencies = [
- "castaway",
- "cfg-if",
- "itoa",
- "ryu",
- "static_assertions",
-]
-
-[[package]]
-name = "compact_str"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6050c3a16ddab2e412160b31f2c871015704239bca62f72f6e5f0be631d3f644"
+checksum = "3b79c4069c6cad78e2e0cdfcbd26275770669fb39fd308a752dc110e83b9af32"
 dependencies = [
  "castaway",
  "cfg-if",
@@ -777,7 +764,7 @@ dependencies = [
  "proto_pdk_test_utils",
  "schematic",
  "serde",
- "starbase_sandbox 0.8.0",
+ "starbase_sandbox",
  "tokio",
 ]
 
@@ -1264,11 +1251,11 @@ dependencies = [
 
 [[package]]
 name = "garde"
-version = "0.20.0"
+version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a3233677ea1554a48235d81bb59d2a41654969a8e29a1316c48105fd1701693"
+checksum = "1dbf10452e3dbf51033a5035a05762b2653c43bf84d46e96f15bc93beedd426d"
 dependencies = [
- "compact_str 0.7.1",
+ "compact_str",
  "garde_derive",
  "once_cell",
  "regex",
@@ -1278,9 +1265,9 @@ dependencies = [
 
 [[package]]
 name = "garde_derive"
-version = "0.20.0"
+version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8796f322e43105351a7ec35148807b32b5b6058a539656dafe4a5b456d5ca41f"
+checksum = "ccfdbc9c39fad7991686e229c55cf71565eafe73dcb2cf38ddf1d4aa3ca7e176"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1361,7 +1348,7 @@ dependencies = [
  "proto_pdk_test_utils",
  "schematic",
  "serde",
- "starbase_sandbox 0.8.0",
+ "starbase_sandbox",
  "tokio",
 ]
 
@@ -2151,11 +2138,11 @@ dependencies = [
 
 [[package]]
 name = "moon_common"
-version = "0.0.9"
+version = "0.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aff3e83a28df116dcac5c64da785e130aff0b62ec3c6658c651a29f9624fb734"
+checksum = "243aa29764b9b0514410e9891fd8f9b19b4c593440db800b7288637080234d22"
 dependencies = [
- "compact_str 0.8.0",
+ "compact_str",
  "dirs 5.0.1",
  "miette 7.4.0",
  "regex",
@@ -2164,14 +2151,14 @@ dependencies = [
  "schematic",
  "serde",
  "starbase_styles",
- "thiserror 2.0.7",
+ "thiserror 2.0.9",
 ]
 
 [[package]]
 name = "moon_config"
-version = "0.0.11"
+version = "0.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "232a16e3c197efe3fc7cd25fd9ead3e3c3b7ea9804209ddd7dfb9288a7811544"
+checksum = "b64840ed07a237ff23c88fad706afd2e04c32b2bbea9530b954b735ad0d8546f"
 dependencies = [
  "indexmap",
  "miette 7.4.0",
@@ -2198,7 +2185,7 @@ dependencies = [
  "moon_extension_common",
  "moon_pdk",
  "moon_pdk_test_utils",
- "starbase_sandbox 0.8.0",
+ "starbase_sandbox",
  "tokio",
 ]
 
@@ -2212,7 +2199,7 @@ dependencies = [
  "moon_pdk",
  "rustc-hash",
  "serde",
- "starbase_utils 0.8.13",
+ "starbase_utils",
 ]
 
 [[package]]
@@ -2229,8 +2216,8 @@ dependencies = [
  "rustc-hash",
  "serde",
  "serde_json",
- "starbase_sandbox 0.8.0",
- "starbase_utils 0.8.13",
+ "starbase_sandbox",
+ "starbase_utils",
  "tokio",
 ]
 
@@ -2247,16 +2234,16 @@ dependencies = [
  "moon_target",
  "rustc-hash",
  "serde",
- "starbase_sandbox 0.8.0",
- "starbase_utils 0.8.13",
+ "starbase_sandbox",
+ "starbase_utils",
  "tokio",
 ]
 
 [[package]]
 name = "moon_pdk"
-version = "0.0.11"
+version = "0.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b6e270facfe0f74156f01350d0ec97461a10ec4dfa8bf6b7bea570c0c3227c4"
+checksum = "fecefacac6c9639b3870c7c36e7cf37929f9330a61ec437e9740f508f44d32e3"
 dependencies = [
  "clap",
  "extism-pdk",
@@ -2267,9 +2254,9 @@ dependencies = [
 
 [[package]]
 name = "moon_pdk_api"
-version = "0.0.11"
+version = "0.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d97df647929556ec41176f862700be31edfe7d7cba249f3df55f6d1a686f80b"
+checksum = "2f8b9abf0aca0056df9767f0ed1c8b28551dcf9a1d07aac2cac96b47532ba8ad"
 dependencies = [
  "moon_common",
  "moon_config",
@@ -2281,9 +2268,9 @@ dependencies = [
 
 [[package]]
 name = "moon_pdk_test_utils"
-version = "0.0.12"
+version = "0.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e413ba9a30d54467bde48cb01eb678cf5fbbdcc88e8962f28ead793c0533c3e4"
+checksum = "23078ad09c29eba1917942b826d4474ba96e5a5bafddc8f819a9bc1eeb287c1b"
 dependencies = [
  "extism",
  "moon_pdk_api",
@@ -2294,18 +2281,18 @@ dependencies = [
 
 [[package]]
 name = "moon_target"
-version = "0.0.8"
+version = "0.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ebd762ea149a925e4d87f8d580e77e8eef9336240f42bb68fe964de93489c62"
+checksum = "0e8afd9e6acf9eed6ebcefea80e1025df87386d3296aad4eefe8bdf98542deb5"
 dependencies = [
- "compact_str 0.8.0",
+ "compact_str",
  "miette 7.4.0",
  "moon_common",
  "once_cell",
  "regex",
  "schematic",
  "serde",
- "thiserror 2.0.7",
+ "thiserror 2.0.9",
  "tracing",
 ]
 
@@ -2317,8 +2304,8 @@ dependencies = [
  "moon_extension_common",
  "moon_pdk",
  "moon_pdk_test_utils",
- "starbase_archive 0.8.10",
- "starbase_sandbox 0.8.0",
+ "starbase_archive",
+ "starbase_sandbox",
  "tokio",
 ]
 
@@ -2354,7 +2341,7 @@ dependencies = [
  "schematic",
  "serde",
  "serde_json",
- "starbase_sandbox 0.8.0",
+ "starbase_sandbox",
  "tokio",
 ]
 
@@ -2370,22 +2357,22 @@ dependencies = [
  "schematic",
  "serde",
  "serial_test",
- "starbase_sandbox 0.8.0",
+ "starbase_sandbox",
  "tokio",
 ]
 
 [[package]]
 name = "nodejs_package_json"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d5b1935bec0b4fb49c42f50bd6822a3171cbf55a0d9cd1810715baa2f319a1d7"
+checksum = "008b3dcf2b6ccd151efab4145717974b21588f105f2bc9004983b6cc2e00cf9e"
 dependencies = [
  "indexmap",
  "rustc-hash",
  "semver",
  "serde",
  "serde_json",
- "thiserror 1.0.69",
+ "thiserror 2.0.9",
 ]
 
 [[package]]
@@ -2663,9 +2650,9 @@ dependencies = [
 
 [[package]]
 name = "proto_core"
-version = "0.43.9"
+version = "0.44.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd73634385b24ecc3453d2b9280f83c928e754aab82261b3bdc5a006661e865e"
+checksum = "9fc5ec3e1fa963cf426b8d638345fd10ac6cfde0d2b8511e05a73b41e805a3e6"
 dependencies = [
  "convert_case",
  "dotenvy",
@@ -2684,10 +2671,10 @@ dependencies = [
  "serde_json",
  "sha2",
  "shell-words",
- "starbase_archive 0.9.0",
+ "starbase_archive",
  "starbase_styles",
- "starbase_utils 0.9.1",
- "thiserror 2.0.7",
+ "starbase_utils",
+ "thiserror 2.0.9",
  "tracing",
  "url",
  "uuid",
@@ -2720,22 +2707,22 @@ dependencies = [
  "serde",
  "serde_json",
  "system_env",
- "thiserror 2.0.7",
+ "thiserror 2.0.9",
  "version_spec",
  "warpgate_api",
 ]
 
 [[package]]
 name = "proto_pdk_test_utils"
-version = "0.30.4"
+version = "0.31.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eaf635c6da4e6122b3d015028628c1437f0c722e22cffc36ff35683ba70bba50"
+checksum = "b882c629ce77a2612a994d0f85c47d6383e4d0f9f139910721367fccf0ba6fea"
 dependencies = [
  "proto_core",
  "proto_pdk_api",
  "serde",
  "serde_json",
- "starbase_sandbox 0.7.7",
+ "starbase_sandbox",
  "warpgate",
 ]
 
@@ -2787,7 +2774,7 @@ dependencies = [
  "proto_pdk_test_utils",
  "regex",
  "serde",
- "starbase_sandbox 0.8.0",
+ "starbase_sandbox",
  "tokio",
 ]
 
@@ -2804,7 +2791,7 @@ dependencies = [
  "rustc-hash",
  "rustls",
  "socket2",
- "thiserror 2.0.7",
+ "thiserror 2.0.9",
  "tokio",
  "tracing",
 ]
@@ -2823,7 +2810,7 @@ dependencies = [
  "rustls",
  "rustls-pki-types",
  "slab",
- "thiserror 2.0.7",
+ "thiserror 2.0.9",
  "tinyvec",
  "tracing",
  "web-time",
@@ -3162,7 +3149,7 @@ dependencies = [
  "proto_pdk",
  "proto_pdk_test_utils",
  "serde",
- "starbase_sandbox 0.8.0",
+ "starbase_sandbox",
  "tokio",
  "toml",
 ]
@@ -3312,15 +3299,15 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
- "starbase_sandbox 0.8.0",
+ "starbase_sandbox",
  "tokio",
 ]
 
 [[package]]
 name = "schematic"
-version = "0.17.7"
+version = "0.17.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ef9a634be1649ec5f5516e39eb78d2e84fcf5eef3792acae353d8ade6a7b391"
+checksum = "bc902ccf410e32f7d1fdcad8080729def0cd5e696fb70ca7468bfcd02ff4fe80"
 dependencies = [
  "garde",
  "indexmap",
@@ -3333,16 +3320,16 @@ dependencies = [
  "serde_path_to_error",
  "serde_yaml",
  "starbase_styles",
- "thiserror 2.0.7",
+ "thiserror 2.0.9",
  "toml",
  "tracing",
 ]
 
 [[package]]
 name = "schematic_macros"
-version = "0.17.5"
+version = "0.17.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26d2d4005b3b6482801d60ba093c550d25382401e0c4d1c3fbba80eb07e28626"
+checksum = "55f638e083cb574cc60a6f15a9eecc45bb4ace4bbbeda0e904298788f04e9453"
 dependencies = [
  "convert_case",
  "darling",
@@ -3426,18 +3413,18 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.216"
+version = "1.0.217"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b9781016e935a97e8beecf0c933758c97a5520d32930e460142b4cd80c6338e"
+checksum = "02fc4265df13d6fa1d00ecff087228cc0a2b5f3c0e87e258d8b94a156e984c70"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.216"
+version = "1.0.217"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46f859dbbf73865c6627ed570e78961cd3ac92407a2d117204c49232485da55e"
+checksum = "5a9bf7cf98d04a2b28aead066b7496853d4779c9cc183c440dbac457641e19a0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3446,9 +3433,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.133"
+version = "1.0.134"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7fceb2473b9166b2294ef05efcb65a3db80803f0b03ef86a5fc88a2b85ee377"
+checksum = "d00f4175c42ee48b15416f6193a959ba3a0d67fc699a0db9ad12df9f83991c7d"
 dependencies = [
  "indexmap",
  "itoa",
@@ -3692,22 +3679,6 @@ checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 
 [[package]]
 name = "starbase_archive"
-version = "0.8.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b4c102781eddb9417186f40eb49ef6e1b3dade352bbffe405e95c3427c6170b"
-dependencies = [
- "binstall-tar",
- "flate2",
- "rustc-hash",
- "starbase_styles",
- "starbase_utils 0.8.13",
- "thiserror 2.0.7",
- "tracing",
- "zip",
-]
-
-[[package]]
-name = "starbase_archive"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d80c1d1b4368f34f8d7ee9db29e44141a7a6ae349ce2ddf30b86914f499dc8d3"
@@ -3718,27 +3689,12 @@ dependencies = [
  "miette 7.4.0",
  "rustc-hash",
  "starbase_styles",
- "starbase_utils 0.9.1",
- "thiserror 2.0.7",
+ "starbase_utils",
+ "thiserror 2.0.9",
  "tracing",
  "xz2",
  "zip",
  "zstd",
-]
-
-[[package]]
-name = "starbase_sandbox"
-version = "0.7.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eea28a45557a5974e6995a36bf34cb56bda35cbfc0d9536089c83e9c0d2414c1"
-dependencies = [
- "assert_cmd",
- "assert_fs",
- "clean-path",
- "insta",
- "predicates",
- "pretty_assertions",
- "starbase_utils 0.8.13",
 ]
 
 [[package]]
@@ -3753,7 +3709,7 @@ dependencies = [
  "insta",
  "predicates",
  "pretty_assertions",
- "starbase_utils 0.9.1",
+ "starbase_utils",
 ]
 
 [[package]]
@@ -3766,24 +3722,6 @@ dependencies = [
  "owo-colors",
  "relative-path",
  "supports-color",
-]
-
-[[package]]
-name = "starbase_utils"
-version = "0.8.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb5d48b4190c4e94d9f6e8dc3487228500f78d5920655d357b1a5c086a995c28"
-dependencies = [
- "dirs 5.0.1",
- "json-strip-comments",
- "regex",
- "serde",
- "serde_json",
- "serde_yaml",
- "starbase_styles",
- "thiserror 2.0.7",
- "tracing",
- "wax",
 ]
 
 [[package]]
@@ -3803,7 +3741,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "starbase_styles",
- "thiserror 2.0.7",
+ "thiserror 2.0.9",
  "tokio",
  "toml",
  "tracing",
@@ -3964,11 +3902,11 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "2.0.7"
+version = "2.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93605438cbd668185516ab499d589afb7ee1859ea3d5fc8f6b0755e1c7443767"
+checksum = "f072643fd0190df67a8bab670c20ef5d8737177d6ac6b2e9a236cb096206b2cc"
 dependencies = [
- "thiserror-impl 2.0.7",
+ "thiserror-impl 2.0.9",
 ]
 
 [[package]]
@@ -3984,9 +3922,9 @@ dependencies = [
 
 [[package]]
 name = "thiserror-impl"
-version = "2.0.7"
+version = "2.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e1d8749b4531af2117677a5fcd12b1348a3fe2b81e36e61ffeac5c4aa3273e36"
+checksum = "7b50fa271071aae2e6ee85f842e2e28ba8cd2c5fb67f11fcb1fd70b276f9e7d4"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4347,13 +4285,13 @@ version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "acae98122dbacf133351b898ae29916c0faa263279e1ee7ab418b02e38aaaecf"
 dependencies = [
- "compact_str 0.8.0",
+ "compact_str",
  "human-sort",
  "regex",
  "schematic",
  "semver",
  "serde",
- "thiserror 2.0.7",
+ "thiserror 2.0.9",
 ]
 
 [[package]]
@@ -4386,12 +4324,12 @@ dependencies = [
 
 [[package]]
 name = "warpgate"
-version = "0.20.1"
+version = "0.20.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "599b245703bf1225a88aecfd40f1054fdccfc472b33cb90a42f6ea5ef6a72995"
+checksum = "f735385fd761d474fef2af2b4bfaaf5c2ab7c7765e7ea730bee2b1f939a22f67"
 dependencies = [
  "async-trait",
- "compact_str 0.8.0",
+ "compact_str",
  "extism",
  "http-cache-reqwest",
  "miette 7.4.0",
@@ -4406,11 +4344,11 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
- "starbase_archive 0.9.0",
+ "starbase_archive",
  "starbase_styles",
- "starbase_utils 0.9.1",
+ "starbase_utils",
  "system_env",
- "thiserror 2.0.7",
+ "thiserror 2.0.9",
  "tokio",
  "tracing",
  "ureq",
@@ -5439,7 +5377,7 @@ dependencies = [
  "flate2",
  "indexmap",
  "memchr",
- "thiserror 2.0.7",
+ "thiserror 2.0.9",
  "zopfli",
 ]
 
