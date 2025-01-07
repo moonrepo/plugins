@@ -1,0 +1,25 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "pipeline": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"],
+      "dotEnv": [".env.local", ".env"]
+    },
+    "test": {
+      "dependsOn": ["build"],
+      "inputs": ["src/**/*.tsx", "src/**/*.ts", "test/**/*.ts"],
+      "outputLogs": "full"
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true,
+      "env": ["SECRET_KEY"]
+    }
+  },
+
+  "globalDependencies": [".env", "tsconfig.json"],
+  "globalEnv": ["GITHUB_TOKEN"],
+  "globalPassThroughEnv": ["AWS_SECRET_KEY", "GITHUB_TOKEN"],
+  "globalDotEnv": [".env.local", ".env"]
+}

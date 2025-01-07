@@ -1,0 +1,10 @@
+---
+source: crates/migrate-nx/tests/migrate_nx_test.rs
+expression: "fs::read_to_string(sandbox.path().join(\"lib/moon.yml\")).unwrap()"
+---
+language: javascript
+platform: node
+tags:
+- foo-bar
+- baz_qux
+

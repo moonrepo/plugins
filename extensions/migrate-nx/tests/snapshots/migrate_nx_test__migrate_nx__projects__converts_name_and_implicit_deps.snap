@@ -1,0 +1,12 @@
+---
+source: crates/migrate-nx/tests/migrate_nx_test.rs
+expression: "fs::read_to_string(sandbox.path().join(\"moon.yml\")).unwrap()"
+---
+dependsOn:
+- a
+- b
+- c
+id: custom
+language: javascript
+platform: node
+

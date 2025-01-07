@@ -1,0 +1,63 @@
+{
+  "targets": {
+    "noop": {
+      "executor": "nx:noop"
+    },
+    "run-single": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "ls apps/frontend/src"
+      }
+    },
+    "run-multiple": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          "mkdir -p apps/frontend/scripts",
+          "touch apps/frontend/scripts/my-script.sh",
+          "chmod +x apps/frontend/scripts/my-script.sh"
+        ],
+        "parallel": false
+      }
+    },
+    "run-with-cwd": {
+      "executor": "nx:run-commands",
+      "outputs": ["scripts/**/*"],
+      "options": {
+        "cwd": "apps/frontend",
+        "commands": ["mkdir -p scripts"]
+      }
+    },
+    "run-env-file": {
+      "executor": "nx:run-commands",
+      "options": {
+        "envFile": ".env.production",
+        "command": "echo 'foo'"
+      }
+    },
+    "run-env": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "echo 'foo'",
+        "env": {
+          "FOO": 123,
+          "BAR": "abc",
+          "BAZ": true
+        }
+      }
+    },
+    "script": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "build"
+      }
+    },
+    "script-alt": {
+      "executor": "nx:run-script",
+      "outputs": ["{projectRoot}/dist", "{projectRoot}/docs"],
+      "options": {
+        "script": "build"
+      }
+    }
+  }
+}

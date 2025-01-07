@@ -1,0 +1,22 @@
+{
+  "implicitDependencies": ["bar"],
+  "targets": {
+    "e2e": {
+      "executor": "@nx/cypress:cypress",
+      "options": {
+        "cypressConfig": "foo/cypress.config.ts",
+        "parallel": true,
+        "debug": false
+      },
+      "configurations": {
+        "dev": {
+          "devServerTarget": "my-app:serve"
+        },
+        "qa": {
+          "baseUrl": "https://some-internal-url.example.com"
+        }
+      },
+      "defaultConfiguration": "dev"
+    }
+  }
+}

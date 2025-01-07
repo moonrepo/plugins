@@ -1,0 +1,34 @@
+[package]
+name = "moon_migrate_turborepo_extension"
+version = "0.1.4"
+edition = "2021"
+license = "MIT"
+publish = false
+
+[lib]
+crate-type = ['cdylib']
+
+[package.metadata.release]
+pre-release-replacements = [
+	{ file = "./CHANGELOG.md", search = "Unreleased", replace = "{{version}}" },
+]
+
+[dependencies]
+moon_extension_common = { path = "../common" }
+extism-pdk = { workspace = true }
+moon_common = { workspace = true }
+moon_config = { workspace = true }
+moon_pdk = { workspace = true }
+moon_target = { workspace = true }
+rustc-hash = { workspace = true }
+serde = { workspace = true }
+starbase_utils = { workspace = true, features = ["glob", "json", "yaml"] }
+
+[dev-dependencies]
+moon_pdk_test_utils = { workspace = true }
+starbase_sandbox = { workspace = true }
+tokio = { workspace = true }
+
+[features]
+default = ["wasm"]
+wasm = []

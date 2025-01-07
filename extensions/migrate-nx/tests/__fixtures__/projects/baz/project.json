@@ -1,0 +1,27 @@
+{
+  "namedInputs": {
+    "default": ["{projectRoot}/**/*", "sharedGlobals"],
+    "production": [
+      "default",
+      "!{projectRoot}/jest.config.ts",
+      "!{projectRoot}/**/?(*.)+(spec|test).ts"
+    ]
+  },
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{workspaceRoot}/dist/baz"],
+      "dependsOn": ["^build"],
+      "inputs": ["production", "^production"],
+      "options": {
+        "tsConfig": "baz/tsconfig.lib.json",
+        "main": "baz/src/main.ts"
+      },
+      "configurations": {
+        "production": {
+          "tsConfig": "baz/tsconfig-prod.lib.json"
+        }
+      }
+    }
+  }
+}

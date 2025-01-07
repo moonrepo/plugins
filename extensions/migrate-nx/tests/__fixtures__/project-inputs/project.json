@@ -1,0 +1,46 @@
+{
+  "namedInputs": {
+    "empty": [],
+    "variants": [
+      { "env": "FOO_BAR" },
+      { "fileset": "**/*" },
+      { "fileset": "{projectRoot}/**/*" },
+      { "fileset": "!{projectRoot}/**/*" },
+      { "fileset": "{workspaceRoot}/**/*" },
+      { "fileset": "!{workspaceRoot}/**/*" },
+      { "runtime": "node -v" },
+      "./src/file.ts",
+      "./src/file.*",
+      "./src",
+      "group",
+      "^group"
+    ],
+    "filtered": [
+      {
+        "externalDependencies": ["webpack"]
+      },
+      {
+        "input": "*",
+        "projects": ["a", "b", "c"]
+      },
+      {
+        "input": "*",
+        "projects": "a"
+      },
+      {
+        "input": "*",
+        "dependencies": true
+      },
+      {
+        "input": "*"
+      },
+      {
+        "dependentTasksOutputFiles": "out/**/*",
+        "transitive": true
+      },
+      {
+        "dependentTasksOutputFiles": "out/**/*"
+      }
+    ]
+  }
+}

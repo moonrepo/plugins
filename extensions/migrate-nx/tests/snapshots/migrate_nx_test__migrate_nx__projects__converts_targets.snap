@@ -1,0 +1,60 @@
+---
+source: crates/migrate-nx/tests/migrate_nx_test.rs
+expression: "fs::read_to_string(sandbox.path().join(\"moon.yml\")).unwrap()"
+---
+language: javascript
+platform: node
+tasks:
+  build:
+    command: esbuild
+    args:
+    - --main
+    - app
+    - --tsConfig
+    - $workspaceRoot/app/tsconfig.app.json
+    - --outputPath
+    - $workspaceRoot/dist/app
+  create-script:
+    command: mkdir -p apps/frontend/scripts && touch apps/frontend/scripts/my-script.sh && chmod +x apps/frontend/scripts/my-script.sh
+    platform: system
+  dev:
+    command: next server
+    args:
+    - --buildTarget
+    - acme:build
+    - --no-turbo
+    - --dev
+  e2e:
+    command: cypress
+    args:
+    - --cypressConfig
+    - $workspaceRoot/apps/app-e2e/cypres.config.ts
+    - --devServerTarget
+    - my-react-app:serve
+    - --testingType
+    - e2e
+  ls-project-root:
+    command: ls apps/frontend/src
+    platform: system
+  noop:
+    command: noop
+  run-script:
+    command: npm run build-my-project
+  serve:
+    command: angular dev-server
+  serve.development:
+    extends: serve
+    args:
+    - --buildTarget
+    - my-app:build:development
+  serve.production:
+    extends: serve
+    args:
+    - --buildTarget
+    - my-app:build:production
+  test:
+    command: jest
+    args:
+    - --passWithNoTests
+    - --jestConfig
+    - $workspaceRoot/libs/my-lib/jest.config.ts

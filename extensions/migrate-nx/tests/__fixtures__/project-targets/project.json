@@ -1,0 +1,74 @@
+{
+  "targets": {
+    "serve": {
+      "executor": "@nx/angular:dev-server",
+      "configurations": {
+        "production": {
+          "buildTarget": "my-app:build:production"
+        },
+        "development": {
+          "buildTarget": "my-app:build:development"
+        }
+      },
+      "defaultConfiguration": "development"
+    },
+    "e2e": {
+      "executor": "cypress:cypress",
+      "options": {
+        "cypressConfig": "apps/app-e2e/cypres.config.ts",
+        "devServerTarget": "my-react-app:serve",
+        "testingType": "e2e"
+      }
+    },
+    "build": {
+      "executor": "@nx/esbuild:esbuild",
+      "options": {
+        "main": "app",
+        "tsConfig": "app/tsconfig.app.json",
+        "outputPath": "dist/app"
+      }
+    },
+    "test": {
+      "executor": "@scope/jest:jest",
+      "options": {
+        "jestConfig": "libs/my-lib/jest.config.ts",
+        "passWithNoTests": true
+      }
+    },
+    "dev": {
+      "executor": "@nx/next:server",
+      "defaultConfiguration": "production",
+      "options": {
+        "buildTarget": "acme:build",
+        "dev": true,
+        "turbo": false
+      }
+    },
+    "noop": {
+      "executor": "nx:noop"
+    },
+    "ls-project-root": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "ls apps/frontend/src"
+      }
+    },
+    "create-script": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          "mkdir -p apps/frontend/scripts",
+          "touch apps/frontend/scripts/my-script.sh",
+          "chmod +x apps/frontend/scripts/my-script.sh"
+        ],
+        "parallel": false
+      }
+    },
+    "run-script": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "build-my-project"
+      }
+    }
+  }
+}

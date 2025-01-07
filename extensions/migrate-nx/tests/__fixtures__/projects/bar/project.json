@@ -1,0 +1,24 @@
+{
+  "root": "bar",
+  "sourceRoot": "bar/src",
+  "projectType": "application",
+  "generators": {},
+  "targets": {
+    "build": {
+      "executor": "@nx/webpack:webpack",
+      "options": {
+        "outputPath": "dist/bar"
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "options": {
+        "concurrency": 5,
+        "passWithNoTests": true
+      }
+    },
+    "echo": {
+      "command": "echo 'hello world'"
+    }
+  }
+}

@@ -1,0 +1,18 @@
+---
+source: crates/migrate-turborepo/tests/migrate_turborepo_test.rs
+expression: "fs::read_to_string(sandbox.path().join(\"server/moon.yml\")).unwrap()"
+---
+language: typescript
+platform: bun
+tasks:
+  build:
+    command: bun run build
+    deps:
+    - ^:build
+    outputs:
+    - server/**/*
+  lint:
+    command: bun run lint
+    options:
+      outputStyle: buffer-only-failure
+

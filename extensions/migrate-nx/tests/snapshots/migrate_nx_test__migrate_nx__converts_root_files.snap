@@ -1,0 +1,24 @@
+---
+source: crates/migrate-nx/tests/migrate_nx_test.rs
+expression: "fs::read_to_string(sandbox.path().join(\".moon/tasks/node.yml\")).unwrap()"
+---
+fileGroups:
+  default:
+  - '**/*'
+  - $FOO_BAR
+  production:
+  - '!**/*.spec.tsx'
+  - /static
+tasks:
+  build:
+    command: js tsc
+    args:
+    - --main
+    - $projectRoot/src/index.ts
+    deps:
+    - ^:build
+    inputs:
+    - '@group(production)'
+    options:
+      cache: true
+

@@ -1,0 +1,17 @@
+---
+source: crates/migrate-nx/tests/migrate_nx_test.rs
+expression: "fs::read_to_string(sandbox.path().join(\"moon.yml\")).unwrap()"
+---
+fileGroups:
+  variants:
+  - $FOO_BAR
+  - '**/*'
+  - '**/*'
+  - '!**/*'
+  - /**/*
+  - '!/**/*'
+  - src/file.ts
+  - src/file.*
+  - src
+language: javascript
+platform: node

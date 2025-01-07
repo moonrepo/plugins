@@ -1,0 +1,61 @@
+{
+  "plugins": [
+    {
+      "plugin": "@nx/eslint/plugin",
+      "options": {
+        "targetName": "lint"
+      }
+    }
+  ],
+  "parallel": 4,
+  "cacheDirectory": "tmp/my-nx-cache",
+  "affected": {
+    "defaultBase": "main"
+  },
+  "namedInputs": {
+    "default": [
+      "{projectRoot}/**/*",
+      { "env": "FOO_BAR" },
+      { "runtime": "node -v" }
+    ],
+    "production": [
+      "!{projectRoot}/**/*.spec.tsx",
+      { "fileset": "{workspaceRoot}/static" }
+    ]
+  },
+  "targetDefaults": {
+    "build": {
+      "inputs": ["production", "^production"],
+      "dependsOn": ["^build"],
+      "executor": "@nrwl/js:tsc",
+      "options": {
+        "main": "{projectRoot}/src/index.ts"
+      },
+      "cache": true
+    }
+  },
+  "release": {
+    "version": {
+      "generatorOptions": {
+        "currentVersionResolver": "git-tag",
+        "specifierSource": "conventional-commits"
+      }
+    },
+    "changelog": {
+      "git": {
+        "commit": true,
+        "tag": true
+      },
+      "workspaceChangelog": {
+        "createRelease": "github"
+      },
+      "projectChangelogs": true
+    }
+  },
+  "generators": {
+    "@nx/js:library": {
+      "buildable": true
+    }
+  },
+  "extends": "nx/presets/npm.json"
+}

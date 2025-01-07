@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "client": "apps/client",
+    "server": "apps/server",
+    "shared": "libs/shared"
+  }
+}

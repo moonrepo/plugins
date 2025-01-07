@@ -1,0 +1,31 @@
+---
+source: crates/migrate-nx/tests/migrate_nx_test.rs
+expression: "fs::read_to_string(sandbox.path().join(\"baz/moon.yml\")).unwrap()"
+---
+fileGroups:
+  default:
+  - '**/*'
+  production:
+  - '!jest.config.ts'
+  - '!**/?(*.)+(spec|test).ts'
+language: javascript
+platform: node
+tasks:
+  build:
+    command: js tsc
+    args:
+    - --main
+    - $workspaceRoot/baz/src/main.ts
+    - --tsConfig
+    - $workspaceRoot/baz/tsconfig.lib.json
+    deps:
+    - ^:build
+    inputs:
+    - '@group(production)'
+    outputs:
+    - /dist/baz
+  build.production:
+    extends: build
+    args:
+    - --tsConfig
+    - $workspaceRoot/baz/tsconfig-prod.lib.json

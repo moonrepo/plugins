@@ -1,0 +1,4 @@
+{
+  "name": "custom",
+  "implicitDependencies": ["a", "b", "c"]
+}
