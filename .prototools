@@ -1,3 +1,5 @@
+# moon = "1.31.1"
+
 [plugins]
 bun-test = "file://./target/wasm32-wasi/debug/bun_tool.wasm"
 deno-test = "file://./target/wasm32-wasi/debug/deno_tool.wasm"
