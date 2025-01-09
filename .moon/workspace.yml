@@ -4,6 +4,7 @@ projects:
   - "crates/*"
   - "extensions/*"
   - "tools/*"
+  - "."
 
 runner:
   logRunningCommand: true
