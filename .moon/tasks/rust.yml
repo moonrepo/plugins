@@ -1,9 +1,5 @@
 $schema: "https://moonrepo.dev/schemas/tasks.json"
 
-env:
-  CARGO_TERM_COLOR: "always"
-  CARGO_TERM_QUIET: "true"
-
 fileGroups:
   cargo:
     - "Cargo.toml"
@@ -21,6 +17,9 @@ tasks:
     inputs:
       - "@group(cargo)"
       - "@group(sources)"
+    env: &env
+      CARGO_TERM_COLOR: "always"
+      CARGO_TERM_QUIET: "true"
 
   check:
     command: "cargo check --all-targets"
@@ -28,6 +27,7 @@ tasks:
       - "@group(cargo)"
       - "@group(sources)"
       - "@group(tests)"
+    env: *env
 
   lint:
     command: "cargo clippy --all-targets"
@@ -35,6 +35,7 @@ tasks:
       - "@group(cargo)"
       - "@group(sources)"
       - "@group(tests)"
+    env: *env
 
   test:
     command: "cargo nextest run"
@@ -45,3 +46,4 @@ tasks:
       - "@group(sources)"
       - "@group(tests)"
       # - "/.config/nextest.*"
+    env: *env
