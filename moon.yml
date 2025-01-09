@@ -12,7 +12,8 @@ tasks:
   format-write:
     extends: "format"
     command: "cargo fmt --all -- --emit=files"
-    local: true
+    options:
+      runInCI: false
 
 workspace:
   inheritedTasks:

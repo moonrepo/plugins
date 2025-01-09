@@ -5,19 +5,13 @@ init:
 	cargo binstall cargo-insta cargo-nextest cargo-wasi cargo-release
 
 build:
-	cargo wasi build
+	moon run :build
 
 check:
-	cargo check --workspace
-
-format:
-	cargo fmt --all
-
-format-check:
-	cargo fmt --all --check
+	moon run :check
 
 lint:
-	cargo clippy --workspace --all-targets
+	moon run :lint
 
 test name="":
 	just build
