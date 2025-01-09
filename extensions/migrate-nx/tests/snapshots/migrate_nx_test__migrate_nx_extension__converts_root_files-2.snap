@@ -1,5 +1,5 @@
 ---
-source: crates/migrate-nx/tests/migrate_nx_test.rs
+source: extensions/migrate-nx/tests/migrate_nx_test.rs
 expression: "fs::read_to_string(sandbox.path().join(\".moon/workspace.yml\")).unwrap()"
 ---
 projects:
@@ -8,4 +8,3 @@ projects:
   shared: libs/shared
 vcs:
   defaultBranch: main
-

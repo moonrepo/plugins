@@ -1,5 +1,5 @@
 ---
-source: crates/migrate-turborepo/tests/migrate_turborepo_test.rs
+source: extensions/migrate-turborepo/tests/migrate_turborepo_test.rs
 expression: "fs::read_to_string(sandbox.path().join(\".moon/tasks/node.yml\")).unwrap()"
 ---
 tasks:
@@ -9,4 +9,3 @@ tasks:
     - ^:build
     outputs:
     - dist/**/*
-
