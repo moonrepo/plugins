@@ -1,20 +1,22 @@
 #[cfg(not(windows))]
-mod npm {
+mod node_depman_tool {
     use proto_pdk_test_utils::*;
 
-    generate_shims_test!("npm-test", ["npm", "npx", "node-gyp"]);
-}
+    mod npm {
+        use super::*;
 
-#[cfg(not(windows))]
-mod pnpm {
-    use proto_pdk_test_utils::*;
+        generate_shims_test!("npm-test", ["npm", "npx", "node-gyp"]);
+    }
 
-    generate_shims_test!("pnpm-test", ["pnpm", "pnpx"]);
-}
+    mod pnpm {
+        use super::*;
 
-#[cfg(not(windows))]
-mod yarn {
-    use proto_pdk_test_utils::*;
+        generate_shims_test!("pnpm-test", ["pnpm", "pnpx"]);
+    }
 
-    generate_shims_test!("yarn-test", ["yarn", "yarnpkg"]);
+    mod yarn {
+        use super::*;
+
+        generate_shims_test!("yarn-test", ["yarn", "yarnpkg"]);
+    }
 }
