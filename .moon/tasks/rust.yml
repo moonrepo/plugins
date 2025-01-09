@@ -1,0 +1,49 @@
+$schema: "https://moonrepo.dev/schemas/tasks.json"
+
+fileGroups:
+  cargo:
+    - "Cargo.toml"
+    # - "/.cargo/config.toml"
+    - "/rust-toolchain.toml"
+  sources:
+    - "src/**/*"
+  tests:
+    - "benches/**/*"
+    - "tests/**/*"
+
+tasks:
+  build:
+    command: "cargo build --target wasm32-wasip1"
+    inputs:
+      - "@group(cargo)"
+      - "@group(sources)"
+    env: &env
+      CARGO_TERM_COLOR: "always"
+      CARGO_TERM_QUIET: "true"
+
+  check:
+    command: "cargo check --all-targets"
+    inputs:
+      - "@group(cargo)"
+      - "@group(sources)"
+      - "@group(tests)"
+    env: *env
+
+  lint:
+    command: "cargo clippy --all-targets"
+    inputs:
+      - "@group(cargo)"
+      - "@group(sources)"
+      - "@group(tests)"
+    env: *env
+
+  test:
+    command: "cargo nextest run"
+    deps:
+      - "build"
+    inputs:
+      - "@group(cargo)"
+      - "@group(sources)"
+      - "@group(tests)"
+      - "/.config/nextest.*"
+    env: *env

@@ -1,0 +1,9 @@
+$schema: "https://moonrepo.dev/schemas/workspace.json"
+
+projects:
+  - "crates/*"
+  - "extensions/*"
+  - "tools/*"
+
+runner:
+  logRunningCommand: true

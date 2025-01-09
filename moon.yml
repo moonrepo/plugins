@@ -1,0 +1,14 @@
+tasks:
+  format:
+    command: "cargo fmt --all --check"
+    inputs:
+      - "@group(cargo)"
+      - "@group(sources)"
+      - "@group(tests)"
+      - "/rustfmt.toml"
+    env: *env
+
+  format-write:
+    extends: "format"
+    command: "cargo fmt --all -- --emit=files"
+    local: true
