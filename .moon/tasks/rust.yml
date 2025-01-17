@@ -3,6 +3,7 @@ $schema: "https://moonrepo.dev/schemas/tasks.json"
 fileGroups:
   cargo:
     - "Cargo.toml"
+    - "/Cargo.toml"
     # - "/.cargo/config.toml"
     - "/rust-toolchain.toml"
   sources:
