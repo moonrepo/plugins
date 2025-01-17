@@ -21,6 +21,7 @@ pub fn register_tool(Json(_): Json<ToolMetadataInput>) -> FnResult<Json<ToolMeta
         type_of: PluginType::Language,
         minimum_proto_version: Some(Version::new(0, 42, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
+        unstable: Switch::Message("Pre-builds are provided by astral-sh/python-build-standalone, which may not support all versions.".into()),
         ..ToolMetadataOutput::default()
     }))
 }

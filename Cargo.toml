@@ -27,7 +27,7 @@ moon_target = { version = "0.0.9" }          # , path = "../moon/crates/target" 
 
 # proto
 proto_pdk = { version = "0.25.5" }            # , path = "../proto/crates/pdk" }
-proto_pdk_api = { version = "0.24.5" }        # , path = "../proto/crates/pdk-api" }
+proto_pdk_api = { version = "0.24.6" }        # , path = "../proto/crates/pdk-api" }
 proto_pdk_test_utils = { version = "0.31.0" } # , path = "../proto/crates/pdk-test-utils" }
 
 # Node.js
