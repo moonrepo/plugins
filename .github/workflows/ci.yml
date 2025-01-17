@@ -70,7 +70,10 @@ jobs:
           fetch-depth: 0
       - uses: moonrepo/setup-rust@v1
         with:
+          bins: cargo-nextest
           cache: false # Runs out of disk space
+          components: clippy, rustfmt
+          targets: wasm32-wasip1
       - uses: moonrepo/setup-toolchain@v0
         with:
           moon-version: latest
