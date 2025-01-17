@@ -15,6 +15,20 @@ tasks:
     options:
       runInCI: false
 
+  build-all:
+    command: "just build"
+    inputs: []
+    options:
+      runInCI: false
+
+  test-all:
+    command: "cargo nextest run --workspace"
+    inputs: []
+    deps:
+      - "build-all"
+    options:
+      runInCI: false
+
 workspace:
   inheritedTasks:
     include: []

@@ -17,7 +17,7 @@ pre-release-replacements = [
 extension_common = { path = "../common" }
 extism-pdk = { workspace = true }
 moon_pdk = { workspace = true }
-starbase_archive = { version = "0.9.0", default-features = false, features = [
+starbase_archive = { version = "0.9.1", default-features = false, features = [
     "tar-gz",
     "zip",
 ] }

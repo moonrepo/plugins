@@ -19,7 +19,7 @@ tasks:
       - "@group(sources)"
     env: &env
       CARGO_TERM_COLOR: "always"
-      CARGO_TERM_QUIET: "true"
+      # CARGO_TERM_QUIET: "true"
 
   check:
     command: "cargo check --all-targets"
@@ -46,4 +46,6 @@ tasks:
       - "@group(sources)"
       - "@group(tests)"
       # - "/.config/nextest.*"
-    env: *env
+    env:
+      <<: *env
+      NO_COLOR: "true"
