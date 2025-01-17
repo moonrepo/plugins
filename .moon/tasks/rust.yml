@@ -38,7 +38,7 @@ tasks:
     env: *env
 
   test:
-    command: "cargo nextest run --no-tests=pass"
+    command: "cargo nextest run --no-default-features --no-tests=pass"
     deps:
       - "build"
     inputs:
