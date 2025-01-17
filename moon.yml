@@ -3,11 +3,7 @@ id: root
 tasks:
   format:
     command: "cargo fmt --all --check"
-    inputs:
-      - "@group(cargo)"
-      - "@group(sources)"
-      - "@group(tests)"
-      # - "/rustfmt.toml"
+    inputs: []
 
   format-write:
     extends: "format"

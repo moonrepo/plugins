@@ -17,7 +17,6 @@ starbase_sandbox = "0.8.1"
 starbase_utils = { version = "0.9.4", default-features = false }
 tokio = { version = "1.43.0", features = ["full"] }
 toml = { version = "0.8.19", default-features = false, features = ["parse"] }
-warpgate = "0.20.3"
 
 # moon
 moon_common = { version = "0.0.10" }         # , path = "../moon/crates/common" }

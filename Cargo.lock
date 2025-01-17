@@ -4356,9 +4356,9 @@ dependencies = [
 
 [[package]]
 name = "warpgate"
-version = "0.20.2"
+version = "0.20.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f735385fd761d474fef2af2b4bfaaf5c2ab7c7765e7ea730bee2b1f939a22f67"
+checksum = "ca0e4103486998b0f3ac66bec330587899f433d33ab8fad57c02b48a15ea5141"
 dependencies = [
  "async-trait",
  "compact_str",
