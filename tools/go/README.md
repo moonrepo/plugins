@@ -12,7 +12,7 @@ This plugin is built-in to proto, but if you want to override it with an explici
 
 ```toml
 [plugins]
-go = "https://github.com/moonrepo/tools/releases/download/go_tool-vX.Y.Z/go_tool.wasm"
+go = "https://github.com/moonrepo/plugins/releases/download/go_tool-vX.Y.Z/go_tool.wasm"
 ```
 
 ## Configuration
@@ -46,7 +46,7 @@ proto install go -- --no-gobin
 Build the plugin:
 
 ```shell
-cargo build --target wasm32-wasi
+cargo build --target wasm32-wasip1
 ```
 
 Test the plugin by running `proto` commands.

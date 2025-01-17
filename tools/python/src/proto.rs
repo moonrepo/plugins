@@ -103,7 +103,7 @@ pub fn download_prebuilt(
     }
 
     let releases: BTreeMap<Version, BTreeMap<String, ReleaseEntry>> = fetch_json(
-        "https://raw.githubusercontent.com/moonrepo/tools/master/tools/python/releases.json",
+        "https://raw.githubusercontent.com/moonrepo/plugins/master/tools/python/releases.json",
     )?;
 
     let Some(release_triples) = version.as_version().and_then(|v| releases.get(v)) else {

@@ -12,7 +12,7 @@ This plugin is built-in to proto, but if you want to override it with an explici
 
 ```toml
 [plugins]
-npm|pnpm|yarn = "https://github.com/moonrepo/tools/releases/download/node_depman_tool-vX.Y.Z/node_depman_tool.wasm"
+npm|pnpm|yarn = "https://github.com/moonrepo/plugins/releases/download/node_depman_tool-vX.Y.Z/node_depman_tool.wasm"
 ```
 
 ## Configuration
@@ -46,7 +46,7 @@ npm and yarn will set the `PREFIX` environment variable, while pnpm will set `--
 Build the plugins:
 
 ```shell
-cargo build --target wasm32-wasi
+cargo build --target wasm32-wasip1
 ```
 
 Test the plugins by running `proto` commands.

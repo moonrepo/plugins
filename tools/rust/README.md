@@ -12,7 +12,7 @@ This plugin is built-in to proto, but if you want to override it with an explici
 
 ```toml
 [plugins]
-rust = "https://github.com/moonrepo/tools/releases/download/rust_tool-vX.Y.Z/rust_tool.wasm"
+rust = "https://github.com/moonrepo/plugins/releases/download/rust_tool-vX.Y.Z/rust_tool.wasm"
 ```
 
 ## Configuration
@@ -39,7 +39,7 @@ Since we don't create shims for `cargo`, `rustup`, etc, we can't detect Rust ver
 Build the plugin:
 
 ```shell
-cargo build --target wasm32-wasi
+cargo build --target wasm32-wasip1
 ```
 
 Test the plugin by running `proto` commands.

@@ -2306,6 +2306,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "moon_tool"
+version = "0.0.1"
+dependencies = [
+ "extism-pdk",
+ "proto_pdk",
+ "serde",
+]
+
+[[package]]
 name = "nix"
 version = "0.27.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

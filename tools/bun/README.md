@@ -8,7 +8,7 @@ This plugin is built-in to proto, but if you want to override it with an explici
 
 ```toml
 [plugins]
-bun = "https://github.com/moonrepo/tools/releases/download/bun_tool-vX.Y.Z/bun_tool.wasm"
+bun = "https://github.com/moonrepo/plugins/releases/download/bun_tool-vX.Y.Z/bun_tool.wasm"
 ```
 
 ## Configuration
@@ -39,7 +39,7 @@ This caveat only really matters in regards to the `--bun` flag, which works for 
 Build the plugin:
 
 ```shell
-cargo build --target wasm32-wasi
+cargo build --target wasm32-wasip1
 ```
 
 Test the plugin by running `proto` commands.

@@ -12,7 +12,7 @@ This plugin is built-in to proto, but if you want to override it with an explici
 
 ```toml
 [plugins]
-node = "https://github.com/moonrepo/tools/releases/download/node_tool-vX.Y.Z/node_tool.wasm"
+node = "https://github.com/moonrepo/plugins/releases/download/node_tool-vX.Y.Z/node_tool.wasm"
 ```
 
 ## Configuration
@@ -43,7 +43,7 @@ proto install node -- --no-bundled-npm
 Build the plugins:
 
 ```shell
-cargo build --target wasm32-wasi
+cargo build --target wasm32-wasip1
 ```
 
 Test the plugins by running `proto` commands.

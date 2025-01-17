@@ -12,7 +12,7 @@ This plugin is built-in to proto, but if you want to override it with an explici
 
 ```toml
 [plugins]
-python = "https://github.com/moonrepo/tools/releases/download/python_tool-vX.Y.Z/python_tool.wasm"
+python = "https://github.com/moonrepo/plugins/releases/download/python_tool-vX.Y.Z/python_tool.wasm"
 ```
 
 ## Configuration
@@ -34,7 +34,7 @@ Building from source directly (with `python-build`), and supporting Python 2, wi
 Build the plugin:
 
 ```shell
-cargo build --target wasm32-wasi
+cargo build --target wasm32-wasip1
 ```
 
 Test the plugin by running `proto` commands.

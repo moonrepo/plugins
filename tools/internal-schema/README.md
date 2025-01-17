@@ -8,7 +8,7 @@ This plugin is built-in to proto, but if you want to override it with an explici
 
 ```toml
 [plugins]
-internal-schema = "https://github.com/moonrepo/tools/releases/download/schema_tool-vX.Y.Z/schema_tool.wasm"
+internal-schema = "https://github.com/moonrepo/plugins/releases/download/schema_tool-vX.Y.Z/schema_tool.wasm"
 ```
 
 ## Configuration
@@ -24,7 +24,7 @@ This plugin does not support hooks.
 Build the plugin:
 
 ```shell
-cargo build --target wasm32-wasi
+cargo build --target wasm32-wasip1
 ```
 
 Test the plugin by running `proto` commands.

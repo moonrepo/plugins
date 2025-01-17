@@ -8,7 +8,7 @@ This plugin is built-in to proto, but if you want to override it with an explici
 
 ```toml
 [plugins]
-deno = "https://github.com/moonrepo/tools/releases/download/deno_tool-vX.Y.Z/deno_tool.wasm"
+deno = "https://github.com/moonrepo/plugins/releases/download/deno_tool-vX.Y.Z/deno_tool.wasm"
 ```
 
 ## Configuration
@@ -31,7 +31,7 @@ Deno plugin does not support hooks.
 Build the plugin:
 
 ```shell
-cargo build --target wasm32-wasi
+cargo build --target wasm32-wasip1
 ```
 
 Test the plugin by running `proto` commands.
