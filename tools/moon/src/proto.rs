@@ -14,6 +14,7 @@ pub fn register_tool(Json(_): Json<ToolMetadataInput>) -> FnResult<Json<ToolMeta
         type_of: PluginType::CommandLine,
         minimum_proto_version: Some(Version::new(0, 42, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
+        self_upgrade_commands: vec!["upgrade".into()],
         ..ToolMetadataOutput::default()
     }))
 }
@@ -81,10 +82,14 @@ pub fn locate_executables(
 ) -> FnResult<Json<LocateExecutablesOutput>> {
     let env = get_host_environment()?;
 
+    // Because moon releases do not pacakge the binaries in archives,
+    // the downloaded file gets renamed to the plugin ID, and not just "moon".
+    let id = get_plugin_id()?;
+
     Ok(Json(LocateExecutablesOutput {
         exes: HashMap::from_iter([(
             "moon".into(),
-            ExecutableConfig::new_primary(env.os.get_exe_name("moon")),
+            ExecutableConfig::new_primary(env.os.get_exe_name(id)),
         )]),
         ..LocateExecutablesOutput::default()
     }))

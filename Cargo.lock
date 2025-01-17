@@ -2311,7 +2311,10 @@ version = "0.0.1"
 dependencies = [
  "extism-pdk",
  "proto_pdk",
+ "proto_pdk_test_utils",
  "serde",
+ "starbase_sandbox",
+ "tokio",
 ]
 
 [[package]]
