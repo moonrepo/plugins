@@ -2787,6 +2787,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "python_uv_tool"
+version = "0.0.1"
+dependencies = [
+ "extism-pdk",
+ "proto_pdk",
+ "proto_pdk_test_utils",
+ "serde",
+ "starbase_sandbox",
+ "tokio",
+]
+
+[[package]]
 name = "quinn"
 version = "0.11.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"

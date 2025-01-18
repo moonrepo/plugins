@@ -92,7 +92,7 @@ pub fn download_prebuilt(
     };
 
     let download_file = format!("{target}.tar.gz");
-    let base_url = format!("https://github.com/ruby/ruby-builder/releases/download/toolcache");
+    let base_url = "https://github.com/ruby/ruby-builder/releases/download/toolcache";
 
     Ok(Json(DownloadPrebuiltOutput {
         archive_prefix: match env.arch {
