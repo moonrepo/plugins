@@ -31,7 +31,7 @@ Test the plugin by running `proto` commands.
 
 ```shell
 proto install moon-test
-proto list-remote moon-test
+proto versions moon-test
 ```
 
 > Since this plugin requires an external schema file, its testing uses moon: https://moonrepo.dev/docs/install#proto

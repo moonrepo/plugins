@@ -50,5 +50,5 @@ Test the plugins by running `proto` commands.
 
 ```shell
 proto install node-test
-proto list-remote node-test
+proto versions node-test
 ```

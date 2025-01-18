@@ -53,5 +53,5 @@ Test the plugins by running `proto` commands.
 
 ```shell
 proto install npm-test
-proto list-remote npm-test
+proto versions npm-test
 ```

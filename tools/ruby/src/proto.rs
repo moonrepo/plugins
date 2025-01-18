@@ -23,15 +23,33 @@ pub fn register_tool(Json(_): Json<ToolMetadataInput>) -> FnResult<Json<ToolMeta
 }
 
 #[plugin_fn]
+pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
+    Ok(Json(DetectVersionOutput {
+        files: vec![".ruby-version".into()],
+        ignore: vec!["vendor".into()],
+    }))
+}
+
+#[plugin_fn]
 pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
     let tags = load_git_tags("https://github.com/ruby/ruby")?
         .into_iter()
         .filter_map(|tag| {
-            tag.strip_prefix('v')
+            if let Some(tag) = tag.strip_prefix('v') {
                 // First 2 underscores are the separators between the major,
                 // minor, and patch digits, while the remaining underscores
                 // are used in the pre/build metadata
-                .map(|tag| tag.replacen('_', ".", 2).replace('_', "-"))
+                let version = tag.replacen('_', ".", 2).replace('_', "-");
+
+                // Very old versions that we don't need to support
+                if version.starts_with('0') || version.starts_with('1') {
+                    None
+                } else {
+                    Some(version)
+                }
+            } else {
+                None
+            }
         })
         .collect::<Vec<_>>();
 
@@ -94,15 +112,27 @@ pub fn locate_executables(
 ) -> FnResult<Json<LocateExecutablesOutput>> {
     let env = get_host_environment()?;
 
-    // Because moon releases do not pacakge the binaries in archives,
-    // the downloaded file gets renamed to the plugin ID, and not just "moon".
-    let id = get_plugin_id()?;
-
     Ok(Json(LocateExecutablesOutput {
-        exes: HashMap::from_iter([(
-            "moon".into(),
-            ExecutableConfig::new_primary(env.os.get_exe_name(id)),
-        )]),
+        exes: HashMap::from_iter([
+            (
+                "ruby".into(),
+                ExecutableConfig::new_primary(env.os.get_exe_name("bin/ruby")),
+            ),
+            (
+                "rake".into(),
+                ExecutableConfig::new(env.os.get_exe_name("bin/rake")),
+            ),
+            (
+                "gem".into(),
+                ExecutableConfig::new(env.os.get_exe_name("bin/gem")),
+            ),
+            (
+                "bundle".into(),
+                ExecutableConfig::new(env.os.get_exe_name("bin/bundle")),
+            ),
+        ]),
+        exes_dir: Some("bin".into()),
+        globals_lookup_dirs: vec![],
         ..LocateExecutablesOutput::default()
     }))
 }

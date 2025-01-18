@@ -35,5 +35,5 @@ Test the plugins by running `proto` commands.
 
 ```shell
 proto install moon-test
-proto list-remote moon-test
+proto versions moon-test
 ```

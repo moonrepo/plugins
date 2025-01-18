@@ -46,5 +46,5 @@ Test the plugin by running `proto` commands.
 
 ```shell
 proto install rust-test
-proto list-remote rust-test
+proto versions rust-test
 ```

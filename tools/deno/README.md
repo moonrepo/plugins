@@ -38,5 +38,5 @@ Test the plugin by running `proto` commands.
 
 ```shell
 proto install deno-test
-proto list-remote deno-test
+proto versions deno-test
 ```

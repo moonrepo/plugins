@@ -41,5 +41,5 @@ Test the plugin by running `proto` commands.
 
 ```shell
 proto install python-test
-proto list-remote python-test
+proto versions python-test
 ```

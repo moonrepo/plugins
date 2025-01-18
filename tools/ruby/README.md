@@ -35,5 +35,5 @@ Test the plugins by running `proto` commands.
 
 ```shell
 proto install ruby-test
-proto list-remote ruby-test
+proto versions ruby-test
 ```

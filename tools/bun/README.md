@@ -46,5 +46,5 @@ Test the plugin by running `proto` commands.
 
 ```shell
 proto install bun-test
-proto list-remote bun-test
+proto versions bun-test
 ```

@@ -53,5 +53,5 @@ Test the plugin by running `proto` commands.
 
 ```shell
 proto install go-test
-proto list-remote go-test
+proto versions go-test
 ```
