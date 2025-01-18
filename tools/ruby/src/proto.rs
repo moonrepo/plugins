@@ -10,20 +10,29 @@ extern "ExtismHost" {
 #[plugin_fn]
 pub fn register_tool(Json(_): Json<ToolMetadataInput>) -> FnResult<Json<ToolMetadataOutput>> {
     Ok(Json(ToolMetadataOutput {
-        name: "moon".into(),
-        type_of: PluginType::CommandLine,
+        name: "Ruby".into(),
+        type_of: PluginType::Language,
         minimum_proto_version: Some(Version::new(0, 42, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
-        self_upgrade_commands: vec!["upgrade".into()],
+        unstable: Switch::Message(
+            "Pre-builds are provided by ruby/ruby-builder, which may not support all versions. Windows is currently not supported."
+                .into(),
+        ),
         ..ToolMetadataOutput::default()
     }))
 }
 
 #[plugin_fn]
 pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
-    let tags = load_git_tags("https://github.com/moonrepo/moon")?
+    let tags = load_git_tags("https://github.com/ruby/ruby")?
         .into_iter()
-        .filter_map(|tag| tag.strip_prefix('v').map(|tag| tag.to_owned()))
+        .filter_map(|tag| {
+            tag.strip_prefix('v')
+                // First 2 underscores are the separators between the major,
+                // minor, and patch digits, while the remaining underscores
+                // are used in the pre/build metadata
+                .map(|tag| tag.replacen('_', ".", 2).replace('_', "-"))
+        })
         .collect::<Vec<_>>();
 
     Ok(Json(LoadVersionsOutput::from(tags)?))
@@ -36,40 +45,43 @@ pub fn download_prebuilt(
     let env = get_host_environment()?;
 
     check_supported_os_and_arch(
-        "moon",
+        "Ruby",
         &env,
         permutations! [
-            HostOS::Linux => [HostArch::X64, HostArch::Arm64],
+            HostOS::Linux => [HostArch::X64],
             HostOS::MacOS => [HostArch::X64, HostArch::Arm64],
-            HostOS::Windows => [HostArch::X64],
+            // HostOS::Windows => [HostArch::X64],
         ],
     )?;
 
     let version = input.context.version;
-    let arch = env.arch.to_rust_arch();
 
-    let tag = if version.is_canary() {
-        "canary".to_owned()
-    } else {
-        format!("v{version}")
-    };
+    if version.is_canary() {
+        return Err(plugin_err!(PluginError::UnsupportedCanary {
+            tool: "Ruby".into()
+        }));
+    }
 
     let target = match env.os {
-        HostOS::Linux => format!("{arch}-unknown-linux-{}", env.libc),
-        HostOS::MacOS => format!("{arch}-apple-darwin"),
-        HostOS::Windows => format!("{arch}-pc-windows-msvc"),
+        HostOS::Linux => format!("ruby-{version}-ubuntu-20.04"),
+        HostOS::MacOS => match env.arch {
+            HostArch::X64 => format!("ruby-{version}-macos-latest"),
+            HostArch::Arm64 => format!("ruby-{version}-macos-13-arm64"),
+            _ => unreachable!(),
+        },
+        // HostOS::Windows => format!("{arch}-pc-windows-msvc"),
         _ => unreachable!(),
     };
-    let target_name = format!("moon-{target}");
 
-    let download_file = if env.os.is_windows() {
-        format!("{target_name}.exe")
-    } else {
-        target_name
-    };
-    let base_url = format!("https://github.com/moonrepo/moon/releases/download/{tag}");
+    let download_file = format!("{target}.tar.gz");
+    let base_url = format!("https://github.com/ruby/ruby-builder/releases/download/toolcache");
 
     Ok(Json(DownloadPrebuiltOutput {
+        archive_prefix: match env.arch {
+            HostArch::X64 => Some("x64".into()),
+            HostArch::Arm64 => Some("arm64".into()),
+            _ => None,
+        },
         download_url: format!("{base_url}/{download_file}"),
         download_name: Some(download_file),
         ..DownloadPrebuiltOutput::default()
