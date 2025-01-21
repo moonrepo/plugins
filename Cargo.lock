@@ -75,6 +75,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "asdf"
+version = "0.1.0"
+dependencies = [
+ "extism-pdk",
+ "proto_pdk",
+ "schematic",
+ "serde",
+]
+
+[[package]]
 name = "assert_cmd"
 version = "2.0.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
