@@ -2657,6 +2657,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "proto-asdf-plugin"
+version = "0.1.0"
+dependencies = [
+ "extism-pdk",
+ "proto_pdk",
+ "proto_pdk_test_utils",
+ "rustc-hash",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "proto_core"
 version = "0.44.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
