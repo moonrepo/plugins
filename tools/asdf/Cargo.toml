@@ -1,0 +1,17 @@
+[package]
+name = "asdf"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+extism-pdk = { workspace = true }
+proto_pdk = { workspace = true }
+schematic = { workspace = true }
+serde = { workspace = true }
+
+[lib]
+crate-type = ['cdylib']
+
+[features]
+default = ["wasm"]
+wasm = []
