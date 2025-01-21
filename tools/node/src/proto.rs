@@ -139,6 +139,79 @@ pub fn resolve_version(
 }
 
 #[plugin_fn]
+pub fn build_instructions(
+    Json(input): Json<BuildInstructionsInput>,
+) -> FnResult<Json<BuildInstructionsOutput>> {
+    let env = get_host_environment()?;
+
+    check_supported_os_and_arch(
+        NAME,
+        &env,
+        permutations! [
+            HostOS::Linux => [HostArch::X64, HostArch::Arm64, HostArch::Arm, HostArch::Powerpc64, HostArch::S390x],
+            HostOS::MacOS => [HostArch::X64, HostArch::Arm64],
+            HostOS::Windows => [HostArch::X64, HostArch::X86, HostArch::Arm64],
+        ],
+    )?;
+
+    let version = input.context.version;
+
+    let mut output = BuildInstructionsOutput {
+        help_url: Some("https://github.com/nodejs/node/blob/main/BUILDING.md".into()),
+        source: Some(SourceLocation::Archive(ArchiveSource {
+            url: format!("https://github.com/nodejs/node/archive/refs/tags/v{version}.tar.gz"),
+            prefix: Some(format!("node-{version}")),
+        })),
+        system_dependencies: vec![
+            SystemDependency::for_pm(
+                HostPackageManager::Apt,
+                ["python3", "python3-pip", "g++-12", "gcc-12", "make"],
+            ),
+            SystemDependency::for_pm(
+                HostPackageManager::Dnf,
+                ["python3", "python3-pip", "gcc-c++", "make"],
+            ),
+            SystemDependency::for_pm(
+                HostPackageManager::Yum,
+                ["python3", "python3-pip", "gcc-c++", "make"],
+            ),
+            SystemDependency::for_pm(
+                HostPackageManager::Pacman,
+                ["python3", "python3-pip", "gcc", "make"],
+            ),
+        ],
+        requirements: vec![
+            BuildRequirement::XcodeCommandLineTools,
+            BuildRequirement::CommandExistsOnPath("python".into()),
+            BuildRequirement::CommandExistsOnPath("make".into()),
+        ],
+        ..Default::default()
+    };
+
+    if env.os.is_windows() {
+        output.requirements.push(BuildRequirement::ManualIntercept(
+            "https://github.com/nodejs/node/blob/main/BUILDING.md#windows-prerequisites".into(),
+        ));
+        output
+            .instructions
+            .push(BuildInstruction::RunCommand(Box::new(
+                CommandInstruction::new(".\\vcbuild", ["full-icu"]),
+            )));
+    } else {
+        output.instructions.extend(vec![
+            BuildInstruction::SetEnvVar("CXX".into(), "g++-12".into()),
+            BuildInstruction::RunCommand(Box::new(CommandInstruction::new(
+                "./configure",
+                ["--with-intl", "full-icu"],
+            ))),
+            BuildInstruction::RunCommand(Box::new(CommandInstruction::new("make", ["-j4"]))),
+        ]);
+    }
+
+    Ok(Json(output))
+}
+
+#[plugin_fn]
 pub fn download_prebuilt(
     Json(input): Json<DownloadPrebuiltInput>,
 ) -> FnResult<Json<DownloadPrebuiltOutput>> {

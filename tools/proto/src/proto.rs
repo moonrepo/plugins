@@ -42,6 +42,16 @@ pub fn build_instructions(
     let env = get_host_environment()?;
     let version = input.context.version;
 
+    check_supported_os_and_arch(
+        "proto",
+        &env,
+        permutations! [
+            HostOS::Linux => [HostArch::X64, HostArch::Arm64],
+            HostOS::MacOS => [HostArch::X64, HostArch::Arm64],
+            HostOS::Windows => [HostArch::X64],
+        ],
+    )?;
+
     let output = BuildInstructionsOutput {
         source: Some(SourceLocation::Archive(ArchiveSource {
             url: format!(

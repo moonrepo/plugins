@@ -50,6 +50,16 @@ pub fn build_instructions(
     let env = get_host_environment()?;
     let version = input.context.version;
 
+    check_supported_os_and_arch(
+        NAME,
+        &env,
+        permutations! [
+            HostOS::Linux => [HostArch::X64, HostArch::Arm64],
+            HostOS::MacOS => [HostArch::X64, HostArch::Arm64],
+            HostOS::Windows => [HostArch::X64],
+        ],
+    )?;
+
     let mut output = BuildInstructionsOutput {
         // source: Some(SourceLocation::Git(GitSource {
         //     url: "https://github.com/denoland/deno.git".into(),
@@ -66,14 +76,14 @@ pub fn build_instructions(
         ),
         system_dependencies: vec![
             // Linux
-            SystemDependency::for_os("cmake", HostOS::Linux),
-            SystemDependency::for_os("libglib2.0-dev", HostOS::Linux),
-            SystemDependency::for_os("protobuf-compiler", HostOS::Linux),
+            SystemDependency::for_os(HostOS::Linux, "cmake"),
+            SystemDependency::for_os(HostOS::Linux, "libglib2.0-dev"),
+            SystemDependency::for_os(HostOS::Linux, "protobuf-compiler"),
             // macOS
-            SystemDependency::for_os("cmake", HostOS::MacOS),
-            SystemDependency::for_os_arch("llvm", HostOS::MacOS, HostArch::Arm64),
-            SystemDependency::for_os_arch("lld", HostOS::MacOS, HostArch::Arm64),
-            SystemDependency::for_os("protobuf", HostOS::MacOS),
+            SystemDependency::for_os(HostOS::MacOS, "cmake"),
+            SystemDependency::for_os_arch(HostOS::MacOS, HostArch::Arm64, "llvm"),
+            SystemDependency::for_os_arch(HostOS::MacOS, HostArch::Arm64, "lld"),
+            SystemDependency::for_os(HostOS::MacOS, "protobuf"),
             // Windows
         ],
         requirements: vec![
