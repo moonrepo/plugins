@@ -526,15 +526,6 @@ dependencies = [
 
 [[package]]
 name = "convert_case"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec182b0ca2f35d8fc196cf3404988fd8b8c739a4d270ff118a398feb0cbec1ca"
-dependencies = [
- "unicode-segmentation",
-]
-
-[[package]]
-name = "convert_case"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bb402b8d4c85569410425650ce3eddc7d698ed96d39a73f941b08fb63082f1e7"
@@ -2793,7 +2784,7 @@ dependencies = [
 name = "proto_core"
 version = "0.44.6"
 dependencies = [
- "convert_case 0.6.0",
+ "convert_case",
  "dotenvy",
  "indexmap",
  "iocraft",
@@ -2814,7 +2805,7 @@ dependencies = [
  "starbase_archive",
  "starbase_console",
  "starbase_styles",
- "starbase_utils 0.9.4",
+ "starbase_utils 0.10.0",
  "system_env 0.6.1",
  "thiserror 2.0.11",
  "tokio",
@@ -2868,7 +2859,7 @@ name = "proto_shim"
 version = "0.5.0"
 dependencies = [
  "command-group",
- "dirs 5.0.1",
+ "dirs 6.0.0",
 ]
 
 [[package]]
@@ -3514,7 +3505,7 @@ version = "0.17.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e5ea932a91232414dc5c0f34f0e3ad60c8244968f9e8b06e8b3a4b87ae99051"
 dependencies = [
- "convert_case 0.7.1",
+ "convert_case",
  "darling",
  "proc-macro2",
  "quote",
@@ -3913,9 +3904,9 @@ checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 
 [[package]]
 name = "starbase_archive"
-version = "0.9.1"
+version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16f47e43d0768400f8b83d372b6f136b55c12e431c5d5fb38b06f70a0b17f5cd"
+checksum = "550327b4bb767734859d2bca7ed08ba362ac289fbf3fbf52ae54c41ce68f25a2"
 dependencies = [
  "binstall-tar",
  "bzip2",
@@ -3923,7 +3914,7 @@ dependencies = [
  "miette 7.4.0",
  "rustc-hash",
  "starbase_styles",
- "starbase_utils 0.9.4",
+ "starbase_utils 0.10.0",
  "thiserror 2.0.11",
  "tracing",
  "xz2",
@@ -3981,17 +3972,13 @@ checksum = "8813b123653ee27546530a4f215c863bd067960c6c5f672b42ff8a7ec8cc9aff"
 dependencies = [
  "async-trait",
  "dirs 5.0.1",
- "fs4",
  "json-strip-comments",
  "miette 7.4.0",
- "regex",
  "reqwest",
  "serde",
  "serde_json",
- "serde_yaml",
  "starbase_styles",
  "thiserror 2.0.11",
- "tokio",
  "toml",
  "tracing",
  "url",
@@ -4004,15 +3991,21 @@ version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ccad09b8d83d873b1873aa4aa1ceeb9b26e96b367000805cb6b2085319eb784"
 dependencies = [
+ "async-trait",
  "dirs 6.0.0",
+ "fs4",
  "json-strip-comments",
+ "miette 7.4.0",
  "regex",
+ "reqwest",
  "serde",
  "serde_json",
  "serde_yml",
  "starbase_styles",
  "thiserror 2.0.11",
+ "toml",
  "tracing",
+ "url",
  "wax",
 ]
 
@@ -4603,9 +4596,9 @@ checksum = "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be"
 
 [[package]]
 name = "uuid"
-version = "1.12.0"
+version = "1.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "744018581f9a3454a9e15beb8a33b017183f1e7c0cd170232a2d1453b23a51c4"
+checksum = "b3758f5e68192bb96cc8f9b7e2c2cfdabb435499a28499a42f8f984092adad4b"
 dependencies = [
  "getrandom",
 ]
@@ -4706,7 +4699,7 @@ dependencies = [
  "sha2",
  "starbase_archive",
  "starbase_styles",
- "starbase_utils 0.9.4",
+ "starbase_utils 0.10.0",
  "system_env 0.6.1",
  "thiserror 2.0.11",
  "tokio",

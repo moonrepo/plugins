@@ -61,17 +61,57 @@ pub fn build_instructions(
     let env = get_host_environment()?;
     let version = input.context.version;
 
-    check_supported_os_and_arch(
-        NAME,
-        &env,
-        permutations! [
-            HostOS::Linux => [HostArch::X86, HostArch::X64, HostArch::Arm, HostArch::Arm64, HostArch::S390x, HostArch::Riscv64, HostArch::Powerpc64],
-            HostOS::MacOS => [HostArch::X64, HostArch::Arm64],
-            // HostOS::Windows => [HostArch::X86, HostArch::X64],
-        ],
-    )?;
+    if env.os.is_windows() {
+        return Err(PluginError::UnsupportedWindowsBuild.into());
+    }
+
+    // check_supported_os_and_arch(
+    //     NAME,
+    //     &env,
+    //     permutations! [
+    //         HostOS::Linux => [HostArch::X86, HostArch::X64, HostArch::Arm, HostArch::Arm64, HostArch::S390x, HostArch::Riscv64, HostArch::Powerpc64],
+    //         HostOS::MacOS => [HostArch::X64, HostArch::Arm64],
+    //         // HostOS::Windows => [HostArch::X86, HostArch::X64],
+    //     ],
+    // )?;
 
     let output = BuildInstructionsOutput {
+        help_url: Some(
+            "https://github.com/pyenv/pyenv/blob/master/plugins/python-build/README.md".into(),
+        ),
+        system_dependencies: vec![
+            SystemDependency::for_pm(
+                HostPackageManager::Apt,
+                "build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev curl git libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev"
+                    .split(' ')
+                    .collect::<Vec<_>>(),
+            ),
+            SystemDependency::for_pm(
+                HostPackageManager::Brew,
+                "openssl readline sqlite3 xz zlib tcl-tk@8"
+                    .split(' ')
+                    .collect::<Vec<_>>(),
+            ),
+            SystemDependency::for_pm(
+                HostPackageManager::Dnf,
+                "make gcc patch zlib-devel bzip2 bzip2-devel readline-devel sqlite sqlite-devel openssl-devel tk-devel libffi-devel xz-devel libuuid-devel gdbm-libs libnsl2"
+                    .split(' ')
+                    .collect::<Vec<_>>(),
+            ),
+            SystemDependency::for_pm(
+                HostPackageManager::Pacman,
+                "base-devel openssl zlib xz tk"
+                    .split(' ')
+                    .collect::<Vec<_>>(),
+            ),
+            SystemDependency::for_pm(
+                HostPackageManager::Yum,
+                "gcc make patch zlib-devel bzip2 bzip2-devel readline-devel sqlite sqlite-devel openssl-devel tk-devel libffi-devel xz-devel"
+                    .split(' ')
+                    .collect::<Vec<_>>(),
+            ),
+        ],
+        requirements: vec![BuildRequirement::XcodeCommandLineTools],
         instructions: vec![
             BuildInstruction::InstallBuilder(Box::new(BuilderInstruction {
                 id: "python-build".into(),
