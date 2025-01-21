@@ -1,4 +1,4 @@
-# Python plugin (experimental)
+# Python plugin
 
 [Python](https://www.python.org/) WASM plugin for [proto](https://github.com/moonrepo/proto).
 
@@ -26,8 +26,6 @@ Python plugin does not support hooks.
 ## Caveats
 
 This will install a pre-built version from [astral-sh/python-build-standalone](https://github.com/astral-sh/python-build-standalone), which doesn't support all versions, only Python 3.
-
-Building from source directly (with `python-build`), and supporting Python 2, will be fully supported in the future.
 
 ## Contributing
 
