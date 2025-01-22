@@ -25,19 +25,24 @@ fn is_asdf_repo() -> bool {
     }
 }
 
-fn get_raw_github_url(repo: &str) -> String {
+fn get_raw_github_url(repo: &str) -> FnResult<String> {
     let repo_parts: Vec<&str> = repo.split("/").collect();
 
     // Get the default branch of the repository
-    let repo_data: Value = fetch_json(format!("https://api.github.com/repos/{}/{}", repo_parts[3], repo_parts[4])).unwrap();
-    let default_branch = match repo_data.get("default_branch") {
-        Some(branch) => branch,
-        None => &Value::String(String::from("main"))
-    };
-    let default_branch = default_branch.as_str().unwrap();
-    let repo = repo.replace("https://github.com", "https://raw.githubusercontent.com");
+    let repo_data: Result<_, Error> = fetch_json::<std::string::String, Value>(format!("https://api.github.com/repos/{}/{}", repo_parts[3], repo_parts[4]));
+    match repo_data {
+        Ok(repo_data) => {
+            let default_branch = match repo_data.get("default_branch") {
+                Some(branch) => branch,
+                None => &Value::String(String::from("main"))
+            };
+            let default_branch = default_branch.as_str().unwrap();
+            let repo = repo.replace("https://github.com", "https://raw.githubusercontent.com");
 
-    format!("{repo}/refs/heads/{default_branch}")
+            return Ok(format!("{repo}/refs/heads/{default_branch}"));
+        },
+        _ => Err(PluginError::Message("Failed to fetch repository's default branch".to_string()).into())
+    }
 }
 
 fn get_script_url(script: &str, git: bool) -> FnResult<String> {
@@ -46,7 +51,7 @@ fn get_script_url(script: &str, git: bool) -> FnResult<String> {
         if git {
             return Ok(config.asdf_repository.unwrap().trim().to_string());
         }
-        return Ok(format!("{}/bin/{script}", get_raw_github_url(config.asdf_repository.unwrap().as_str().split(".git").next().unwrap())));
+        return Ok(format!("{}/bin/{script}", get_raw_github_url(config.asdf_repository.unwrap().as_str().split(".git").next().unwrap())?));
     }
 
     let id = get_plugin_id()?;
@@ -76,7 +81,7 @@ fn get_script_url(script: &str, git: bool) -> FnResult<String> {
         .into());
     };
 
-    Ok(format!("{}/bin/{script}", get_raw_github_url(repo)))
+    Ok(format!("{}/bin/{script}", get_raw_github_url(repo)?))
 }
 
 /// Returns the real path of the script
