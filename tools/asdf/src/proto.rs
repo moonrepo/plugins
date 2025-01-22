@@ -96,24 +96,6 @@ fn get_script(script: &str) -> FnResult<String> {
     Ok(format!("{real_script_path}/{script}"))
 }
 
-/// Check if the requested tool version is available in the asdf versions.
-fn check_version(version: &str) -> FnResult<()> {
-    let versions = exec_command!("bash", [get_script("list-all")?]).stdout;
-    let versions = versions.split_whitespace();
-
-    if version == "latest" {
-        return Ok(());
-    }
-
-    for v in versions {
-        if v == version {
-            return Ok(());
-        }
-    }
-
-    Err(PluginError::Message(format!("Version {version} not found in asdf repository")).into())
-}
-
 /// Set the environment variables to be used by asdf scripts
 fn set_asdf_env_vars(version: &str) -> FnResult<()> {
     host_env!("ASDF_INSTALL_TYPE", "version");
@@ -225,10 +207,9 @@ pub fn locate_executables(
 
 #[plugin_fn]
 /// Loads all versions, if the version is invalid, skip it. Expects versions to be ordered in descending order.
-pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
+pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
     let mut output = LoadVersionsOutput::default();
 
-    check_version(input.initial.to_string().as_str())?;
     let versions = exec_command!("bash", [get_script("list-all")?]).stdout;
     let versions: Vec<&str> = versions.split_whitespace().map(AsRef::as_ref).collect();
     
