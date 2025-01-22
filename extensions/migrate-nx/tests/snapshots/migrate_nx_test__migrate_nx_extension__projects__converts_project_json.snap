@@ -7,16 +7,16 @@ tasks:
   build:
     command: webpack
     args:
-    - --outputPath
+    - '--outputPath'
     - $workspaceRoot/dist/bar
   echo:
     command: echo 'hello world'
   test:
     command: jest
     args:
-    - --concurrency
+    - '--concurrency'
     - '5'
-    - --passWithNoTests
+    - '--passWithNoTests'
 toolchain:
   default: node
 type: application

@@ -16,7 +16,7 @@ tasks:
   run-env-file:
     command: echo 'foo'
     options:
-      envFile: .env.production
+      envFile: '.env.production'
     toolchain: system
   run-multiple:
     command: mkdir -p apps/frontend/scripts && touch apps/frontend/scripts/my-script.sh && chmod +x apps/frontend/scripts/my-script.sh
