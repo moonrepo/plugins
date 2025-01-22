@@ -419,9 +419,9 @@ checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
 name = "clap"
-version = "4.5.23"
+version = "4.5.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3135e7ec2ef7b10c6ed8950f0f792ed96ee093fa088608f1c76e569722700c84"
+checksum = "769b0145982b4b48713e01ec42d61614425f27b7058bda7180a3a41f30104796"
 dependencies = [
  "clap_builder",
  "clap_derive",
@@ -429,9 +429,9 @@ dependencies = [
 
 [[package]]
 name = "clap_builder"
-version = "4.5.23"
+version = "4.5.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30582fc632330df2bd26877bde0c1f4470d57c582bbc070376afcd04d8cb4838"
+checksum = "1b26884eb4b57140e4d2d93652abfa49498b938b3c9179f9fc487b0acc3edad7"
 dependencies = [
  "anstyle",
  "clap_lex",
@@ -439,9 +439,9 @@ dependencies = [
 
 [[package]]
 name = "clap_derive"
-version = "4.5.18"
+version = "4.5.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ac6a0c7b1a9e9a5186361f67dfa1b88213572f427fb9ab038efb2bd8c582dab"
+checksum = "54b755194d6389280185988721fffba69495eed5ee9feeee9a599b53db80318c"
 dependencies = [
  "heck 0.5.0",
  "proc-macro2",
@@ -1044,7 +1044,7 @@ dependencies = [
  "moon_pdk",
  "rustc-hash",
  "serde",
- "starbase_utils 0.10.0",
+ "starbase_utils",
 ]
 
 [[package]]
@@ -2264,7 +2264,7 @@ dependencies = [
  "serde",
  "serde_json",
  "starbase_sandbox",
- "starbase_utils 0.10.0",
+ "starbase_utils",
  "tokio",
 ]
 
@@ -2282,7 +2282,7 @@ dependencies = [
  "rustc-hash",
  "serde",
  "starbase_sandbox",
- "starbase_utils 0.10.0",
+ "starbase_utils",
  "tokio",
 ]
 
@@ -2327,12 +2327,12 @@ dependencies = [
 
 [[package]]
 name = "moon_common"
-version = "0.0.10"
+version = "0.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "243aa29764b9b0514410e9891fd8f9b19b4c593440db800b7288637080234d22"
+checksum = "d03352fb4c92722d74519112cbec4f90ee05c7f116172203ffd706324678d5cf"
 dependencies = [
  "compact_str",
- "dirs 5.0.1",
+ "dirs 6.0.0",
  "miette 7.4.0",
  "regex",
  "relative-path",
@@ -2345,9 +2345,9 @@ dependencies = [
 
 [[package]]
 name = "moon_config"
-version = "0.0.12"
+version = "0.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b64840ed07a237ff23c88fad706afd2e04c32b2bbea9530b954b735ad0d8546f"
+checksum = "a7b3c3ab43319a531b183aca7b7d70162e29ce6211f33aa5fbddf125bed01cb6"
 dependencies = [
  "indexmap",
  "miette 7.4.0",
@@ -2355,62 +2355,62 @@ dependencies = [
  "moon_target",
  "once_cell",
  "regex",
- "rpkl 0.3.5",
+ "rpkl",
  "rustc-hash",
  "schematic",
  "semver",
  "serde",
  "serde_json",
- "serde_yaml",
+ "serde_yml",
  "version_spec",
- "warpgate_api 0.10.1",
+ "warpgate_api",
 ]
 
 [[package]]
 name = "moon_pdk"
-version = "0.0.12"
+version = "0.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fecefacac6c9639b3870c7c36e7cf37929f9330a61ec437e9740f508f44d32e3"
+checksum = "418ffd983b544f5ec6ca8023e2be4e4ab96dd76b8ba31fc7149f6ab11d384ebd"
 dependencies = [
  "clap",
  "extism-pdk",
  "moon_pdk_api",
  "serde",
- "warpgate_pdk 0.8.1",
+ "warpgate_pdk",
 ]
 
 [[package]]
 name = "moon_pdk_api"
-version = "0.0.12"
+version = "0.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f8b9abf0aca0056df9767f0ed1c8b28551dcf9a1d07aac2cac96b47532ba8ad"
+checksum = "a7abc809a5fc3fc43835a86bd259c9c7723e5bbca3f40513ce9ef4b13a6c102a"
 dependencies = [
  "moon_common",
  "moon_config",
  "rustc-hash",
  "schematic",
  "serde",
- "warpgate_api 0.10.1",
+ "warpgate_api",
 ]
 
 [[package]]
 name = "moon_pdk_test_utils"
-version = "0.0.13"
+version = "0.0.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23078ad09c29eba1917942b826d4474ba96e5a5bafddc8f819a9bc1eeb287c1b"
+checksum = "3a6cbda32fe29dfdd1053ce62892a1cf83155cf30412270d95cef245990b4c85"
 dependencies = [
  "extism",
  "moon_pdk_api",
  "serde",
  "serde_json",
- "warpgate 0.20.3",
+ "warpgate",
 ]
 
 [[package]]
 name = "moon_target"
-version = "0.0.9"
+version = "0.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e8afd9e6acf9eed6ebcefea80e1025df87386d3296aad4eefe8bdf98542deb5"
+checksum = "82083ee67108d876978e412ee6702e7ed2a87746412e567efd11e440515836a7"
 dependencies = [
  "compact_str",
  "miette 7.4.0",
@@ -2807,15 +2807,15 @@ dependencies = [
  "starbase_archive",
  "starbase_console",
  "starbase_styles",
- "starbase_utils 0.10.0",
- "system_env 0.7.0",
+ "starbase_utils",
+ "system_env",
  "thiserror 2.0.11",
  "tokio",
  "tracing",
  "url",
  "uuid",
  "version_spec",
- "warpgate 0.21.0",
+ "warpgate",
 ]
 
 [[package]]
@@ -2828,7 +2828,7 @@ dependencies = [
  "proto_pdk_api",
  "rustc-hash",
  "serde",
- "warpgate_pdk 0.9.0",
+ "warpgate_pdk",
 ]
 
 [[package]]
@@ -2842,10 +2842,10 @@ dependencies = [
  "semver",
  "serde",
  "serde_json",
- "system_env 0.7.0",
+ "system_env",
  "thiserror 2.0.11",
  "version_spec",
- "warpgate_api 0.11.0",
+ "warpgate_api",
 ]
 
 [[package]]
@@ -2859,7 +2859,7 @@ dependencies = [
  "serde",
  "serde_json",
  "starbase_sandbox",
- "warpgate 0.21.0",
+ "warpgate",
 ]
 
 [[package]]
@@ -3281,18 +3281,6 @@ dependencies = [
 
 [[package]]
 name = "rpkl"
-version = "0.3.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "90d4fb97471646d778a76c8009623e1303898fdf9f4ba9f404b02a0217b7dfb1"
-dependencies = [
- "dunce",
- "rmp-serde",
- "rmpv",
- "serde",
-]
-
-[[package]]
-name = "rpkl"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "830c41bb6db0df94499c9d2581a4748d3b8d90ed5e8150c35cc859989f1b0ff3"
@@ -3496,13 +3484,13 @@ dependencies = [
  "garde",
  "indexmap",
  "miette 7.4.0",
- "rpkl 0.4.0",
+ "rpkl",
  "schematic_macros",
  "schematic_types",
  "serde",
  "serde_json",
  "serde_path_to_error",
- "serde_yaml",
+ "serde_yml",
  "starbase_styles",
  "thiserror 2.0.11",
  "toml",
@@ -3529,11 +3517,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "15254cba352d302f26c0e427bf2634e513dff936f8a86c6df4f94843818fa4e3"
 dependencies = [
  "indexmap",
- "rpkl 0.4.0",
+ "rpkl",
  "semver",
  "serde",
  "serde_json",
- "serde_yaml",
+ "serde_yml",
  "toml",
  "url",
 ]
@@ -3657,19 +3645,6 @@ dependencies = [
  "itoa",
  "ryu",
  "serde",
-]
-
-[[package]]
-name = "serde_yaml"
-version = "0.9.34+deprecated"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a8b1a1a2ebf674015cc02edccce75287f1a0130d394307b36743c2f5d504b47"
-dependencies = [
- "indexmap",
- "itoa",
- "ryu",
- "serde",
- "unsafe-libyaml",
 ]
 
 [[package]]
@@ -3924,7 +3899,7 @@ dependencies = [
  "miette 7.4.0",
  "rustc-hash",
  "starbase_styles",
- "starbase_utils 0.10.0",
+ "starbase_utils",
  "thiserror 2.0.11",
  "tracing",
  "xz2",
@@ -3959,7 +3934,7 @@ dependencies = [
  "insta",
  "predicates",
  "pretty_assertions",
- "starbase_utils 0.10.0",
+ "starbase_utils",
 ]
 
 [[package]]
@@ -3972,27 +3947,6 @@ dependencies = [
  "owo-colors",
  "relative-path",
  "supports-color",
-]
-
-[[package]]
-name = "starbase_utils"
-version = "0.9.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8813b123653ee27546530a4f215c863bd067960c6c5f672b42ff8a7ec8cc9aff"
-dependencies = [
- "async-trait",
- "dirs 5.0.1",
- "json-strip-comments",
- "miette 7.4.0",
- "reqwest",
- "serde",
- "serde_json",
- "starbase_styles",
- "thiserror 2.0.11",
- "toml",
- "tracing",
- "url",
- "wax",
 ]
 
 [[package]]
@@ -4112,19 +4066,6 @@ dependencies = [
  "rustix",
  "windows-sys 0.59.0",
  "winx",
-]
-
-[[package]]
-name = "system_env"
-version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1303c37a9842bba9d6ec7725d2e73b13dbca214bbf9a5a9219da59115047ff06"
-dependencies = [
- "schematic",
- "serde",
- "serde_json",
- "shell-words",
- "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -4554,12 +4495,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "unsafe-libyaml"
-version = "0.2.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "673aac59facbab8a9007c7f6108d11f63b603f7cabff99fabf650fea5c32b861"
-
-[[package]]
 name = "untrusted"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4678,38 +4613,6 @@ dependencies = [
 
 [[package]]
 name = "warpgate"
-version = "0.20.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ca0e4103486998b0f3ac66bec330587899f433d33ab8fad57c02b48a15ea5141"
-dependencies = [
- "async-trait",
- "compact_str",
- "extism",
- "http-cache-reqwest",
- "miette 7.4.0",
- "once_cell",
- "regex",
- "reqwest",
- "reqwest-middleware 0.4.0",
- "reqwest-netrc",
- "rust-netrc",
- "scc",
- "serde",
- "serde_json",
- "sha2",
- "starbase_archive",
- "starbase_styles",
- "starbase_utils 0.9.4",
- "system_env 0.6.1",
- "thiserror 2.0.11",
- "tokio",
- "tracing",
- "ureq",
- "warpgate_api 0.10.1",
-]
-
-[[package]]
-name = "warpgate"
 version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf4d1e21be4094e4317812f9f59e01a74c87f413c8e34b1c7358275407e1f820"
@@ -4732,28 +4635,13 @@ dependencies = [
  "sha2",
  "starbase_archive",
  "starbase_styles",
- "starbase_utils 0.10.0",
- "system_env 0.7.0",
+ "starbase_utils",
+ "system_env",
  "thiserror 2.0.11",
  "tokio",
  "tracing",
  "ureq",
- "warpgate_api 0.11.0",
-]
-
-[[package]]
-name = "warpgate_api"
-version = "0.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a122a35bbc9d72d386d44fcf5685dc1083d65755168108c9ecd08b8913580dfc"
-dependencies = [
- "anyhow",
- "rustc-hash",
- "schematic",
- "serde",
- "serde_json",
- "system_env 0.6.1",
- "thiserror 1.0.69",
+ "warpgate_api",
 ]
 
 [[package]]
@@ -4767,19 +4655,8 @@ dependencies = [
  "schematic",
  "serde",
  "serde_json",
- "system_env 0.7.0",
+ "system_env",
  "thiserror 2.0.11",
-]
-
-[[package]]
-name = "warpgate_pdk"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be2e0163feedeff5f8e0d7b3a4d2c857f3cdb57a337dd55c6c71c909c7854c8e"
-dependencies = [
- "extism-pdk",
- "serde",
- "warpgate_api 0.10.1",
 ]
 
 [[package]]
@@ -4790,7 +4667,7 @@ checksum = "5fb4e029f9d89cde89882d4099f6e059cf4672a1304be8e733e927685629faba"
 dependencies = [
  "extism-pdk",
  "serde",
- "warpgate_api 0.11.0",
+ "warpgate_api",
 ]
 
 [[package]]
