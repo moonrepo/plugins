@@ -90,7 +90,7 @@ fn get_script(script: &str) -> FnResult<String> {
     
     fs::create_dir_all(virtual_script_path.parent().unwrap())?;
     exec_command!("rm", ["-rf", repo_dir.real_path().unwrap().to_str().unwrap()]);
-    exec_command!("git", ["clone", &script_url, repo_dir.real_path().unwrap().to_str().unwrap()]);
+    exec_command!("git", ["clone", "--depth=1", &script_url, repo_dir.real_path().unwrap().to_str().unwrap()]);
 
     let real_script_path = virtual_script_path.join("asdf").join("bin").real_path().unwrap().into_os_string().into_string().unwrap();
     Ok(format!("{real_script_path}/{script}"))
