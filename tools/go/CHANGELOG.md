@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.15.0
+
+#### 🚀 Updates
+
+- Added build from source support.
+
 ## 0.14.1
 
 #### 🚀 Updates

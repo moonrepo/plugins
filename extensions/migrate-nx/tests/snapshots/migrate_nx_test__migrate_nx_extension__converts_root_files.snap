@@ -13,7 +13,7 @@ tasks:
   build:
     command: js tsc
     args:
-    - --main
+    - '--main'
     - $projectRoot/src/index.ts
     deps:
     - ^:build

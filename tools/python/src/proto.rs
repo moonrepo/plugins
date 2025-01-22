@@ -4,7 +4,6 @@ use proto_pdk::*;
 use regex::Regex;
 use serde::Deserialize;
 use std::collections::{BTreeMap, HashMap};
-use std::fs;
 
 #[host_fn]
 extern "ExtismHost" {
@@ -21,7 +20,6 @@ pub fn register_tool(Json(_): Json<ToolMetadataInput>) -> FnResult<Json<ToolMeta
         type_of: PluginType::Language,
         minimum_proto_version: Some(Version::new(0, 42, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
-        unstable: Switch::Message("Pre-builds are provided by astral-sh/python-build-standalone, which may not support all versions.".into()),
         ..ToolMetadataOutput::default()
     }))
 }
@@ -56,33 +54,83 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
     Ok(Json(LoadVersionsOutput::from(tags)?))
 }
 
-// #[plugin_fn]
-// pub fn native_install(
-//     Json(input): Json<NativeInstallInput>,
-// ) -> FnResult<Json<NativeInstallOutput>> {
-//     let mut output = NativeInstallOutput::default();
-//     let env = get_host_environment()?;
+#[plugin_fn]
+pub fn build_instructions(
+    Json(input): Json<BuildInstructionsInput>,
+) -> FnResult<Json<BuildInstructionsOutput>> {
+    let env = get_host_environment()?;
+    let version = input.context.version;
 
-//     // https://github.com/pyenv/pyenv/tree/master/plugins/python-build
-//     if command_exists(&env, "python-build") {
-//         host_log!("Building with `python-build` instead of downloading a pre-built");
+    if env.os.is_windows() {
+        return Err(PluginError::UnsupportedWindowsBuild.into());
+    }
 
-//         let result = exec_command!(
-//             inherit,
-//             "python-build",
-//             [
-//                 input.context.version.as_str(),
-//                 input.install_dir.real_path().to_str().unwrap(),
-//             ]
-//         );
+    // check_supported_os_and_arch(
+    //     NAME,
+    //     &env,
+    //     permutations! [
+    //         HostOS::Linux => [HostArch::X86, HostArch::X64, HostArch::Arm, HostArch::Arm64, HostArch::S390x, HostArch::Riscv64, HostArch::Powerpc64],
+    //         HostOS::MacOS => [HostArch::X64, HostArch::Arm64],
+    //         // HostOS::Windows => [HostArch::X86, HostArch::X64],
+    //     ],
+    // )?;
 
-//         output.installed = result.exit_code == 0;
-//     } else {
-//         output.skip_install = true;
-//     }
+    let output = BuildInstructionsOutput {
+        help_url: Some(
+            "https://github.com/pyenv/pyenv/blob/master/plugins/python-build/README.md".into(),
+        ),
+        system_dependencies: vec![
+            SystemDependency::for_pm(
+                HostPackageManager::Apt,
+                "build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev curl git libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev"
+                    .split(' ')
+                    .collect::<Vec<_>>(),
+            ),
+            SystemDependency::for_pm(
+                HostPackageManager::Brew,
+                "openssl readline sqlite3 xz zlib tcl-tk@8"
+                    .split(' ')
+                    .collect::<Vec<_>>(),
+            ),
+            SystemDependency::for_pm(
+                HostPackageManager::Dnf,
+                "make gcc patch zlib-devel bzip2 bzip2-devel readline-devel sqlite sqlite-devel openssl-devel tk-devel libffi-devel xz-devel libuuid-devel gdbm-libs libnsl2"
+                    .split(' ')
+                    .collect::<Vec<_>>(),
+            ),
+            SystemDependency::for_pm(
+                HostPackageManager::Pacman,
+                "base-devel openssl zlib xz tk"
+                    .split(' ')
+                    .collect::<Vec<_>>(),
+            ),
+            SystemDependency::for_pm(
+                HostPackageManager::Yum,
+                "gcc make patch zlib-devel bzip2 bzip2-devel readline-devel sqlite sqlite-devel openssl-devel tk-devel libffi-devel xz-devel"
+                    .split(' ')
+                    .collect::<Vec<_>>(),
+            ),
+        ],
+        requirements: vec![BuildRequirement::XcodeCommandLineTools],
+        instructions: vec![
+            BuildInstruction::InstallBuilder(Box::new(BuilderInstruction {
+                id: "python-build".into(),
+                exe: "plugins/python-build/bin/python-build".into(),
+                git: GitSource {
+                    url: "https://github.com/pyenv/pyenv.git".into(),
+                    ..Default::default()
+                },
+            })),
+            BuildInstruction::RunCommand(Box::new(CommandInstruction::with_builder(
+                "python-build",
+                ["--verbose", version.to_string().as_str(), "."],
+            ))),
+        ],
+        ..Default::default()
+    };
 
-//     Ok(Json(output))
-// }
+    Ok(Json(output))
+}
 
 #[derive(Deserialize)]
 struct ReleaseEntry {
@@ -109,8 +157,7 @@ pub fn download_prebuilt(
 
     let Some(release_triples) = version.as_version().and_then(|v| releases.get(v)) else {
         return Err(plugin_err!(
-            "No pre-built available for version <hash>{}</hash> (via <url>https://github.com/astral-sh/python-build-standalone</url>)! Try installing another version for the time being.",
-            version
+            "No pre-built available for version <hash>{version}</hash> (via <url>https://github.com/astral-sh/python-build-standalone</url>)! Try building from source with <shell>--build</shell>.",
         ));
     };
 
@@ -118,24 +165,16 @@ pub fn download_prebuilt(
 
     let Some(release) = release_triples.get(&triple) else {
         return Err(plugin_err!(
-            "No pre-built available for architecture <id>{}</id>!",
-            triple
+            "No pre-built available for architecture <id>{triple}</id>! Try building from source with <shell>--build</shell>."
         ));
     };
 
     Ok(Json(DownloadPrebuiltOutput {
-        archive_prefix: Some("python".into()),
+        archive_prefix: Some("python/install".into()),
         checksum_url: release.checksum.clone(),
         download_url: release.download.clone(),
         ..DownloadPrebuiltOutput::default()
     }))
-}
-
-#[derive(Deserialize)]
-struct PythonManifest {
-    // python_exe: String,
-    // python_major_minor_version: String,
-    python_paths: HashMap<String, String>,
 }
 
 #[plugin_fn]
@@ -143,24 +182,19 @@ pub fn locate_executables(
     Json(input): Json<LocateExecutablesInput>,
 ) -> FnResult<Json<LocateExecutablesOutput>> {
     let env = get_host_environment()?;
-    let mut exe_path = env
-        .os
-        .for_native("install/bin/python", "install/python.exe")
-        .to_owned();
-    let mut exes_dir = env
-        .os
-        .for_native("install/bin", "install/Scripts")
-        .to_owned();
+    let mut exe_path = env.os.for_native("bin/python", "python.exe").to_owned();
+    let mut exes_dir = env.os.for_native("bin", "Scripts").to_owned();
 
-    // Manifest is only available for pre-builts
-    let manifest_path = input.context.tool_dir.join("PYTHON.json");
-
-    if manifest_path.exists() {
-        let manifest: PythonManifest = json::from_slice(&fs::read(manifest_path)?)?;
-
-        if let Some(dir) = manifest.python_paths.get("scripts") {
-            dir.clone_into(&mut exes_dir);
-        }
+    // Backwards compatibility for the old pre-built implementation
+    if input.context.tool_dir.join("PYTHON.json").exists() {
+        exe_path = env
+            .os
+            .for_native("install/bin/python", "install/python.exe")
+            .to_owned();
+        exes_dir = env
+            .os
+            .for_native("install/bin", "install/Scripts")
+            .to_owned();
     }
 
     // When on Unix, the executable returned from `PYTHON.json` is `pythonX.X`,
@@ -170,7 +204,7 @@ pub fn locate_executables(
     // itself doesn't exist (which is true for some versions).
     if !env.os.is_windows() && !input.context.tool_dir.join(&exe_path).exists() {
         if let Some(version) = input.context.version.as_version() {
-            exe_path = format!("install/bin/python{}", version.major);
+            exe_path = format!("{exe_path}{}", version.major);
         }
     }
 

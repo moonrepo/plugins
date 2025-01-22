@@ -9,19 +9,19 @@ tasks:
   e2e:
     command: cypress
     args:
-    - --cypressConfig
+    - '--cypressConfig'
     - $workspaceRoot/foo/cypress.config.ts
-    - --no-debug
-    - --parallel
+    - '--no-debug'
+    - '--parallel'
   e2e.dev:
     extends: e2e
     args:
-    - --devServerTarget
+    - '--devServerTarget'
     - my-app:serve
   e2e.qa:
     extends: e2e
     args:
-    - --baseUrl
+    - '--baseUrl'
     - https://some-internal-url.example.com
 toolchain:
   default: node

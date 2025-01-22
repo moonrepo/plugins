@@ -28,9 +28,6 @@ const { values: args } = parseArgs({
   },
 });
 
-// Exclude for now since they don't work
-args.exclude.push("ruby_tool");
-
 async function exec(cmd, args, opts = {}) {
   return new Promise((resolve, reject) => {
     let child = spawn(cmd, args, {

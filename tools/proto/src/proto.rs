@@ -36,6 +36,62 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
 }
 
 #[plugin_fn]
+pub fn build_instructions(
+    Json(input): Json<BuildInstructionsInput>,
+) -> FnResult<Json<BuildInstructionsOutput>> {
+    let env = get_host_environment()?;
+    let version = input.context.version;
+
+    check_supported_os_and_arch(
+        "proto",
+        &env,
+        permutations! [
+            HostOS::Linux => [HostArch::X64, HostArch::Arm64],
+            HostOS::MacOS => [HostArch::X64, HostArch::Arm64],
+            HostOS::Windows => [HostArch::X64],
+        ],
+    )?;
+
+    let output = BuildInstructionsOutput {
+        source: Some(SourceLocation::Archive(ArchiveSource {
+            url: format!(
+                "https://github.com/moonrepo/proto/releases/download/v{version}/source.tar.gz"
+            ),
+            prefix: Some(format!("proto_cli-{version}")),
+        })),
+        requirements: vec![BuildRequirement::CommandExistsOnPath("cargo".into())],
+        instructions: vec![
+            BuildInstruction::RunCommand(Box::new(CommandInstruction::new(
+                "cargo",
+                [
+                    "build",
+                    "--bin",
+                    "proto",
+                    "--bin",
+                    "proto-shim",
+                    "--release",
+                    "--no-default-features",
+                ],
+            ))),
+            // Move file to the root so that the executable can be located,
+            // and also so that we can remove the target directory
+            BuildInstruction::MoveFile(
+                env.os.get_exe_name("target/release/proto").into(),
+                env.os.get_exe_name("proto").into(),
+            ),
+            BuildInstruction::MoveFile(
+                env.os.get_exe_name("target/release/proto-shim").into(),
+                env.os.get_exe_name("proto-shim").into(),
+            ),
+            BuildInstruction::RemoveDir("target".into()),
+        ],
+        ..Default::default()
+    };
+
+    Ok(Json(output))
+}
+
+#[plugin_fn]
 pub fn download_prebuilt(
     Json(input): Json<DownloadPrebuiltInput>,
 ) -> FnResult<Json<DownloadPrebuiltOutput>> {

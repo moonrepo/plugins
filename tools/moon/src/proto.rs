@@ -30,6 +30,48 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
 }
 
 #[plugin_fn]
+pub fn build_instructions(
+    Json(input): Json<BuildInstructionsInput>,
+) -> FnResult<Json<BuildInstructionsOutput>> {
+    let env = get_host_environment()?;
+    let version = input.context.version;
+
+    check_supported_os_and_arch(
+        "moon",
+        &env,
+        permutations! [
+            HostOS::Linux => [HostArch::X64, HostArch::Arm64],
+            HostOS::MacOS => [HostArch::X64, HostArch::Arm64],
+            HostOS::Windows => [HostArch::X64],
+        ],
+    )?;
+
+    let output = BuildInstructionsOutput {
+        source: Some(SourceLocation::Archive(ArchiveSource {
+            url: format!("https://github.com/moonrepo/moon/archive/refs/tags/v{version}.tar.gz"),
+            prefix: Some(format!("moon-{version}")),
+        })),
+        requirements: vec![BuildRequirement::CommandExistsOnPath("cargo".into())],
+        instructions: vec![
+            BuildInstruction::RunCommand(Box::new(CommandInstruction::new(
+                "cargo",
+                ["build", "--bin", "moon", "--release"],
+            ))),
+            // Move file to the root so that the executable can be located,
+            // and also so that we can remove the target directory
+            BuildInstruction::MoveFile(
+                env.os.get_exe_name("target/release/moon").into(),
+                env.os.get_exe_name("moon").into(),
+            ),
+            BuildInstruction::RemoveDir("target".into()),
+        ],
+        ..Default::default()
+    };
+
+    Ok(Json(output))
+}
+
+#[plugin_fn]
 pub fn download_prebuilt(
     Json(input): Json<DownloadPrebuiltInput>,
 ) -> FnResult<Json<DownloadPrebuiltOutput>> {
@@ -82,7 +124,7 @@ pub fn locate_executables(
 ) -> FnResult<Json<LocateExecutablesOutput>> {
     let env = get_host_environment()?;
 
-    // Because moon releases do not pacakge the binaries in archives,
+    // Because moon releases do not package the binaries in archives,
     // the downloaded file gets renamed to the plugin ID, and not just "moon".
     let id = get_plugin_id()?;
 

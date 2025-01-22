@@ -12,12 +12,10 @@ pub fn register_tool(Json(_): Json<ToolMetadataInput>) -> FnResult<Json<ToolMeta
     Ok(Json(ToolMetadataOutput {
         name: "Ruby".into(),
         type_of: PluginType::Language,
+        default_install_strategy: InstallStrategy::BuildFromSource,
         minimum_proto_version: Some(Version::new(0, 42, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
-        unstable: Switch::Message(
-            "Pre-builds are provided by ruby/ruby-builder, which may not support all versions. Windows is currently not supported."
-                .into(),
-        ),
+        unstable: Switch::Message("Windows is currently not supported.".into()),
         ..ToolMetadataOutput::default()
     }))
 }
@@ -57,53 +55,65 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
 }
 
 #[plugin_fn]
-pub fn download_prebuilt(
-    Json(input): Json<DownloadPrebuiltInput>,
-) -> FnResult<Json<DownloadPrebuiltOutput>> {
+pub fn build_instructions(
+    Json(input): Json<BuildInstructionsInput>,
+) -> FnResult<Json<BuildInstructionsOutput>> {
     let env = get_host_environment()?;
-
-    check_supported_os_and_arch(
-        "Ruby",
-        &env,
-        permutations! [
-            HostOS::Linux => [HostArch::X64],
-            HostOS::MacOS => [HostArch::X64, HostArch::Arm64],
-            // HostOS::Windows => [HostArch::X64],
-        ],
-    )?;
-
     let version = input.context.version;
 
-    if version.is_canary() {
-        return Err(plugin_err!(PluginError::UnsupportedCanary {
-            tool: "Ruby".into()
-        }));
+    if env.os.is_windows() {
+        return Err(PluginError::UnsupportedWindowsBuild.into());
     }
 
-    let target = match env.os {
-        HostOS::Linux => format!("ruby-{version}-ubuntu-20.04"),
-        HostOS::MacOS => match env.arch {
-            HostArch::X64 => format!("ruby-{version}-macos-latest"),
-            HostArch::Arm64 => format!("ruby-{version}-macos-13-arm64"),
-            _ => unreachable!(),
-        },
-        // HostOS::Windows => format!("{arch}-pc-windows-msvc"),
-        _ => unreachable!(),
+    let output = BuildInstructionsOutput {
+        help_url: Some(
+            "https://github.com/rbenv/ruby-build/wiki".into(),
+        ),
+        system_dependencies: vec![
+            SystemDependency::for_pm(
+                HostPackageManager::Apt,
+                "autoconf patch build-essential rustc libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libgmp-dev libncurses5-dev libffi-dev libgdbm6 libgdbm-dev libdb-dev uuid-dev".split(' ').collect::<Vec<_>>(),
+            ),
+            SystemDependency::for_pm(
+                HostPackageManager::Brew,
+                ["openssl@3", "readline", "libyaml", "gmp", "autoconf"],
+            ),
+            SystemDependency::for_pm(
+                HostPackageManager::Dnf,
+                "autoconf gcc patch bzip2 openssl-devel libffi-devel readline zlib-devel gdbm ncurses-devel tar perl-FindBin".split(' ').collect::<Vec<_>>(),
+            ),
+            SystemDependency::for_pm(
+                HostPackageManager::Pacman,
+                "base-devel libffi libyaml openssl zlib".split(' ').collect::<Vec<_>>(),
+            ),
+            SystemDependency::for_pm(
+                HostPackageManager::Pkg,
+                "devel/autoconf devel/bison devel/patch lang/gcc databases/gdbm devel/gmake devel/libffi textproc/libyaml devel/ncurses security/openssl devel/readline".split(' ').collect::<Vec<_>>(),
+            ),
+            SystemDependency::for_pm(
+                HostPackageManager::Yum,
+                "autoconf gcc patch bzip2 openssl-devel libffi-devel readline-devel zlib-devel gdbm-devel ncurses-devel tar".split(' ').collect::<Vec<_>>(),
+            ),
+        ],
+        requirements: vec![BuildRequirement::XcodeCommandLineTools],
+        instructions: vec![
+            BuildInstruction::InstallBuilder(Box::new(BuilderInstruction {
+                id: "ruby-build".into(),
+                exe: "bin/ruby-build".into(),
+                git: GitSource {
+                    url: "https://github.com/rbenv/ruby-build.git".into(),
+                    ..Default::default()
+                },
+            })),
+            BuildInstruction::RunCommand(Box::new(CommandInstruction::with_builder(
+                "ruby-build",
+                ["--verbose", version.to_string().as_str(), "."],
+            ))),
+        ],
+        ..Default::default()
     };
 
-    let download_file = format!("{target}.tar.gz");
-    let base_url = "https://github.com/ruby/ruby-builder/releases/download/toolcache";
-
-    Ok(Json(DownloadPrebuiltOutput {
-        archive_prefix: match env.arch {
-            HostArch::X64 => Some("x64".into()),
-            HostArch::Arm64 => Some("arm64".into()),
-            _ => None,
-        },
-        download_url: format!("{base_url}/{download_file}"),
-        download_name: Some(download_file),
-        ..DownloadPrebuiltOutput::default()
-    }))
+    Ok(Json(output))
 }
 
 #[plugin_fn]

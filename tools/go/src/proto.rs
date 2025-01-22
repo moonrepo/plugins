@@ -64,6 +64,61 @@ pub fn parse_version_file(
 }
 
 #[plugin_fn]
+pub fn build_instructions(
+    Json(input): Json<BuildInstructionsInput>,
+) -> FnResult<Json<BuildInstructionsOutput>> {
+    let env = get_host_environment()?;
+
+    check_supported_os_and_arch(
+        NAME,
+        &env,
+        permutations! [
+            HostOS::Linux => [
+                HostArch::X64, HostArch::Arm64, HostArch::X86, HostArch::Arm, HostArch::S390x
+            ],
+            HostOS::MacOS => [HostArch::X64, HostArch::Arm64],
+            HostOS::Windows => [HostArch::X64, HostArch::Arm64, HostArch::X86],
+            HostOS::FreeBSD => [HostArch::X64, HostArch::X86],
+        ],
+    )?;
+
+    let version = input.context.version;
+    let tag = format!("go{}", to_go_version(&version));
+
+    let output = BuildInstructionsOutput {
+        help_url: Some("https://go.dev/doc/install/source".into()),
+        // source: Some(SourceLocation::Git(GitSource {
+        //     url: "https://go.googlesource.com/go".into(),
+        //     reference: Some(tag),
+        //     submodules: false,
+        // })),
+        source: Some(SourceLocation::Archive(ArchiveSource {
+            url: format!("https://github.com/golang/go/archive/refs/tags/{tag}.tar.gz"),
+            prefix: Some(format!("go-{tag}")),
+        })),
+        requirements: vec![
+            BuildRequirement::CommandExistsOnPath("go".into()),
+            BuildRequirement::CommandExistsOnPath("git".into()),
+        ],
+        instructions: vec![BuildInstruction::RunCommand(Box::new({
+            CommandInstruction {
+                bin: if env.os.is_windows() {
+                    "./all.bat"
+                } else {
+                    "./all.bash"
+                }
+                .into(),
+                cwd: Some("src".into()),
+                ..Default::default()
+            }
+        }))],
+        ..Default::default()
+    };
+
+    Ok(Json(output))
+}
+
+#[plugin_fn]
 pub fn download_prebuilt(
     Json(input): Json<DownloadPrebuiltInput>,
 ) -> FnResult<Json<DownloadPrebuiltOutput>> {
