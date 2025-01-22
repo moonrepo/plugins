@@ -211,17 +211,20 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
     let mut output = LoadVersionsOutput::default();
 
     let versions = exec_command!("bash", [get_script("list-all")?]).stdout;
-    let versions: Vec<&str> = versions.split_whitespace().map(AsRef::as_ref).collect();
+    let mut versions: Vec<&str> = versions.split_whitespace().map(AsRef::as_ref).collect();
     
-    for (i, version) in versions.iter().enumerate() {
-        if i == 0 {
-            let version = Version::parse(version);
-            match version {
-                Ok(version) => output.latest = Some(UnresolvedVersionSpec::Semantic(SemVer(version.clone()))),
-                _ => continue
-            }
-        }
+     // Remove the last element, which is the latest version
+    let last_version = versions.pop().unwrap();
+    let version = UnresolvedVersionSpec::parse(last_version);
+    match version {
+        Ok(version) => {
+            output.latest = Some(version);
+            output.versions.push(VersionSpec::parse(last_version)?);
+        },
+        _ => return Err(PluginError::Message("Failed to find any version".to_string()).into())
+    }
 
+    for version in versions.iter() {
         let version = VersionSpec::parse(version);
         match version {
             Ok(version) => output.versions.push(version),
