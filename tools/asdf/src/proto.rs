@@ -16,13 +16,9 @@ extern "ExtismHost" {
 
 const ASDF_PLUGINS_URL: &str = "https://raw.githubusercontent.com/asdf-vm/asdf-plugins/refs/heads/master/plugins";
 
-/// Returns whether the user has opted to use the GitHub repository instead of the asdf short-name
-fn is_asdf_repo() -> bool {
-    let config = get_tool_config::<AsdfPluginConfig>();
-    match config {
-        Ok(config) => config.asdf_repository.is_some(),
-        Err(_) => false,
-    }
+/// Returns whether the user has opted to use the GitHub repository instead of solely using the asdf short-name
+fn is_asdf_repo(config: &AsdfPluginConfig) -> bool {
+    config.asdf_repository.is_some()
 }
 
 fn get_raw_github_url(repo: &str) -> FnResult<String> {
@@ -47,7 +43,7 @@ fn get_raw_github_url(repo: &str) -> FnResult<String> {
 
 fn get_script_url(script: &str, git: bool) -> FnResult<String> {
     let config = get_tool_config::<AsdfPluginConfig>()?;
-    if is_asdf_repo() {
+    if is_asdf_repo(&config) {
         if git {
             return Ok(config.asdf_repository.unwrap().trim().to_string());
         }
