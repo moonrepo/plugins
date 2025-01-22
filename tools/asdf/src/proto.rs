@@ -105,8 +105,6 @@ fn set_asdf_env_vars(version: &str) -> FnResult<()> {
     host_env!("ASDF_INSTALL_PATH", asdf_bin.real_path().unwrap().to_str().unwrap());
     asdf_bin.real_path().unwrap().to_str().unwrap();
     host_env!("ASDF_DOWNLOAD_PATH", asdf_bin.real_path().unwrap().to_str().unwrap());
-    // asdf needs a bin directory to install the tools
-    let _ = fs::create_dir_all(asdf_bin.join("bin"));
 
     let cores = exec_command!("nproc").stdout;
     host_env!("ASDF_CONCURRENCY", cores);
