@@ -29,7 +29,7 @@ fn get_raw_github_url(repo: &str) -> String {
     let repo_parts: Vec<&str> = repo.split("/").collect();
 
     // Get the default branch of the repository
-    let repo_data: Value = fetch_json(format!(" https://api.github.com/repos/{}/{}", repo_parts[3], repo_parts[4])).unwrap();
+    let repo_data: Value = fetch_json(format!("https://api.github.com/repos/{}/{}", repo_parts[3], repo_parts[4])).unwrap();
     let default_branch = match repo_data.get("default_branch") {
         Some(branch) => branch,
         None => &Value::String(String::from("main"))
