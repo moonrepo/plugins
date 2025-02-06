@@ -228,24 +228,37 @@ fn interpolate_tokens(
 
     if let Some(v) = version.as_version() {
         let major = v.major.to_string();
-        let major_minor = format!("{}.{}", v.major, v.minor);
-        let year_month = format!("{:0>4}-{:0>2}", v.major, v.minor);
+        let minor = v.minor.to_string();
+        let patch = v.patch.to_string();
+        let year = format!("{:0>4}", v.major);
+        let month = format!("{:0>2}", v.minor);
+        let day = format!("{:0>2}", v.patch);
+        let major_minor = format!("{}.{}", v.major, v.minor); // Deprecated, remains for backwards compatibility
+        let year_month = format!("{:0>4}-{:0>2}", v.major, v.minor); // Deprecated, remains for backwards compatibility
         let pre = v.pre.to_string();
         let build = v.build.to_string();
 
         value = value
             .replace("{versionMajor}", &major)
-            .replace("{versionMajorMinor}", &major_minor)
-            .replace("{versionYear}", &major)
-            .replace("{versionYearMonth}", &year_month)
+            .replace("{versionMinor}", &minor)
+            .replace("{versionPatch}", &patch)
+            .replace("{versionMajorMinor}", &major_minor) // Deprecated, remains for backwards compatibility
+            .replace("{versionYear}", &year)
+            .replace("{versionMonth}", &month)
+            .replace("{versionDay}", &day)
+            .replace("{versionYearMonth}", &year_month) // Deprecated, remains for backwards compatibility
             .replace("{versionPrerelease}", &pre)
             .replace("{versionBuild}", &build);
     } else {
         value = value
             .replace("{versionMajor}", "")
-            .replace("{versionMajorMinor}", "")
+            .replace("{versionMinor}", "")
+            .replace("{versionPatch}", "")
+            .replace("{versionMajorMinor}", "") // Deprecated, remains for backwards compatibility
             .replace("{versionYear}", "")
-            .replace("{versionYearMonth}", "")
+            .replace("{versionMonth}", "")
+            .replace("{versionDay}", "")
+            .replace("{versionYearMonth}", "") // Deprecated, remains for backwards compatibility
             .replace("{versionPrerelease}", "")
             .replace("{versionBuild}", "");
     }
