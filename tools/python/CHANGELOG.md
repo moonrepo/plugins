@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.1
+
+#### 🐞 Fixes
+
+- Potential fixes for locating exes in a backwards compatible manner.
+
 ## 0.13.0
 
 #### 🚀 Updates

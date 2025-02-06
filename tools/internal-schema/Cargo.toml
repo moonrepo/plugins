@@ -1,6 +1,6 @@
 [package]
 name = "schema_tool"
-version = "0.16.3"
+version = "0.16.4"
 edition = "2021"
 license = "MIT"
 publish = false

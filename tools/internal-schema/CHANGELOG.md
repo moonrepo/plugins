@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added new version tokens: `{versionMinor}`, `{versionPatch}`, `{versionMonth}`, `{versionDay}`, and deprecated `{versionMajorMinor}` and `{versionYearMonth}`.
+
 ## 0.16.3
 
 #### 🚀 Updates

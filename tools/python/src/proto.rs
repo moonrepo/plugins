@@ -186,15 +186,11 @@ pub fn locate_executables(
     let mut exes_dir = env.os.for_native("bin", "Scripts").to_owned();
 
     // Backwards compatibility for the old pre-built implementation
-    if input.context.tool_dir.join("PYTHON.json").exists() {
-        exe_path = env
-            .os
-            .for_native("install/bin/python", "install/python.exe")
-            .to_owned();
-        exes_dir = env
-            .os
-            .for_native("install/bin", "install/Scripts")
-            .to_owned();
+    if input.context.tool_dir.join("PYTHON.json").exists()
+        || input.context.tool_dir.join("install").exists()
+    {
+        exe_path = format!("install/{exe_path}");
+        exes_dir = format!("install/{exes_dir}");
     }
 
     // When on Unix, the executable returned from `PYTHON.json` is `pythonX.X`,
