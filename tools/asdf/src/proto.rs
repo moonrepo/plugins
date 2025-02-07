@@ -94,8 +94,8 @@ fn get_repo() -> FnResult<Repo> {
 
 // Workaround for a bug when using fs::remove_dir_all in this environment
 fn remove_dir_recursive(path: &VirtualPath) -> FnResult<()> {
-    let path = path.real_path().unwrap().into_os_string().into_string().unwrap();
-    if exec_command!("rm", ["-rf", &path]).exit_code != 0 {
+    let path = real_path!(buf, path);
+    if exec_command!("rm", ["-rf", &path.into_os_string().into_string().unwrap()]).exit_code != 0 {
         return Err(PluginError::Message("Failed to remove directory".to_string()).into());
     }
     Ok(())
@@ -108,7 +108,7 @@ fn clone_repo(proto_temp_dir: VirtualPath) -> FnResult<VirtualPath> {
     remove_dir_recursive(&repo_dir)?;
     fs::create_dir_all(&repo_dir.parent().unwrap())?;
 
-    if exec_command!("git", ["clone", "--depth=1", &repo.url, &repo_dir.real_path().unwrap().into_os_string().into_string().unwrap()]).exit_code != 0 {
+    if exec_command!("git", ["clone", "--depth=1", &repo.url, real_path!(buf, &repo_dir).into_os_string().into_string().unwrap().as_str()]).exit_code != 0 {
         return Err(PluginError::Message("Failed to clone repository".to_string()).into());
     }
 
@@ -117,7 +117,7 @@ fn clone_repo(proto_temp_dir: VirtualPath) -> FnResult<VirtualPath> {
 
 fn get_versions(proto_temp_dir: VirtualPath) -> FnResult<Vec<String>> {
     let script_path = clone_repo(proto_temp_dir)?;
-    let script_path = script_path.join("bin").join("list-all").real_path().unwrap().into_os_string().into_string().unwrap();
+    let script_path = real_path!(buf, script_path).join("bin").join("list-all").into_os_string().into_string().unwrap();
 
     let versions = exec_command!("bash", [script_path]).stdout;
     let versions: Vec<String> = versions.split_whitespace().map(str::to_owned).collect();
@@ -161,7 +161,7 @@ pub fn build_instructions(
     let version = input.context.version;
 
     // Set asdf environment variables
-    let install_download_path = &input.context.tool_dir.real_path().unwrap().into_os_string().into_string().unwrap();
+    let install_download_path = real_path!(buf, input.context.tool_dir).into_os_string().into_string().unwrap();
     let cores = if env.os.is_mac() {
         exec_command!("sysctl -n hw.physicalcpu").stdout
     } else {
