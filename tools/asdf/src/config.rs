@@ -5,6 +5,7 @@
 pub struct AsdfPluginConfig {
     pub asdf_shortname: Option<String>,
 	pub asdf_repository: Option<String>,
+    pub executable_name: Option<String>
 }
 
 impl Default for AsdfPluginConfig {
@@ -12,6 +13,7 @@ impl Default for AsdfPluginConfig {
         Self {
             asdf_shortname: None,
 			asdf_repository: None,
+            executable_name: None
         }
     }
 }
