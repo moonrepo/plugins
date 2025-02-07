@@ -177,42 +177,43 @@ pub fn build_instructions(
 
     let id = get_id(None)?;
 
+    let install_id = String::from(format!("{id}-{version}-install"));
+    let mut install_instruction = Box::new(BuilderInstruction {
+        id: install_id.clone(),
+        exe: "bin/install".into(),
+        git,
+        ..BuilderInstruction::default()
+    });
+    let has_download_script = send_request!(format!("{}/blob/{}/bin/download", repo.url, repo.default_branch)).status == 200;
     // In older versions of asdf there may not be a 'download' script,
     // instead both download and install were done in the 'install' script.
     // However, in newer versions, there's two separate 'download' and 'install' scripts.
-    if send_request!(format!("{}/blob/{}/bin/download", repo.url, repo.default_branch)).status == 200 {
-            let download_id = String::from(format!("{id}-{version}-download"));
-            instructions.push(BuildInstruction::InstallBuilder(Box::new(BuilderInstruction {
-                id: download_id.clone(),
-                exe: "bin/download".into(),
-                git: git.clone(),
-                ..BuilderInstruction::default()
-            })));
-            
-            instructions.push(
-                BuildInstruction::RunCommand(Box::new(CommandInstruction::with_builder(
-                    &download_id,
-                    [""],
-                ))),
-            )
-        }
+    let download_script_id = String::from("download-script");
+    if has_download_script {
+        install_instruction.exes = HashMap::from_iter([(
+            download_script_id.clone(),
+            "bin/download".into()
+        )]);
+    }
+    instructions.push(BuildInstruction::InstallBuilder(install_instruction));
 
-    let install_id = String::from(format!("{id}-{version}-install"));
-    instructions.push(
-        BuildInstruction::InstallBuilder(Box::new(BuilderInstruction {
-            id: install_id.clone(),
-            exe: "bin/install".into(),
-            git,
-            ..BuilderInstruction::default()
-        }))
-    );
+    if has_download_script {
+        instructions.push(BuildInstruction::RunCommand(
+            Box::new(
+                CommandInstruction::with_builder(
+                    format!("{install_id}:{download_script_id}").as_str(),
+                    [""]
+                )
+            )
+        ));
+    }
+
     instructions.push(
         BuildInstruction::RunCommand(Box::new(CommandInstruction::with_builder(
             &install_id,
             [""],
         ))),
     );
-
     let output = BuildInstructionsOutput {
         instructions,
         ..Default::default()
