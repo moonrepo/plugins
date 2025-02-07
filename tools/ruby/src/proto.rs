@@ -104,6 +104,7 @@ pub fn build_instructions(
                     url: "https://github.com/rbenv/ruby-build.git".into(),
                     ..Default::default()
                 },
+                ..BuilderInstruction::default()
             })),
             BuildInstruction::RunCommand(Box::new(CommandInstruction::with_builder(
                 "ruby-build",

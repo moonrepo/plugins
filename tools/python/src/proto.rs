@@ -120,6 +120,7 @@ pub fn build_instructions(
                     url: "https://github.com/pyenv/pyenv.git".into(),
                     ..Default::default()
                 },
+                ..BuilderInstruction::default()
             })),
             BuildInstruction::RunCommand(Box::new(CommandInstruction::with_builder(
                 "python-build",

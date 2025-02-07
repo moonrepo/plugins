@@ -101,9 +101,9 @@ fn remove_dir_recursive(path: &VirtualPath) -> FnResult<()> {
     Ok(())
 }
 
-fn clone_repo() -> FnResult<VirtualPath> {
+fn clone_repo(proto_temp_dir: VirtualPath) -> FnResult<VirtualPath> {
     let repo = get_repo()?;
-    let repo_dir = virtual_path!(format!("/proto/temp/{}/repo", get_id(None)?));
+    let repo_dir = virtual_path!(format!("{proto_temp_dir}/{}/repo", get_id(None)?));
     // Remove the previous repo directory if it exists
     remove_dir_recursive(&repo_dir)?;
     fs::create_dir_all(&repo_dir.parent().unwrap())?;
@@ -115,8 +115,8 @@ fn clone_repo() -> FnResult<VirtualPath> {
     Ok(repo_dir)
 }
 
-fn get_versions() -> FnResult<Vec<String>> {
-    let script_path = clone_repo()?;
+fn get_versions(proto_temp_dir: VirtualPath) -> FnResult<Vec<String>> {
+    let script_path = clone_repo(proto_temp_dir)?;
     let script_path = script_path.join("bin").join("list-all").real_path().unwrap().into_os_string().into_string().unwrap();
 
     let versions = exec_command!("bash", [script_path]).stdout;
@@ -185,7 +185,8 @@ pub fn build_instructions(
             instructions.push(BuildInstruction::InstallBuilder(Box::new(BuilderInstruction {
                 id: download_id.clone(),
                 exe: "bin/download".into(),
-                git: git.clone()
+                git: git.clone(),
+                ..BuilderInstruction::default()
             })));
             
             instructions.push(
@@ -202,6 +203,7 @@ pub fn build_instructions(
             id: install_id.clone(),
             exe: "bin/install".into(),
             git,
+            ..BuilderInstruction::default()
         }))
     );
     instructions.push(
@@ -240,10 +242,10 @@ pub fn locate_executables(
 
 #[plugin_fn]
 /// Loads all versions, if the version is invalid, skip it. Expects versions to be ordered in descending order.
-pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
+pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
     let mut output = LoadVersionsOutput::default();
 
-    let Ok(mut versions) = get_versions() else {
+    let Ok(mut versions) = get_versions(input.context.temp_dir) else {
         return Err(PluginError::Message("Failed to find any version".to_string()).into())
     };
      // Remove the last element, which is the latest version
