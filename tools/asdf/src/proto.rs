@@ -224,19 +224,18 @@ pub fn build_instructions(
 
 #[plugin_fn]
 pub fn locate_executables(
-    Json(input): Json<LocateExecutablesInput>,
+    Json(_): Json<LocateExecutablesInput>,
 ) -> FnResult<Json<LocateExecutablesOutput>> {
     let exe = get_executable_name()?;
 
-    let install_path = input.context.tool_dir.real_path().unwrap().into_os_string().into_string().unwrap();
     Ok(Json(LocateExecutablesOutput {
         exes: HashMap::from_iter([(
             exe.clone(),
             ExecutableConfig::new_primary(
-                format!("{install_path}/bin/{exe}")
+                format!("bin/{exe}")
             )
         )]),
-        exes_dir: input.context.tool_dir.join("bin").real_path(),
+        exes_dir: Some("bin".into()),
         ..LocateExecutablesOutput::default()
     }))
 }
