@@ -1,7 +1,7 @@
 $schema: "https://moonrepo.dev/schemas/toolchain.json"
 
 rust:
-  version: "1.84.0"
+  version: "1.84.1"
   bins: ["cargo-nextest"]
   components: ["clippy", "rustfmt"]
   targets: ["wasm32-wasip1"]
