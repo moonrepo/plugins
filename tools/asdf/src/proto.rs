@@ -3,7 +3,7 @@ use extism_pdk::json::Value;
 use extism_pdk::*;
 use proto_pdk::*;
 use std::collections::HashMap;
-use std::fs;
+use std::path::PathBuf;
 
 struct Repo {
     url: String,
@@ -91,37 +91,25 @@ fn get_repo() -> FnResult<Repo> {
     })
 }
 
-
-// Workaround for a bug when using fs::remove_dir_all in this environment
-fn remove_dir_recursive(path: &VirtualPath) -> FnResult<()> {
-    let path = real_path!(buf, path);
-    if exec_command!("rm", ["-rf", &path.into_os_string().into_string().unwrap()]).exit_code != 0 {
-        return Err(PluginError::Message("Failed to remove directory".to_string()).into());
-    }
-    Ok(())
-}
-
-fn clone_repo(proto_temp_dir: VirtualPath) -> FnResult<VirtualPath> {
-    let repo = get_repo()?;
-    let repo_dir = virtual_path!(format!("{proto_temp_dir}/{}/repo", get_id(None)?));
-    // Remove the previous repo directory if it exists
-    remove_dir_recursive(&repo_dir)?;
-    fs::create_dir_all(&repo_dir.parent().unwrap())?;
-
-    if exec_command!("git", ["clone", "--depth=1", &repo.url, real_path!(buf, &repo_dir).into_os_string().into_string().unwrap().as_str()]).exit_code != 0 {
-        return Err(PluginError::Message("Failed to clone repository".to_string()).into());
-    }
-
-    Ok(repo_dir)
-}
-
-fn get_versions(proto_temp_dir: VirtualPath) -> FnResult<Vec<String>> {
-    let script_path = clone_repo(proto_temp_dir)?;
-    let script_path = real_path!(buf, script_path).join("bin").join("list-all").into_os_string().into_string().unwrap();
+fn get_versions(install_version: VersionSpec) -> FnResult<Vec<String>> {
+    let install_builder_id = get_install_builder_id(install_version)?;
+    let script_path = real_path!(
+        buf, PathBuf::new()
+        .join("proto")
+        .join("builders")
+        .join(install_builder_id)
+        .join("bin")
+        .join("list-all")
+    ).into_os_string().into_string().unwrap();
 
     let versions = exec_command!("bash", [script_path]).stdout;
     let versions: Vec<String> = versions.split_whitespace().map(str::to_owned).collect();
     Ok(versions)
+}
+
+fn get_install_builder_id(version: VersionSpec) -> FnResult<String> {
+    let id = get_id(None)?;
+    Ok(format!("install-{id}-{version}"))
 }
 
 #[plugin_fn]
@@ -175,11 +163,9 @@ pub fn build_instructions(
         BuildInstruction::SetEnvVar("ASDF_CONCURRENCY".into(), cores),
     ]);
 
-    let id = get_id(None)?;
-
-    let install_id = String::from(format!("{id}-{version}-install"));
+    let install_builder_id = get_install_builder_id(version)?;
     let mut install_instruction = Box::new(BuilderInstruction {
-        id: install_id.clone(),
+        id: install_builder_id.clone(),
         exe: "bin/install".into(),
         git,
         ..BuilderInstruction::default()
@@ -201,7 +187,7 @@ pub fn build_instructions(
         instructions.push(BuildInstruction::RunCommand(
             Box::new(
                 CommandInstruction::with_builder(
-                    format!("{install_id}:{download_script_id}").as_str(),
+                    format!("{install_builder_id}:{download_script_id}").as_str(),
                     [""]
                 )
             )
@@ -210,7 +196,7 @@ pub fn build_instructions(
 
     instructions.push(
         BuildInstruction::RunCommand(Box::new(CommandInstruction::with_builder(
-            &install_id,
+            &install_builder_id,
             [""],
         ))),
     );
@@ -245,7 +231,7 @@ pub fn locate_executables(
 pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
     let mut output = LoadVersionsOutput::default();
 
-    let Ok(mut versions) = get_versions(input.context.temp_dir) else {
+    let Ok(mut versions) = get_versions(input.context.version) else {
         return Err(PluginError::Message("Failed to find any version".to_string()).into())
     };
      // Remove the last element, which is the latest version
