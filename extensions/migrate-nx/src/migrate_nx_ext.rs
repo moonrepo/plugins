@@ -50,7 +50,7 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
     let root_config_path = workspace_root.join("nx.json");
 
     if root_config_path.exists() {
-        host_log!(stdout, "Migrating root config <file>nx.json</file>",);
+        host_log!(stdout, "Migrating root config <file>nx.json</file>");
 
         migrator.migrate_root_config(json::read_file(&root_config_path)?)?;
 

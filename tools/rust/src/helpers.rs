@@ -1,7 +1,6 @@
-use std::path::PathBuf;
-
 use extism_pdk::*;
 use proto_pdk::*;
+use std::path::PathBuf;
 
 #[host_fn]
 extern "ExtismHost" {
@@ -10,7 +9,7 @@ extern "ExtismHost" {
 }
 
 fn get_home_env(key: &str) -> Result<Option<VirtualPath>, Error> {
-    match host_env!(key) {
+    match get_host_env_var(key)? {
         Some(value) => {
             if value.is_empty() {
                 return Ok(None);
@@ -20,9 +19,9 @@ fn get_home_env(key: &str) -> Result<Option<VirtualPath>, Error> {
 
             // Variable returns a real path, so convert to virtual
             let path = if path.is_absolute() {
-                virtual_path!(buf, path)
+                into_virtual_path(path)?
             } else {
-                virtual_path!("/cwd").join(path)
+                into_virtual_path("/cwd")?.join(path)
             };
 
             Ok(Some(path))
@@ -39,7 +38,7 @@ pub fn get_rustup_home(env: &HostEnvironment) -> Result<VirtualPath, Error> {
     // Cargo sets the RUSTUP_HOME env var when running tests,
     // which causes a ton of issues, so intercept it here!
     if let Some(test_env) = get_test_environment()? {
-        return Ok(virtual_path!(buf, test_env.sandbox).join(".home/.rustup"));
+        return Ok(into_virtual_path(test_env.sandbox)?.join(".home/.rustup"));
     }
 
     Ok(get_home_env("RUSTUP_HOME")?.unwrap_or_else(|| env.home_dir.join(".rustup")))

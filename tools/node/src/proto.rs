@@ -362,7 +362,7 @@ pub fn post_install(Json(input): Json<InstallHook>) -> FnResult<()> {
         args.extend(passthrough_args);
     }
 
-    exec_command!(inherit, "proto", args);
+    exec_streamed("proto", args)?;
 
     Ok(())
 }

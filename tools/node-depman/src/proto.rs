@@ -206,7 +206,7 @@ pub fn resolve_version(
                 let mut found_version = false;
 
                 // Infer from proto's environment variable
-                if let Some(node_version) = host_env!("PROTO_NODE_VERSION") {
+                if let Some(node_version) = get_host_env_var("PROTO_NODE_VERSION")? {
                     for node_release in &response {
                         // Theirs starts with v, ours does not
                         if node_release.version[1..] == node_version && node_release.npm.is_some() {
@@ -220,7 +220,7 @@ pub fn resolve_version(
 
                 // Otherwise call the current `node` binary and infer from that
                 if !found_version {
-                    let result = exec_command!("node", ["--version"]);
+                    let result = exec_captured("node", ["--version"])?;
                     let node_version = result.stdout.trim();
 
                     for node_release in &response {
