@@ -73,8 +73,6 @@ pub fn build_instructions(
                     "--no-default-features",
                 ],
             ))),
-            // Move file to the root so that the executable can be located,
-            // and also so that we can remove the target directory
             BuildInstruction::MoveFile(
                 env.os.get_exe_name("target/release/proto").into(),
                 env.os.get_exe_name("proto").into(),
@@ -83,7 +81,10 @@ pub fn build_instructions(
                 env.os.get_exe_name("target/release/proto-shim").into(),
                 env.os.get_exe_name("proto-shim").into(),
             ),
-            BuildInstruction::RemoveDir("target".into()),
+            BuildInstruction::RemoveAllExcept(vec![
+                env.os.get_exe_name("proto").into(),
+                env.os.get_exe_name("proto-shim").into(),
+            ]),
         ],
         ..Default::default()
     };

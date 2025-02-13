@@ -57,13 +57,11 @@ pub fn build_instructions(
                 "cargo",
                 ["build", "--bin", "moon", "--release"],
             ))),
-            // Move file to the root so that the executable can be located,
-            // and also so that we can remove the target directory
             BuildInstruction::MoveFile(
                 env.os.get_exe_name("target/release/moon").into(),
                 env.os.get_exe_name("moon").into(),
             ),
-            BuildInstruction::RemoveDir("target".into()),
+            BuildInstruction::RemoveAllExcept(vec![env.os.get_exe_name("moon").into()]),
         ],
         ..Default::default()
     };

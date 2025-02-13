@@ -100,18 +100,21 @@ pub fn build_instructions(
             BuildRequirement::CommandExistsOnPath("go".into()),
             BuildRequirement::CommandExistsOnPath("git".into()),
         ],
-        instructions: vec![BuildInstruction::RunCommand(Box::new({
-            CommandInstruction {
-                bin: if env.os.is_windows() {
-                    "./all.bat"
-                } else {
-                    "./all.bash"
+        instructions: vec![
+            BuildInstruction::RunCommand(Box::new({
+                CommandInstruction {
+                    bin: if env.os.is_windows() {
+                        "./all.bat"
+                    } else {
+                        "./all.bash"
+                    }
+                    .into(),
+                    cwd: Some("src".into()),
+                    ..Default::default()
                 }
-                .into(),
-                cwd: Some("src".into()),
-                ..Default::default()
-            }
-        }))],
+            })),
+            BuildInstruction::RemoveAllExcept(vec![env.os.get_exe_name("bin").into()]),
+        ],
         ..Default::default()
     };
 

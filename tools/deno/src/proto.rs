@@ -132,11 +132,7 @@ pub fn build_instructions(
             env.os.get_exe_name("target/release/deno").into(),
             env.os.get_exe_name("deno").into(),
         ),
-        // BuildInstruction::RemoveDir("target".into()),
-        BuildInstruction::RemoveAllExcept(vec![
-            env.os.get_exe_name("deno").into(),
-            "bench_util/js_runtime.rs".into(),
-        ]),
+        BuildInstruction::RemoveAllExcept(vec![env.os.get_exe_name("deno").into()]),
     ]);
 
     Ok(Json(output))
