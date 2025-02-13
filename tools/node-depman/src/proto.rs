@@ -18,10 +18,10 @@ extern "ExtismHost" {
 }
 
 #[plugin_fn]
-pub fn register_tool(Json(_): Json<ToolMetadataInput>) -> FnResult<Json<ToolMetadataOutput>> {
+pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {
     let manager = PackageManager::detect()?;
 
-    Ok(Json(ToolMetadataOutput {
+    Ok(Json(RegisterToolOutput {
         name: manager.to_string(),
         type_of: PluginType::DependencyManager,
         config_schema: Some(SchemaBuilder::build_root::<NodeDepmanPluginConfig>()),
@@ -30,10 +30,10 @@ pub fn register_tool(Json(_): Json<ToolMetadataInput>) -> FnResult<Json<ToolMeta
         } else {
             None
         },
-        minimum_proto_version: Some(Version::new(0, 42, 0)),
+        minimum_proto_version: Some(Version::new(0, 46, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         requires: vec!["node".into()],
-        ..ToolMetadataOutput::default()
+        ..RegisterToolOutput::default()
     }))
 }
 

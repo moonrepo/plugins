@@ -8,14 +8,14 @@ extern "ExtismHost" {
 }
 
 #[plugin_fn]
-pub fn register_tool(Json(_): Json<ToolMetadataInput>) -> FnResult<Json<ToolMetadataOutput>> {
-    Ok(Json(ToolMetadataOutput {
+pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {
+    Ok(Json(RegisterToolOutput {
         name: "uv".into(),
         type_of: PluginType::CommandLine,
-        minimum_proto_version: Some(Version::new(0, 42, 0)),
+        minimum_proto_version: Some(Version::new(0, 46, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
-        self_upgrade_commands: vec!["self".into()],
-        ..ToolMetadataOutput::default()
+        self_upgrade_commands: vec!["self upgrade".into()],
+        ..RegisterToolOutput::default()
     }))
 }
 

@@ -19,10 +19,10 @@ fn get_toolchain_dir(env: &HostEnvironment) -> AnyResult<VirtualPath> {
 }
 
 #[plugin_fn]
-pub fn register_tool(Json(_): Json<ToolMetadataInput>) -> FnResult<Json<ToolMetadataOutput>> {
+pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {
     let env = get_host_environment()?;
 
-    Ok(Json(ToolMetadataOutput {
+    Ok(Json(RegisterToolOutput {
         name: NAME.into(),
         type_of: PluginType::Language,
         default_version: Some(UnresolvedVersionSpec::Alias("stable".into())),
@@ -30,9 +30,9 @@ pub fn register_tool(Json(_): Json<ToolMetadataInput>) -> FnResult<Json<ToolMeta
             override_dir: Some(get_toolchain_dir(&env)?),
             version_suffix: Some(format!("-{}", get_target_triple(&env, NAME)?)),
         },
-        minimum_proto_version: Some(Version::new(0, 42, 0)),
+        minimum_proto_version: Some(Version::new(0, 46, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
-        ..ToolMetadataOutput::default()
+        ..RegisterToolOutput::default()
     }))
 }
 

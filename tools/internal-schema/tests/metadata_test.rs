@@ -12,12 +12,12 @@ mod schema_tool {
             .await;
 
         assert_eq!(
-            plugin.register_tool(ToolMetadataInput::default()).await,
-            ToolMetadataOutput {
+            plugin.register_tool(RegisterToolInput::default()).await,
+            RegisterToolOutput {
                 name: "moon-test".into(),
                 type_of: PluginType::CommandLine,
                 plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
-                ..ToolMetadataOutput::default()
+                ..RegisterToolOutput::default()
             }
         );
     }
