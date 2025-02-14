@@ -2913,7 +2913,7 @@ dependencies = [
  "url",
  "uuid",
  "version_spec 0.8.0",
- "warpgate 0.22.0",
+ "warpgate 0.22.1",
 ]
 
 [[package]]
@@ -2957,7 +2957,7 @@ dependencies = [
  "serde",
  "serde_json",
  "starbase_sandbox",
- "warpgate 0.22.0",
+ "warpgate 0.22.1",
 ]
 
 [[package]]
@@ -4803,9 +4803,9 @@ dependencies = [
 
 [[package]]
 name = "warpgate"
-version = "0.22.0"
+version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e2bcc6acadfc722f63e36e54657ff982b5e600438347a7a324ddbfadb632d6e9"
+checksum = "01ea086ddeb9939978db9acd2f76e0e7d83891ba9dd6bd10aaf33a84e82cf131"
 dependencies = [
  "async-trait",
  "compact_str",
