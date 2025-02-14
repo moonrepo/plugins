@@ -11,7 +11,7 @@ mod python_uv_tool {
         let metadata = plugin.register_tool(RegisterToolInput::default()).await;
 
         assert_eq!(metadata.name, "uv");
-        assert_eq!(metadata.self_upgrade_commands, vec!["self"]);
+        assert_eq!(metadata.self_upgrade_commands, vec!["self upgrade"]);
         assert_eq!(
             metadata.plugin_version.unwrap().to_string(),
             env!("CARGO_PKG_VERSION")
