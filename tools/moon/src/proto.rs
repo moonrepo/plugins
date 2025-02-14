@@ -46,6 +46,8 @@ pub fn build_instructions(
         ],
     )?;
 
+    let id = get_plugin_id()?;
+
     let output = BuildInstructionsOutput {
         source: Some(SourceLocation::Archive(ArchiveSource {
             url: format!("https://github.com/moonrepo/moon/archive/refs/tags/v{version}.tar.gz"),
@@ -59,9 +61,9 @@ pub fn build_instructions(
             ))),
             BuildInstruction::MoveFile(
                 env.os.get_exe_name("target/release/moon").into(),
-                env.os.get_exe_name("moon").into(),
+                env.os.get_exe_name(&id).into(),
             ),
-            BuildInstruction::RemoveAllExcept(vec![env.os.get_exe_name("moon").into()]),
+            BuildInstruction::RemoveAllExcept(vec![env.os.get_exe_name(&id).into()]),
         ],
         ..Default::default()
     };
