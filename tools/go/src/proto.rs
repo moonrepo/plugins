@@ -13,14 +13,14 @@ extern "ExtismHost" {
 static NAME: &str = "Go";
 
 #[plugin_fn]
-pub fn register_tool(Json(_): Json<ToolMetadataInput>) -> FnResult<Json<ToolMetadataOutput>> {
-    Ok(Json(ToolMetadataOutput {
+pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {
+    Ok(Json(RegisterToolOutput {
         name: NAME.into(),
         type_of: PluginType::Language,
         config_schema: Some(SchemaBuilder::build_root::<GoPluginConfig>()),
-        minimum_proto_version: Some(Version::new(0, 42, 0)),
+        minimum_proto_version: Some(Version::new(0, 46, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
-        ..ToolMetadataOutput::default()
+        ..RegisterToolOutput::default()
     }))
 }
 
@@ -100,18 +100,21 @@ pub fn build_instructions(
             BuildRequirement::CommandExistsOnPath("go".into()),
             BuildRequirement::CommandExistsOnPath("git".into()),
         ],
-        instructions: vec![BuildInstruction::RunCommand(Box::new({
-            CommandInstruction {
-                bin: if env.os.is_windows() {
-                    "./all.bat"
-                } else {
-                    "./all.bash"
+        instructions: vec![
+            BuildInstruction::RunCommand(Box::new({
+                CommandInstruction {
+                    bin: if env.os.is_windows() {
+                        "./all.bat"
+                    } else {
+                        "./all.bash"
+                    }
+                    .into(),
+                    cwd: Some("src".into()),
+                    ..Default::default()
                 }
-                .into(),
-                cwd: Some("src".into()),
-                ..Default::default()
-            }
-        }))],
+            })),
+            BuildInstruction::RemoveAllExcept(vec![env.os.get_exe_name("bin").into()]),
+        ],
         ..Default::default()
     };
 
