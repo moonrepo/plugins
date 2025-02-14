@@ -36,7 +36,7 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
     let root_config_path = workspace_root.join("turbo.json");
 
     if root_config_path.exists() {
-        host_log!(stdout, "Migrating root config <file>turbo.json</file>",);
+        host_log!(stdout, "Migrating root config <file>turbo.json</file>");
 
         migrator.migrate_root_config(json::read_file(&root_config_path)?)?;
 

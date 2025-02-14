@@ -9,7 +9,7 @@ mod rust_tool {
         let plugin = sandbox.create_plugin("rust-test").await;
 
         let metadata = plugin
-            .register_tool(ToolMetadataInput {
+            .register_tool(RegisterToolInput {
                 id: "rust-test".into(),
             })
             .await;

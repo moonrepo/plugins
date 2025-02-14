@@ -11,14 +11,12 @@ mod schema_tool {
             .create_schema_plugin("schema-test", locate_fixture("schemas").join("base.toml"))
             .await;
 
+        let metadata = plugin.register_tool(RegisterToolInput::default()).await;
+
+        assert_eq!(metadata.name, "moon-test");
         assert_eq!(
-            plugin.register_tool(ToolMetadataInput::default()).await,
-            ToolMetadataOutput {
-                name: "moon-test".into(),
-                type_of: PluginType::CommandLine,
-                plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
-                ..ToolMetadataOutput::default()
-            }
+            metadata.plugin_version.unwrap().to_string(),
+            env!("CARGO_PKG_VERSION")
         );
     }
 }

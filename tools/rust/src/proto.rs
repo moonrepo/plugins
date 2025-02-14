@@ -19,10 +19,10 @@ fn get_toolchain_dir(env: &HostEnvironment) -> AnyResult<VirtualPath> {
 }
 
 #[plugin_fn]
-pub fn register_tool(Json(_): Json<ToolMetadataInput>) -> FnResult<Json<ToolMetadataOutput>> {
+pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {
     let env = get_host_environment()?;
 
-    Ok(Json(ToolMetadataOutput {
+    Ok(Json(RegisterToolOutput {
         name: NAME.into(),
         type_of: PluginType::Language,
         default_version: Some(UnresolvedVersionSpec::Alias("stable".into())),
@@ -30,9 +30,9 @@ pub fn register_tool(Json(_): Json<ToolMetadataInput>) -> FnResult<Json<ToolMeta
             override_dir: Some(get_toolchain_dir(&env)?),
             version_suffix: Some(format!("-{}", get_target_triple(&env, NAME)?)),
         },
-        minimum_proto_version: Some(Version::new(0, 42, 0)),
+        minimum_proto_version: Some(Version::new(0, 46, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
-        ..ToolMetadataOutput::default()
+        ..RegisterToolOutput::default()
     }))
 }
 
@@ -126,23 +126,20 @@ pub fn native_install(
             )?;
         }
 
-        exec_command!(
-            input,
-            ExecCommandInput {
-                command: script_path.to_string_lossy().to_string(),
-                args: vec!["--default-toolchain".into(), "none".into(), "-y".into()],
-                set_executable: true,
-                stream: true,
-                ..ExecCommandInput::default()
-            }
-        );
+        exec(ExecCommandInput {
+            command: script_path.to_string_lossy().to_string(),
+            args: vec!["--default-toolchain".into(), "none".into(), "-y".into()],
+            set_executable: true,
+            stream: true,
+            ..ExecCommandInput::default()
+        })?;
 
         // Update PATH explicitly, since we can't "reload the shell"
         // on the host side. This is good enough since it's deterministic.
-        host_env!(
-            "PATH",
-            format!("{}:$HOME/.cargo/bin", get_cargo_home(&env)?.join("bin"))
-        );
+        add_host_paths([
+            get_cargo_home(&env)?.join("bin").to_string(),
+            "$HOME/.cargo/bin".to_string(),
+        ])?;
     }
 
     let version = &input.context.version;
@@ -153,7 +150,7 @@ pub fn native_install(
     debug!("Installing target <id>{}</id> with rustup", triple);
 
     // Install if not already installed
-    let installed_list = exec_command!(pipe, "rustup", ["toolchain", "list"]);
+    let installed_list = exec_captured("rustup", ["toolchain", "list"])?;
     let mut do_install = true;
 
     if installed_list
@@ -171,16 +168,12 @@ pub fn native_install(
         } else {
             debug!("Detected a broken toolchain, uninstalling it");
 
-            exec_command!(inherit, "rustup", ["toolchain", "uninstall", &triple]);
+            exec_streamed("rustup", ["toolchain", "uninstall", &triple])?;
         }
     }
 
     if do_install {
-        exec_command!(
-            inherit,
-            "rustup",
-            ["toolchain", "install", &triple, "--force"]
-        );
+        exec_streamed("rustup", ["toolchain", "install", &triple, "--force"])?;
     }
 
     // Always mark as installed so that binaries can be located!
@@ -198,7 +191,7 @@ pub fn native_uninstall(
     let channel = get_channel_from_version(&input.context.version);
     let triple = format!("{}-{}", channel, get_target_triple(&env, NAME)?);
 
-    exec_command!(inherit, "rustup", ["toolchain", "uninstall", &triple]);
+    exec_streamed("rustup", ["toolchain", "uninstall", &triple])?;
 
     Ok(Json(NativeUninstallOutput {
         uninstalled: true,

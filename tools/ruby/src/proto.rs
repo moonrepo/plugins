@@ -8,15 +8,15 @@ extern "ExtismHost" {
 }
 
 #[plugin_fn]
-pub fn register_tool(Json(_): Json<ToolMetadataInput>) -> FnResult<Json<ToolMetadataOutput>> {
-    Ok(Json(ToolMetadataOutput {
+pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {
+    Ok(Json(RegisterToolOutput {
         name: "Ruby".into(),
         type_of: PluginType::Language,
         default_install_strategy: InstallStrategy::BuildFromSource,
-        minimum_proto_version: Some(Version::new(0, 42, 0)),
+        minimum_proto_version: Some(Version::new(0, 46, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         unstable: Switch::Message("Windows is currently not supported.".into()),
-        ..ToolMetadataOutput::default()
+        ..RegisterToolOutput::default()
     }))
 }
 
@@ -104,7 +104,7 @@ pub fn build_instructions(
                     url: "https://github.com/rbenv/ruby-build.git".into(),
                     ..Default::default()
                 },
-                ..BuilderInstruction::default()
+                ..Default::default()
             })),
             BuildInstruction::RunCommand(Box::new(CommandInstruction::with_builder(
                 "ruby-build",

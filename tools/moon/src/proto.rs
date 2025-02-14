@@ -8,14 +8,14 @@ extern "ExtismHost" {
 }
 
 #[plugin_fn]
-pub fn register_tool(Json(_): Json<ToolMetadataInput>) -> FnResult<Json<ToolMetadataOutput>> {
-    Ok(Json(ToolMetadataOutput {
+pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {
+    Ok(Json(RegisterToolOutput {
         name: "moon".into(),
         type_of: PluginType::CommandLine,
-        minimum_proto_version: Some(Version::new(0, 42, 0)),
+        minimum_proto_version: Some(Version::new(0, 46, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         self_upgrade_commands: vec!["upgrade".into()],
-        ..ToolMetadataOutput::default()
+        ..RegisterToolOutput::default()
     }))
 }
 
@@ -57,13 +57,11 @@ pub fn build_instructions(
                 "cargo",
                 ["build", "--bin", "moon", "--release"],
             ))),
-            // Move file to the root so that the executable can be located,
-            // and also so that we can remove the target directory
             BuildInstruction::MoveFile(
                 env.os.get_exe_name("target/release/moon").into(),
                 env.os.get_exe_name("moon").into(),
             ),
-            BuildInstruction::RemoveDir("target".into()),
+            BuildInstruction::RemoveAllExcept(vec![env.os.get_exe_name("moon").into()]),
         ],
         ..Default::default()
     };

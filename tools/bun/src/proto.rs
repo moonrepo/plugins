@@ -12,15 +12,15 @@ extern "ExtismHost" {
 static NAME: &str = "Bun";
 
 #[plugin_fn]
-pub fn register_tool(Json(_): Json<ToolMetadataInput>) -> FnResult<Json<ToolMetadataOutput>> {
-    Ok(Json(ToolMetadataOutput {
+pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {
+    Ok(Json(RegisterToolOutput {
         name: NAME.into(),
         type_of: PluginType::Language,
         config_schema: Some(SchemaBuilder::build_root::<BunPluginConfig>()),
-        minimum_proto_version: Some(Version::new(0, 42, 0)),
+        minimum_proto_version: Some(Version::new(0, 46, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         self_upgrade_commands: vec!["upgrade".into()],
-        ..ToolMetadataOutput::default()
+        ..RegisterToolOutput::default()
     }))
 }
 
@@ -74,7 +74,7 @@ pub fn download_prebuilt(
     let mut avx2_suffix = "";
 
     if env.arch == HostArch::X64 && env.os.is_linux() && command_exists(&env, "grep") {
-        let output = exec_command!("grep", ["avx2", "/proc/cpuinfo"]);
+        let output = exec_captured("grep", ["avx2", "/proc/cpuinfo"])?;
 
         if output.exit_code != 0 {
             avx2_suffix = "-baseline";

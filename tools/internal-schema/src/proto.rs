@@ -36,7 +36,7 @@ fn get_platform<'schema>(
 }
 
 #[plugin_fn]
-pub fn register_tool(Json(_): Json<ToolMetadataInput>) -> FnResult<Json<ToolMetadataOutput>> {
+pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {
     let env = get_host_environment()?;
     let schema = get_schema()?;
     let platform = get_platform(&schema, &env)?;
@@ -63,7 +63,7 @@ pub fn register_tool(Json(_): Json<ToolMetadataInput>) -> FnResult<Json<ToolMeta
         );
     }
 
-    Ok(Json(ToolMetadataOutput {
+    Ok(Json(RegisterToolOutput {
         name: schema.name,
         type_of: match schema.type_of {
             SchemaType::CommandLine => PluginType::CommandLine,
@@ -71,13 +71,12 @@ pub fn register_tool(Json(_): Json<ToolMetadataInput>) -> FnResult<Json<ToolMeta
             SchemaType::Language => PluginType::Language,
             SchemaType::VersionManager => PluginType::VersionManager,
         },
-        // Enable after we remove primary/secondary
-        // minimum_proto_version: Some(Version::new(0, 42, 0)),
+        minimum_proto_version: Some(Version::new(0, 46, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         self_upgrade_commands: schema.metadata.self_upgrade_commands,
         deprecations,
         requires: schema.metadata.requires,
-        ..ToolMetadataOutput::default()
+        ..RegisterToolOutput::default()
     }))
 }
 
