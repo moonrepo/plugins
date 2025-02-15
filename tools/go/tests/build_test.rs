@@ -1,3 +1,5 @@
+// NOTE: Doesn't work in GitHub CI.
+
 // use proto_pdk_test_utils::*;
 
 // mod go_tool {
