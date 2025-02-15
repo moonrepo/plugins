@@ -167,6 +167,7 @@ pub fn build_instructions(
                 HostPackageManager::Apt,
                 ["python3", "python3-pip", "g++-12", "gcc-12", "make"],
             ),
+            SystemDependency::for_pm(HostPackageManager::Brew, ["gcc@12"]),
             SystemDependency::for_pm(
                 HostPackageManager::Dnf,
                 ["python3", "python3-pip", "gcc-c++", "make"],
