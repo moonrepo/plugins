@@ -1,7 +1,5 @@
-use crate::config::NodeConfig;
 use extism_pdk::*;
 use moon_pdk::*;
-use schematic::SchemaBuilder;
 
 #[plugin_fn]
 pub fn register_toolchain(
