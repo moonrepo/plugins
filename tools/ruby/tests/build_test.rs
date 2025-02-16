@@ -1,3 +1,5 @@
+// NOTE: Doesn't work in GitHub CI.
+//
 // #[cfg(unix)]
 // mod ruby_tool {
 //     use proto_pdk_test_utils::*;

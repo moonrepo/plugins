@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.16.0
+
+#### 🐞 Fixes
+
+- Added `gcc@12` for macOS Homebrew when building from source.
+
 ## 0.15.0
 
 #### 🚀 Updates

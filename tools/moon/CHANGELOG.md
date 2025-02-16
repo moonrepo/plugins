@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0
+
+#### 🐞 Fixes
+
+- Fixed the wrong binary name being used when building from source.
+
 ## 0.2.0
 
 #### 🚀 Updates
