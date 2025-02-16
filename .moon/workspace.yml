@@ -4,7 +4,7 @@ projects:
   root: .
   # Common
   extension-common: crates/extension-common
-  node-common: crates/node-common
+  lang-node-common: crates/lang-node-common
   # Extensions
   download-extension: extensions/download
   migrate-nx-extension: extensions/migrate-nx
