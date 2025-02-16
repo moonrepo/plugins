@@ -1,5 +1,4 @@
 use crate::config::AsdfPluginConfig;
-use extism_pdk::json::Value;
 use extism_pdk::*;
 use proto_pdk::*;
 use std::collections::HashMap;
@@ -7,7 +6,6 @@ use std::path::PathBuf;
 
 struct Repo {
     url: String,
-    default_branch: String,
 }
 
 #[host_fn]
@@ -36,31 +34,12 @@ fn get_executable_name() -> FnResult<String> {
 }
 
 fn get_repo() -> FnResult<Repo> {
-    fn get_default_branch(repo: &str) -> FnResult<String> {
-        let repo_parts: Vec<&str> = repo.split("/").collect();
-    
-        // Get the default branch of the repository
-        let repo_data: Result<_, Error> = fetch_json::<std::string::String, Value>(format!("https://api.github.com/repos/{}/{}", repo_parts[3], repo_parts[4]));
-        match repo_data {
-            Ok(repo_data) => {
-                let default_branch = match repo_data.get("default_branch") {
-                    Some(branch) => branch,
-                    None => &Value::String(String::from("main"))
-                };
-                let default_branch = default_branch.as_str().unwrap();
-                return Ok(default_branch.into());
-            },
-            _ => Err(PluginError::Message("Failed to fetch repository's default branch".to_string()).into())
-        }
-    }
-
     let config = get_tool_config::<AsdfPluginConfig>()?;
     if is_asdf_repo(&config) {
         let repo_url = config.asdf_repository.unwrap().trim().to_string();
 
         return Ok(Repo {
             url: repo_url.to_string(),
-            default_branch: get_default_branch(&repo_url)?
         });
     }
 
@@ -87,21 +66,16 @@ fn get_repo() -> FnResult<Repo> {
 
     Ok(Repo {
         url: repo_url.to_string(),
-        default_branch: get_default_branch(&repo_url)?
     })
 }
 
-fn get_versions(install_version: VersionSpec) -> FnResult<Vec<String>> {
-    let install_builder_id = get_install_builder_id(install_version)?;
-    let script_path = real_path!(
-        buf, PathBuf::new()
-        .join("proto")
-        .join("builders")
-        .join(install_builder_id)
-        .join("bin")
-        .join("list-all")
-    ).into_os_string().into_string().unwrap();
+fn get_versions(_: VersionSpec) -> FnResult<Vec<String>> {
+    let script_path = virtual_path!(format!("/proto/backends/{}/bin/list-all", get_backend_id()?));
+    if !script_path.exists() {
+        return Err(PluginError::Message("list-all script not found, is the ASDF repository valid?".to_string()).into());
+    }
 
+    let script_path = script_path.real_path().unwrap().into_os_string().into_string().unwrap();
     let versions = exec_command!("bash", [script_path]).stdout;
     let versions: Vec<String> = versions.split_whitespace().map(str::to_owned).collect();
     Ok(versions)
@@ -112,16 +86,33 @@ fn get_install_builder_id(version: VersionSpec) -> FnResult<String> {
     Ok(format!("install-{id}-{version}"))
 }
 
+fn get_backend_id() -> FnResult<String> {
+    let id = get_id(None)?;
+    Ok(format!("asdf-{id}"))
+}
+
 #[plugin_fn]
-pub fn register_tool(Json(input): Json<ToolMetadataInput>) -> FnResult<Json<ToolMetadataOutput>> {    
-    Ok(Json(ToolMetadataOutput {
+pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {    
+    Ok(Json(RegisterToolOutput {
         name: input.id,
         type_of: PluginType::Language,
-        minimum_proto_version: Some(Version::new(0, 45, 2)),
+        minimum_proto_version: Some(Version::new(0, 46, 0)),
         default_install_strategy: InstallStrategy::BuildFromSource,
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
 		config_schema: Some(schematic::SchemaBuilder::generate::<AsdfPluginConfig>()),
-        ..ToolMetadataOutput::default()
+        ..RegisterToolOutput::default()
+    }))
+}
+
+#[plugin_fn]
+pub fn register_backend(Json(_): Json<RegisterBackendInput>) -> FnResult<Json<RegisterBackendOutput>> {
+    Ok(Json(RegisterBackendOutput {
+        backend_id: get_backend_id()?,
+        source: Some(SourceLocation::Git(GitSource {
+            url: String::from(get_repo()?.url),
+            ..GitSource::default()
+        })),
+        ..RegisterBackendOutput::default()
     }))
 }
 
@@ -170,7 +161,15 @@ pub fn build_instructions(
         git,
         ..BuilderInstruction::default()
     });
-    let has_download_script = send_request!(format!("{}/blob/{}/bin/download", repo.url, repo.default_branch)).status == 200;
+    let has_download_script = real_path!(
+        buf, PathBuf::new()
+        .join("proto")
+        .join("backends")
+        .join(get_backend_id()?)
+        .join("bin")
+        .join("download")
+    ).exists();
+
     // In older versions of asdf there may not be a 'download' script,
     // instead both download and install were done in the 'install' script.
     // However, in newer versions, there's two separate 'download' and 'install' scripts.
@@ -230,7 +229,6 @@ pub fn locate_executables(
 /// Loads all versions, if the version is invalid, skip it. Expects versions to be ordered in descending order.
 pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
     let mut output = LoadVersionsOutput::default();
-
     let Ok(mut versions) = get_versions(input.context.version) else {
         return Err(PluginError::Message("Failed to find any version".to_string()).into())
     };
