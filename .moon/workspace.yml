@@ -3,7 +3,7 @@ $schema: "https://moonrepo.dev/schemas/workspace.json"
 projects:
   root: .
   # Common
-  extension-common: extensions/common
+  extension-common: crates/extension-common
   node-common: crates/node-common
   # Extensions
   download-extension: extensions/download
