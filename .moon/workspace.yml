@@ -1,10 +1,30 @@
 $schema: "https://moonrepo.dev/schemas/workspace.json"
 
 projects:
-  - "crates/*"
-  - "extensions/*"
-  - "tools/*"
-  - "."
+  root: .
+  # Common
+  extension-common: crates/extension-common
+  lang-node-common: crates/lang-node-common
+  # Extensions
+  download-extension: extensions/download
+  migrate-nx-extension: extensions/migrate-nx
+  migrate-turborepo-extension: extensions/migrate-turborepo
+  unpack-extension: extensions/unpack
+  # Tools
+  bun-tool: tools/bun
+  deno-tool: tools/deno
+  go-tool: tools/go
+  moon-tool: tools/moon
+  node-tool: tools/node
+  node-depman-tool: tools/node-depman
+  proto-tool: tools/proto
+  python-tool: tools/python
+  python-uv-tool: tools/python-uv
+  ruby-tool: tools/ruby
+  rust-tool: tools/rust
+  schema-tool: tools/internal-schema
+  # Toolchains
+  node-toolchain: toolchains/node
 
 runner:
   logRunningCommand: true

@@ -1,5 +1,5 @@
 [package]
-name = "node_common"
+name = "lang_node_common"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"

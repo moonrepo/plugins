@@ -2,7 +2,7 @@ use crate::config::NodeDepmanPluginConfig;
 use crate::npm_registry::parse_registry_response;
 use crate::package_manager::PackageManager;
 use extism_pdk::*;
-use node_common::{NodeDistVersion, VoltaField};
+use lang_node_common::{NodeDistVersion, VoltaField};
 use nodejs_package_json::PackageJson;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
