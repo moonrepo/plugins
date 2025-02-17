@@ -2405,8 +2405,6 @@ dependencies = [
 [[package]]
 name = "moon_common"
 version = "0.0.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d03352fb4c92722d74519112cbec4f90ee05c7f116172203ffd706324678d5cf"
 dependencies = [
  "compact_str",
  "dirs 6.0.0",
@@ -2423,8 +2421,6 @@ dependencies = [
 [[package]]
 name = "moon_config"
 version = "0.0.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "91db9b0bcd4e89a1e32de3da7663ba4bbd14baa160b011e0e30abe1f8af068a9"
 dependencies = [
  "indexmap",
  "miette 7.5.0",
@@ -2446,8 +2442,6 @@ dependencies = [
 [[package]]
 name = "moon_pdk"
 version = "0.0.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "58946072898786d6b189271995ac07f73fee75887cc85bf3dfbe2cdf2d7d0422"
 dependencies = [
  "clap",
  "extism-pdk",
@@ -2459,8 +2453,6 @@ dependencies = [
 [[package]]
 name = "moon_pdk_api"
 version = "0.0.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb256e68f981974aaff0975b061f629b46dea4ce31051f3ff1b87c491c2d0caf"
 dependencies = [
  "moon_common",
  "moon_config",
@@ -2473,8 +2465,6 @@ dependencies = [
 [[package]]
 name = "moon_pdk_test_utils"
 version = "0.0.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb9accc0d5c9809765215c5b700ebc03786a878a3368f352e78e72a68f67b32c"
 dependencies = [
  "extism",
  "moon_pdk_api",
@@ -2486,8 +2476,6 @@ dependencies = [
 [[package]]
 name = "moon_target"
 version = "0.0.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "82083ee67108d876978e412ee6702e7ed2a87746412e567efd11e440515836a7"
 dependencies = [
  "compact_str",
  "miette 7.5.0",
@@ -4152,9 +4140,9 @@ dependencies = [
 
 [[package]]
 name = "starbase_styles"
-version = "0.4.13"
+version = "0.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f947bf66e858922ddd27eef15656f4ac4fa11401cfdccbc4140674ea68ee6465"
+checksum = "27604aa17f1a81b57033ca1a466fa5a39f24211a3f06e98d64f804af1c665bc5"
 dependencies = [
  "dirs 6.0.0",
  "owo-colors",
@@ -4715,6 +4703,16 @@ name = "typenum"
 version = "1.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
+
+[[package]]
+name = "typescript_toolchain"
+version = "0.0.1"
+dependencies = [
+ "extism-pdk",
+ "moon_pdk",
+ "schematic",
+ "serde",
+]
 
 [[package]]
 name = "unicode-ident"

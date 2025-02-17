@@ -28,6 +28,7 @@ projects:
   schema-tool: tools/internal-schema
   # Toolchains
   node-toolchain: toolchains/node
+  typescript-toolchain: toolchains/typescript
 
 runner:
   logRunningCommand: true
