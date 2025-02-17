@@ -18,6 +18,7 @@ extism-pdk = { workspace = true }
 moon_pdk = { workspace = true }
 schematic = { workspace = true }
 serde = { workspace = true }
+typescript_tsconfig_json = { workspace = true }
 
 [features]
 default = ["wasm"]

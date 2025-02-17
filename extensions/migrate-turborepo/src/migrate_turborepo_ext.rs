@@ -10,9 +10,9 @@ extern "ExtismHost" {
 
 #[plugin_fn]
 pub fn register_extension(
-    Json(_): Json<ExtensionMetadataInput>,
-) -> FnResult<Json<ExtensionMetadataOutput>> {
-    Ok(Json(ExtensionMetadataOutput {
+    Json(_): Json<RegisterExtensionInput>,
+) -> FnResult<Json<RegisterExtensionOutput>> {
+    Ok(Json(RegisterExtensionOutput {
         name: "Migrate Turborepo".into(),
         description: Some("Migrate a Turborepo repository to moon by converting all <file>turbo.json</file> files into moon configuration files.".into()),
         plugin_version: env!("CARGO_PKG_VERSION").into(),

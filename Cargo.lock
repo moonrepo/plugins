@@ -4712,6 +4712,21 @@ dependencies = [
  "moon_pdk",
  "schematic",
  "serde",
+ "typescript_tsconfig_json",
+]
+
+[[package]]
+name = "typescript_tsconfig_json"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "304bec14e5e1c54d3c0db1edfd20dc3656debd9660765614daa16134940169f3"
+dependencies = [
+ "clean-path",
+ "indexmap",
+ "relative-path",
+ "rustc-hash",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

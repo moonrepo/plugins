@@ -30,8 +30,9 @@ proto_pdk = { version = "0.28.3" }            # , path = "../../proto/crates/pdk
 proto_pdk_api = { version = "0.27.5" }        # , path = "../../proto/crates/pdk-api" }
 proto_pdk_test_utils = { version = "0.35.4" } # , path = "../../proto/crates/pdk-test-utils" }
 
-# Node.js
+# JavaScript
 nodejs_package_json = "0.3.1"
+typescript_tsconfig_json = { version = "0.4.0", features = ["serialize"] }
 
 [profile.release]
 codegen-units = 1
