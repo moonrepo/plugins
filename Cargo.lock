@@ -508,6 +508,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "common-path"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2382f75942f4b3be3690fe4f86365e9c853c1587d6ee58212cebf6e2a9ccd101"
+
+[[package]]
 name = "compact_str"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1015,6 +1021,12 @@ name = "dunce"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "92773504d58c093f6de2459af4af33faa518c13451eb8f2b5698ed3d36e7c813"
+
+[[package]]
+name = "ec4rs"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "acf65d056c7da9c971c2847ce250fd1f0f9659d5718845c3ec0ad95f5668352c"
 
 [[package]]
 name = "either"
@@ -2440,12 +2452,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "moon_file_group"
+version = "0.0.3"
+dependencies = [
+ "common-path",
+ "miette 7.5.0",
+ "moon_common",
+ "moon_config",
+ "once_cell",
+ "serde",
+ "starbase_utils",
+ "thiserror 2.0.11",
+]
+
+[[package]]
 name = "moon_pdk"
 version = "0.0.14"
 dependencies = [
  "clap",
  "extism-pdk",
+ "moon_common",
  "moon_pdk_api",
+ "moon_project",
+ "moon_task",
+ "rustc-hash",
  "serde",
  "warpgate_pdk 0.11.0",
 ]
@@ -2459,7 +2489,8 @@ dependencies = [
  "rustc-hash",
  "schematic 0.17.11",
  "serde",
- "warpgate_api 0.12.1",
+ "serde_json",
+ "warpgate_api",
 ]
 
 [[package]]
@@ -2471,6 +2502,19 @@ dependencies = [
  "serde",
  "serde_json",
  "warpgate 0.22.1",
+]
+
+[[package]]
+name = "moon_project"
+version = "0.0.3"
+dependencies = [
+ "miette 7.5.0",
+ "moon_common",
+ "moon_config",
+ "moon_file_group",
+ "moon_task",
+ "serde",
+ "thiserror 2.0.11",
 ]
 
 [[package]]
@@ -2486,6 +2530,20 @@ dependencies = [
  "serde",
  "thiserror 2.0.11",
  "tracing",
+]
+
+[[package]]
+name = "moon_task"
+version = "0.0.3"
+dependencies = [
+ "miette 7.5.0",
+ "moon_common",
+ "moon_config",
+ "moon_target",
+ "once_cell",
+ "rustc-hash",
+ "serde",
+ "starbase_utils",
 ]
 
 [[package]]
@@ -4169,27 +4227,7 @@ checksum = "e22b27b7f476b5b6beffe16e694ff4ae8d38f808612b7eef9e279c3cf47eb856"
 dependencies = [
  "async-trait",
  "dirs 6.0.0",
- "json-strip-comments",
- "miette 7.5.0",
- "reqwest",
- "serde",
- "serde_json",
- "starbase_styles 0.4.13",
- "thiserror 2.0.11",
- "toml",
- "tracing",
- "url",
- "wax",
-]
-
-[[package]]
-name = "starbase_utils"
-version = "0.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e6e52b7d15ac7e4dfbae97954539d17a8e6aa355f0835222b04d3a2a65f3ff38"
-dependencies = [
- "async-trait",
- "dirs 6.0.0",
+ "ec4rs",
  "fs4",
  "json-strip-comments",
  "miette 7.5.0",
@@ -4709,9 +4747,13 @@ name = "typescript_toolchain"
 version = "0.0.1"
 dependencies = [
  "extism-pdk",
+ "moon_common",
  "moon_pdk",
+ "moon_project",
+ "rustc-hash",
  "schematic",
  "serde",
+ "starbase_utils",
  "typescript_tsconfig_json",
 ]
 
