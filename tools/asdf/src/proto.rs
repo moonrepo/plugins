@@ -92,7 +92,41 @@ fn get_backend_id() -> FnResult<String> {
 }
 
 #[plugin_fn]
-pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {    
+pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
+    Ok(Json(DetectVersionOutput {
+        files: vec![
+            ".tool-versions".into(),
+        ],
+        ignore: vec![]
+    }))
+}
+
+#[plugin_fn]
+pub fn parse_version_file(Json(input): Json<ParseVersionFileInput>) -> FnResult<Json<ParseVersionFileOutput>> {
+    let mut final_version = None;
+    
+    if input.file != ".tool-versions" {
+        return Err(PluginError::Message("Invalid version file".to_string()).into());
+    }
+
+    for line in input.content.lines() {
+        let line = line.trim();
+        // TODO: Handle comments
+        if line.is_empty() {
+            continue;
+        }
+        let (tool, version) = line.split_once(' ').unwrap_or((line, ""));
+        if tool == get_id(None)? {
+            final_version = Some(UnresolvedVersionSpec::parse(version)?);
+            break;
+        }
+    }
+    
+    Ok(Json(ParseVersionFileOutput { version: final_version }))
+}
+
+#[plugin_fn]
+pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {
     Ok(Json(RegisterToolOutput {
         name: input.id,
         type_of: PluginType::Language,
