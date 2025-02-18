@@ -4637,6 +4637,8 @@ dependencies = [
  "rustc-hash",
  "schematic",
  "serde",
+ "serde_json",
+ "starbase_sandbox",
  "starbase_utils",
  "typescript_tsconfig_json",
 ]

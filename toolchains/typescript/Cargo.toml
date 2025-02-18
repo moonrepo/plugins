@@ -11,7 +11,7 @@ pre-release-replacements = [
 ]
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "lib"]
 
 [dependencies]
 extism-pdk = { workspace = true }
@@ -23,6 +23,10 @@ schematic = { workspace = true }
 serde = { workspace = true }
 starbase_utils = { workspace = true, features = ["editor-config", "json"] }
 typescript_tsconfig_json = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+starbase_sandbox = { workspace = true }
 
 [features]
 default = ["wasm"]
