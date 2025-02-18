@@ -1,18 +1,11 @@
-use crate::{config::TypeScriptConfig, tsconfig_json::TsConfigJson};
-use extism_pdk::*;
+use crate::config::TypeScriptConfig;
+use crate::tsconfig_json::TsConfigJson;
 use moon_common::Id;
-use moon_pdk::{
-    host_log, is_project_toolchain_enabled, AnyResult, HostLogInput, MoonContext, VirtualPath,
-};
+use moon_pdk::{is_project_toolchain_enabled, AnyResult, MoonContext, VirtualPath};
 use moon_project::Project;
 use rustc_hash::FxHashMap;
 use serde::Deserialize;
 use typescript_tsconfig_json::{CompilerOptionsPathsMap, CompilerPath, ExtendsField};
-
-#[host_fn]
-extern "ExtismHost" {
-    fn host_log(input: Json<HostLogInput>);
-}
 
 pub struct ReferenceData {
     package_name: Option<String>,
@@ -73,16 +66,7 @@ fn sync_root_project_reference(
     }
 
     let mut tsconfig = TsConfigJson::load(root_tsconfig_path)?;
-
-    // Mark as changed only if a reference was added
-    if tsconfig.add_project_ref(&project_root, &config.project_config_file_name)? {
-        host_log!(
-            "Syncing <id>{}</id> as a project reference to <path>{}</path>",
-            project.id,
-            tsconfig.path.display(),
-        );
-    }
-
+    tsconfig.add_project_ref(&project_root, &config.project_config_file_name)?;
     tsconfig.save()
 }
 
