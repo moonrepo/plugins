@@ -16,7 +16,6 @@ pub fn register_toolchain(
                 .into(),
         ),
         plugin_version: env!("CARGO_PKG_VERSION").into(),
-        ..RegisterToolchainOutput::default()
     }))
 }
 
@@ -34,7 +33,8 @@ pub fn sync_project(Json(input): Json<SyncProjectInput>) -> FnResult<Json<SyncPr
     let config = get_toolchain_config::<TypeScriptConfig>(input.config)?;
     let dependencies = load_projects(input.project_dependencies)?;
 
-    output.changed_files = sync_project_references(&input.context, config, project, dependencies)?;
+    output.changed_files =
+        sync_project_references(&input.context, &config, &project, &dependencies)?;
 
     Ok(Json(output))
 }

@@ -21,7 +21,7 @@ moon_project = { workspace = true }
 rustc-hash = { workspace = true }
 schematic = { workspace = true }
 serde = { workspace = true }
-starbase_utils = { workspace = true, features = ["json"] }
+starbase_utils = { workspace = true, features = ["editor-config", "json"] }
 typescript_tsconfig_json = { workspace = true }
 
 [features]
