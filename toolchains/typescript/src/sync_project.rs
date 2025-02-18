@@ -171,7 +171,7 @@ pub fn sync_project_options(
                 || options
                     .out_dir
                     .as_ref()
-                    .is_some_and(|dir| dir.as_str() != &out_dir)
+                    .is_some_and(|dir| dir.as_str() != out_dir)
             {
                 options.out_dir = Some(CompilerPath::from(out_dir));
 

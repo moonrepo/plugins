@@ -1,15 +1,19 @@
+#[cfg(feature = "wasm")]
 use extism_pdk::*;
 use moon_common::path::to_relative_virtual_string;
-use moon_pdk::{host_log, json_config, map_miette_error, AnyResult, HostLogInput, VirtualPath};
+#[cfg(feature = "wasm")]
+use moon_pdk::host_log;
+use moon_pdk::{json_config, map_miette_error, AnyResult, VirtualPath};
 use starbase_utils::json::{self, JsonValue};
 use typescript_tsconfig_json::{
     CompilerOptions, CompilerOptionsPathsMap, CompilerPath, ProjectReference,
     TsConfigJson as BaseTsConfigJson,
 };
 
+#[cfg(feature = "wasm")]
 #[host_fn]
 extern "ExtismHost" {
-    fn host_log(input: Json<HostLogInput>);
+    fn host_log(input: Json<moon_pdk::HostLogInput>);
 }
 
 json_config!(TsConfigJson, BaseTsConfigJson);
@@ -102,10 +106,13 @@ impl TsConfigJson {
             return Ok(false);
         }
 
-        host_log!(
-            "Adding <file>{include_path}</file> as an include to <path>{}</path>",
-            self.path.display(),
-        );
+        #[cfg(feature = "wasm")]
+        {
+            host_log!(
+                "Adding <file>{include_path}</file> as an include to <path>{}</path>",
+                self.path.display(),
+            );
+        }
 
         include.push(CompilerPath::from(include_path));
         include.sort();
@@ -133,10 +140,13 @@ impl TsConfigJson {
             return Ok(false);
         }
 
-        host_log!(
-            "Adding <file>{ref_path}</file> as a reference to <path>{}</path>",
-            self.path.display(),
-        );
+        #[cfg(feature = "wasm")]
+        {
+            host_log!(
+                "Adding <file>{ref_path}</file> as a reference to <path>{}</path>",
+                self.path.display(),
+            );
+        }
 
         // Add and sort the references
         references.push(ProjectReference {
