@@ -12,6 +12,7 @@ extern "ExtismHost" {
     fn send_request(input: Json<SendRequestInput>) -> Json<SendRequestOutput>;
     fn from_virtual_path(path: String) -> String;
     fn to_virtual_path(path: String) -> String;
+    fn host_log(input: Json<HostLogInput>);
 }
 
 const ASDF_PLUGINS_URL: &str = "https://raw.githubusercontent.com/asdf-vm/asdf-plugins/refs/heads/master/plugins";
@@ -100,6 +101,16 @@ fn exec_script(script_path: VirtualPath) -> FnResult<()> {
     Ok(())
 }
 
+fn set_env_var(name: &str, value: &str) -> FnResult<()> {
+    if let Some(var) = get_host_env_var(name)? {
+        host_log!("Skipped setting environment variable '{name}' to '{value}', because it's already set to '{var}'");
+    } else {
+        set_host_env_var(name, value)?;
+    }
+
+    Ok(())
+}
+
 #[plugin_fn]
 pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
     Ok(Json(DetectVersionOutput {
@@ -180,10 +191,10 @@ pub fn native_install(
     // };
 
     // Set asdf environment variables
-    set_host_env_var("ASDF_INSTALL_TYPE", "version")?;
-    set_host_env_var("ASDF_INSTALL_VERSION", input.context.version.to_string())?;
-    set_host_env_var("ASDF_INSTALL_PATH", install_download_path.clone())?;
-    set_host_env_var("ASDF_DOWNLOAD_PATH", install_download_path)?;
+    set_env_var("ASDF_INSTALL_TYPE", "version")?;
+    set_env_var("ASDF_INSTALL_VERSION", input.context.version.to_string().as_str())?;
+    set_env_var("ASDF_INSTALL_PATH", &install_download_path)?;
+    set_env_var("ASDF_DOWNLOAD_PATH", &install_download_path)?;
     // set_host_env_var("ASDF_CONCURRENCY", cores)?;
 
     let download_script_path = get_backend_path()?.join("bin").join("download");
