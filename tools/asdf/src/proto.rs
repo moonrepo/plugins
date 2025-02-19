@@ -2,8 +2,6 @@ use crate::config::AsdfPluginConfig;
 use extism_pdk::*;
 use proto_pdk::*;
 use std::collections::HashMap;
-use std::path::PathBuf;
-
 struct Repo {
     url: String,
 }
@@ -70,7 +68,7 @@ fn get_repo() -> FnResult<Repo> {
 }
 
 fn get_versions(_: VersionSpec) -> FnResult<Vec<String>> {
-    let script_path = virtual_path!(format!("/proto/backends/{}/bin/list-all", get_backend_id()?));
+    let script_path = get_backend_path()?.join("bin").join("list-all");
     if !script_path.exists() {
         return Err(PluginError::Message("list-all script not found, is the ASDF repository valid?".to_string()).into());
     }
@@ -81,14 +79,25 @@ fn get_versions(_: VersionSpec) -> FnResult<Vec<String>> {
     Ok(versions)
 }
 
-fn get_install_builder_id(version: VersionSpec) -> FnResult<String> {
-    let id = get_id(None)?;
-    Ok(format!("install-{id}-{version}"))
-}
-
 fn get_backend_id() -> FnResult<String> {
     let id = get_id(None)?;
     Ok(format!("asdf-{id}"))
+}
+
+fn get_backend_path() -> FnResult<VirtualPath> {
+    let backend_id = get_backend_id()?;
+    let virtual_path = virtual_path!(format!("/proto/backends/{backend_id}"));
+    Ok(virtual_path)
+}
+
+fn exec_script(script_path: VirtualPath) -> FnResult<()> {
+    let script_path = script_path.real_path().unwrap().into_os_string().into_string().unwrap();
+    let result = exec_command!("bash", [&script_path]);
+    if result.exit_code != 0 {
+        return Err(PluginError::Message(format!("Failed to execute script ({script_path}): {}", result.stderr)).into());
+    }
+
+    Ok(())
 }
 
 #[plugin_fn]
@@ -151,94 +160,50 @@ pub fn register_backend(Json(_): Json<RegisterBackendInput>) -> FnResult<Json<Re
 }
 
 #[plugin_fn]
-pub fn build_instructions(
-    Json(input): Json<BuildInstructionsInput>,
-) -> FnResult<Json<BuildInstructionsOutput>> {
+pub fn native_install(
+    Json(input): Json<NativeInstallInput>,
+) -> FnResult<Json<NativeInstallOutput>> {
     let env = get_host_environment()?;    
 
     if env.os.is_windows() {
         return Err(PluginError::UnsupportedWindowsBuild.into());
     }
-    
-    let repo = get_repo()?;
 
-    let git = GitSource {
-        url: repo.url.clone(),
-        // Use default branch
-        reference: None,
-        ..Default::default()
-    };
-
-    let mut instructions = Vec::new();
-
-    let version = input.context.version;
-
-    // Set asdf environment variables
     let install_download_path = real_path!(buf, input.context.tool_dir).into_os_string().into_string().unwrap();
+    // Create the download/install path if it doesn't already exist
+    if !virtual_path!(&install_download_path).exists() {
+        exec_command!("mkdir", ["-p", &install_download_path]);
+    }
+
     let cores = if env.os.is_mac() {
         exec_command!("sysctl -n hw.physicalcpu").stdout
     } else {
         exec_command!("nproc").stdout
     };
-    instructions.append(&mut vec![
-        BuildInstruction::SetEnvVar("ASDF_INSTALL_TYPE".into(), "version".into()),
-        BuildInstruction::SetEnvVar("ASDF_INSTALL_VERSION".into(), version.clone().into()),
-        BuildInstruction::SetEnvVar("ASDF_INSTALL_PATH".into(), install_download_path.clone()),
-        BuildInstruction::SetEnvVar("ASDF_DOWNLOAD_PATH".into(), install_download_path.clone()),
-        BuildInstruction::SetEnvVar("ASDF_CONCURRENCY".into(), cores),
-    ]);
 
-    let install_builder_id = get_install_builder_id(version)?;
-    let mut install_instruction = Box::new(BuilderInstruction {
-        id: install_builder_id.clone(),
-        exe: "bin/install".into(),
-        git,
-        ..BuilderInstruction::default()
-    });
-    let has_download_script = real_path!(
-        buf, PathBuf::new()
-        .join("proto")
-        .join("backends")
-        .join(get_backend_id()?)
-        .join("bin")
-        .join("download")
-    ).exists();
+    // Set asdf environment variables
+    set_host_env_var("ASDF_INSTALL_TYPE", "version")?;
+    set_host_env_var("ASDF_INSTALL_VERSION", input.context.version.to_string())?;
+    set_host_env_var("ASDF_INSTALL_PATH", install_download_path.clone())?;
+    set_host_env_var("ASDF_DOWNLOAD_PATH", install_download_path)?;
+    set_host_env_var("ASDF_CONCURRENCY", cores)?;
 
+    let download_script_path = get_backend_path()?.join("bin").join("download");
+    let install_script_path = get_backend_path()?.join("bin").join("install");
     // In older versions of asdf there may not be a 'download' script,
     // instead both download and install were done in the 'install' script.
     // However, in newer versions, there's two separate 'download' and 'install' scripts.
-    let download_script_id = String::from("download-script");
-    if has_download_script {
-        install_instruction.exes = HashMap::from_iter([(
-            download_script_id.clone(),
-            "bin/download".into()
-        )]);
+    if download_script_path.exists() {
+        exec_script(download_script_path)?;
     }
-    instructions.push(BuildInstruction::InstallBuilder(install_instruction));
+    exec_script(install_script_path)?;
 
-    if has_download_script {
-        instructions.push(BuildInstruction::RunCommand(
-            Box::new(
-                CommandInstruction::with_builder(
-                    format!("{install_builder_id}:{download_script_id}").as_str(),
-                    [""]
-                )
-            )
-        ));
-    }
-
-    instructions.push(
-        BuildInstruction::RunCommand(Box::new(CommandInstruction::with_builder(
-            &install_builder_id,
-            [""],
-        ))),
-    );
-    let output = BuildInstructionsOutput {
-        instructions,
+    Ok(Json(NativeInstallOutput {
+        // TODO: Figure out if returning an Err (FnResult) is different than
+        // setting this to false along with the 'error' field
+        installed: true,
         ..Default::default()
-    };
-
-    Ok(Json(output))
+    }))
 }
 
 #[plugin_fn]
