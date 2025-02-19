@@ -22,19 +22,28 @@ pub fn register_toolchain(
 #[plugin_fn]
 pub fn sync_project(Json(input): Json<SyncProjectInput>) -> FnResult<Json<SyncProjectOutput>> {
     let mut output = SyncProjectOutput::default();
-    let project = load_project(input.project_id)?;
 
-    if !is_project_toolchain_enabled(&project, "typescript") {
+    if is_project_toolchain_enabled(&input.project, "typescript") {
+        let config = get_toolchain_config::<TypeScriptConfig>(input.toolchain_config)?;
+
+        output.changed_files = sync_project_references(
+            &input.context,
+            &config,
+            &input.project,
+            &input.project_dependencies,
+        )?;
+    } else {
         output.skipped = true;
-
-        return Ok(Json(output));
     }
 
-    let config = get_toolchain_config::<TypeScriptConfig>(input.config)?;
-    let dependencies = load_projects(input.project_dependencies)?;
+    Ok(Json(output))
+}
 
-    output.changed_files =
-        sync_project_references(&input.context, &config, &project, &dependencies)?;
+#[plugin_fn]
+pub fn hash_task_contents(
+    Json(input): Json<HashTaskContentsInput>,
+) -> FnResult<Json<HashTaskContentsOutput>> {
+    let mut output = HashTaskContentsOutput::default();
 
     Ok(Json(output))
 }

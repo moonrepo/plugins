@@ -1,8 +1,9 @@
 use crate::config::TypeScriptConfig;
 use crate::tsconfig_json::TsConfigJson;
-use moon_common::Id;
+use moon_common::{path::is_root_level_source, Id};
+use moon_config::DependencyScope;
 use moon_pdk::{is_project_toolchain_enabled, AnyResult, MoonContext, VirtualPath};
-use moon_project::Project;
+use moon_project::ProjectFragment;
 use rustc_hash::FxHashMap;
 use serde::Deserialize;
 use typescript_tsconfig_json::{CompilerOptionsPathsMap, CompilerPath, ExtendsField};
@@ -20,9 +21,9 @@ struct PackageJson {
 fn create_missing_tsconfig(
     context: &MoonContext,
     config: &TypeScriptConfig,
-    project: &Project,
+    project: &ProjectFragment,
 ) -> AnyResult<Option<VirtualPath>> {
-    let project_root = context.workspace_root.join(project.source.as_str());
+    let project_root = context.workspace_root.join(&project.source);
     let project_tsconfig_path = project_root.join(&config.project_config_file_name);
 
     if project_tsconfig_path.exists() {
@@ -46,9 +47,9 @@ fn create_missing_tsconfig(
 fn sync_root_project_reference(
     context: &MoonContext,
     config: &TypeScriptConfig,
-    project: &Project,
+    project: &ProjectFragment,
 ) -> AnyResult<Option<VirtualPath>> {
-    let project_root = context.workspace_root.join(project.source.as_str());
+    let project_root = context.workspace_root.join(&project.source);
     let types_root = context.workspace_root.join(&config.root);
 
     // Don't sync a root project to itself
@@ -73,11 +74,11 @@ fn sync_root_project_reference(
 pub fn sync_project_options(
     context: &MoonContext,
     config: &TypeScriptConfig,
-    project: &Project,
+    project: &ProjectFragment,
     project_refs: &FxHashMap<Id, ReferenceData>,
 ) -> AnyResult<Option<VirtualPath>> {
     let types_root = context.workspace_root.join(&config.root);
-    let project_root = context.workspace_root.join(project.source.as_str());
+    let project_root = context.workspace_root.join(&project.source);
     let project_tsconfig_path = project_root.join(&config.project_config_file_name);
 
     if !project_tsconfig_path.exists() {
@@ -147,7 +148,7 @@ pub fn sync_project_options(
             context
                 .workspace_root
                 .join(".moon/cache/types")
-                .join(project.source.as_str()),
+                .join(&project.source),
         )?;
 
         tsconfig.update_compiler_options(|options| {
@@ -172,26 +173,23 @@ pub fn sync_project_options(
 pub fn sync_project_references(
     context: &MoonContext,
     config: &TypeScriptConfig,
-    project: &Project,
-    dependencies: &FxHashMap<Id, Project>,
+    project: &ProjectFragment,
+    dependencies: &[ProjectFragment],
 ) -> AnyResult<Vec<VirtualPath>> {
     let mut project_refs = FxHashMap::default();
     let mut changed_files = vec![];
 
-    for dep_config in &project.dependencies {
-        let Some(dep_project) = dependencies.get(&dep_config.id) else {
-            continue;
-        };
-
-        if dep_config.is_root_scope()
-            || dep_config.is_build_scope()
-            || dep_project.is_root_level()
-            || !is_project_toolchain_enabled(dep_project, "typescript")
+    for dep_project in dependencies {
+        if !is_project_toolchain_enabled(dep_project, "typescript")
+            || is_root_level_source(&dep_project.source)
+            || dep_project.dependency_scope.is_some_and(|scope| {
+                matches!(scope, DependencyScope::Build | DependencyScope::Root)
+            })
         {
             continue;
         }
 
-        let dep_project_root = context.workspace_root.join(dep_project.source.as_str());
+        let dep_project_root = context.workspace_root.join(&dep_project.source);
         let tsconfig_path = dep_project_root.join(&config.project_config_file_name);
         let package_path = dep_project_root.join("package.json");
 
@@ -206,7 +204,7 @@ pub fn sync_project_references(
                 data.package_name = package.name;
             }
 
-            project_refs.insert(dep_config.id.clone(), data);
+            project_refs.insert(dep_project.id.clone(), data);
         }
     }
 
