@@ -148,7 +148,11 @@ pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<Regi
 }
 
 #[plugin_fn]
-pub fn register_backend(Json(_): Json<RegisterBackendInput>) -> FnResult<Json<RegisterBackendOutput>> {
+pub fn register_backend(Json(_): Json<RegisterBackendInput>) -> FnResult<Json<RegisterBackendOutput>> { 
+    if get_host_environment()?.os.is_windows() {
+        return Err(PluginError::UnsupportedWindowsBuild.into());
+    }
+
     Ok(Json(RegisterBackendOutput {
         backend_id: get_backend_id()?,
         source: Some(SourceLocation::Git(GitSource {
@@ -163,30 +167,24 @@ pub fn register_backend(Json(_): Json<RegisterBackendInput>) -> FnResult<Json<Re
 pub fn native_install(
     Json(input): Json<NativeInstallInput>,
 ) -> FnResult<Json<NativeInstallOutput>> {
-    let env = get_host_environment()?;    
-
-    if env.os.is_windows() {
-        return Err(PluginError::UnsupportedWindowsBuild.into());
-    }
-
     let install_download_path = real_path!(buf, input.context.tool_dir).into_os_string().into_string().unwrap();
     // Create the download/install path if it doesn't already exist
     if !virtual_path!(&install_download_path).exists() {
         exec_command!("mkdir", ["-p", &install_download_path]);
     }
 
-    let cores = if env.os.is_mac() {
-        exec_command!("sysctl -n hw.physicalcpu").stdout
-    } else {
-        exec_command!("nproc").stdout
-    };
+    // let cores = if env.os.is_mac() {
+    //     exec_command!("sysctl -n hw.physicalcpu").stdout
+    // } else {
+    //     exec_command!("nproc").stdout
+    // };
 
     // Set asdf environment variables
     set_host_env_var("ASDF_INSTALL_TYPE", "version")?;
     set_host_env_var("ASDF_INSTALL_VERSION", input.context.version.to_string())?;
     set_host_env_var("ASDF_INSTALL_PATH", install_download_path.clone())?;
     set_host_env_var("ASDF_DOWNLOAD_PATH", install_download_path)?;
-    set_host_env_var("ASDF_CONCURRENCY", cores)?;
+    // set_host_env_var("ASDF_CONCURRENCY", cores)?;
 
     let download_script_path = get_backend_path()?.join("bin").join("download");
     let install_script_path = get_backend_path()?.join("bin").join("install");
