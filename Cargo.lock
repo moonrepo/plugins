@@ -2486,6 +2486,8 @@ version = "0.0.14"
 dependencies = [
  "moon_common",
  "moon_config",
+ "moon_project",
+ "moon_task",
  "rustc-hash",
  "schematic 0.17.11",
  "serde",
@@ -4748,6 +4750,7 @@ version = "0.0.1"
 dependencies = [
  "extism-pdk",
  "moon_common",
+ "moon_config",
  "moon_pdk",
  "moon_project",
  "rustc-hash",
