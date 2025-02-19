@@ -140,13 +140,16 @@ pub fn parse_version_file(Json(input): Json<ParseVersionFileInput>) -> FnResult<
     }
 
     for line in input.content.lines() {
-        let line = line.trim();
-        // TODO: Handle comments
-        if line.is_empty() {
-            continue;
+        let mut parsed_line = String::new();
+        for char in line.chars() {
+            if char == '#' {
+                break;
+            }
+            parsed_line.push(char);
         }
-        let (tool, version) = line.split_once(' ').unwrap_or((line, ""));
-        if tool == get_id(None)? {
+
+        let (tool, version) = parsed_line.split_once(' ').unwrap_or((&parsed_line, ""));
+        if tool == get_id(None)? && !version.is_empty() {
             final_version = Some(UnresolvedVersionSpec::parse(version)?);
             break;
         }
