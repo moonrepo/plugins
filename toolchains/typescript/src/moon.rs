@@ -1,5 +1,7 @@
 use crate::config::TypeScriptConfig;
+use crate::run_task::*;
 use crate::sync_project::*;
+use crate::tsconfig_json::TsConfigJson;
 use extism_pdk::*;
 use moon_pdk::*;
 use schematic::SchemaBuilder;
@@ -43,7 +45,29 @@ pub fn sync_project(Json(input): Json<SyncProjectInput>) -> FnResult<Json<SyncPr
 pub fn hash_task_contents(
     Json(input): Json<HashTaskContentsInput>,
 ) -> FnResult<Json<HashTaskContentsOutput>> {
+    let config = get_toolchain_config::<TypeScriptConfig>(input.toolchain_config)?;
     let mut output = HashTaskContentsOutput::default();
+
+    for tsconfig_path in [
+        input
+            .context
+            .workspace_root
+            .join(&config.root)
+            .join(&config.root_config_file_name),
+        input
+            .context
+            .workspace_root
+            .join(&input.project.source)
+            .join(&config.project_config_file_name),
+    ] {
+        if tsconfig_path.exists() {
+            let tsconfig = TsConfigJson::load(tsconfig_path)?;
+
+            if let Some(options) = &tsconfig.compiler_options {
+                output.contents.push(hash_compiler_options(options));
+            }
+        }
+    }
 
     Ok(Json(output))
 }
