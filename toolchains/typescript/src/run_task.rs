@@ -10,20 +10,20 @@ pub fn hash_compiler_options(compiler_options: &CompilerOptions) -> JsonValue {
     }
 
     if let Some(jsx_factory) = &compiler_options.jsx_factory {
-        options.insert("jsxFactory".into(), format!("{jsx_factory}").into());
+        options.insert("jsxFactory".into(), jsx_factory.to_string().into());
     }
 
     if let Some(jsx_fragment_factory) = &compiler_options.jsx_fragment_factory {
         options.insert(
             "jsxFragmentFactory".into(),
-            format!("{jsx_fragment_factory}").into(),
+            jsx_fragment_factory.to_string().into(),
         );
     }
 
     if let Some(jsx_import_source) = &compiler_options.jsx_import_source {
         options.insert(
             "jsxImportSource".into(),
-            format!("{jsx_import_source}").into(),
+            jsx_import_source.to_string().into(),
         );
     }
 
