@@ -22,8 +22,8 @@ pub fn register_toolchain(
 }
 
 #[plugin_fn]
-pub fn sync_project(Json(input): Json<SyncProjectInput>) -> FnResult<Json<SyncProjectOutput>> {
-    let mut output = SyncProjectOutput::default();
+pub fn sync_project(Json(input): Json<SyncProjectInput>) -> FnResult<Json<SyncOutput>> {
+    let mut output = SyncOutput::default();
 
     if is_project_toolchain_enabled(&input.project, "typescript") {
         let config = get_toolchain_config::<TypeScriptConfig>(input.toolchain_config)?;
