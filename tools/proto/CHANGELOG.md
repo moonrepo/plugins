@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.1
+
+#### 🚀 Updates
+
+- Enabled shims support.
+
 ## 0.5.0
 
 #### 🚀 Updates
