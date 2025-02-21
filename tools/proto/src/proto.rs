@@ -148,11 +148,9 @@ pub fn locate_executables(
 
     let mut primary = ExecutableConfig::new_primary(env.os.get_exe_name("proto"));
     primary.no_bin = true;
-    primary.no_shim = true;
 
     let mut secondary = ExecutableConfig::new(env.os.get_exe_name("proto-shim"));
     secondary.no_bin = true;
-    secondary.no_shim = true;
 
     Ok(Json(LocateExecutablesOutput {
         exes: HashMap::from_iter([("proto".into(), primary), ("proto-shim".into(), secondary)]),
