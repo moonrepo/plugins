@@ -11,6 +11,7 @@ projects:
   migrate-turborepo-extension: extensions/migrate-turborepo
   unpack-extension: extensions/unpack
   # Tools
+  asdf-tool: tools/asdf
   bun-tool: tools/bun
   deno-tool: tools/deno
   go-tool: tools/go
