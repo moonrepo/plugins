@@ -1,4 +1,4 @@
-use moon_pdk_test_utils::{create_extension, ExecuteExtensionInput};
+use moon_pdk_test_utils::{ExecuteExtensionInput, create_extension};
 use starbase_sandbox::create_empty_sandbox;
 
 mod unpack_extension {

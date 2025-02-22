@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use extism_pdk::{json, Error};
+use extism_pdk::{Error, json};
 use serde::Deserialize;
 use std::collections::HashMap;
 

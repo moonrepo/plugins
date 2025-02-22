@@ -127,7 +127,9 @@ fn exec_script(script_path: VirtualPath) -> FnResult<()> {
 fn set_env_var(name: &str, value: &str) -> FnResult<()> {
     match get_host_env_var(name)? {
         Some(var) => {
-            host_log!("Skipped setting environment variable '{name}' to '{value}', because it's already set to '{var}'");
+            host_log!(
+                "Skipped setting environment variable '{name}' to '{value}', because it's already set to '{var}'"
+            );
         }
         _ => {
             set_host_env_var(name, value)?;
@@ -210,7 +212,7 @@ pub fn register_backend(
     Ok(Json(RegisterBackendOutput {
         backend_id: get_backend_id()?,
         source: Some(SourceLocation::Git(GitSource {
-            url: String::from(get_repo()?.url),
+            url: get_repo()?.url,
             ..GitSource::default()
         })),
         ..RegisterBackendOutput::default()

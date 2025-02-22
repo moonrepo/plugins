@@ -1,13 +1,13 @@
 [package]
 name = "schema_tool"
 version = "0.17.0"
-edition = "2021"
+edition = "2024"
 license = "MIT"
 publish = false
 
 [package.metadata.release]
 pre-release-replacements = [
-	{ file = "./CHANGELOG.md", search = "Unreleased", replace = "{{version}}" },
+    { file = "./CHANGELOG.md", search = "Unreleased", replace = "{{version}}" },
 ]
 
 [lib]

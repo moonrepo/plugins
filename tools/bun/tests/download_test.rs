@@ -74,10 +74,11 @@ mod bun_tool {
         // assert_eq!(result.archive_prefix, Some("bun-linux-x64".into()));
         // assert_eq!(result.download_name, Some("bun-linux-x64.zip".into()));
         assert!(
-        result.download_url ==
-        "https://github.com/oven-sh/bun/releases/download/bun-v1.2.0/bun-linux-x64.zip" || result.download_url ==
-        "https://github.com/oven-sh/bun/releases/download/bun-v1.2.0/bun-linux-x64-baseline.zip"
-    );
+            result.download_url
+                == "https://github.com/oven-sh/bun/releases/download/bun-v1.2.0/bun-linux-x64.zip"
+                || result.download_url
+                    == "https://github.com/oven-sh/bun/releases/download/bun-v1.2.0/bun-linux-x64-baseline.zip"
+        );
     }
 
     #[tokio::test(flavor = "multi_thread")]

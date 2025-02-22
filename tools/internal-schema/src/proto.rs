@@ -149,8 +149,8 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
                 }
             }
         }
-        _ => match schema.resolve.manifest_url {
-            Some(endpoint) => {
+        _ => {
+            if let Some(endpoint) = schema.resolve.manifest_url {
                 let pattern = regex::Regex::new(&schema.resolve.version_pattern)?;
                 let version_key = &schema.resolve.manifest_version_key;
                 let response: Vec<JsonValue> = fetch_json(endpoint)?;
@@ -173,8 +173,7 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
                     }
                 }
             }
-            _ => {}
-        },
+        }
     }
 
     let mut output = LoadVersionsOutput::from_versions(versions.into_iter().collect());

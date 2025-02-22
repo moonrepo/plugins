@@ -1,6 +1,6 @@
 use crate::format_virtual_path;
 use extism_pdk::debug;
-use moon_pdk::{fetch_bytes, AnyResult, VirtualPath};
+use moon_pdk::{AnyResult, VirtualPath, fetch_bytes};
 use std::fs;
 
 pub fn download_from_url<U: AsRef<str>, P: AsRef<VirtualPath>>(
