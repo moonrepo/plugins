@@ -19,6 +19,7 @@ projects:
   node-depman-tool: tools/node-depman
   proto-tool: tools/proto
   python-tool: tools/python
+  python-poetry-tool: tools/python-poetry
   python-uv-tool: tools/python-uv
   ruby-tool: tools/ruby
   rust-tool: tools/rust

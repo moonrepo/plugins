@@ -23,7 +23,18 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
 
 #[plugin_fn]
 pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
-    let tags = load_git_tags("https://github.com/python-poetry/poetry")?;
+    let tags = load_git_tags("https://github.com/python-poetry/poetry")?
+        .into_iter()
+        .map(|tag| {
+            for del in ["a", "b", "rc"] {
+                if let Some(parts) = tag.split_once(del) {
+                    return format!("{}-{}{}", parts.0, del, parts.1);
+                }
+            }
+
+            tag
+        })
+        .collect::<Vec<_>>();
 
     Ok(Json(LoadVersionsOutput::from(tags)?))
 }
@@ -32,26 +43,39 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
 pub fn native_install(
     Json(input): Json<NativeInstallInput>,
 ) -> FnResult<Json<NativeInstallOutput>> {
+    let env = get_host_environment()?;
     let script_path = input.context.temp_dir.join("get-poetry.py");
 
     if !script_path.exists() {
-        fs::write(
-            &script_path,
-            fetch_bytes("https://install.python-poetry.org")?,
-        )?;
+        let mut script = fetch_text("https://install.python-poetry.org")?;
+
+        // https://stackoverflow.com/a/77120044
+        // https://github.com/python-poetry/install.python-poetry.org/issues/24
+        if env.os.is_mac() {
+            script = script.replace("symlinks=False", "symlinks=True");
+        }
+
+        fs::write(&script_path, script)?;
     }
 
     let result = exec(ExecCommandInput {
         command: "python".into(),
         args: vec![
-            script_path.to_string_lossy().to_string(),
+            script_path
+                .real_path()
+                .unwrap()
+                .to_string_lossy()
+                .to_string(),
             "--force".into(),
             "--yes".into(),
         ],
         env: HashMap::from_iter([
             (
                 "POETRY_HOME".into(),
-                into_real_path(input.install_dir.any_path())?
+                input
+                    .install_dir
+                    .real_path()
+                    .unwrap()
                     .to_string_lossy()
                     .to_string(),
             ),
@@ -59,7 +83,6 @@ pub fn native_install(
             ("PROTO_PYTHON_VERSION".into(), "3".into()),
         ]),
         set_executable: true,
-        stream: true,
         ..ExecCommandInput::default()
     })?;
 
@@ -76,16 +99,10 @@ pub fn locate_executables(
     let env = get_host_environment()?;
 
     Ok(Json(LocateExecutablesOutput {
-        exes: HashMap::from_iter([
-            (
-                "uv".into(),
-                ExecutableConfig::new_primary(env.os.get_exe_name("uv")),
-            ),
-            (
-                "uvx".into(),
-                ExecutableConfig::new(env.os.get_exe_name("uvx")),
-            ),
-        ]),
+        exes: HashMap::from_iter([(
+            "poetry".into(),
+            ExecutableConfig::new_primary(env.os.get_exe_name("bin/poetry")),
+        )]),
         ..LocateExecutablesOutput::default()
     }))
 }

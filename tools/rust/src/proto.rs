@@ -4,7 +4,6 @@ use extism_pdk::*;
 use proto_pdk::*;
 use std::collections::HashMap;
 use std::fs;
-use std::path::PathBuf;
 
 #[host_fn]
 extern "ExtismHost" {
