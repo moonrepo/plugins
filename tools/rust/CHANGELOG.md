@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Use the correct temporary directory when installing `rustup`.
+
 ## 0.13.0
 
 #### 🚀 Updates

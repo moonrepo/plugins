@@ -12,7 +12,7 @@ This plugin is built-in to proto, but if you want to override it with an explici
 
 ```toml
 [plugins]
-ub = "https://github.com/moonrepo/plugins/releases/download/python_uv_tool-vX.Y.Z/python_uv_tool.wasm"
+uv = "https://github.com/moonrepo/plugins/releases/download/python_uv_tool-vX.Y.Z/python_uv_tool.wasm"
 ```
 
 ## Configuration

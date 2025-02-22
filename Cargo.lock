@@ -3022,6 +3022,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "python_poetry_tool"
+version = "0.0.1"
+dependencies = [
+ "extism-pdk",
+ "proto_pdk",
+ "proto_pdk_test_utils",
+ "serde",
+ "starbase_sandbox",
+ "tokio",
+]
+
+[[package]]
 name = "python_tool"
 version = "0.14.0"
 dependencies = [

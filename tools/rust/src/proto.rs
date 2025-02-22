@@ -109,7 +109,7 @@ pub fn native_install(
         debug!("Installing <shell>rustup</shell>");
 
         let is_windows = env.os.is_windows();
-        let script_path = PathBuf::from("/proto/temp").join(if is_windows {
+        let script_path = input.context.temp_dir.join(if is_windows {
             "rustup-init.exe"
         } else {
             "rustup-init.sh"
