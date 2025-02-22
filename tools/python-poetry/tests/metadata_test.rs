@@ -10,7 +10,7 @@ mod python_poetry_tool {
 
         let metadata = plugin.register_tool(RegisterToolInput::default()).await;
 
-        assert_eq!(metadata.name, "poetry");
+        assert_eq!(metadata.name, "Poetry");
         assert_eq!(metadata.self_upgrade_commands, vec!["self update"]);
         assert_eq!(
             metadata.plugin_version.unwrap().to_string(),
