@@ -1,25 +1,25 @@
 [package]
-name = "download_extension"
-version = "0.0.8"
+name = "python_poetry_tool"
+version = "0.0.1"
 edition = "2021"
 license = "MIT"
 publish = false
-
-[lib]
-crate-type = ["cdylib"]
 
 [package.metadata.release]
 pre-release-replacements = [
     { file = "./CHANGELOG.md", search = "Unreleased", replace = "{{version}}" },
 ]
 
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
-extension_common = { path = "../../crates/extension-common" }
 extism-pdk = { workspace = true }
-moon_pdk = { workspace = true }
+proto_pdk = { workspace = true }
+serde = { workspace = true }
 
 [dev-dependencies]
-moon_pdk_test_utils = { workspace = true }
+proto_pdk_test_utils = { workspace = true }
 starbase_sandbox = { workspace = true }
 tokio = { workspace = true }
 
