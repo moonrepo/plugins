@@ -7,11 +7,11 @@ publish = false
 
 [package.metadata.release]
 pre-release-replacements = [
-	{ file = "./CHANGELOG.md", search = "Unreleased", replace = "{{version}}" },
+    { file = "./CHANGELOG.md", search = "Unreleased", replace = "{{version}}" },
 ]
 
 [lib]
-crate-type = ['cdylib']
+crate-type = ["cdylib"]
 
 [dependencies]
 extism-pdk = { workspace = true }
