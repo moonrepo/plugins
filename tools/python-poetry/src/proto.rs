@@ -22,6 +22,14 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
 }
 
 #[plugin_fn]
+pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
+    Ok(Json(DetectVersionOutput {
+        files: vec![".poetry-version".into()],
+        ignore: vec![],
+    }))
+}
+
+#[plugin_fn]
 pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
     let tags = load_git_tags("https://github.com/python-poetry/poetry")?
         .into_iter()
@@ -80,7 +88,6 @@ pub fn native_install(
                     .to_string(),
             ),
             ("POETRY_VERSION".into(), input.context.version.to_string()),
-            ("PROTO_PYTHON_VERSION".into(), "3".into()),
         ]),
         set_executable: true,
         ..ExecCommandInput::default()
@@ -90,6 +97,28 @@ pub fn native_install(
         installed: result.exit_code == 0,
         ..NativeInstallOutput::default()
     }))
+}
+
+#[plugin_fn]
+pub fn post_install(Json(input): Json<InstallHook>) -> FnResult<()> {
+    let version = input.context.version.as_version();
+
+    // https://python-poetry.org/docs/main/configuration/#virtualenvsuse-poetry-python
+    if version.is_some_and(|v| v.major >= 2) {
+        exec_captured(
+            "poetry",
+            ["config", "virtualenvs.use-poetry-python", "false"],
+        )?;
+    }
+    // https://python-poetry.org/docs/1.8/configuration/#virtualenvsprefer-active-python-experimental
+    else if version.is_some_and(|v| v.major >= 1 && v.minor >= 2) {
+        exec_captured(
+            "poetry",
+            ["config", "virtualenvs.prefer-active-python", "true"],
+        )?;
+    }
+
+    Ok(())
 }
 
 #[plugin_fn]

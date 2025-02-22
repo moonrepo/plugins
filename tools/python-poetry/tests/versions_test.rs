@@ -1,17 +1,17 @@
 use proto_pdk_test_utils::*;
 
-mod python_uv_tool {
+mod python_poetry_tool {
     use super::*;
 
-    generate_resolve_versions_tests!("uv-test", {
-        "0.3" => "0.3.5",
-        "0.5.21" => "0.5.21",
+    generate_resolve_versions_tests!("poetry-test", {
+        "1.8" => "1.8.5",
+        "2.1.1" => "2.1.1",
     });
 
     #[tokio::test(flavor = "multi_thread")]
     async fn loads_versions_from_git() {
         let sandbox = create_empty_proto_sandbox();
-        let plugin = sandbox.create_plugin("uv-test").await;
+        let plugin = sandbox.create_plugin("poetry-test").await;
 
         let output = plugin.load_versions(LoadVersionsInput::default()).await;
 
@@ -21,7 +21,7 @@ mod python_uv_tool {
     #[tokio::test(flavor = "multi_thread")]
     async fn sets_latest_alias() {
         let sandbox = create_empty_proto_sandbox();
-        let plugin = sandbox.create_plugin("uv-test").await;
+        let plugin = sandbox.create_plugin("poetry-test").await;
 
         let output = plugin.load_versions(LoadVersionsInput::default()).await;
 
