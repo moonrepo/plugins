@@ -3,8 +3,7 @@ use proto_pdk_test_utils::*;
 mod python_poetry_tool {
     use super::*;
 
-    // TODO swap to native install macro
-    // generate_download_install_tests!("poetry-test", "2.1.0");
+    generate_native_install_tests!("poetry-test", "2.1.0");
 
     #[tokio::test(flavor = "multi_thread")]
     async fn locates_unix_bin() {

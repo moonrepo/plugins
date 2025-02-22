@@ -338,6 +338,7 @@ pub fn download_prebuilt(
         checksum_public_key: schema.install.checksum_public_key,
         download_url,
         download_name: Some(download_file),
+        ..DownloadPrebuiltOutput::default()
     }))
 }
 
