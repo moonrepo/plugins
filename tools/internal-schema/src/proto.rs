@@ -133,45 +133,42 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
     let mut versions: HashSet<VersionSpec> = HashSet::from_iter(schema.resolve.versions);
 
     // Git tags
-    match schema.resolve.git_url {
-        Some(repository) => {
-            let pattern = regex::Regex::new(
-                schema
-                    .resolve
-                    .git_tag_pattern
-                    .as_ref()
-                    .unwrap_or(&schema.resolve.version_pattern),
-            )?;
+    if let Some(repository) = schema.resolve.git_url {
+        let pattern = regex::Regex::new(
+            schema
+                .resolve
+                .git_tag_pattern
+                .as_ref()
+                .unwrap_or(&schema.resolve.version_pattern),
+        )?;
 
-            for tag in load_git_tags(repository)? {
-                if let Some(cap) = pattern.captures(&tag) {
-                    versions.insert(VersionSpec::parse(create_version(cap))?);
-                }
+        for tag in load_git_tags(repository)? {
+            if let Some(cap) = pattern.captures(&tag) {
+                versions.insert(VersionSpec::parse(create_version(cap))?);
             }
         }
-        _ => {
-            if let Some(endpoint) = schema.resolve.manifest_url {
-                let pattern = regex::Regex::new(&schema.resolve.version_pattern)?;
-                let version_key = &schema.resolve.manifest_version_key;
-                let response: Vec<JsonValue> = fetch_json(endpoint)?;
+    }
+    // URL endpoint
+    else if let Some(endpoint) = schema.resolve.manifest_url {
+        let pattern = regex::Regex::new(&schema.resolve.version_pattern)?;
+        let version_key = &schema.resolve.manifest_version_key;
+        let response: Vec<JsonValue> = fetch_json(endpoint)?;
 
-                for row in response {
-                    match row {
-                        JsonValue::String(v) => {
-                            if let Some(cap) = pattern.captures(&v) {
-                                versions.insert(VersionSpec::parse(create_version(cap))?);
-                            }
-                        }
-                        JsonValue::Object(o) => {
-                            if let Some(JsonValue::String(v)) = o.get(version_key) {
-                                if let Some(cap) = pattern.captures(v) {
-                                    versions.insert(VersionSpec::parse(create_version(cap))?);
-                                }
-                            }
-                        }
-                        _ => {}
+        for row in response {
+            match row {
+                JsonValue::String(v) => {
+                    if let Some(cap) = pattern.captures(&v) {
+                        versions.insert(VersionSpec::parse(create_version(cap))?);
                     }
                 }
+                JsonValue::Object(o) => {
+                    if let Some(JsonValue::String(v)) = o.get(version_key) {
+                        if let Some(cap) = pattern.captures(v) {
+                            versions.insert(VersionSpec::parse(create_version(cap))?);
+                        }
+                    }
+                }
+                _ => {}
             }
         }
     }
@@ -181,7 +178,7 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
 
     if output.versions.is_empty() {
         return Err(plugin_err!(
-            "Unable to resolve versions for {}. Schema either requires a <property>resolve.git_url</property> or <property>resolve.manifest_url</property>.",
+            "Unable to resolve versions for {}. Schema either requires a <property>resolve.git-url</property> or <property>resolve.manifest-url</property>.",
             schema.name
         ));
     }
