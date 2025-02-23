@@ -49,6 +49,11 @@ impl AsdfPluginConfig {
         Ok(PathBuf::from(format!("/proto/backends/{backend_id}")))
     }
 
+    pub fn get_script_path(&self, script: &str) -> AnyResult<PathBuf> {
+        self.get_backend_path()
+            .map(|path| path.join("bin").join(script))
+    }
+
     pub fn get_repo_url(&self) -> AnyResult<String> {
         if let Some(repo_url) = &self.asdf_repository {
             return Ok(repo_url.into());
