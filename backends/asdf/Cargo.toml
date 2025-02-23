@@ -8,6 +8,7 @@ extism-pdk = { workspace = true }
 proto_pdk = { workspace = true }
 schematic = { workspace = true }
 serde = { workspace = true }
+starbase_utils = { workspace = true }
 
 [lib]
 crate-type = ["cdylib"]
