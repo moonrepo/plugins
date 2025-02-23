@@ -2,6 +2,8 @@ $schema: "https://moonrepo.dev/schemas/workspace.json"
 
 projects:
   root: .
+  # Backends
+  asdf-backend: backends/asdf
   # Common
   extension-common: crates/extension-common
   lang-node-common: crates/lang-node-common
@@ -11,7 +13,6 @@ projects:
   migrate-turborepo-extension: extensions/migrate-turborepo
   unpack-extension: extensions/unpack
   # Tools
-  asdf-tool: tools/asdf
   bun-tool: tools/bun
   deno-tool: tools/deno
   go-tool: tools/go

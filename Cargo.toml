@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/*", "extensions/*", "tools/*", "toolchains/*"]
+members = ["backends/*", "crates/*", "extensions/*", "tools/*", "toolchains/*"]
 
 [workspace.dependencies]
 # Common

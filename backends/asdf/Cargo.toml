@@ -1,5 +1,5 @@
 [package]
-name = "asdf_tool"
+name = "asdf_backend"
 version = "0.0.1"
 edition = "2024"
 
@@ -10,7 +10,7 @@ schematic = { workspace = true }
 serde = { workspace = true }
 
 [lib]
-crate-type = ['cdylib']
+crate-type = ["cdylib"]
 
 [features]
 default = ["wasm"]
