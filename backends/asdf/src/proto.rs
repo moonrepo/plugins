@@ -3,85 +3,14 @@ use extism_pdk::*;
 use proto_pdk::*;
 use rustc_hash::FxHashMap;
 use starbase_utils::fs;
-use std::path::PathBuf;
+use std::path::Path;
 
 #[host_fn]
 extern "ExtismHost" {
     fn exec_command(input: Json<ExecCommandInput>) -> Json<ExecCommandOutput>;
-    fn send_request(input: Json<SendRequestInput>) -> Json<SendRequestOutput>;
     fn from_virtual_path(path: String) -> String;
     fn to_virtual_path(path: String) -> String;
     fn host_log(input: Json<HostLogInput>);
-}
-
-fn exec_script(
-    virtual_script_path: PathBuf,
-    base_args: Vec<String>,
-    env: FxHashMap<String, String>,
-) -> AnyResult<String> {
-    if !virtual_script_path.exists() {
-        return Err(PluginError::Message(format!(
-            "{} script not found, is the asdf repository valid?",
-            fs::file_name(&virtual_script_path)
-        ))
-        .into());
-    }
-
-    let script_path = into_real_path(virtual_script_path)?
-        .to_string_lossy()
-        .to_string();
-
-    let mut args = vec![script_path.clone()];
-    args.extend(base_args);
-
-    let result = exec(ExecCommandInput {
-        command: "bash".into(),
-        args,
-        env,
-        set_executable: true,
-        // working_dir, // TODO
-        ..Default::default()
-    })?;
-
-    if result.exit_code != 0 {
-        return Err(PluginError::Message(format!(
-            "Failed to execute script ({script_path}): {}",
-            result.stderr
-        ))
-        .into());
-    }
-
-    Ok(result.stdout)
-}
-
-fn exec_bare_script(virtual_script_path: PathBuf) -> AnyResult<String> {
-    exec_script(virtual_script_path, vec![], FxHashMap::default())
-}
-
-fn get_env_vars(context: &ToolContext) -> AnyResult<FxHashMap<String, String>> {
-    let mut vars = FxHashMap::default();
-    vars.insert("ASDF_INSTALL_TYPE".into(), "version".into());
-    vars.insert("ASDF_INSTALL_VERSION".into(), context.version.to_string());
-    vars.insert(
-        "ASDF_INSTALL_PATH".into(),
-        context
-            .tool_dir
-            .real_path()
-            .unwrap()
-            .to_string_lossy()
-            .to_string(),
-    );
-    vars.insert(
-        "ASDF_DOWNLOAD_PATH".into(),
-        context
-            .temp_dir
-            .real_path()
-            .unwrap()
-            .to_string_lossy()
-            .to_string(),
-    );
-    vars.insert("ASDF_CONCURRENCY".into(), cpu_cores()?);
-    Ok(vars)
 }
 
 fn cpu_cores() -> AnyResult<String> {
@@ -92,6 +21,72 @@ fn cpu_cores() -> AnyResult<String> {
     };
 
     Ok(result.stdout.trim().into())
+}
+
+fn create_script(virtual_script_path: &Path, context: &ToolContext) -> AnyResult<ExecCommandInput> {
+    if !virtual_script_path.exists() {
+        return Err(PluginError::Message(format!(
+            "{} script not found, is the asdf repository valid?",
+            fs::file_name(virtual_script_path)
+        ))
+        .into());
+    }
+
+    let mut input = ExecCommandInput {
+        command: "bash".into(),
+        set_executable: true,
+        working_dir: Some(context.tool_dir.clone()),
+        ..Default::default()
+    };
+
+    input.args.push(
+        into_real_path(virtual_script_path)?
+            .to_string_lossy()
+            .to_string(),
+    );
+
+    input
+        .env
+        .insert("ASDF_INSTALL_TYPE".into(), "version".into());
+    input
+        .env
+        .insert("ASDF_INSTALL_VERSION".into(), context.version.to_string());
+    input.env.insert(
+        "ASDF_INSTALL_PATH".into(),
+        context
+            .tool_dir
+            .real_path()
+            .unwrap()
+            .to_string_lossy()
+            .to_string(),
+    );
+    input.env.insert(
+        "ASDF_DOWNLOAD_PATH".into(),
+        context
+            .temp_dir
+            .real_path()
+            .unwrap()
+            .to_string_lossy()
+            .to_string(),
+    );
+    input.env.insert("ASDF_CONCURRENCY".into(), cpu_cores()?);
+
+    Ok(input)
+}
+
+fn exec_script(input: ExecCommandInput) -> AnyResult<String> {
+    let script_path = input.args[0].clone();
+    let result = exec(input)?;
+
+    if result.exit_code != 0 {
+        return Err(PluginError::Message(format!(
+            "Failed to execute script ({script_path}): {}",
+            result.stderr
+        ))
+        .into());
+    }
+
+    Ok(result.stdout)
 }
 
 #[plugin_fn]
@@ -142,9 +137,9 @@ pub fn detect_version_files(
 
     // https://asdf-vm.com/plugins/create.html#bin-list-legacy-filenames
     if script_path.exists() {
-        let data = exec_script(script_path, vec![], get_env_vars(&input.context)?)?;
+        let data = exec_script(create_script(&script_path, &input.context)?)?;
 
-        for file in data.trim().split_whitespace() {
+        for file in data.split_whitespace() {
             output.files.push(file.to_owned());
         }
     }
@@ -185,18 +180,18 @@ pub fn parse_version_file(
 
         // https://asdf-vm.com/plugins/create.html#bin-parse-legacy-file
         if script_path.exists() {
-            let data = exec_script(
-                script_path,
-                vec![
-                    input
-                        .path
-                        .real_path()
-                        .unwrap()
-                        .to_string_lossy()
-                        .to_string(),
-                ],
-                FxHashMap::default(),
-            )?;
+            let mut script = create_script(&script_path, &input.context)?;
+            script.env.clear();
+            script.args.push(
+                input
+                    .path
+                    .real_path()
+                    .unwrap()
+                    .to_string_lossy()
+                    .to_string(),
+            );
+
+            let data = exec_script(script)?;
 
             if !data.is_empty() {
                 output.version = Some(UnresolvedVersionSpec::parse(data.trim())?);
@@ -214,23 +209,22 @@ pub fn native_install(
     Json(input): Json<NativeInstallInput>,
 ) -> FnResult<Json<NativeInstallOutput>> {
     let config = get_tool_config::<AsdfPluginConfig>()?;
-    let download_script_path = config.get_script_path("download")?;
-    let install_script_path = config.get_script_path("install")?;
 
     // In older versions of asdf there may not be a 'download' script,
     // instead both download and install were done in the 'install' script.
     // However, in newer versions, there's two separate 'download' and 'install' scripts.
-    let mut env = get_env_vars(&input.context)?;
+    let download_script_path = config.get_script_path("download")?;
+    let install_script_path = config.get_script_path("install")?;
+    let mut install_script = create_script(&install_script_path, &input.context)?;
 
     // https://asdf-vm.com/plugins/create.html#bin-download
     if download_script_path.exists() {
-        exec_script(download_script_path, vec![], env.clone())?;
-    } else {
-        env.remove("ASDF_DOWNLOAD_PATH");
+        install_script.env.remove("ASDF_DOWNLOAD_PATH");
+        exec_script(create_script(&download_script_path, &input.context)?)?;
     }
 
     // https://asdf-vm.com/plugins/create.html#bin-install
-    exec_script(install_script_path, vec![], env)?;
+    exec_script(install_script)?;
 
     Ok(Json(NativeInstallOutput {
         installed: true,
@@ -247,7 +241,7 @@ pub fn native_uninstall(
 
     // https://asdf-vm.com/plugins/create.html#bin-uninstall
     if script_path.exists() {
-        exec_script(script_path, vec![], get_env_vars(&input.context)?)?;
+        exec_script(create_script(&script_path, &input.context)?)?;
     }
 
     Ok(Json(NativeUninstallOutput {
@@ -275,13 +269,13 @@ pub fn locate_executables(
 }
 
 #[plugin_fn]
-pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
+pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
     let mut output = LoadVersionsOutput::default();
     let config = get_tool_config::<AsdfPluginConfig>()?;
     let script_path = config.get_script_path("list-all")?;
 
     //https://asdf-vm.com/plugins/create.html#bin-list-all
-    let versions: Vec<String> = exec_bare_script(script_path)?
+    let versions: Vec<String> = exec_script(create_script(&script_path, &input.context)?)?
         .split_whitespace()
         .map(str::to_owned)
         .collect();

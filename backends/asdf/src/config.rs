@@ -1,15 +1,10 @@
-use std::path::PathBuf;
-
 use extism_pdk::*;
 use proto_pdk::*;
+use std::path::PathBuf;
 
 #[host_fn]
 extern "ExtismHost" {
-    // fn exec_command(input: Json<ExecCommandInput>) -> Json<ExecCommandOutput>;
     fn send_request(input: Json<SendRequestInput>) -> Json<SendRequestOutput>;
-    // fn from_virtual_path(path: String) -> String;
-    // fn to_virtual_path(path: String) -> String;
-    // fn host_log(input: Json<HostLogInput>);
 }
 
 const ASDF_PLUGINS_URL: &str =
