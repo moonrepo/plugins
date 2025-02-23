@@ -59,7 +59,7 @@ pub fn native_install(
 
         // https://stackoverflow.com/a/77120044
         // https://github.com/python-poetry/install.python-poetry.org/issues/24
-        if env.os.is_mac() {
+        if env.os.is_unix() {
             script = script.replace("symlinks=False", "symlinks=True");
         }
 
@@ -94,6 +94,12 @@ pub fn native_install(
     })?;
 
     Ok(Json(NativeInstallOutput {
+        error: if result.stdout.contains("poetry-installer-error") && result.stdout.contains(".log")
+        {
+            Some("An error log has been written to the current directory.".into())
+        } else {
+            None
+        },
         installed: result.exit_code == 0,
         ..NativeInstallOutput::default()
     }))
