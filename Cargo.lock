@@ -2974,7 +2974,7 @@ dependencies = [
  "system_env 0.8.0",
  "thiserror 2.0.11",
  "version_spec 0.9.0",
- "warpgate_api 0.13.0",
+ "warpgate_api 0.13.1",
 ]
 
 [[package]]
@@ -4972,7 +4972,7 @@ dependencies = [
  "tokio",
  "tracing",
  "ureq",
- "warpgate_api 0.13.0",
+ "warpgate_api 0.13.1",
 ]
 
 [[package]]
@@ -4992,9 +4992,9 @@ dependencies = [
 
 [[package]]
 name = "warpgate_api"
-version = "0.13.0"
+version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad6554e9f8c44881a4c13b70a2f5daf42fa29a1b13f874cb7067575c5424b2db"
+checksum = "c0297f94de206b1c20500e64d35475efcf397ca3c05ddbdbb67f5d38ef8f6fa8"
 dependencies = [
  "anyhow",
  "rustc-hash",
@@ -5024,7 +5024,7 @@ checksum = "ea672102fcd363cba23c39d8b2e4b8626e4a493d1f9c31e7bb320e9eb5caf4bf"
 dependencies = [
  "extism-pdk",
  "serde",
- "warpgate_api 0.13.0",
+ "warpgate_api 0.13.1",
 ]
 
 [[package]]
