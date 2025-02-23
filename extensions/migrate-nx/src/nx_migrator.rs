@@ -8,7 +8,7 @@ use moon_config::{
     PartialTaskOptionsConfig, PartialVcsConfig, PartialWorkspaceProjects, PortablePath,
     ProjectType, TaskOptionEnvFile,
 };
-use moon_pdk::{map_miette_error, AnyResult, MoonContext};
+use moon_pdk::{AnyResult, MoonContext, map_miette_error};
 use moon_target::Target;
 use rustc_hash::FxHashMap;
 use starbase_utils::json::JsonValue;

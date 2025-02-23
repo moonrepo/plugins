@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use extism_pdk::Error;
-use proto_pdk::{get_plugin_id, UnresolvedVersionSpec};
+use proto_pdk::{UnresolvedVersionSpec, get_plugin_id};
 use std::fmt;
 
 #[derive(PartialEq)]

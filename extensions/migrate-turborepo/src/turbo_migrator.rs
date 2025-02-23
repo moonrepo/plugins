@@ -86,7 +86,9 @@ impl TurboMigrator {
             }
         }
 
-        Err(anyhow!("Unable to migrate task as package <id>{package_name}</id> does not exist. Is it within the workspace?"))
+        Err(anyhow!(
+            "Unable to migrate task as package <id>{package_name}</id> does not exist. Is it within the workspace?"
+        ))
     }
 
     pub fn migrate_root_config(&mut self, mut turbo_json: TurboJson) -> AnyResult<()> {

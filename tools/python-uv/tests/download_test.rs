@@ -30,7 +30,8 @@ mod python_uv_tool {
                 checksum_public_key: None,
                 checksum_url: Some("https://github.com/astral-sh/uv/releases/download/1.41.0/uv-aarch64-unknown-linux-gnu.tar.gz.sha256".into()),
                 download_name: Some("uv-aarch64-unknown-linux-gnu.tar.gz".into()),
-                download_url: "https://github.com/astral-sh/uv/releases/download/1.41.0/uv-aarch64-unknown-linux-gnu.tar.gz".into()
+                download_url: "https://github.com/astral-sh/uv/releases/download/1.41.0/uv-aarch64-unknown-linux-gnu.tar.gz".into(),
+                ..DownloadPrebuiltOutput::default()
             }
         );
     }
@@ -60,7 +61,8 @@ mod python_uv_tool {
                 checksum_public_key: None,
                 checksum_url: Some("https://github.com/astral-sh/uv/releases/download/1.2.0/uv-x86_64-unknown-linux-gnu.tar.gz.sha256".into()),
                 download_name: Some("uv-x86_64-unknown-linux-gnu.tar.gz".into()),
-                download_url: "https://github.com/astral-sh/uv/releases/download/1.2.0/uv-x86_64-unknown-linux-gnu.tar.gz".into()
+                download_url: "https://github.com/astral-sh/uv/releases/download/1.2.0/uv-x86_64-unknown-linux-gnu.tar.gz".into(),
+                ..DownloadPrebuiltOutput::default()
             }
         );
     }
@@ -90,6 +92,7 @@ mod python_uv_tool {
                 checksum_url: Some("https://github.com/astral-sh/uv/releases/download/1.2.0/uv-aarch64-apple-darwin.tar.gz.sha256".into()),
                 download_name: Some("uv-aarch64-apple-darwin.tar.gz".into()),
                 download_url: "https://github.com/astral-sh/uv/releases/download/1.2.0/uv-aarch64-apple-darwin.tar.gz".into(),
+                ..DownloadPrebuiltOutput::default()
             }
         );
     }
@@ -119,7 +122,8 @@ mod python_uv_tool {
                 checksum_public_key: None,
                 checksum_url: Some("https://github.com/astral-sh/uv/releases/download/1.2.0/uv-x86_64-apple-darwin.tar.gz.sha256".into()),
                 download_name: Some("uv-x86_64-apple-darwin.tar.gz".into()),
-                download_url: "https://github.com/astral-sh/uv/releases/download/1.2.0/uv-x86_64-apple-darwin.tar.gz".into()
+                download_url: "https://github.com/astral-sh/uv/releases/download/1.2.0/uv-x86_64-apple-darwin.tar.gz".into(),
+                ..DownloadPrebuiltOutput::default()
             }
         );
     }
@@ -175,7 +179,8 @@ mod python_uv_tool {
                 checksum_public_key: None,
                 checksum_url: Some("https://github.com/astral-sh/uv/releases/download/1.2.0/uv-x86_64-pc-windows-msvc.zip.sha256".into()),
                 download_name: Some("uv-x86_64-pc-windows-msvc.zip".into()),
-                download_url: "https://github.com/astral-sh/uv/releases/download/1.2.0/uv-x86_64-pc-windows-msvc.zip".into()
+                download_url: "https://github.com/astral-sh/uv/releases/download/1.2.0/uv-x86_64-pc-windows-msvc.zip".into(),
+                ..DownloadPrebuiltOutput::default()
             }
         );
     }

@@ -178,7 +178,7 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
 
     if output.versions.is_empty() {
         return Err(plugin_err!(
-            "Unable to resolve versions for {}. Schema either requires a <property>resolve.git_url</property> or <property>resolve.manifest_url</property>.",
+            "Unable to resolve versions for {}. Schema either requires a <property>resolve.git-url</property> or <property>resolve.manifest-url</property>.",
             schema.name
         ));
     }
@@ -335,6 +335,7 @@ pub fn download_prebuilt(
         checksum_public_key: schema.install.checksum_public_key,
         download_url,
         download_name: Some(download_file),
+        ..DownloadPrebuiltOutput::default()
     }))
 }
 
