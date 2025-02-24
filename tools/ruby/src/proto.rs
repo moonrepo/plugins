@@ -142,7 +142,7 @@ pub fn locate_executables(
                 ExecutableConfig::new(env.os.get_exe_name("bin/bundle")),
             ),
         ]),
-        exes_dir: Some("bin".into()),
+        exes_dirs: vec!["bin".into()],
         globals_lookup_dirs: vec![],
         ..LocateExecutablesOutput::default()
     }))

@@ -128,9 +128,9 @@ pub fn register_backend(
             "bin/install".into(),
             "bin/list-all".into(),
             "bin/list-bin-paths".into(),
-            "bin/uninstall".into(),
             "bin/list-legacy-filenames".into(),
             "bin/parse-legacy-file".into(),
+            "bin/uninstall".into(),
         ],
         source: Some(SourceLocation::Git(GitSource {
             url: config.get_repo_url()?,

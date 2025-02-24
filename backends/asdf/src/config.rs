@@ -65,7 +65,6 @@ impl AsdfPluginConfig {
             404 => Err(PluginError::Message(format!("URL not found: {filepath}")).into()),
             _ => Err(PluginError::Message(format!("Failed to fetch URL: {filepath}")).into()),
         }?;
-        let repo_config = repo_config.replace(" ", "");
 
         let Some(repo_url) = repo_config.split("=").last() else {
             return Err(PluginError::Message(String::from(

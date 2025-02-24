@@ -319,11 +319,11 @@ pub fn locate_executables(
                 "bin/node"
             }),
         )]),
-        exes_dir: Some(if env.os.is_windows() {
+        exes_dirs: vec![if env.os.is_windows() {
             ".".into()
         } else {
             "bin".into()
-        }),
+        }],
         globals_lookup_dirs: vec!["$PROTO_HOME/tools/node/globals/bin".into()],
         ..LocateExecutablesOutput::default()
     }))

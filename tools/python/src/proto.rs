@@ -218,7 +218,7 @@ pub fn locate_executables(
                 },
             ),
         ]),
-        exes_dir: Some(exes_dir.into()),
+        exes_dirs: vec![exes_dir.into()],
         ..LocateExecutablesOutput::default()
     }))
 }

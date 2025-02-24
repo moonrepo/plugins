@@ -213,7 +213,7 @@ pub fn locate_executables(
 
     Ok(Json(LocateExecutablesOutput {
         exes: HashMap::from_iter([("cargo".into(), primary)]),
-        exes_dir: Some("bin".into()),
+        exes_dirs: vec!["bin".into()],
         globals_lookup_dirs: vec![
             "$CARGO_INSTALL_ROOT/bin".into(),
             "$CARGO_HOME/bin".into(),
