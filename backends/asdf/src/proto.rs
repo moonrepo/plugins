@@ -13,19 +13,27 @@ extern "ExtismHost" {
 }
 
 fn cpu_cores() -> AnyResult<String> {
+    if let Some(value) = var::get("cpu_count")? {
+        return Ok(value);
+    }
+
     let result = if get_host_environment()?.os.is_mac() {
         exec_captured("sysctl", ["-n", "hw.physicalcpu"])?
     } else {
         exec_captured("nproc", Vec::<String>::new())?
     };
 
-    Ok(result.stdout.trim().into())
+    let value = result.stdout.trim().to_string();
+
+    var::set("cpu_count", &value)?;
+
+    Ok(value)
 }
 
 fn create_script(virtual_script_path: &Path, context: &ToolContext) -> AnyResult<ExecCommandInput> {
     if !virtual_script_path.exists() {
         return Err(PluginError::Message(format!(
-            "{} script not found, is the asdf repository valid?",
+            "Script <id>{}</id> not found. Is the asdf repository valid?",
             fs::file_name(virtual_script_path)
         ))
         .into());
@@ -67,7 +75,6 @@ fn create_script(virtual_script_path: &Path, context: &ToolContext) -> AnyResult
             .to_string_lossy()
             .to_string(),
     );
-    input.env.insert("ASDF_CONCURRENCY".into(), cpu_cores()?);
 
     Ok(input)
 }
@@ -78,7 +85,7 @@ fn exec_script(input: ExecCommandInput) -> AnyResult<String> {
 
     if result.exit_code != 0 {
         return Err(PluginError::Message(format!(
-            "Failed to execute script ({script_path}): {}",
+            "Failed to execute script <path>{script_path}</path>: {}",
             result.stderr
         ))
         .into());
@@ -95,7 +102,7 @@ pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<Regi
         minimum_proto_version: Some(Version::new(0, 46, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         config_schema: Some(schematic::SchemaBuilder::generate::<AsdfPluginConfig>()),
-        unstable: Switch::Message("asdf backend is experimental. Please report any issues.".into()),
+        unstable: Switch::Message("asdf backend is experimental. Any tools that require <id>exec-env</id> may not work correctly. Please report any issues.".into()),
         ..RegisterToolOutput::default()
     }))
 }
@@ -129,7 +136,6 @@ pub fn register_backend(
             url: config.get_repo_url()?,
             ..GitSource::default()
         })),
-        ..RegisterBackendOutput::default()
     }))
 }
 
@@ -223,16 +229,17 @@ pub fn native_install(
     // However, in newer versions, there's two separate 'download' and 'install' scripts.
     let download_script_path = config.get_script_path("download")?;
     let install_script_path = config.get_script_path("install")?;
-    let mut install_script = create_script(&install_script_path, &input.context)?;
 
     // https://asdf-vm.com/plugins/create.html#bin-download
     if download_script_path.exists() {
-        install_script.env.remove("ASDF_DOWNLOAD_PATH");
         exec_script(create_script(&download_script_path, &input.context)?)?;
     }
 
     // https://asdf-vm.com/plugins/create.html#bin-install
-    exec_script(install_script)?;
+    let mut script = create_script(&install_script_path, &input.context)?;
+    script.env.insert("ASDF_CONCURRENCY".into(), cpu_cores()?);
+
+    exec_script(script)?;
 
     Ok(Json(NativeInstallOutput {
         installed: true,
@@ -279,9 +286,8 @@ pub fn locate_executables(
 
     if let Some(dir) = output.exes_dirs.first() {
         let id = config.get_id()?;
-        let base_dir = input.context.tool_dir.join(dir);
 
-        for entry in fs::read_dir(&base_dir)? {
+        for entry in fs::read_dir(input.context.tool_dir.join(dir))? {
             let file = entry.path();
             let name = fs::file_name(&file);
 
@@ -289,7 +295,7 @@ pub fn locate_executables(
                 name.clone(),
                 ExecutableConfig {
                     primary: name == id,
-                    exe_path: match file.strip_prefix(&base_dir) {
+                    exe_path: match file.strip_prefix(&input.context.tool_dir) {
                         Ok(suffix) => Some(suffix.to_owned()),
                         Err(_) => Some(dir.join(name)),
                     },
@@ -318,18 +324,17 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
     let script_path = config.get_script_path("list-all")?;
 
     //https://asdf-vm.com/plugins/create.html#bin-list-all
-    let versions: Vec<String> = exec_script(create_script(&script_path, &input.context)?)?
-        .split_whitespace()
-        .map(str::to_owned)
-        .collect();
+    let mut script = create_script(&script_path, &input.context)?;
+    script.env.clear();
+    script.working_dir = None;
 
-    if !versions.is_empty() {
-        for version in versions {
-            match VersionSpec::parse(version) {
-                Ok(version) => output.versions.push(version),
-                _ => continue,
-            };
-        }
+    let data = exec_script(script)?;
+
+    for version in data.split_whitespace() {
+        match VersionSpec::parse(version.trim()) {
+            Ok(version) => output.versions.push(version),
+            _ => continue,
+        };
     }
 
     Ok(Json(output))

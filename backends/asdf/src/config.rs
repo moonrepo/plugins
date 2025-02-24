@@ -74,6 +74,6 @@ impl AsdfPluginConfig {
             .into());
         };
 
-        Ok(repo_url.trim_end_matches(".git").into())
+        Ok(repo_url.trim().trim_end_matches(".git").into())
     }
 }
