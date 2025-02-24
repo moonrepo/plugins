@@ -465,7 +465,10 @@ pub fn locate_executables(
 
     Ok(Json(LocateExecutablesOutput {
         exes: HashMap::from_iter(exes),
-        exes_dir: platform.exes_dir.as_ref().map(PathBuf::from),
+        exes_dirs: match platform.exes_dir.as_ref() {
+            Some(dir) => vec![dir.into()],
+            None => vec![],
+        },
         globals_lookup_dirs: schema.packages.globals_lookup_dirs,
         globals_prefix: schema.packages.globals_prefix,
         ..Default::default()
