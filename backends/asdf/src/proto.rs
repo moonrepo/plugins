@@ -1,7 +1,6 @@
 use crate::config::AsdfPluginConfig;
 use extism_pdk::*;
 use proto_pdk::*;
-use rustc_hash::FxHashMap;
 use starbase_utils::fs;
 use std::path::Path;
 
@@ -34,7 +33,6 @@ fn create_script(virtual_script_path: &Path, context: &ToolContext) -> AnyResult
 
     let mut input = ExecCommandInput {
         command: "bash".into(),
-        set_executable: true,
         working_dir: Some(context.tool_dir.clone()),
         ..Default::default()
     };
@@ -97,6 +95,7 @@ pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<Regi
         minimum_proto_version: Some(Version::new(0, 46, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         config_schema: Some(schematic::SchemaBuilder::generate::<AsdfPluginConfig>()),
+        unstable: Switch::Message("asdf backend is experimental. Please report any issues.".into()),
         ..RegisterToolOutput::default()
     }))
 }
@@ -117,6 +116,15 @@ pub fn register_backend(
 
     Ok(Json(RegisterBackendOutput {
         backend_id: config.get_backend_id()?,
+        exes: vec![
+            "bin/download".into(),
+            "bin/install".into(),
+            "bin/list-all".into(),
+            "bin/list-bin-paths".into(),
+            "bin/uninstall".into(),
+            "bin/list-legacy-filenames".into(),
+            "bin/parse-legacy-file".into(),
+        ],
         source: Some(SourceLocation::Git(GitSource {
             url: config.get_repo_url()?,
             ..GitSource::default()
@@ -140,7 +148,7 @@ pub fn detect_version_files(
         let data = exec_script(create_script(&script_path, &input.context)?)?;
 
         for file in data.split_whitespace() {
-            output.files.push(file.to_owned());
+            output.files.push(file.into());
         }
     }
 
@@ -252,20 +260,55 @@ pub fn native_uninstall(
 
 #[plugin_fn]
 pub fn locate_executables(
-    Json(_): Json<LocateExecutablesInput>,
+    Json(input): Json<LocateExecutablesInput>,
 ) -> FnResult<Json<LocateExecutablesOutput>> {
+    let mut output = LocateExecutablesOutput::default();
     let config = get_tool_config::<AsdfPluginConfig>()?;
-    let exe = config.get_exe_name()?;
+    let script_path = config.get_script_path("list-bin-paths")?;
 
-    Ok(Json(LocateExecutablesOutput {
-        exes: FxHashMap::from_iter([(
+    // https://asdf-vm.com/plugins/create.html#bin-list-bin-paths
+    if script_path.exists() {
+        let data = exec_script(create_script(&script_path, &input.context)?)?;
+
+        for dir in data.split_whitespace() {
+            output.exes_dirs.push(dir.into());
+        }
+    } else {
+        output.exes_dirs.push("bin".into());
+    }
+
+    if let Some(dir) = output.exes_dirs.first() {
+        let id = config.get_id()?;
+        let base_dir = input.context.tool_dir.join(dir);
+
+        for entry in fs::read_dir(&base_dir)? {
+            let file = entry.path();
+            let name = fs::file_name(&file);
+
+            output.exes.insert(
+                name.clone(),
+                ExecutableConfig {
+                    primary: name == id,
+                    exe_path: match file.strip_prefix(&base_dir) {
+                        Ok(suffix) => Some(suffix.to_owned()),
+                        Err(_) => Some(dir.join(name)),
+                    },
+                    ..Default::default()
+                },
+            );
+        }
+    }
+
+    if output.exes.is_empty() {
+        let exe = config.get_exe_name()?;
+
+        output.exes.insert(
             exe.clone(),
             ExecutableConfig::new_primary(format!("bin/{exe}")),
-        )]),
-        // TODO verify
-        exes_dir: Some("bin".into()),
-        ..LocateExecutablesOutput::default()
-    }))
+        );
+    }
+
+    Ok(Json(output))
 }
 
 #[plugin_fn]

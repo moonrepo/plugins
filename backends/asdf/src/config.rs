@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use extism_pdk::*;
 use proto_pdk::*;
 use std::path::PathBuf;

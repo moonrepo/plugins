@@ -102,7 +102,6 @@ version = "0.0.1"
 dependencies = [
  "extism-pdk",
  "proto_pdk",
- "rustc-hash",
  "schematic 0.18.0",
  "serde",
  "starbase_utils 0.11.1",
@@ -2964,9 +2963,9 @@ dependencies = [
 
 [[package]]
 name = "proto_pdk_api"
-version = "0.27.1"
+version = "0.27.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d449dfec2b9025447f9afeb54b7b15acc5fae3a7341c0750972a726e83538cb7"
+checksum = "a63c7abb3816a254ddd294700d981b37f5040e37bf292c077fc7fb01681ec9ff"
 dependencies = [
  "rustc-hash",
  "schematic 0.18.0",

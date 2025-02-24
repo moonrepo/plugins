@@ -6,7 +6,6 @@ edition = "2024"
 [dependencies]
 extism-pdk = { workspace = true }
 proto_pdk = { workspace = true }
-rustc-hash = { workspace = true }
 schematic = { workspace = true }
 serde = { workspace = true }
 starbase_utils = { workspace = true }

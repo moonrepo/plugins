@@ -2,6 +2,10 @@
 
 [asdf](https://asdf-vm.com/) backend WASM plugin for [proto](https://github.com/moonrepo/proto).
 
+## Unsupported
+
+The `latest-stable`, `exec-env`, `exec-path`, `post-*`, `pre-*`, and `help.*` asdf scripts are currently not supported by this plugin.
+
 ## Installation
 
 This plugin is built-in to proto, but if you want to override it with an explicit version, add the following to `.prototools`.
