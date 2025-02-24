@@ -3,6 +3,9 @@ name = "asdf_backend"
 version = "0.0.1"
 edition = "2024"
 
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
 extism-pdk = { workspace = true }
 proto_pdk = { workspace = true }
@@ -10,8 +13,10 @@ schematic = { workspace = true }
 serde = { workspace = true }
 starbase_utils = { workspace = true }
 
-[lib]
-crate-type = ["cdylib"]
+[dev-dependencies]
+proto_pdk_test_utils = { workspace = true }
+starbase_sandbox = { workspace = true }
+tokio = { workspace = true }
 
 [features]
 default = ["wasm"]

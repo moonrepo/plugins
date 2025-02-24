@@ -18,6 +18,7 @@ mod node_depman_tool {
                     content: r#"{ "volta": { "extends": "./a.json" } }"#.into(),
                     file: "package.json".into(),
                     path: VirtualPath::OnlyReal(sandbox.path().join("package.json")),
+                    ..Default::default()
                 })
                 .await,
             ParseVersionFileOutput {
