@@ -18,18 +18,11 @@ const ASDF_PLUGINS_URL: &str =
 pub struct AsdfPluginConfig {
     pub asdf_shortname: Option<String>,
     pub asdf_repository: Option<String>,
-    pub executable_name: Option<String>,
+    pub exes: Option<Vec<String>>,
 }
 
 impl AsdfPluginConfig {
-    pub fn get_exe_name(&self) -> AnyResult<String> {
-        match &self.executable_name {
-            Some(name) => Ok(name.into()),
-            None => self.get_id(),
-        }
-    }
-
-    pub fn get_id(&self) -> AnyResult<String> {
+    pub fn get_shortname(&self) -> AnyResult<String> {
         match &self.asdf_shortname {
             Some(name) => Ok(name.into()),
             None => get_plugin_id(),
@@ -37,7 +30,7 @@ impl AsdfPluginConfig {
     }
 
     pub fn get_backend_id(&self) -> AnyResult<String> {
-        Ok(format!("asdf-{}", self.get_id()?))
+        Ok(format!("asdf-{}", self.get_shortname()?))
     }
 
     pub fn get_backend_path(&self) -> AnyResult<PathBuf> {
@@ -56,7 +49,7 @@ impl AsdfPluginConfig {
             return Ok(repo_url.into());
         }
 
-        let id = self.get_id()?;
+        let id = self.get_shortname()?;
         let filepath = format!("{ASDF_PLUGINS_URL}/{id}");
         let repo_response = send_request!(&filepath);
 

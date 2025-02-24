@@ -20,8 +20,8 @@ asdf = "https://github.com/moonrepo/plugins/releases/download/asdf_backend-vX.Y.
 asdf plugin can be configured with a `.prototools` file.
 
 - `asdf-shortname` (string) - The name of the [asdf plugin](https://github.com/asdf-vm/asdf-plugins) if different than the configured ID.
-- `asdf-repository` (string) - The Git repository URL in which to locate [scripts](https://asdf-vm.com/plugins/create.html#scripts-overview). If not defined, is extracted from the shortname plugin manifest.
-- `executable-name` (string) - The name of the executable if different from the configured ID.
+- `asdf-repository` (string) - The Git repository URL in which to locate [scripts](https://asdf-vm.com/plugins/create.html#scripts-overview). If not defined, is extracted from the shortname plugin index.
+- `exes` (string[]) - List of executable file names (relative from `bin`) to be linked as a shim/bin. If not defined, we'll automatically scan the `bin` directory.
 
 ```toml
 <id> = "asdf:1.2.3"

@@ -117,7 +117,7 @@ pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<Regi
         minimum_proto_version: Some(Version::new(0, 46, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         config_schema: Some(schematic::SchemaBuilder::generate::<AsdfPluginConfig>()),
-        unstable: Switch::Message("asdf backend is experimental. Any tools that require <id>exec-env</id> may not work correctly. Please report any issues.".into()),
+        unstable: Switch::Message("Any tools that require <id>exec-env</id> may not work correctly. Please report any and all issues.".into()),
         ..RegisterToolOutput::default()
     }))
 }
@@ -189,7 +189,7 @@ pub fn parse_version_file(
     let config = get_tool_config::<AsdfPluginConfig>()?;
 
     if input.file == ".tool-versions" {
-        let id = config.get_id()?;
+        let id = get_plugin_id()?;
 
         for line in input.content.lines() {
             let mut parsed_line = String::new();
@@ -317,12 +317,46 @@ pub fn locate_executables(
         output.exes_dirs.push("bin".into());
     }
 
-    if let Some(dir) = output.exes_dirs.first() {
-        let id = config.get_id()?;
+    let id = get_plugin_id()?;
 
+    if let Some(exes) = config.exes {
+        for exe in exes {
+            output.exes.insert(
+                exe.clone(),
+                ExecutableConfig {
+                    primary: exe == id,
+                    exe_path: Some(format!("bin/{exe}").into()),
+                    ..Default::default()
+                },
+            );
+        }
+    } else if let Some(dir) = output.exes_dirs.first() {
         for entry in fs::read_dir(input.context.tool_dir.join(dir))? {
             let file = entry.path();
             let name = fs::file_name(&file);
+
+            // Some asdf plugins just unpack the entire repository/archive
+            // into the same folder, flooding it with non-sense files. Let's
+            // do our best to filter them out...
+            if name.contains("README")
+                || name.contains("HISTORY")
+                || name.contains("CHANGELOG")
+                || name.contains("LICENSE")
+                || name.starts_with('.')
+            {
+                continue;
+            }
+
+            // Let's also do some filtering based on file extension
+            match file.extension().and_then(|ext| ext.to_str()) {
+                Some("sh" | "exe") | None => {
+                    // Allowed
+                }
+                Some(_) => {
+                    // Unknown extension, not allowed
+                    continue;
+                }
+            };
 
             output.exes.insert(
                 name.clone(),
@@ -336,15 +370,6 @@ pub fn locate_executables(
                 },
             );
         }
-    }
-
-    if output.exes.is_empty() {
-        let exe = config.get_exe_name()?;
-
-        output.exes.insert(
-            exe.clone(),
-            ExecutableConfig::new_primary(format!("bin/{exe}")),
-        );
     }
 
     Ok(Json(output))

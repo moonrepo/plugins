@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed an issue where non-executable bins were being returned. We do our best to filter this list.
+
 ## 0.1.1
 
 #### 🐞 Fixes
