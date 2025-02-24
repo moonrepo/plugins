@@ -12,6 +12,13 @@ extern "ExtismHost" {
     fn host_log(input: Json<HostLogInput>);
 }
 
+// The plugin is being used as-is without a "tool" assigned to it,
+// so return nothing instead of failing. This happens during
+// `proto plugin info` and other similar commands.
+fn is_asdf() -> bool {
+    get_plugin_id().is_ok_and(|id| id == "asdf")
+}
+
 fn cpu_cores() -> AnyResult<String> {
     if let Some(value) = var::get("cpu_count")? {
         return Ok(value);
@@ -97,8 +104,16 @@ fn exec_script(input: ExecCommandInput) -> AnyResult<String> {
 #[plugin_fn]
 pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {
     Ok(Json(RegisterToolOutput {
-        name: format!("asdf:{}", input.id),
-        type_of: PluginType::Language,
+        name: if input.id == "asdf" {
+            input.id.clone()
+        } else {
+            format!("asdf:{}", input.id)
+        },
+        type_of: if input.id == "asdf" {
+            PluginType::VersionManager
+        } else {
+            PluginType::Language
+        },
         minimum_proto_version: Some(Version::new(0, 46, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         config_schema: Some(schematic::SchemaBuilder::generate::<AsdfPluginConfig>()),
@@ -144,6 +159,11 @@ pub fn detect_version_files(
     Json(input): Json<DetectVersionInput>,
 ) -> FnResult<Json<DetectVersionOutput>> {
     let mut output = DetectVersionOutput::default();
+
+    if is_asdf() {
+        return Ok(Json(output));
+    }
+
     let config = get_tool_config::<AsdfPluginConfig>()?;
     let script_path = config.get_script_path("list-legacy-filenames")?;
 
@@ -222,6 +242,14 @@ pub fn parse_version_file(
 pub fn native_install(
     Json(input): Json<NativeInstallInput>,
 ) -> FnResult<Json<NativeInstallOutput>> {
+    if is_asdf() {
+        return Ok(Json(NativeInstallOutput {
+            error: Some("asdf itself cannot be installed, only asdf plugins.".into()),
+            installed: false,
+            ..Default::default()
+        }));
+    }
+
     let config = get_tool_config::<AsdfPluginConfig>()?;
 
     // In older versions of asdf there may not be a 'download' script,
@@ -270,6 +298,11 @@ pub fn locate_executables(
     Json(input): Json<LocateExecutablesInput>,
 ) -> FnResult<Json<LocateExecutablesOutput>> {
     let mut output = LocateExecutablesOutput::default();
+
+    if is_asdf() {
+        return Ok(Json(output));
+    }
+
     let config = get_tool_config::<AsdfPluginConfig>()?;
     let script_path = config.get_script_path("list-bin-paths")?;
 
@@ -320,10 +353,15 @@ pub fn locate_executables(
 #[plugin_fn]
 pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
     let mut output = LoadVersionsOutput::default();
+
+    if is_asdf() {
+        return Ok(Json(output));
+    }
+
     let config = get_tool_config::<AsdfPluginConfig>()?;
     let script_path = config.get_script_path("list-all")?;
 
-    //https://asdf-vm.com/plugins/create.html#bin-list-all
+    // https://asdf-vm.com/plugins/create.html#bin-list-all
     let mut script = create_script(&script_path, &input.context)?;
     script.env.clear();
     script.working_dir = None;
