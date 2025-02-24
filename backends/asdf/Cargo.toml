@@ -3,6 +3,11 @@ name = "asdf_backend"
 version = "0.1.0"
 edition = "2024"
 
+[package.metadata.release]
+pre-release-replacements = [
+    { file = "./CHANGELOG.md", search = "Unreleased", replace = "{{version}}" },
+]
+
 [lib]
 crate-type = ["cdylib"]
 
