@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 
-data=$(moon query tasks --affected --upstream deep --json)
+
+raw=$(moon query tasks --affected --upstream deep --downstream deep)
+
+echo "Tasks:"
+echo "$raw"
+echo ""
+
+data=$(moon query tasks --affected --upstream deep --downstream deep --json)
 taskCount=$(echo "$data" | jq '.tasks | length')
 taskPerJob=15
 jobTotal=1
