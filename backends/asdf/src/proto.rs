@@ -372,6 +372,14 @@ pub fn locate_executables(
         }
     }
 
+    // Return at least something!
+    if output.exes.is_empty() {
+        output.exes.insert(
+            id.clone(),
+            ExecutableConfig::new_primary(format!("bin/{id}")),
+        );
+    }
+
     Ok(Json(output))
 }
 
