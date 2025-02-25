@@ -5,13 +5,13 @@ mod asdf_backend {
     #[tokio::test(flavor = "multi_thread")]
     async fn registers_metadata() {
         let sandbox = create_empty_proto_sandbox();
-        let plugin = sandbox.create_plugin("act").await;
+        let plugin = sandbox.create_plugin("zig").await;
 
         let metadata = plugin
-            .register_tool(RegisterToolInput { id: "act".into() })
+            .register_tool(RegisterToolInput { id: "zig".into() })
             .await;
 
-        assert_eq!(metadata.name, "asdf:act");
+        assert_eq!(metadata.name, "asdf:zig");
         assert_eq!(
             metadata.plugin_version.unwrap().to_string(),
             env!("CARGO_PKG_VERSION")
@@ -21,16 +21,16 @@ mod asdf_backend {
     #[tokio::test(flavor = "multi_thread")]
     async fn registers_backend() {
         let sandbox = create_empty_proto_sandbox();
-        let plugin = sandbox.create_plugin("act").await;
+        let plugin = sandbox.create_plugin("zig").await;
 
         let metadata = plugin
             .register_backend(RegisterBackendInput::default())
             .await;
 
-        assert_eq!(metadata.backend_id, "asdf-act");
+        assert_eq!(metadata.backend_id, "asdf-zig");
 
         if let SourceLocation::Git(git) = metadata.source.unwrap() {
-            assert_eq!(git.url, "https://github.com/gr1m0h/asdf-act");
+            assert_eq!(git.url, "https://github.com/cheetah/asdf-zig");
         }
     }
 }

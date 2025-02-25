@@ -2,5 +2,5 @@
 mod asdf_backend {
     use proto_pdk_test_utils::*;
 
-    generate_native_install_tests!("asdf:act", "asdf:0.2.70");
+    generate_native_install_tests!("asdf:zig", "asdf:0.13.0");
 }
