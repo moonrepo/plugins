@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Ensure an executable is always returned, even if invalid.
+
 ## 0.1.2
 
 #### 🐞 Fixes
