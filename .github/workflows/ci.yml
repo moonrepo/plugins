@@ -7,9 +7,10 @@ on:
   pull_request:
 
 env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # For setup-rust
+  NEXTEST_TEST_THREADS: 3
+  NEXTEST_RETRIES: 2
   PROTO_LOG: trace
-  # For setup-rust
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
   # format:
