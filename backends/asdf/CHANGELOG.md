@@ -4,7 +4,9 @@
 
 #### 🚀 Updates
 
+- Added `exec-env` experimental support. Runs as a `pre-run` hook to extract any set environment variables.
 - Added `latest-stable` script support when the alias "stable" is used for a version.
+- Reduced the amount of calls made for converting `/proto/backends` virtual paths into a real path.
 
 #### 🐞 Fixes
 

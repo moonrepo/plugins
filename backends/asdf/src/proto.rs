@@ -1,8 +1,9 @@
 use crate::config::AsdfPluginConfig;
 use extism_pdk::*;
 use proto_pdk::*;
+use rustc_hash::FxHashMap;
 use starbase_utils::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -35,6 +36,18 @@ fn cpu_cores() -> AnyResult<String> {
     var::set("cpu_count", &value)?;
 
     Ok(value)
+}
+
+fn backend_root() -> AnyResult<PathBuf> {
+    if let Some(value) = var::get::<String>("backend_root")? {
+        return Ok(value.into());
+    }
+
+    let root = into_real_path("/proto/backends")?;
+
+    var::set("backend_root", root.to_str().unwrap())?;
+
+    Ok(root)
 }
 
 fn create_script_from_context(
@@ -77,9 +90,12 @@ fn create_script(
     };
 
     input.args.push(
-        into_real_path(virtual_script_path)?
-            .to_string_lossy()
-            .to_string(),
+        match virtual_script_path.strip_prefix("/proto/backends") {
+            Ok(suffix) => backend_root()?.join(suffix),
+            Err(_) => into_real_path(virtual_script_path)?,
+        }
+        .to_string_lossy()
+        .to_string(),
     );
 
     if let Some(version) = version {
@@ -112,6 +128,10 @@ fn exec_script(input: ExecCommandInput) -> AnyResult<String> {
     let script_path = input.args[0].clone();
     let result = exec(input)?;
 
+    handle_exec_result(script_path, result)
+}
+
+fn handle_exec_result(script_path: String, result: ExecCommandOutput) -> AnyResult<String> {
     if result.exit_code != 0 {
         return Err(PluginError::Message(format!(
             "Failed to execute script <path>{script_path}</path>: {}",
@@ -139,7 +159,7 @@ pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<Regi
         minimum_proto_version: Some(Version::new(0, 46, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         config_schema: Some(schematic::SchemaBuilder::generate::<AsdfPluginConfig>()),
-        unstable: Switch::Message("Any tools that require <id>exec-env</id> may not work correctly. Please report any and all issues.".into()),
+        unstable: Switch::Toggle(true),
         ..RegisterToolOutput::default()
     }))
 }
@@ -162,7 +182,9 @@ pub fn register_backend(
         backend_id: config.get_backend_id()?,
         exes: vec![
             "bin/download".into(),
+            "bin/exec-env".into(),
             "bin/install".into(),
+            "bin/latest-stable".into(),
             "bin/list-all".into(),
             "bin/list-bin-paths".into(),
             "bin/list-legacy-filenames".into(),
@@ -460,6 +482,61 @@ pub fn resolve_version(
                 }
             } else {
                 output.candidate = Some(UnresolvedVersionSpec::Alias("latest".into()));
+            }
+        }
+    }
+
+    Ok(Json(output))
+}
+
+#[plugin_fn]
+pub fn pre_run(Json(input): Json<RunHook>) -> FnResult<Json<RunHookResult>> {
+    let mut output = RunHookResult::default();
+    let config = get_tool_config::<AsdfPluginConfig>()?;
+    let script_path = config.get_script_path("exec-env")?;
+
+    // https://asdf-vm.com/plugins/create.html#bin-exec-env
+    if !script_path.exists() {
+        return Ok(Json(output));
+    }
+
+    // Because `exec-env` sets environment variables, we simply can't execute
+    // the script as-is, we need to execute it and capture the variables that were
+    // set. This is complicated, but doable. We will achieve this by running `env`
+    // to capture the existing variables, then `source`ing the `exec-env` script,
+    // then running `env` again to capture the new/different variables.
+    let mut script = create_script_from_context(&script_path, &input.context)?;
+    let real_script_path = script.args.remove(0);
+
+    script.args.push("-c".into());
+    script.args.push(format!(
+        "env; echo \"###\"; source \"{real_script_path}\"; env;"
+    ));
+
+    let stdout = handle_exec_result(real_script_path, exec(script)?)?;
+    let mut existing_env = FxHashMap::default();
+    let mut after_source = false;
+
+    for line in stdout.lines() {
+        if line == "###" {
+            after_source = true;
+            continue;
+        }
+
+        if let Some((key, value)) = line.split_once('=') {
+            if after_source {
+                if let Some(existing_value) = existing_env.get(key) {
+                    if value == *existing_value {
+                        continue;
+                    }
+                }
+
+                output
+                    .env
+                    .get_or_insert_default()
+                    .insert(key.to_owned(), value.to_owned());
+            } else {
+                existing_env.insert(key, value);
             }
         }
     }

@@ -103,6 +103,7 @@ dependencies = [
  "extism-pdk",
  "proto_pdk",
  "proto_pdk_test_utils",
+ "rustc-hash",
  "schematic 0.18.0",
  "serde",
  "starbase_sandbox",

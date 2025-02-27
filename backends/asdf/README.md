@@ -4,7 +4,7 @@
 
 ## Unsupported
 
-The `exec-env`, `exec-path`, `post-*`, `pre-*`, and `help.*` asdf scripts are currently not supported by this plugin.
+The `exec-path`, `post-*`, `pre-*`, and `help.*` asdf scripts are currently not supported by this plugin.
 
 ## Installation
 
