@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+#### 🚀 Updates
+
+- Added `latest-stable` script support when the alias "stable" is used for a version.
+
 #### 🐞 Fixes
 
 - Ensure an executable is always returned, even if invalid.

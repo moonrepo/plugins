@@ -436,3 +436,33 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
 
     Ok(Json(output))
 }
+
+#[plugin_fn]
+pub fn resolve_version(
+    Json(input): Json<ResolveVersionInput>,
+) -> FnResult<Json<ResolveVersionOutput>> {
+    let mut output = ResolveVersionOutput::default();
+
+    if let UnresolvedVersionSpec::Alias(alias) = input.initial {
+        if alias == "stable" {
+            let config = get_tool_config::<AsdfPluginConfig>()?;
+            let script_path = config.get_script_path("latest-stable")?;
+
+            // https://asdf-vm.com/plugins/create.html#bin-latest-stable
+            if script_path.exists() {
+                let data = exec_script(create_script_from_unresolved_context(
+                    &script_path,
+                    &input.context,
+                )?)?;
+
+                if !data.is_empty() {
+                    output.candidate = UnresolvedVersionSpec::parse(data.trim()).ok();
+                }
+            } else {
+                output.candidate = Some(UnresolvedVersionSpec::Alias("latest".into()));
+            }
+        }
+    }
+
+    Ok(Json(output))
+}
