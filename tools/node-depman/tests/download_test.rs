@@ -51,6 +51,7 @@ mod node_depman_tool {
                             version: VersionSpec::parse("9.0.0").unwrap(),
                             ..Default::default()
                         },
+                        ..Default::default()
                     })
                     .await
                     .exes
@@ -110,6 +111,7 @@ mod node_depman_tool {
                             version: VersionSpec::parse("8.0.0").unwrap(),
                             ..Default::default()
                         },
+                        ..Default::default()
                     })
                     .await
                     .exes
@@ -169,6 +171,7 @@ mod node_depman_tool {
                             version: VersionSpec::parse("1.22.0").unwrap(),
                             ..Default::default()
                         },
+                        ..Default::default()
                     })
                     .await
                     .exes
@@ -236,6 +239,7 @@ mod node_depman_tool {
                             version: VersionSpec::parse("3.6.1").unwrap(),
                             ..Default::default()
                         },
+                        ..Default::default()
                     })
                     .await
                     .exes

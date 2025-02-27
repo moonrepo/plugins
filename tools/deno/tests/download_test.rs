@@ -200,6 +200,7 @@ mod deno_tool {
                         version: VersionSpec::parse("1.2.0").unwrap(),
                         ..Default::default()
                     },
+                    ..Default::default()
                 })
                 .await
                 .exes
@@ -226,6 +227,7 @@ mod deno_tool {
                         version: VersionSpec::parse("1.2.0").unwrap(),
                         ..Default::default()
                     },
+                    ..Default::default()
                 })
                 .await
                 .exes

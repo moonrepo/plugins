@@ -196,7 +196,8 @@ mod bun_tool {
                     context: ToolContext {
                         version: VersionSpec::parse("1.2.0").unwrap(),
                         ..Default::default()
-                    }
+                    },
+                    ..Default::default()
                 })
                 .await
                 .exes
@@ -222,7 +223,8 @@ mod bun_tool {
                     context: ToolContext {
                         version: VersionSpec::parse("1.2.0").unwrap(),
                         ..Default::default()
-                    }
+                    },
+                    ..Default::default()
                 })
                 .await
                 .exes

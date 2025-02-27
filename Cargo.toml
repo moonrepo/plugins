@@ -26,9 +26,9 @@ moon_pdk_test_utils = { version = "0.0.15" } # , path = "../moon/crates/pdk-test
 moon_target = { version = "0.0.10" }         # , path = "../moon/crates/target" }
 
 # proto
-proto_pdk = { version = "0.28.1" }            # , path = "../../proto/crates/pdk" }
-proto_pdk_api = { version = "0.27.3" }        # , path = "../../proto/crates/pdk-api" }
-proto_pdk_test_utils = { version = "0.35.2" } # , path = "../../proto/crates/pdk-test-utils" }
+proto_pdk = { version = "0.28.1"  , path = "../../proto/crates/pdk" }
+proto_pdk_api = { version = "0.27.3"  , path = "../../proto/crates/pdk-api" }
+proto_pdk_test_utils = { version = "0.35.2"  , path = "../../proto/crates/pdk-test-utils" }
 
 # Node.js
 nodejs_package_json = "0.3.1"

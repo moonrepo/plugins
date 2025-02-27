@@ -158,7 +158,7 @@ pub fn native_install(
         .any(|line| line.starts_with(&triple))
     {
         // Ensure the bins exist and that this isn't just an empty folder
-        if input.context.tool_dir.join("bin").exists() {
+        if input.install_dir.join("bin").exists() {
             debug!("Target already installed in toolchain");
 
             do_install = false;
