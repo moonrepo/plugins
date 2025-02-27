@@ -1,8 +1,9 @@
 use crate::config::AsdfPluginConfig;
 use extism_pdk::*;
 use proto_pdk::*;
+use rustc_hash::FxHashMap;
 use starbase_utils::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -37,7 +38,43 @@ fn cpu_cores() -> AnyResult<String> {
     Ok(value)
 }
 
-fn create_script(virtual_script_path: &Path, context: &ToolContext) -> AnyResult<ExecCommandInput> {
+fn backend_root() -> AnyResult<PathBuf> {
+    if let Some(value) = var::get::<String>("backend_root")? {
+        return Ok(value.into());
+    }
+
+    let root = into_real_path("/proto/backends")?;
+
+    var::set("backend_root", root.to_str().unwrap())?;
+
+    Ok(root)
+}
+
+fn create_script_from_context(
+    virtual_script_path: &Path,
+    context: &ToolContext,
+) -> AnyResult<ExecCommandInput> {
+    create_script(
+        virtual_script_path,
+        Some(&context.version),
+        Some(&context.tool_dir),
+        Some(&context.temp_dir),
+    )
+}
+
+fn create_script_from_unresolved_context(
+    virtual_script_path: &Path,
+    context: &ToolUnresolvedContext,
+) -> AnyResult<ExecCommandInput> {
+    create_script(virtual_script_path, context.version.as_ref(), None, None)
+}
+
+fn create_script(
+    virtual_script_path: &Path,
+    version: Option<&VersionSpec>,
+    tool_dir: Option<&VirtualPath>,
+    temp_dir: Option<&VirtualPath>,
+) -> AnyResult<ExecCommandInput> {
     if !virtual_script_path.exists() {
         return Err(PluginError::Message(format!(
             "Script <id>{}</id> not found. Is the asdf repository valid?",
@@ -48,40 +85,41 @@ fn create_script(virtual_script_path: &Path, context: &ToolContext) -> AnyResult
 
     let mut input = ExecCommandInput {
         command: "bash".into(),
-        working_dir: Some(context.tool_dir.clone()),
+        working_dir: tool_dir.cloned(),
         ..Default::default()
     };
 
     input.args.push(
-        into_real_path(virtual_script_path)?
-            .to_string_lossy()
-            .to_string(),
+        match virtual_script_path.strip_prefix("/proto/backends") {
+            Ok(suffix) => backend_root()?.join(suffix),
+            Err(_) => into_real_path(virtual_script_path)?,
+        }
+        .to_string_lossy()
+        .to_string(),
     );
 
-    input
-        .env
-        .insert("ASDF_INSTALL_TYPE".into(), "version".into());
-    input
-        .env
-        .insert("ASDF_INSTALL_VERSION".into(), context.version.to_string());
-    input.env.insert(
-        "ASDF_INSTALL_PATH".into(),
-        context
-            .tool_dir
-            .real_path()
-            .unwrap()
-            .to_string_lossy()
-            .to_string(),
-    );
-    input.env.insert(
-        "ASDF_DOWNLOAD_PATH".into(),
-        context
-            .temp_dir
-            .real_path()
-            .unwrap()
-            .to_string_lossy()
-            .to_string(),
-    );
+    if let Some(version) = version {
+        input
+            .env
+            .insert("ASDF_INSTALL_TYPE".into(), "version".into());
+        input
+            .env
+            .insert("ASDF_INSTALL_VERSION".into(), version.to_string());
+    }
+
+    if let Some(dir) = tool_dir {
+        input.env.insert(
+            "ASDF_INSTALL_PATH".into(),
+            dir.real_path().unwrap().to_string_lossy().to_string(),
+        );
+    }
+
+    if let Some(dir) = temp_dir {
+        input.env.insert(
+            "ASDF_DOWNLOAD_PATH".into(),
+            dir.real_path().unwrap().to_string_lossy().to_string(),
+        );
+    }
 
     Ok(input)
 }
@@ -90,6 +128,10 @@ fn exec_script(input: ExecCommandInput) -> AnyResult<String> {
     let script_path = input.args[0].clone();
     let result = exec(input)?;
 
+    handle_exec_result(script_path, result)
+}
+
+fn handle_exec_result(script_path: String, result: ExecCommandOutput) -> AnyResult<String> {
     if result.exit_code != 0 {
         return Err(PluginError::Message(format!(
             "Failed to execute script <path>{script_path}</path>: {}",
@@ -117,7 +159,7 @@ pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<Regi
         minimum_proto_version: Some(Version::new(0, 46, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         config_schema: Some(schematic::SchemaBuilder::generate::<AsdfPluginConfig>()),
-        unstable: Switch::Message("Any tools that require <id>exec-env</id> may not work correctly. Please report any and all issues.".into()),
+        unstable: Switch::Toggle(true),
         ..RegisterToolOutput::default()
     }))
 }
@@ -140,7 +182,9 @@ pub fn register_backend(
         backend_id: config.get_backend_id()?,
         exes: vec![
             "bin/download".into(),
+            "bin/exec-env".into(),
             "bin/install".into(),
+            "bin/latest-stable".into(),
             "bin/list-all".into(),
             "bin/list-bin-paths".into(),
             "bin/list-legacy-filenames".into(),
@@ -171,7 +215,10 @@ pub fn detect_version_files(
 
     // https://asdf-vm.com/plugins/create.html#bin-list-legacy-filenames
     if script_path.exists() {
-        let data = exec_script(create_script(&script_path, &input.context)?)?;
+        let data = exec_script(create_script_from_unresolved_context(
+            &script_path,
+            &input.context,
+        )?)?;
 
         for file in data.split_whitespace() {
             output.files.push(file.into());
@@ -214,8 +261,7 @@ pub fn parse_version_file(
 
         // https://asdf-vm.com/plugins/create.html#bin-parse-legacy-file
         if script_path.exists() {
-            let mut script = create_script(&script_path, &input.context)?;
-            script.env.clear();
+            let mut script = create_script_from_unresolved_context(&script_path, &input.context)?;
             script.args.push(
                 input
                     .path
@@ -260,11 +306,14 @@ pub fn native_install(
 
     // https://asdf-vm.com/plugins/create.html#bin-download
     if download_script_path.exists() {
-        exec_script(create_script(&download_script_path, &input.context)?)?;
+        exec_script(create_script_from_context(
+            &download_script_path,
+            &input.context,
+        )?)?;
     }
 
     // https://asdf-vm.com/plugins/create.html#bin-install
-    let mut script = create_script(&install_script_path, &input.context)?;
+    let mut script = create_script_from_context(&install_script_path, &input.context)?;
     script.env.insert("ASDF_CONCURRENCY".into(), cpu_cores()?);
 
     exec_script(script)?;
@@ -284,7 +333,7 @@ pub fn native_uninstall(
 
     // https://asdf-vm.com/plugins/create.html#bin-uninstall
     if script_path.exists() {
-        exec_script(create_script(&script_path, &input.context)?)?;
+        exec_script(create_script_from_context(&script_path, &input.context)?)?;
     }
 
     Ok(Json(NativeUninstallOutput {
@@ -308,7 +357,7 @@ pub fn locate_executables(
 
     // https://asdf-vm.com/plugins/create.html#bin-list-bin-paths
     if script_path.exists() {
-        let data = exec_script(create_script(&script_path, &input.context)?)?;
+        let data = exec_script(create_script_from_context(&script_path, &input.context)?)?;
 
         for dir in data.split_whitespace() {
             output.exes_dirs.push(dir.into());
@@ -331,7 +380,7 @@ pub fn locate_executables(
             );
         }
     } else if let Some(dir) = output.exes_dirs.first() {
-        for entry in fs::read_dir(input.context.tool_dir.join(dir))? {
+        for entry in fs::read_dir(input.install_dir.join(dir))? {
             let file = entry.path();
             let name = fs::file_name(&file);
 
@@ -362,7 +411,7 @@ pub fn locate_executables(
                 name.clone(),
                 ExecutableConfig {
                     primary: name == id,
-                    exe_path: match file.strip_prefix(&input.context.tool_dir) {
+                    exe_path: match file.strip_prefix(&input.install_dir) {
                         Ok(suffix) => Some(suffix.to_owned()),
                         Err(_) => Some(dir.join(name)),
                     },
@@ -395,17 +444,101 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
     let script_path = config.get_script_path("list-all")?;
 
     // https://asdf-vm.com/plugins/create.html#bin-list-all
-    let mut script = create_script(&script_path, &input.context)?;
-    script.env.clear();
-    script.working_dir = None;
-
-    let data = exec_script(script)?;
+    let data = exec_script(create_script_from_unresolved_context(
+        &script_path,
+        &input.context,
+    )?)?;
 
     for version in data.split_whitespace() {
         match VersionSpec::parse(version.trim()) {
             Ok(version) => output.versions.push(version),
             _ => continue,
         };
+    }
+
+    Ok(Json(output))
+}
+
+#[plugin_fn]
+pub fn resolve_version(
+    Json(input): Json<ResolveVersionInput>,
+) -> FnResult<Json<ResolveVersionOutput>> {
+    let mut output = ResolveVersionOutput::default();
+
+    if let UnresolvedVersionSpec::Alias(alias) = input.initial {
+        if alias == "stable" {
+            let config = get_tool_config::<AsdfPluginConfig>()?;
+            let script_path = config.get_script_path("latest-stable")?;
+
+            // https://asdf-vm.com/plugins/create.html#bin-latest-stable
+            if script_path.exists() {
+                let data = exec_script(create_script_from_unresolved_context(
+                    &script_path,
+                    &input.context,
+                )?)?;
+
+                if !data.is_empty() {
+                    output.candidate = UnresolvedVersionSpec::parse(data.trim()).ok();
+                }
+            } else {
+                output.candidate = Some(UnresolvedVersionSpec::Alias("latest".into()));
+            }
+        }
+    }
+
+    Ok(Json(output))
+}
+
+#[plugin_fn]
+pub fn pre_run(Json(input): Json<RunHook>) -> FnResult<Json<RunHookResult>> {
+    let mut output = RunHookResult::default();
+    let config = get_tool_config::<AsdfPluginConfig>()?;
+    let script_path = config.get_script_path("exec-env")?;
+
+    // https://asdf-vm.com/plugins/create.html#bin-exec-env
+    if !script_path.exists() {
+        return Ok(Json(output));
+    }
+
+    // Because `exec-env` sets environment variables, we simply can't execute
+    // the script as-is, we need to execute it and capture the variables that were
+    // set. This is complicated, but doable. We will achieve this by running `env`
+    // to capture the existing variables, then `source`ing the `exec-env` script,
+    // then running `env` again to capture the new/different variables.
+    let mut script = create_script_from_context(&script_path, &input.context)?;
+    let real_script_path = script.args.remove(0);
+
+    script.args.push("-c".into());
+    script.args.push(format!(
+        "env; echo \"###\"; source \"{real_script_path}\"; env;"
+    ));
+
+    let stdout = handle_exec_result(real_script_path, exec(script)?)?;
+    let mut existing_env = FxHashMap::default();
+    let mut after_source = false;
+
+    for line in stdout.lines() {
+        if line == "###" {
+            after_source = true;
+            continue;
+        }
+
+        if let Some((key, value)) = line.split_once('=') {
+            if after_source {
+                if let Some(existing_value) = existing_env.get(key) {
+                    if value == *existing_value {
+                        continue;
+                    }
+                }
+
+                output
+                    .env
+                    .get_or_insert_default()
+                    .insert(key.to_owned(), value.to_owned());
+            } else {
+                existing_env.insert(key, value);
+            }
+        }
     }
 
     Ok(Json(output))

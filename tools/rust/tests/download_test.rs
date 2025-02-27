@@ -22,6 +22,7 @@ mod rust_tool {
                         version: VersionSpec::parse("1.69.0").unwrap(),
                         ..Default::default()
                     },
+                    ..Default::default()
                 })
                 .await
                 .exes
@@ -48,6 +49,7 @@ mod rust_tool {
                         version: VersionSpec::parse("1.69.0").unwrap(),
                         ..Default::default()
                     },
+                    ..Default::default()
                 })
                 .await
                 .exes
@@ -74,6 +76,7 @@ mod rust_tool {
                         version: VersionSpec::parse("1.69.0").unwrap(),
                         ..Default::default()
                     },
+                    ..Default::default()
                 })
                 .await
                 .exes

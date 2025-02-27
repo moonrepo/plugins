@@ -9,12 +9,12 @@ echo ""
 
 data=$(moon query tasks --affected --upstream deep --downstream deep --json)
 taskCount=$(echo "$data" | jq '.tasks | length')
-taskPerJob=15
+taskPerJob=10
 jobTotal=1
 
 if [[ $taskCount == 0 ]]; then
     jobTotal=0
-elif [[ $taskCount -gt 15 ]]; then
+elif [[ $taskCount -gt 10 ]]; then
     ((jobTotal = (taskCount + taskPerJob - 1) / taskPerJob))
 fi
 

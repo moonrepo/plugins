@@ -201,6 +201,7 @@ mod python_uv_tool {
                         version: VersionSpec::parse("1.2.0").unwrap(),
                         ..Default::default()
                     },
+                    ..Default::default()
                 })
                 .await
                 .exes
@@ -227,6 +228,7 @@ mod python_uv_tool {
                         version: VersionSpec::parse("1.2.0").unwrap(),
                         ..Default::default()
                     },
+                    ..Default::default()
                 })
                 .await
                 .exes

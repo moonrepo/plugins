@@ -389,6 +389,7 @@ mod node_tool {
                         version: VersionSpec::parse("20.0.0").unwrap(),
                         ..Default::default()
                     },
+                    ..Default::default()
                 })
                 .await
                 .exes
@@ -415,6 +416,7 @@ mod node_tool {
                         version: VersionSpec::parse("20.0.0").unwrap(),
                         ..Default::default()
                     },
+                    ..Default::default()
                 })
                 .await
                 .exes

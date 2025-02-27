@@ -219,6 +219,7 @@ mod schema_tool {
                         version: VersionSpec::parse("20.0.0").unwrap(),
                         ..Default::default()
                     },
+                    ..Default::default()
                 })
                 .await
                 .exes
@@ -249,6 +250,7 @@ mod schema_tool {
                         version: VersionSpec::parse("20.0.0").unwrap(),
                         ..Default::default()
                     },
+                    ..Default::default()
                 })
                 .await
                 .exes
@@ -279,6 +281,7 @@ mod schema_tool {
                         version: VersionSpec::parse("20.0.0").unwrap(),
                         ..Default::default()
                     },
+                    ..Default::default()
                 })
                 .await
                 .exes
@@ -311,6 +314,7 @@ mod schema_tool {
                         version: VersionSpec::parse("20.0.0").unwrap(),
                         ..Default::default()
                     },
+                    ..Default::default()
                 })
                 .await;
 
@@ -344,6 +348,7 @@ mod schema_tool {
                             version: VersionSpec::parse("20.0.0").unwrap(),
                             ..Default::default()
                         },
+                        ..Default::default()
                     })
                     .await
                     .exes
@@ -374,6 +379,7 @@ mod schema_tool {
                             version: VersionSpec::parse("20.0.0").unwrap(),
                             ..Default::default()
                         },
+                        ..Default::default()
                     })
                     .await
                     .exes
@@ -407,6 +413,7 @@ mod schema_tool {
                         version: VersionSpec::parse("20.0.0").unwrap(),
                         ..Default::default()
                     },
+                    ..Default::default()
                 })
                 .await;
 
@@ -454,6 +461,7 @@ mod schema_tool {
                         version: VersionSpec::parse("20.0.0").unwrap(),
                         ..Default::default()
                     },
+                    ..Default::default()
                 })
                 .await;
 
