@@ -182,12 +182,13 @@ mod tsconfig_json {
 
             assert_eq!(tsc.data.references, None);
 
-            assert!(tsc
-                .add_project_ref(
+            assert!(
+                tsc.add_project_ref(
                     &VirtualPath::OnlyReal(PathBuf::from("/sibling")),
                     "tsconfig.json"
                 )
-                .unwrap());
+                .unwrap()
+            );
 
             assert_eq!(
                 tsc.data.references.unwrap(),
@@ -212,12 +213,13 @@ mod tsconfig_json {
                 ..Default::default()
             };
 
-            assert!(!tsc
-                .add_project_ref(
+            assert!(
+                !tsc.add_project_ref(
                     &VirtualPath::OnlyReal(PathBuf::from("/sibling")),
                     "tsconfig.json"
                 )
-                .unwrap());
+                .unwrap()
+            );
 
             assert_eq!(
                 tsc.data.references.unwrap(),
@@ -240,12 +242,13 @@ mod tsconfig_json {
 
             assert_eq!(tsc.data.references, None);
 
-            assert!(tsc
-                .add_project_ref(
+            assert!(
+                tsc.add_project_ref(
                     &VirtualPath::OnlyReal(PathBuf::from("/sibling")),
                     "tsconfig.ref.json"
                 )
-                .unwrap());
+                .unwrap()
+            );
 
             assert_eq!(
                 tsc.data.references.unwrap(),
@@ -269,12 +272,13 @@ mod tsconfig_json {
 
             assert_eq!(tsc.data.references, None);
 
-            assert!(tsc
-                .add_project_ref(
+            assert!(
+                tsc.add_project_ref(
                     &VirtualPath::OnlyReal(PathBuf::from("C:\\base\\sibling")),
                     "tsconfig.json"
                 )
-                .unwrap());
+                .unwrap()
+            );
 
             assert_eq!(
                 tsc.data.references.unwrap(),
@@ -299,12 +303,13 @@ mod tsconfig_json {
                 ..Default::default()
             };
 
-            assert!(tsc
-                .add_project_ref(
+            assert!(
+                tsc.add_project_ref(
                     &VirtualPath::OnlyReal(PathBuf::from("/brother")),
                     "tsconfig.json"
                 )
-                .unwrap());
+                .unwrap()
+            );
 
             assert_eq!(
                 tsc.data.references.unwrap(),

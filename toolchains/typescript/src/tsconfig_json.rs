@@ -3,7 +3,7 @@ use extism_pdk::*;
 use moon_common::path::to_relative_virtual_string;
 #[cfg(feature = "wasm")]
 use moon_pdk::host_log;
-use moon_pdk::{json_config, map_miette_error, AnyResult, VirtualPath};
+use moon_pdk::{AnyResult, VirtualPath, json_config, map_miette_error};
 use starbase_utils::json::{self, JsonValue};
 use typescript_tsconfig_json::{
     CompilerOptions, CompilerOptionsPathsMap, CompilerPath, ProjectReference,
@@ -73,11 +73,7 @@ impl TsConfigJson {
                             }));
                     }
 
-                    if save {
-                        Some(current)
-                    } else {
-                        None
-                    }
+                    if save { Some(current) } else { None }
                 } else {
                     None
                 }
@@ -91,7 +87,7 @@ impl TsConfigJson {
     /// Convert an absolute virtual path to a relative virtual string,
     /// for use within tsconfig include, exclude, and other paths.
     pub fn to_relative_path(&self, path: impl AsRef<VirtualPath>) -> AnyResult<String> {
-        to_relative_virtual_string(path.as_ref().any_path(), self.path.parent().unwrap())
+        to_relative_virtual_string(path.as_ref().any_path(), self.path.parent().any_path())
             .map_err(map_miette_error)
     }
 

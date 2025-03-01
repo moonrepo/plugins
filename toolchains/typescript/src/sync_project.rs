@@ -1,8 +1,8 @@
 use crate::config::TypeScriptConfig;
 use crate::tsconfig_json::TsConfigJson;
-use moon_common::{path::is_root_level_source, Id};
+use moon_common::{Id, path::is_root_level_source};
 use moon_config::DependencyScope;
-use moon_pdk::{is_project_toolchain_enabled, AnyResult, MoonContext, VirtualPath};
+use moon_pdk::{AnyResult, MoonContext, VirtualPath, is_project_toolchain_enabled};
 use moon_project::ProjectFragment;
 use rustc_hash::FxHashMap;
 use serde::Deserialize;
