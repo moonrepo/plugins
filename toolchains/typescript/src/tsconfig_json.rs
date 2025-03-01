@@ -19,6 +19,16 @@ extern "ExtismHost" {
 json_config!(TsConfigJson, BaseTsConfigJson);
 
 impl TsConfigJson {
+    pub fn load_with_extends(path: VirtualPath) -> AnyResult<BaseTsConfigJson> {
+        let mut config = BaseTsConfigJson::default();
+
+        for next in BaseTsConfigJson::resolve_extends_chain(path.any_path())? {
+            config.extend(next.config);
+        }
+
+        Ok(config)
+    }
+
     fn save_field(
         &self,
         field: &str,

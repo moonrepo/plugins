@@ -1,3 +1,4 @@
+use extism_pdk::json;
 use starbase_utils::json::{JsonMap, JsonValue};
 use typescript_tsconfig_json::CompilerOptions;
 
@@ -6,7 +7,7 @@ pub fn hash_compiler_options(compiler_options: &CompilerOptions) -> JsonValue {
     let mut options = JsonMap::default();
 
     if let Some(jsx) = &compiler_options.jsx {
-        options.insert("jsx".into(), format!("{jsx:?}").into());
+        options.insert("jsx".into(), json::to_value(jsx).unwrap());
     }
 
     if let Some(jsx_factory) = &compiler_options.jsx_factory {
@@ -27,19 +28,23 @@ pub fn hash_compiler_options(compiler_options: &CompilerOptions) -> JsonValue {
         );
     }
 
+    if let Some(lib) = &compiler_options.lib {
+        options.insert("lib".into(), json::to_value(lib).unwrap());
+    }
+
     if let Some(module) = &compiler_options.module {
-        options.insert("module".into(), format!("{module:?}").into());
+        options.insert("module".into(), json::to_value(module).unwrap());
     }
 
     if let Some(module_resolution) = &compiler_options.module_resolution {
         options.insert(
             "moduleResolution".into(),
-            format!("{module_resolution:?}").into(),
+            json::to_value(module_resolution).unwrap(),
         );
     }
 
     if let Some(target) = &compiler_options.target {
-        options.insert("target".into(), format!("{target:?}").into());
+        options.insert("target".into(), json::to_value(target).unwrap());
     }
 
     JsonValue::Object(options)

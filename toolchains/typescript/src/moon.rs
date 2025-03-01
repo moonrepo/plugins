@@ -61,10 +61,14 @@ pub fn hash_task_contents(
             .join(&config.project_config_file_name),
     ] {
         if tsconfig_path.exists() {
-            let tsconfig = TsConfigJson::load(tsconfig_path)?;
+            let tsconfig = TsConfigJson::load_with_extends(tsconfig_path)?;
 
             if let Some(options) = &tsconfig.compiler_options {
-                output.contents.push(hash_compiler_options(options));
+                let data = hash_compiler_options(options);
+
+                if data.as_object().is_some_and(|obj| !obj.is_empty()) {
+                    output.contents.push(data);
+                }
             }
         }
     }

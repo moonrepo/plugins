@@ -4,7 +4,7 @@ use schematic::Schematic;
 config_struct!(
     /// Configures and enables the TypeScript toolchain.
     /// Docs: https://moonrepo.dev/docs/config/toolchain#typescript
-    #[derive(Default, Schematic)]
+    #[derive(Schematic)]
     pub struct TypeScriptConfig {
         /// When `syncProjectReferences` is enabled, will create a `tsconfig.json`
         /// in referenced projects if it does not exist.
@@ -50,3 +50,20 @@ config_struct!(
         pub sync_project_references_to_paths: bool,
     }
 );
+
+impl Default for TypeScriptConfig {
+    fn default() -> Self {
+        Self {
+            create_missing_config: true,
+            include_project_reference_sources: false,
+            include_shared_types: false,
+            project_config_file_name: "tsconfig.json".into(),
+            root: ".".into(),
+            root_config_file_name: "tsconfig.json".into(),
+            root_options_config_file_name: "tsconfig.options.json".into(),
+            route_out_dir_to_cache: false,
+            sync_project_references: true,
+            sync_project_references_to_paths: false,
+        }
+    }
+}
