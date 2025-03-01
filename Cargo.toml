@@ -8,7 +8,7 @@ extism-pdk = { version = "1.3.0" }
 regex = { version = "1.11.1", default-features = false, features = ["std"] }
 rustc-hash = "2.1.1"
 schematic = { version = "0.18.0", default-features = false, features = [
-	"schema",
+    "schema",
 ] }
 serde = { version = "1.0.218", features = ["derive"] }
 serde_json = "1.0.139"
@@ -32,8 +32,8 @@ proto_pdk_api = { version = "0.27.5" }        # , path = "../../proto/crates/pdk
 proto_pdk_test_utils = { version = "0.35.4" } # , path = "../../proto/crates/pdk-test-utils" }
 
 # JavaScript
-nodejs_package_json = "0.3.1"
-typescript_tsconfig_json = { version = "0.4.0", features = ["serialize"] }
+nodejs_package_json = "0.3.2"
+typescript_tsconfig_json = { version = "0.4.1", features = ["serialize"] }
 
 [profile.release]
 codegen-units = 1

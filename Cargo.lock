@@ -2649,9 +2649,9 @@ dependencies = [
 
 [[package]]
 name = "nodejs_package_json"
-version = "0.3.1"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "008b3dcf2b6ccd151efab4145717974b21588f105f2bc9004983b6cc2e00cf9e"
+checksum = "b7fdb6a5a7deeaa0559dff2c444d898b5089b42c2f2b8d720cf57cd766210cf1"
 dependencies = [
  "indexmap",
  "rustc-hash",
@@ -4742,9 +4742,9 @@ dependencies = [
 
 [[package]]
 name = "typescript_tsconfig_json"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "304bec14e5e1c54d3c0db1edfd20dc3656debd9660765614daa16134940169f3"
+checksum = "29383fcd199604d8a038dfa15c11e7c560cc64f381cf2919b705e5d8f0482f97"
 dependencies = [
  "clean-path",
  "indexmap",

@@ -1,24 +1,9 @@
-use moon_common::Id;
-use moon_pdk::{HashTaskContentsInput, ProjectFragment, TaskFragment};
+mod utils;
+
+use moon_pdk::HashTaskContentsInput;
 use moon_pdk_test_utils::{create_empty_moon_sandbox, create_moon_sandbox};
-use moon_target::Target;
 use serde_json::{Value, json};
-
-fn create_project(id: &str) -> ProjectFragment {
-    ProjectFragment {
-        dependency_scope: None,
-        id: Id::raw(id),
-        source: id.into(),
-        toolchains: vec![Id::raw("typescript"), Id::raw("javascript")],
-    }
-}
-
-fn create_task(target: &str) -> TaskFragment {
-    TaskFragment {
-        target: Target::parse(target).unwrap(),
-        toolchains: vec![Id::raw("typescript"), Id::raw("javascript")],
-    }
-}
+use utils::{create_project, create_task};
 
 mod run_task {
     use super::*;

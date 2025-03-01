@@ -1,5 +1,6 @@
 use crate::config::TypeScriptConfig;
 use crate::tsconfig_json::TsConfigJson;
+use extism_pdk::trace;
 use moon_common::{Id, path::is_root_level_source};
 use moon_config::DependencyScope;
 use moon_pdk::{AnyResult, MoonContext, VirtualPath, is_project_toolchain_enabled};
@@ -41,7 +42,9 @@ fn create_missing_tsconfig(
     ));
     tsconfig.include = Some(vec![CompilerPath::from("**/*")]);
     tsconfig.references = Some(vec![]);
-    tsconfig.save()
+    let file = tsconfig.save_model()?;
+
+    Ok(Some(file))
 }
 
 fn sync_root_project_reference(
