@@ -2517,6 +2517,7 @@ dependencies = [
  "moon_pdk_api",
  "serde",
  "serde_json",
+ "starbase_sandbox",
  "warpgate",
 ]
 
@@ -4717,6 +4718,7 @@ dependencies = [
  "moon_common",
  "moon_config",
  "moon_pdk",
+ "moon_pdk_test_utils",
  "moon_project",
  "rustc-hash",
  "schematic",

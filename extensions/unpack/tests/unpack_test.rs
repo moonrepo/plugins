@@ -1,5 +1,4 @@
-use moon_pdk_test_utils::{ExecuteExtensionInput, create_extension};
-use starbase_sandbox::create_empty_sandbox;
+use moon_pdk_test_utils::{ExecuteExtensionInput, create_empty_moon_sandbox};
 
 mod unpack_extension {
     use super::*;
@@ -7,8 +6,8 @@ mod unpack_extension {
     #[tokio::test(flavor = "multi_thread")]
     #[should_panic(expected = "the following required arguments were not provided")]
     async fn errors_if_no_args() {
-        let sandbox = create_empty_sandbox();
-        let plugin = create_extension("test", sandbox.path());
+        let sandbox = create_empty_moon_sandbox();
+        let plugin = sandbox.create_extension("test").await;
 
         plugin
             .execute_extension(ExecuteExtensionInput {
@@ -23,8 +22,8 @@ mod unpack_extension {
         expected = "Invalid source, only .tar, .tar.gz, and .zip archives are supported."
     )]
     async fn errors_if_unsupported_ext() {
-        let sandbox = create_empty_sandbox();
-        let plugin = create_extension("test", sandbox.path());
+        let sandbox = create_empty_moon_sandbox();
+        let plugin = sandbox.create_extension("test").await;
 
         plugin
             .execute_extension(ExecuteExtensionInput {
@@ -40,8 +39,8 @@ mod unpack_extension {
     #[tokio::test(flavor = "multi_thread")]
     #[should_panic(expected = "must be a valid file")]
     async fn errors_if_src_file_missing() {
-        let sandbox = create_empty_sandbox();
-        let plugin = create_extension("test", sandbox.path());
+        let sandbox = create_empty_moon_sandbox();
+        let plugin = sandbox.create_extension("test").await;
 
         plugin
             .execute_extension(ExecuteExtensionInput {
@@ -54,8 +53,8 @@ mod unpack_extension {
     #[tokio::test(flavor = "multi_thread")]
     #[should_panic(expected = "must be a directory, found a file")]
     async fn errors_if_dest_is_a_file() {
-        let sandbox = create_empty_sandbox();
-        let plugin = create_extension("test", sandbox.path());
+        let sandbox = create_empty_moon_sandbox();
+        let plugin = sandbox.create_extension("test").await;
 
         sandbox.create_file("dest", "file");
 
@@ -75,7 +74,7 @@ mod unpack_extension {
     // #[test]
     // fn unpacks_tar() {
     //     let sandbox = create_sandbox("tar");
-    //     let plugin = create_extension("test", sandbox.path());
+    //     let plugin = sandbox.create_extension("test").await;
 
     //     plugin.execute_extension(ExecuteExtensionInput {
     //         args: vec![
@@ -93,7 +92,7 @@ mod unpack_extension {
     // #[test]
     // fn unpacks_tar_gz() {
     //     let sandbox = create_sandbox("tar");
-    //     let plugin = create_extension("test", sandbox.path());
+    //     let plugin = sandbox.create_extension("test").await;
 
     //     plugin.execute_extension(ExecuteExtensionInput {
     //         args: vec![
@@ -111,7 +110,7 @@ mod unpack_extension {
     // #[test]
     // fn unpacks_zip() {
     //     let sandbox = create_sandbox("zip");
-    //     let plugin = create_extension("test", sandbox.path());
+    //     let plugin = sandbox.create_extension("test").await;
 
     //     plugin.execute_extension(ExecuteExtensionInput {
     //         args: vec![
@@ -128,8 +127,8 @@ mod unpack_extension {
 
     //  #[test]
     // fn downloads_and_unpacks_tar() {
-    //     let sandbox = create_empty_sandbox();
-    //     let plugin = create_extension("test", sandbox.path());
+    //     let sandbox = create_empty_moon_sandbox();
+    //     let plugin = sandbox.create_extension("test").await;
 
     //     plugin.execute_extension(ExecuteExtensionInput {
     //         args: vec![
@@ -147,8 +146,8 @@ mod unpack_extension {
 
     // #[test]
     // fn downloads_and_unpacks_zip() {
-    //     let sandbox = create_empty_sandbox();
-    //     let plugin = create_extension("test", sandbox.path());
+    //     let sandbox = create_empty_moon_sandbox();
+    //     let plugin = sandbox.create_extension("test").await;
 
     //     plugin.execute_extension(ExecuteExtensionInput {
     //         args: vec![

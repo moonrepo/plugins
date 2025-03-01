@@ -1,5 +1,5 @@
-use moon_pdk_test_utils::{ExecuteExtensionInput, create_extension};
-use starbase_sandbox::{assert_snapshot, create_empty_sandbox, create_sandbox};
+use moon_pdk_test_utils::{ExecuteExtensionInput, create_empty_moon_sandbox, create_moon_sandbox};
+use starbase_sandbox::assert_snapshot;
 use std::fs;
 
 mod migrate_nx_extension {
@@ -7,8 +7,8 @@ mod migrate_nx_extension {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn converts_root_files() {
-        let sandbox = create_sandbox("root");
-        let plugin = create_extension("test", sandbox.path());
+        let sandbox = create_moon_sandbox("root");
+        let plugin = sandbox.create_extension("test").await;
 
         plugin
             .execute_extension(ExecuteExtensionInput {
@@ -28,8 +28,8 @@ mod migrate_nx_extension {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn converts_nx_builtin_executors() {
-        let sandbox = create_sandbox("nx-executors");
-        let plugin = create_extension("test", sandbox.path());
+        let sandbox = create_moon_sandbox("nx-executors");
+        let plugin = sandbox.create_extension("test").await;
 
         plugin
             .execute_extension(ExecuteExtensionInput {
@@ -49,8 +49,8 @@ mod migrate_nx_extension {
 
         #[tokio::test(flavor = "multi_thread")]
         async fn converts_named_inputs() {
-            let sandbox = create_sandbox("root-inputs");
-            let plugin = create_extension("test", sandbox.path());
+            let sandbox = create_moon_sandbox("root-inputs");
+            let plugin = sandbox.create_extension("test").await;
 
             plugin
                 .execute_extension(ExecuteExtensionInput {
@@ -73,8 +73,8 @@ mod migrate_nx_extension {
 
         #[tokio::test(flavor = "multi_thread")]
         async fn uses_defaults() {
-            let sandbox = create_empty_sandbox();
-            let plugin = create_extension("test", sandbox.path());
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_extension("test").await;
 
             plugin
                 .execute_extension(ExecuteExtensionInput {
@@ -90,7 +90,7 @@ mod migrate_nx_extension {
 
         #[tokio::test(flavor = "multi_thread")]
         async fn inherits_layout() {
-            let sandbox = create_empty_sandbox();
+            let sandbox = create_empty_moon_sandbox();
             sandbox.create_file(
                 "nx.json",
                 r#"
@@ -102,7 +102,7 @@ mod migrate_nx_extension {
 }"#,
             );
 
-            let plugin = create_extension("test", sandbox.path());
+            let plugin = sandbox.create_extension("test").await;
 
             plugin
                 .execute_extension(ExecuteExtensionInput {
@@ -122,8 +122,8 @@ mod migrate_nx_extension {
 
         #[tokio::test(flavor = "multi_thread")]
         async fn converts_project_json() {
-            let sandbox = create_sandbox("projects");
-            let plugin = create_extension("test", sandbox.path());
+            let sandbox = create_moon_sandbox("projects");
+            let plugin = sandbox.create_extension("test").await;
 
             plugin
                 .execute_extension(ExecuteExtensionInput {
@@ -147,8 +147,8 @@ mod migrate_nx_extension {
 
         #[tokio::test(flavor = "multi_thread")]
         async fn converts_name_and_implicit_deps() {
-            let sandbox = create_sandbox("project-name-deps");
-            let plugin = create_extension("test", sandbox.path());
+            let sandbox = create_moon_sandbox("project-name-deps");
+            let plugin = sandbox.create_extension("test").await;
 
             dbg!(sandbox.path());
 
@@ -167,8 +167,8 @@ mod migrate_nx_extension {
 
         #[tokio::test(flavor = "multi_thread")]
         async fn converts_type_and_tags() {
-            let sandbox = create_sandbox("project-type-tags");
-            let plugin = create_extension("test", sandbox.path());
+            let sandbox = create_moon_sandbox("project-type-tags");
+            let plugin = sandbox.create_extension("test").await;
 
             plugin
                 .execute_extension(ExecuteExtensionInput {
@@ -188,8 +188,8 @@ mod migrate_nx_extension {
 
         #[tokio::test(flavor = "multi_thread")]
         async fn converts_named_inputs() {
-            let sandbox = create_sandbox("project-inputs");
-            let plugin = create_extension("test", sandbox.path());
+            let sandbox = create_moon_sandbox("project-inputs");
+            let plugin = sandbox.create_extension("test").await;
 
             plugin
                 .execute_extension(ExecuteExtensionInput {
@@ -206,8 +206,8 @@ mod migrate_nx_extension {
 
         #[tokio::test(flavor = "multi_thread")]
         async fn converts_targets() {
-            let sandbox = create_sandbox("project-targets");
-            let plugin = create_extension("test", sandbox.path());
+            let sandbox = create_moon_sandbox("project-targets");
+            let plugin = sandbox.create_extension("test").await;
 
             plugin
                 .execute_extension(ExecuteExtensionInput {

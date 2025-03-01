@@ -1,5 +1,5 @@
-use moon_pdk_test_utils::{ExecuteExtensionInput, create_extension};
-use starbase_sandbox::{assert_snapshot, create_sandbox};
+use moon_pdk_test_utils::{ExecuteExtensionInput, create_moon_sandbox};
+use starbase_sandbox::assert_snapshot;
 use std::fs;
 
 mod migrate_turborepo_extension {
@@ -7,8 +7,8 @@ mod migrate_turborepo_extension {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn converts_basic_root_file() {
-        let sandbox = create_sandbox("root-only");
-        let plugin = create_extension("test", sandbox.path());
+        let sandbox = create_moon_sandbox("root-only");
+        let plugin = sandbox.create_extension("test").await;
 
         plugin
             .execute_extension(ExecuteExtensionInput {
@@ -25,8 +25,8 @@ mod migrate_turborepo_extension {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn converts_project_files() {
-        let sandbox = create_sandbox("monorepo");
-        let plugin = create_extension("test", sandbox.path());
+        let sandbox = create_moon_sandbox("monorepo");
+        let plugin = sandbox.create_extension("test").await;
 
         plugin
             .execute_extension(ExecuteExtensionInput {
@@ -49,8 +49,8 @@ mod migrate_turborepo_extension {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn can_force_bun_instead_of_node() {
-        let sandbox = create_sandbox("monorepo");
-        let plugin = create_extension("test", sandbox.path());
+        let sandbox = create_moon_sandbox("monorepo");
+        let plugin = sandbox.create_extension("test").await;
 
         plugin
             .execute_extension(ExecuteExtensionInput {
@@ -74,8 +74,8 @@ mod migrate_turborepo_extension {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn converts_to_a_root_project() {
-        let sandbox = create_sandbox("root-project");
-        let plugin = create_extension("test", sandbox.path());
+        let sandbox = create_moon_sandbox("root-project");
+        let plugin = sandbox.create_extension("test").await;
 
         plugin
             .execute_extension(ExecuteExtensionInput {
@@ -93,8 +93,8 @@ mod migrate_turborepo_extension {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn merges_with_existing_root_tasks() {
-        let sandbox = create_sandbox("root-merge-existing");
-        let plugin = create_extension("test", sandbox.path());
+        let sandbox = create_moon_sandbox("root-merge-existing");
+        let plugin = sandbox.create_extension("test").await;
 
         plugin
             .execute_extension(ExecuteExtensionInput {
@@ -108,8 +108,8 @@ mod migrate_turborepo_extension {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn supports_no_pipeline() {
-        let sandbox = create_sandbox("missing-pipeline");
-        let plugin = create_extension("test", sandbox.path());
+        let sandbox = create_moon_sandbox("missing-pipeline");
+        let plugin = sandbox.create_extension("test").await;
 
         plugin
             .execute_extension(ExecuteExtensionInput {
@@ -125,8 +125,8 @@ mod migrate_turborepo_extension {
     #[tokio::test(flavor = "multi_thread")]
     #[should_panic(expected = "Unable to migrate task as package client does not exist.")]
     async fn errors_if_a_task_points_to_an_unknown_project() {
-        let sandbox = create_sandbox("error-missing-project");
-        let plugin = create_extension("test", sandbox.path());
+        let sandbox = create_moon_sandbox("error-missing-project");
+        let plugin = sandbox.create_extension("test").await;
 
         plugin
             .execute_extension(ExecuteExtensionInput {
@@ -139,8 +139,8 @@ mod migrate_turborepo_extension {
     #[tokio::test(flavor = "multi_thread")]
     #[should_panic(expected = "Unable to migrate task as package client does not exist.")]
     async fn errors_if_a_dependson_points_to_an_unknown_project() {
-        let sandbox = create_sandbox("error-missing-project-deps");
-        let plugin = create_extension("test", sandbox.path());
+        let sandbox = create_moon_sandbox("error-missing-project-deps");
+        let plugin = sandbox.create_extension("test").await;
 
         plugin
             .execute_extension(ExecuteExtensionInput {

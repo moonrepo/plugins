@@ -1,5 +1,4 @@
-use moon_pdk_test_utils::{ExecuteExtensionInput, create_extension};
-use starbase_sandbox::create_empty_sandbox;
+use moon_pdk_test_utils::{ExecuteExtensionInput, create_empty_moon_sandbox};
 use std::fs;
 
 mod download_extension {
@@ -8,8 +7,8 @@ mod download_extension {
     #[tokio::test(flavor = "multi_thread")]
     #[should_panic(expected = "the following required arguments were not provided")]
     async fn errors_if_no_args() {
-        let sandbox = create_empty_sandbox();
-        let plugin = create_extension("test", sandbox.path());
+        let sandbox = create_empty_moon_sandbox();
+        let plugin = sandbox.create_extension("test").await;
 
         plugin
             .execute_extension(ExecuteExtensionInput {
@@ -22,8 +21,8 @@ mod download_extension {
     #[tokio::test(flavor = "multi_thread")]
     #[should_panic(expected = "A valid URL is required for downloading.")]
     async fn errors_if_not_a_url() {
-        let sandbox = create_empty_sandbox();
-        let plugin = create_extension("test", sandbox.path());
+        let sandbox = create_empty_moon_sandbox();
+        let plugin = sandbox.create_extension("test").await;
 
         plugin
             .execute_extension(ExecuteExtensionInput {
@@ -36,8 +35,8 @@ mod download_extension {
     #[tokio::test(flavor = "multi_thread")]
     #[should_panic(expected = "must be a directory, found a file")]
     async fn errors_if_dest_is_a_file() {
-        let sandbox = create_empty_sandbox();
-        let plugin = create_extension("test", sandbox.path());
+        let sandbox = create_empty_moon_sandbox();
+        let plugin = sandbox.create_extension("test").await;
 
         sandbox.create_file("dest", "file");
 
@@ -56,8 +55,8 @@ mod download_extension {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn downloads_file() {
-        let sandbox = create_empty_sandbox();
-        let plugin = create_extension("test", sandbox.path());
+        let sandbox = create_empty_moon_sandbox();
+        let plugin = sandbox.create_extension("test").await;
 
         plugin
             .execute_extension(ExecuteExtensionInput {
@@ -79,8 +78,8 @@ mod download_extension {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn downloads_file_to_subdir() {
-        let sandbox = create_empty_sandbox();
-        let plugin = create_extension("test", sandbox.path());
+        let sandbox = create_empty_moon_sandbox();
+        let plugin = sandbox.create_extension("test").await;
 
         plugin
             .execute_extension(ExecuteExtensionInput {
@@ -99,8 +98,8 @@ mod download_extension {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn downloads_file_with_custom_name() {
-        let sandbox = create_empty_sandbox();
-        let plugin = create_extension("test", sandbox.path());
+        let sandbox = create_empty_moon_sandbox();
+        let plugin = sandbox.create_extension("test").await;
 
         plugin
             .execute_extension(ExecuteExtensionInput {

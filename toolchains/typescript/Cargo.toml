@@ -26,6 +26,7 @@ starbase_utils = { workspace = true, features = ["editor-config", "json"] }
 typescript_tsconfig_json = { workspace = true }
 
 [dev-dependencies]
+moon_pdk_test_utils = { workspace = true }
 serde_json = { workspace = true }
 starbase_sandbox = { workspace = true }
 
