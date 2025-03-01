@@ -11,10 +11,7 @@ mod migrate_nx_extension {
         let plugin = sandbox.create_extension("test").await;
 
         plugin
-            .execute_extension(ExecuteExtensionInput {
-                args: vec![],
-                context: plugin.create_context(sandbox.path()),
-            })
+            .execute_extension(ExecuteExtensionInput::default())
             .await;
 
         assert!(!sandbox.path().join("nx.json").exists());
@@ -32,10 +29,7 @@ mod migrate_nx_extension {
         let plugin = sandbox.create_extension("test").await;
 
         plugin
-            .execute_extension(ExecuteExtensionInput {
-                args: vec![],
-                context: plugin.create_context(sandbox.path()),
-            })
+            .execute_extension(ExecuteExtensionInput::default())
             .await;
 
         assert!(!sandbox.path().join("project.json").exists());
@@ -53,10 +47,7 @@ mod migrate_nx_extension {
             let plugin = sandbox.create_extension("test").await;
 
             plugin
-                .execute_extension(ExecuteExtensionInput {
-                    args: vec![],
-                    context: plugin.create_context(sandbox.path()),
-                })
+                .execute_extension(ExecuteExtensionInput::default())
                 .await;
 
             assert!(!sandbox.path().join("nx.json").exists());
@@ -77,10 +68,7 @@ mod migrate_nx_extension {
             let plugin = sandbox.create_extension("test").await;
 
             plugin
-                .execute_extension(ExecuteExtensionInput {
-                    args: vec![],
-                    context: plugin.create_context(sandbox.path()),
-                })
+                .execute_extension(ExecuteExtensionInput::default())
                 .await;
 
             assert_snapshot!(
@@ -105,10 +93,7 @@ mod migrate_nx_extension {
             let plugin = sandbox.create_extension("test").await;
 
             plugin
-                .execute_extension(ExecuteExtensionInput {
-                    args: vec![],
-                    context: plugin.create_context(sandbox.path()),
-                })
+                .execute_extension(ExecuteExtensionInput::default())
                 .await;
 
             assert_snapshot!(
@@ -126,10 +111,7 @@ mod migrate_nx_extension {
             let plugin = sandbox.create_extension("test").await;
 
             plugin
-                .execute_extension(ExecuteExtensionInput {
-                    args: vec![],
-                    context: plugin.create_context(sandbox.path()),
-                })
+                .execute_extension(ExecuteExtensionInput::default())
                 .await;
 
             assert!(!sandbox.path().join("nx.json").exists());
@@ -150,13 +132,8 @@ mod migrate_nx_extension {
             let sandbox = create_moon_sandbox("project-name-deps");
             let plugin = sandbox.create_extension("test").await;
 
-            dbg!(sandbox.path());
-
             plugin
-                .execute_extension(ExecuteExtensionInput {
-                    args: vec![],
-                    context: plugin.create_context(sandbox.path()),
-                })
+                .execute_extension(ExecuteExtensionInput::default())
                 .await;
 
             assert!(!sandbox.path().join("project.json").exists());
@@ -171,10 +148,7 @@ mod migrate_nx_extension {
             let plugin = sandbox.create_extension("test").await;
 
             plugin
-                .execute_extension(ExecuteExtensionInput {
-                    args: vec![],
-                    context: plugin.create_context(sandbox.path()),
-                })
+                .execute_extension(ExecuteExtensionInput::default())
                 .await;
 
             assert!(!sandbox.path().join("app/project.json").exists());
@@ -192,10 +166,7 @@ mod migrate_nx_extension {
             let plugin = sandbox.create_extension("test").await;
 
             plugin
-                .execute_extension(ExecuteExtensionInput {
-                    args: vec![],
-                    context: plugin.create_context(sandbox.path()),
-                })
+                .execute_extension(ExecuteExtensionInput::default())
                 .await;
 
             assert!(!sandbox.path().join("project.json").exists());
@@ -210,10 +181,7 @@ mod migrate_nx_extension {
             let plugin = sandbox.create_extension("test").await;
 
             plugin
-                .execute_extension(ExecuteExtensionInput {
-                    args: vec![],
-                    context: plugin.create_context(sandbox.path()),
-                })
+                .execute_extension(ExecuteExtensionInput::default())
                 .await;
 
             assert!(!sandbox.path().join("project.json").exists());

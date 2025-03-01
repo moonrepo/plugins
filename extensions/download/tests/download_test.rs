@@ -11,10 +11,7 @@ mod download_extension {
         let plugin = sandbox.create_extension("test").await;
 
         plugin
-            .execute_extension(ExecuteExtensionInput {
-                args: vec![],
-                context: plugin.create_context(sandbox.path()),
-            })
+            .execute_extension(ExecuteExtensionInput::default())
             .await;
     }
 
@@ -27,7 +24,7 @@ mod download_extension {
         plugin
             .execute_extension(ExecuteExtensionInput {
                 args: vec!["--url".into(), "invalid".into()],
-                context: plugin.create_context(sandbox.path()),
+                ..Default::default()
             })
             .await;
     }
@@ -48,7 +45,7 @@ mod download_extension {
                     "--dest".into(),
                     "./dest".into(),
                 ],
-                context: plugin.create_context(sandbox.path()),
+                ..Default::default()
             })
             .await;
     }
@@ -66,7 +63,7 @@ mod download_extension {
                     "--dest".into(),
                     ".".into(),
                 ],
-                context: plugin.create_context(sandbox.path()),
+                ..Default::default()
             })
             .await;
 
@@ -89,7 +86,7 @@ mod download_extension {
                     "--dest".into(),
                     "./sub/dir".into(),
                 ],
-                context: plugin.create_context(sandbox.path()),
+                ..Default::default()
             })
             .await;
 
@@ -111,7 +108,7 @@ mod download_extension {
                     "--name".into(),
                     "moon.md".into(),
                 ],
-                context: plugin.create_context(sandbox.path()),
+                ..Default::default()
             })
             .await;
 

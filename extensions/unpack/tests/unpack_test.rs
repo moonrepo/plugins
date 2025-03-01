@@ -10,10 +10,7 @@ mod unpack_extension {
         let plugin = sandbox.create_extension("test").await;
 
         plugin
-            .execute_extension(ExecuteExtensionInput {
-                args: vec![],
-                context: plugin.create_context(sandbox.path()),
-            })
+            .execute_extension(ExecuteExtensionInput::default())
             .await;
     }
 
@@ -31,7 +28,7 @@ mod unpack_extension {
                     "--src".into(),
                     "https://raw.githubusercontent.com/moonrepo/moon/master/README.md".into(),
                 ],
-                context: plugin.create_context(sandbox.path()),
+                ..Default::default()
             })
             .await;
     }
@@ -45,7 +42,7 @@ mod unpack_extension {
         plugin
             .execute_extension(ExecuteExtensionInput {
                 args: vec!["--src".into(), "./some/archive.zip".into()],
-                context: plugin.create_context(sandbox.path()),
+                ..Default::default()
             })
             .await;
     }
@@ -66,7 +63,7 @@ mod unpack_extension {
                     "--dest".into(),
                     "./dest".into(),
                 ],
-                context: plugin.create_context(sandbox.path()),
+                ..Default::default()
             })
             .await;
     }

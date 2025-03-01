@@ -11,10 +11,7 @@ mod migrate_turborepo_extension {
         let plugin = sandbox.create_extension("test").await;
 
         plugin
-            .execute_extension(ExecuteExtensionInput {
-                args: vec![],
-                context: plugin.create_context(sandbox.path()),
-            })
+            .execute_extension(ExecuteExtensionInput::default())
             .await;
 
         assert!(!sandbox.path().join("turbo.json").exists());
@@ -29,10 +26,7 @@ mod migrate_turborepo_extension {
         let plugin = sandbox.create_extension("test").await;
 
         plugin
-            .execute_extension(ExecuteExtensionInput {
-                args: vec![],
-                context: plugin.create_context(sandbox.path()),
-            })
+            .execute_extension(ExecuteExtensionInput::default())
             .await;
 
         assert!(!sandbox.path().join("turbo.json").exists());
@@ -55,7 +49,7 @@ mod migrate_turborepo_extension {
         plugin
             .execute_extension(ExecuteExtensionInput {
                 args: vec!["--bun".into()],
-                context: plugin.create_context(sandbox.path()),
+                ..Default::default()
             })
             .await;
 
@@ -78,10 +72,7 @@ mod migrate_turborepo_extension {
         let plugin = sandbox.create_extension("test").await;
 
         plugin
-            .execute_extension(ExecuteExtensionInput {
-                args: vec![],
-                context: plugin.create_context(sandbox.path()),
-            })
+            .execute_extension(ExecuteExtensionInput::default())
             .await;
 
         assert!(!sandbox.path().join("turbo.json").exists());
@@ -97,10 +88,7 @@ mod migrate_turborepo_extension {
         let plugin = sandbox.create_extension("test").await;
 
         plugin
-            .execute_extension(ExecuteExtensionInput {
-                args: vec![],
-                context: plugin.create_context(sandbox.path()),
-            })
+            .execute_extension(ExecuteExtensionInput::default())
             .await;
 
         assert_snapshot!(fs::read_to_string(sandbox.path().join(".moon/tasks/node.yml")).unwrap());
@@ -112,10 +100,7 @@ mod migrate_turborepo_extension {
         let plugin = sandbox.create_extension("test").await;
 
         plugin
-            .execute_extension(ExecuteExtensionInput {
-                args: vec![],
-                context: plugin.create_context(sandbox.path()),
-            })
+            .execute_extension(ExecuteExtensionInput::default())
             .await;
 
         assert!(!sandbox.path().join("turbo.json").exists());
@@ -129,10 +114,7 @@ mod migrate_turborepo_extension {
         let plugin = sandbox.create_extension("test").await;
 
         plugin
-            .execute_extension(ExecuteExtensionInput {
-                args: vec![],
-                context: plugin.create_context(sandbox.path()),
-            })
+            .execute_extension(ExecuteExtensionInput::default())
             .await;
     }
 
@@ -143,10 +125,7 @@ mod migrate_turborepo_extension {
         let plugin = sandbox.create_extension("test").await;
 
         plugin
-            .execute_extension(ExecuteExtensionInput {
-                args: vec![],
-                context: plugin.create_context(sandbox.path()),
-            })
+            .execute_extension(ExecuteExtensionInput::default())
             .await;
     }
 }
