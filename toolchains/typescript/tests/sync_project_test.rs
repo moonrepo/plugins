@@ -411,4 +411,127 @@ mod sync_project {
             assert_snapshot!(fs::read_file(sandbox.path().join("root/tsconfig.json")).unwrap());
         }
     }
+
+    mod include_shared_types {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn adds_if_folder_exists() {
+            let sandbox = create_moon_sandbox("refs");
+            sandbox.create_file("types/index.d.ts", "");
+
+            let plugin = sandbox.create_toolchain("typescript").await;
+
+            let output = plugin
+                .sync_project(SyncProjectInput {
+                    project: create_project("no-refs"),
+                    toolchain_config: json!({
+                        "includeSharedTypes": true,
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(has_changed_file(
+                &output,
+                "/workspace/no-refs/tsconfig.json"
+            ));
+            assert_snapshot!(fs::read_file(sandbox.path().join("no-refs/tsconfig.json")).unwrap());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn doesnt_adds_if_disabled() {
+            let sandbox = create_moon_sandbox("refs");
+            sandbox.create_file("types/index.d.ts", "");
+
+            let plugin = sandbox.create_toolchain("typescript").await;
+
+            let output = plugin
+                .sync_project(SyncProjectInput {
+                    project: create_project("no-refs"),
+                    toolchain_config: json!({
+                        "includeSharedTypes": false,
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(!has_changed_file(
+                &output,
+                "/workspace/no-refs/tsconfig.json"
+            ));
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn doesnt_adds_if_no_folder() {
+            let sandbox = create_moon_sandbox("refs");
+            let plugin = sandbox.create_toolchain("typescript").await;
+
+            let output = plugin
+                .sync_project(SyncProjectInput {
+                    project: create_project("no-refs"),
+                    toolchain_config: json!({
+                        "includeSharedTypes": true,
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(!has_changed_file(
+                &output,
+                "/workspace/no-refs/tsconfig.json"
+            ));
+        }
+    }
+
+    mod include_project_reference_sources {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn adds_includes_from_refs() {
+            let sandbox = create_moon_sandbox("refs");
+            let plugin = sandbox.create_toolchain("typescript").await;
+
+            let output = plugin
+                .sync_project(SyncProjectInput {
+                    project: create_project("no-refs"),
+                    project_dependencies: create_project_dependencies(),
+                    toolchain_config: json!({
+                        "includeProjectReferenceSources": true,
+                        "syncProjectReferences": true,
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(has_changed_file(
+                &output,
+                "/workspace/no-refs/tsconfig.json"
+            ));
+            assert_snapshot!(fs::read_file(sandbox.path().join("no-refs/tsconfig.json")).unwrap());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn doesnt_add_includes_if_sync_disabled() {
+            let sandbox = create_moon_sandbox("refs");
+            let plugin = sandbox.create_toolchain("typescript").await;
+
+            let output = plugin
+                .sync_project(SyncProjectInput {
+                    project: create_project("no-refs"),
+                    project_dependencies: create_project_dependencies(),
+                    toolchain_config: json!({
+                        "includeProjectReferenceSources": true,
+                        "syncProjectReferences": false,
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(!has_changed_file(
+                &output,
+                "/workspace/no-refs/tsconfig.json"
+            ));
+        }
+    }
 }
