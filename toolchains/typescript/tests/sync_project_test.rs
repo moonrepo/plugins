@@ -285,4 +285,130 @@ mod sync_project {
             ));
         }
     }
+
+    mod sync_root_project_reference {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn adds_project_as_ref() {
+            let sandbox = create_moon_sandbox("refs");
+            let plugin = sandbox.create_toolchain("typescript").await;
+
+            let output = plugin
+                .sync_project(SyncProjectInput {
+                    project: create_project("no-refs"),
+                    toolchain_config: json!({
+                        "syncProjectReferences": true,
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(has_changed_file(&output, "/workspace/./tsconfig.json"));
+            assert_snapshot!(fs::read_file(sandbox.path().join("tsconfig.json")).unwrap());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn adds_project_as_ref_with_custom_options() {
+            let sandbox = create_moon_sandbox("refs-custom");
+            let plugin = sandbox.create_toolchain("typescript").await;
+
+            let output = plugin
+                .sync_project(SyncProjectInput {
+                    project: create_project("no-refs"),
+                    toolchain_config: json!({
+                        "projectConfigFileName": "tsconfig.ref.json",
+                        "rootConfigFileName": "tsconfig.root.json",
+                        "syncProjectReferences": true,
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(has_changed_file(&output, "/workspace/./tsconfig.root.json"));
+            assert_snapshot!(fs::read_file(sandbox.path().join("tsconfig.root.json")).unwrap());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn doesnt_add_if_disabled() {
+            let sandbox = create_moon_sandbox("refs");
+            let plugin = sandbox.create_toolchain("typescript").await;
+
+            let output = plugin
+                .sync_project(SyncProjectInput {
+                    project: create_project("no-refs"),
+                    toolchain_config: json!({
+                        "syncProjectReferences": false,
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(!has_changed_file(&output, "/workspace/./tsconfig.json"));
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn doesnt_add_root_level_project_if_self() {
+            let sandbox = create_moon_sandbox("refs");
+            let plugin = sandbox.create_toolchain("typescript").await;
+
+            let mut project = create_project("root");
+            project.source = ".".into();
+
+            let output = plugin
+                .sync_project(SyncProjectInput {
+                    project,
+                    toolchain_config: json!({
+                        "syncProjectReferences": true,
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(!has_changed_file(&output, "/workspace/./tsconfig.json"));
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn works_with_root_level_project() {
+            let sandbox = create_moon_sandbox("refs-root-level");
+            let plugin = sandbox.create_toolchain("typescript").await;
+
+            let mut project = create_project("root");
+            project.source = ".".into();
+
+            let output = plugin
+                .sync_project(SyncProjectInput {
+                    project,
+                    toolchain_config: json!({
+                        "projectConfigFileName": "tsconfig.project.json",
+                        "syncProjectReferences": true,
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(has_changed_file(&output, "/workspace/./tsconfig.json"));
+            assert_snapshot!(fs::read_file(sandbox.path().join("tsconfig.json")).unwrap());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn works_with_root_dir() {
+            let sandbox = create_moon_sandbox("refs-sibling-root");
+            let plugin = sandbox.create_toolchain("typescript").await;
+
+            let output = plugin
+                .sync_project(SyncProjectInput {
+                    project: create_project("no-refs"),
+                    toolchain_config: json!({
+                        "root": "root",
+                        "syncProjectReferences": true,
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(has_changed_file(&output, "/workspace/root/tsconfig.json"));
+            assert_snapshot!(fs::read_file(sandbox.path().join("root/tsconfig.json")).unwrap());
+        }
+    }
 }
