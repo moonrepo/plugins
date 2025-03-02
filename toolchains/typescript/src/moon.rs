@@ -11,13 +11,21 @@ pub fn register_toolchain(
     Json(_): Json<RegisterToolchainInput>,
 ) -> FnResult<Json<RegisterToolchainOutput>> {
     Ok(Json(RegisterToolchainOutput {
-        config_schema: Some(SchemaBuilder::build_root::<TypeScriptConfig>()),
         name: "TypeScript".into(),
         description: Some(
             "Provides sync operations that keep <file>tsconfig.json</file>'s in a healthy state."
                 .into(),
         ),
         plugin_version: env!("CARGO_PKG_VERSION").into(),
+        config_file_globs: vec![
+            "tsconfig.json".into(),
+            "tsconfig.*.json".into(),
+            "*.tsconfig.json".into(),
+            ".tsbuildinfo".into(),
+            "*.tsbuildinfo".into(),
+        ],
+        config_schema: Some(SchemaBuilder::build_root::<TypeScriptConfig>()),
+        ..Default::default()
     }))
 }
 
