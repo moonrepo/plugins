@@ -534,4 +534,103 @@ mod sync_project {
             ));
         }
     }
+
+    mod route_out_dir_to_cache {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn adds_when_no_options() {
+            let sandbox = create_moon_sandbox("hashing");
+            let plugin = sandbox.create_toolchain("typescript").await;
+
+            let output = plugin
+                .sync_project(SyncProjectInput {
+                    project: create_project("no-options"),
+                    project_dependencies: create_project_dependencies(),
+                    toolchain_config: json!({
+                        "routeOutDirToCache": true,
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(has_changed_file(
+                &output,
+                "/workspace/no-options/tsconfig.json"
+            ));
+            assert_snapshot!(
+                fs::read_file(sandbox.path().join("no-options/tsconfig.json")).unwrap()
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn adds_when_has_options() {
+            let sandbox = create_moon_sandbox("hashing");
+            let plugin = sandbox.create_toolchain("typescript").await;
+
+            let output = plugin
+                .sync_project(SyncProjectInput {
+                    project: create_project("with-options"),
+                    project_dependencies: create_project_dependencies(),
+                    toolchain_config: json!({
+                        "routeOutDirToCache": true,
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(has_changed_file(
+                &output,
+                "/workspace/with-options/tsconfig.json"
+            ));
+            assert_snapshot!(
+                fs::read_file(sandbox.path().join("with-options/tsconfig.json")).unwrap()
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn overrides_out_dir() {
+            let sandbox = create_moon_sandbox("hashing");
+            let plugin = sandbox.create_toolchain("typescript").await;
+
+            let output = plugin
+                .sync_project(SyncProjectInput {
+                    project: create_project("out-dir"),
+                    project_dependencies: create_project_dependencies(),
+                    toolchain_config: json!({
+                        "routeOutDirToCache": true,
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(has_changed_file(
+                &output,
+                "/workspace/out-dir/tsconfig.json"
+            ));
+            assert_snapshot!(fs::read_file(sandbox.path().join("out-dir/tsconfig.json")).unwrap());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn doesnt_add_when_disabled() {
+            let sandbox = create_moon_sandbox("hashing");
+            let plugin = sandbox.create_toolchain("typescript").await;
+
+            let output = plugin
+                .sync_project(SyncProjectInput {
+                    project: create_project("no-options"),
+                    project_dependencies: create_project_dependencies(),
+                    toolchain_config: json!({
+                        "routeOutDirToCache": false,
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(!has_changed_file(
+                &output,
+                "/workspace/no-options/tsconfig.json"
+            ));
+        }
+    }
 }

@@ -31,9 +31,10 @@ pub fn register_toolchain(
 
 #[plugin_fn]
 pub fn sync_project(Json(input): Json<SyncProjectInput>) -> FnResult<Json<SyncOutput>> {
+    let plugin_id = get_plugin_id()?;
     let mut output = SyncOutput::default();
 
-    if is_project_toolchain_enabled(&input.project, "typescript") {
+    if is_project_toolchain_enabled(&input.project, &plugin_id) {
         let config = get_toolchain_config::<TypeScriptConfig>(input.toolchain_config)?;
 
         output.changed_files = sync_project_references(
