@@ -535,6 +535,77 @@ mod sync_project {
         }
     }
 
+    mod sync_project_references_to_paths {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn adds_paths_for_refs() {
+            let sandbox = create_moon_sandbox("refs-paths");
+            let plugin = sandbox.create_toolchain("typescript").await;
+
+            let mut deps = create_project_dependencies();
+
+            // No package.json
+            deps.push(create_project("d"));
+
+            let output = plugin
+                .sync_project(SyncProjectInput {
+                    project: create_project("other"),
+                    project_dependencies: deps,
+                    toolchain_config: json!({
+                        "syncProjectReferences": true,
+                        "syncProjectReferencesToPaths": true,
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(has_changed_file(&output, "/workspace/other/tsconfig.json"));
+            assert_snapshot!(fs::read_file(sandbox.path().join("other/tsconfig.json")).unwrap());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn doesnt_add_if_main_sync_disabled() {
+            let sandbox = create_moon_sandbox("refs-paths");
+            let plugin = sandbox.create_toolchain("typescript").await;
+
+            let output = plugin
+                .sync_project(SyncProjectInput {
+                    project: create_project("other"),
+                    project_dependencies: create_project_dependencies(),
+                    toolchain_config: json!({
+                        "syncProjectReferences": false,
+                        "syncProjectReferencesToPaths": true,
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(!has_changed_file(&output, "/workspace/other/tsconfig.json"));
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn doesnt_add_if_paths_sync_disabled() {
+            let sandbox = create_moon_sandbox("refs-paths");
+            let plugin = sandbox.create_toolchain("typescript").await;
+
+            let output = plugin
+                .sync_project(SyncProjectInput {
+                    project: create_project("other"),
+                    project_dependencies: create_project_dependencies(),
+                    toolchain_config: json!({
+                        "syncProjectReferences": true,
+                        "syncProjectReferencesToPaths": false,
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(has_changed_file(&output, "/workspace/other/tsconfig.json"));
+            assert_snapshot!(fs::read_file(sandbox.path().join("other/tsconfig.json")).unwrap());
+        }
+    }
+
     mod route_out_dir_to_cache {
         use super::*;
 

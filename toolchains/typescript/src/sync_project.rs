@@ -4,10 +4,11 @@ use moon_common::{Id, path::is_root_level_source};
 use moon_config::DependencyScope;
 use moon_pdk::{AnyResult, MoonContext, VirtualPath, get_plugin_id, is_project_toolchain_enabled};
 use moon_project::ProjectFragment;
-use rustc_hash::FxHashMap;
 use serde::Deserialize;
+use std::collections::BTreeMap;
 use typescript_tsconfig_json::{CompilerOptionsPathsMap, CompilerPath, ExtendsField};
 
+#[derive(Debug)]
 pub struct ReferenceData {
     package_name: Option<String>,
     path: VirtualPath, // absolute
@@ -77,7 +78,7 @@ pub fn sync_project_options(
     context: &MoonContext,
     config: &TypeScriptConfig,
     project: &ProjectFragment,
-    project_refs: &FxHashMap<Id, ReferenceData>,
+    project_refs: &BTreeMap<Id, ReferenceData>,
 ) -> AnyResult<Option<VirtualPath>> {
     let types_root = context.workspace_root.join(&config.root);
     let project_root = context.workspace_root.join(&project.source);
@@ -179,7 +180,7 @@ pub fn sync_project_references(
     dependencies: &[ProjectFragment],
 ) -> AnyResult<Vec<VirtualPath>> {
     let plugin_id = get_plugin_id()?;
-    let mut project_refs = FxHashMap::default();
+    let mut project_refs = BTreeMap::default();
     let mut changed_files = vec![];
 
     for dep_project in dependencies {
