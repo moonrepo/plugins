@@ -24,6 +24,8 @@ pub fn register_extension(
 pub struct MigrateTurborepoExtensionArgs {
     #[arg(long)]
     pub bun: bool,
+    #[arg(long)]
+    pub cleanup: bool,
 }
 
 #[plugin_fn]
@@ -40,7 +42,9 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
 
         migrator.migrate_root_config(json::read_file(&root_config_path)?)?;
 
-        fs::remove(root_config_path)?;
+        if args.cleanup {
+            fs::remove(root_config_path)?;
+        }
     }
 
     // Then migrate project configs
@@ -58,7 +62,9 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
 
         migrator.migrate_project_config(&project_source, json::read_file(&project_config_path)?)?;
 
-        fs::remove(project_config_path)?;
+        if args.cleanup {
+            fs::remove(project_config_path)?;
+        }
     }
 
     // Write the new config files

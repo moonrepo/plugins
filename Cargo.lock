@@ -2457,9 +2457,9 @@ dependencies = [
 
 [[package]]
 name = "moon_config"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4664a61d35af8941041325aa3c91f64780c9bf3fd6645b2b32a64ee399a839c4"
+checksum = "215e83c1279dee1f43d6ab3a4ce7e6848a00cf6dc333ec522cf0cd7e9ffbab63"
 dependencies = [
  "indexmap",
  "miette 7.5.0",
@@ -2513,9 +2513,9 @@ dependencies = [
 
 [[package]]
 name = "moon_pdk_api"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "874247d8ec4f96657feb781058c03d3d9d52e04bafffd4fc06ebccb01ccd39e2"
+checksum = "6f29eecaa2482ed53ddde058e38bed2fc348e3bcfdd7393f98f3c6baf7a920d9"
 dependencies = [
  "moon_common",
  "moon_config",

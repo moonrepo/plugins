@@ -2,6 +2,13 @@ use moon_pdk_test_utils::{ExecuteExtensionInput, create_empty_moon_sandbox, crea
 use starbase_sandbox::assert_snapshot;
 use std::fs;
 
+fn create_input() -> ExecuteExtensionInput {
+    ExecuteExtensionInput {
+        args: vec!["--cleanup".into()],
+        ..Default::default()
+    }
+}
+
 mod migrate_nx_extension {
     use super::*;
 
@@ -10,9 +17,7 @@ mod migrate_nx_extension {
         let sandbox = create_moon_sandbox("root");
         let plugin = sandbox.create_extension("test").await;
 
-        plugin
-            .execute_extension(ExecuteExtensionInput::default())
-            .await;
+        plugin.execute_extension(create_input()).await;
 
         assert!(!sandbox.path().join("nx.json").exists());
         assert!(!sandbox.path().join("workspace.json").exists());
@@ -28,9 +33,7 @@ mod migrate_nx_extension {
         let sandbox = create_moon_sandbox("nx-executors");
         let plugin = sandbox.create_extension("test").await;
 
-        plugin
-            .execute_extension(ExecuteExtensionInput::default())
-            .await;
+        plugin.execute_extension(create_input()).await;
 
         assert!(!sandbox.path().join("project.json").exists());
         assert!(sandbox.path().join("moon.yml").exists());
@@ -46,9 +49,7 @@ mod migrate_nx_extension {
             let sandbox = create_moon_sandbox("root-inputs");
             let plugin = sandbox.create_extension("test").await;
 
-            plugin
-                .execute_extension(ExecuteExtensionInput::default())
-                .await;
+            plugin.execute_extension(create_input()).await;
 
             assert!(!sandbox.path().join("nx.json").exists());
             assert!(sandbox.path().join(".moon/tasks/node.yml").exists());
@@ -67,9 +68,7 @@ mod migrate_nx_extension {
             let sandbox = create_empty_moon_sandbox();
             let plugin = sandbox.create_extension("test").await;
 
-            plugin
-                .execute_extension(ExecuteExtensionInput::default())
-                .await;
+            plugin.execute_extension(create_input()).await;
 
             assert_snapshot!(
                 fs::read_to_string(sandbox.path().join(".moon/workspace.yml")).unwrap()
@@ -92,9 +91,7 @@ mod migrate_nx_extension {
 
             let plugin = sandbox.create_extension("test").await;
 
-            plugin
-                .execute_extension(ExecuteExtensionInput::default())
-                .await;
+            plugin.execute_extension(create_input()).await;
 
             assert_snapshot!(
                 fs::read_to_string(sandbox.path().join(".moon/workspace.yml")).unwrap()
@@ -110,9 +107,7 @@ mod migrate_nx_extension {
             let sandbox = create_moon_sandbox("projects");
             let plugin = sandbox.create_extension("test").await;
 
-            plugin
-                .execute_extension(ExecuteExtensionInput::default())
-                .await;
+            plugin.execute_extension(create_input()).await;
 
             assert!(!sandbox.path().join("nx.json").exists());
             assert!(!sandbox.path().join("bar/project.json").exists());
@@ -132,9 +127,7 @@ mod migrate_nx_extension {
             let sandbox = create_moon_sandbox("project-name-deps");
             let plugin = sandbox.create_extension("test").await;
 
-            plugin
-                .execute_extension(ExecuteExtensionInput::default())
-                .await;
+            plugin.execute_extension(create_input()).await;
 
             assert!(!sandbox.path().join("project.json").exists());
             assert!(sandbox.path().join("moon.yml").exists());
@@ -147,9 +140,7 @@ mod migrate_nx_extension {
             let sandbox = create_moon_sandbox("project-type-tags");
             let plugin = sandbox.create_extension("test").await;
 
-            plugin
-                .execute_extension(ExecuteExtensionInput::default())
-                .await;
+            plugin.execute_extension(create_input()).await;
 
             assert!(!sandbox.path().join("app/project.json").exists());
             assert!(!sandbox.path().join("lib/project.json").exists());
@@ -165,9 +156,7 @@ mod migrate_nx_extension {
             let sandbox = create_moon_sandbox("project-inputs");
             let plugin = sandbox.create_extension("test").await;
 
-            plugin
-                .execute_extension(ExecuteExtensionInput::default())
-                .await;
+            plugin.execute_extension(create_input()).await;
 
             assert!(!sandbox.path().join("project.json").exists());
             assert!(sandbox.path().join("moon.yml").exists());
@@ -180,9 +169,7 @@ mod migrate_nx_extension {
             let sandbox = create_moon_sandbox("project-targets");
             let plugin = sandbox.create_extension("test").await;
 
-            plugin
-                .execute_extension(ExecuteExtensionInput::default())
-                .await;
+            plugin.execute_extension(create_input()).await;
 
             assert!(!sandbox.path().join("project.json").exists());
             assert!(sandbox.path().join("moon.yml").exists());

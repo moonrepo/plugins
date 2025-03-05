@@ -2,6 +2,13 @@ use moon_pdk_test_utils::{ExecuteExtensionInput, create_moon_sandbox};
 use starbase_sandbox::assert_snapshot;
 use std::fs;
 
+fn create_input() -> ExecuteExtensionInput {
+    ExecuteExtensionInput {
+        args: vec!["--cleanup".into()],
+        ..Default::default()
+    }
+}
+
 mod migrate_turborepo_extension {
     use super::*;
 
@@ -10,9 +17,7 @@ mod migrate_turborepo_extension {
         let sandbox = create_moon_sandbox("root-only");
         let plugin = sandbox.create_extension("test").await;
 
-        plugin
-            .execute_extension(ExecuteExtensionInput::default())
-            .await;
+        plugin.execute_extension(create_input()).await;
 
         assert!(!sandbox.path().join("turbo.json").exists());
         assert!(sandbox.path().join(".moon/tasks/node.yml").exists());
@@ -25,9 +30,7 @@ mod migrate_turborepo_extension {
         let sandbox = create_moon_sandbox("monorepo");
         let plugin = sandbox.create_extension("test").await;
 
-        plugin
-            .execute_extension(ExecuteExtensionInput::default())
-            .await;
+        plugin.execute_extension(create_input()).await;
 
         assert!(!sandbox.path().join("turbo.json").exists());
         assert!(!sandbox.path().join("client/turbo.json").exists());
@@ -48,7 +51,7 @@ mod migrate_turborepo_extension {
 
         plugin
             .execute_extension(ExecuteExtensionInput {
-                args: vec!["--bun".into()],
+                args: vec!["--bun".into(), "--cleanup".into()],
                 ..Default::default()
             })
             .await;
@@ -71,9 +74,7 @@ mod migrate_turborepo_extension {
         let sandbox = create_moon_sandbox("root-project");
         let plugin = sandbox.create_extension("test").await;
 
-        plugin
-            .execute_extension(ExecuteExtensionInput::default())
-            .await;
+        plugin.execute_extension(create_input()).await;
 
         assert!(!sandbox.path().join("turbo.json").exists());
         assert!(!sandbox.path().join(".moon/tasks/node.yml").exists());
@@ -87,9 +88,7 @@ mod migrate_turborepo_extension {
         let sandbox = create_moon_sandbox("root-merge-existing");
         let plugin = sandbox.create_extension("test").await;
 
-        plugin
-            .execute_extension(ExecuteExtensionInput::default())
-            .await;
+        plugin.execute_extension(create_input()).await;
 
         assert_snapshot!(fs::read_to_string(sandbox.path().join(".moon/tasks/node.yml")).unwrap());
     }
@@ -99,9 +98,7 @@ mod migrate_turborepo_extension {
         let sandbox = create_moon_sandbox("missing-pipeline");
         let plugin = sandbox.create_extension("test").await;
 
-        plugin
-            .execute_extension(ExecuteExtensionInput::default())
-            .await;
+        plugin.execute_extension(create_input()).await;
 
         assert!(!sandbox.path().join("turbo.json").exists());
         assert!(!sandbox.path().join(".moon/tasks/node.yml").exists());
@@ -113,9 +110,7 @@ mod migrate_turborepo_extension {
         let sandbox = create_moon_sandbox("error-missing-project");
         let plugin = sandbox.create_extension("test").await;
 
-        plugin
-            .execute_extension(ExecuteExtensionInput::default())
-            .await;
+        plugin.execute_extension(create_input()).await;
     }
 
     #[tokio::test(flavor = "multi_thread")]
@@ -124,8 +119,6 @@ mod migrate_turborepo_extension {
         let sandbox = create_moon_sandbox("error-missing-project-deps");
         let plugin = sandbox.create_extension("test").await;
 
-        plugin
-            .execute_extension(ExecuteExtensionInput::default())
-            .await;
+        plugin.execute_extension(create_input()).await;
     }
 }
