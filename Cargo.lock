@@ -2496,9 +2496,9 @@ dependencies = [
 
 [[package]]
 name = "moon_pdk"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f83b50524855c98c2bb3d22a0b1fff142eb7884e6163c83033f17b270eb71672"
+checksum = "89892673aafae6f6d2d63776ffaaa26d9c489c8842ae08bf7d4368ee385f0305"
 dependencies = [
  "clap",
  "extism-pdk",

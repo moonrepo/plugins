@@ -2,7 +2,7 @@ use crate::config::TypeScriptConfig;
 use crate::tsconfig_json::TsConfigJson;
 use moon_common::{Id, path::is_root_level_source};
 use moon_config::DependencyScope;
-use moon_pdk::{AnyResult, MoonContext, VirtualPath, get_plugin_id, is_project_toolchain_enabled};
+use moon_pdk::{AnyResult, MoonContext, VirtualPath, is_project_toolchain_enabled};
 use moon_project::ProjectFragment;
 use serde::Deserialize;
 use std::collections::BTreeMap;
@@ -179,12 +179,11 @@ pub fn sync_project_references(
     project: &ProjectFragment,
     dependencies: &[ProjectFragment],
 ) -> AnyResult<Vec<VirtualPath>> {
-    let plugin_id = get_plugin_id()?;
     let mut project_refs = BTreeMap::default();
     let mut changed_files = vec![];
 
     for dep_project in dependencies {
-        if !is_project_toolchain_enabled(dep_project, &plugin_id)
+        if !is_project_toolchain_enabled(dep_project)
             || is_root_level_source(&dep_project.source)
             || dep_project.dependency_scope.is_some_and(|scope| {
                 matches!(scope, DependencyScope::Build | DependencyScope::Root)
