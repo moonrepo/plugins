@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Will no longer delete Turborepo files by default.
+- Updated dependencies.
+
 ## 0.1.5
 
 #### 🚀 Updates

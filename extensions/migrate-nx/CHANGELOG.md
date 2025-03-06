@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Will no longer delete Nx files by default.
+- Updated dependencies.
+
 ## 0.0.8
 
 #### 🚀 Updates
