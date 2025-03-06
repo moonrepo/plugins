@@ -2,6 +2,7 @@ use extension_common::download::download_from_url;
 use extension_common::format_virtual_path;
 use extism_pdk::*;
 use moon_pdk::*;
+use moon_pdk_api::{ExecuteExtensionInput, RegisterExtensionInput, RegisterExtensionOutput};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -11,9 +12,9 @@ extern "ExtismHost" {
 
 #[plugin_fn]
 pub fn register_extension(
-    Json(_): Json<ExtensionMetadataInput>,
-) -> FnResult<Json<ExtensionMetadataOutput>> {
-    Ok(Json(ExtensionMetadataOutput {
+    Json(_): Json<RegisterExtensionInput>,
+) -> FnResult<Json<RegisterExtensionOutput>> {
+    Ok(Json(RegisterExtensionOutput {
         name: "Download".into(),
         description: Some("Download a file from a URL into the current working directory.".into()),
         plugin_version: env!("CARGO_PKG_VERSION").into(),

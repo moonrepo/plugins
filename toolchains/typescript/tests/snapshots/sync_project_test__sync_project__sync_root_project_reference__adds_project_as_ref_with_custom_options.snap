@@ -1,0 +1,12 @@
+---
+source: toolchains/typescript/tests/sync_project_test.rs
+expression: "fs::read_file(sandbox.path().join(\"tsconfig.root.json\")).unwrap()"
+---
+{
+  "files": [],
+  "references": [
+    {
+      "path": "no-refs/tsconfig.ref.json"
+    }
+  ]
+}

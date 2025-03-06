@@ -1,6 +1,7 @@
 use crate::nx_migrator::NxMigrator;
 use extism_pdk::*;
 use moon_pdk::*;
+use moon_pdk_api::{ExecuteExtensionInput, RegisterExtensionInput, RegisterExtensionOutput};
 use starbase_utils::{fs, glob, json};
 
 #[host_fn]
@@ -10,9 +11,9 @@ extern "ExtismHost" {
 
 #[plugin_fn]
 pub fn register_extension(
-    Json(_): Json<ExtensionMetadataInput>,
-) -> FnResult<Json<ExtensionMetadataOutput>> {
-    Ok(Json(ExtensionMetadataOutput {
+    Json(_): Json<RegisterExtensionInput>,
+) -> FnResult<Json<RegisterExtensionOutput>> {
+    Ok(Json(RegisterExtensionOutput {
         name: "Migrate Nx".into(),
         description: Some("Migrate an Nx repository to moon by converting all <file>nx.json</file> and <file>project.json</file> files into moon configuration files.".into()),
         plugin_version: env!("CARGO_PKG_VERSION").into(),
@@ -24,6 +25,8 @@ pub fn register_extension(
 pub struct MigrateNxExtensionArgs {
     #[arg(long)]
     pub bun: bool,
+    #[arg(long)]
+    pub cleanup: bool,
 }
 
 #[plugin_fn]
@@ -43,7 +46,9 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
 
         migrator.migrate_workspace_config(json::read_file(&workspace_config_path)?)?;
 
-        fs::remove(workspace_config_path)?;
+        if args.cleanup {
+            fs::remove(workspace_config_path)?;
+        }
     }
 
     // Then the root nx config second, to handle project defaults
@@ -54,7 +59,9 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
 
         migrator.migrate_root_config(json::read_file(&root_config_path)?)?;
 
-        fs::remove(root_config_path)?;
+        if args.cleanup {
+            fs::remove(root_config_path)?;
+        }
     }
 
     // And lastly, all project configs (and package.json to)
@@ -92,7 +99,9 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
             migrator
                 .migrate_project_config(&project_source, json::read_file(&project_config_path)?)?;
 
-            fs::remove(project_config_path)?;
+            if args.cleanup {
+                fs::remove(project_config_path)?;
+            }
         }
     }
 

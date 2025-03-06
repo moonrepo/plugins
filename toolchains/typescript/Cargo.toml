@@ -1,0 +1,38 @@
+[package]
+name = "typescript_toolchain"
+version = "0.0.1"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[package.metadata.release]
+pre-release-replacements = [
+    { file = "./CHANGELOG.md", search = "Unreleased", replace = "{{version}}" },
+]
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+extism-pdk = { workspace = true }
+moon_common = { workspace = true }
+moon_config = { workspace = true }
+moon_pdk = { workspace = true }
+moon_pdk_api = { workspace = true }
+moon_project = { workspace = true }
+# rustc-hash = { workspace = true }
+schematic = { workspace = true }
+serde = { workspace = true }
+starbase_utils = { workspace = true, features = ["editor-config", "json"] }
+typescript_tsconfig_json = { workspace = true }
+
+[dev-dependencies]
+moon_pdk_test_utils = { workspace = true }
+moon_target = { workspace = true }
+serde_json = { workspace = true }
+starbase_sandbox = { workspace = true }
+tokio = { workspace = true }
+
+[features]
+default = ["wasm"]
+wasm = []

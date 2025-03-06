@@ -2,6 +2,7 @@ use extension_common::download::download_from_url;
 use extension_common::format_virtual_path;
 use extism_pdk::*;
 use moon_pdk::*;
+use moon_pdk_api::{ExecuteExtensionInput, RegisterExtensionInput, RegisterExtensionOutput};
 use starbase_archive::Archiver;
 use std::fs;
 
@@ -13,9 +14,9 @@ extern "ExtismHost" {
 
 #[plugin_fn]
 pub fn register_extension(
-    Json(_): Json<ExtensionMetadataInput>,
-) -> FnResult<Json<ExtensionMetadataOutput>> {
-    Ok(Json(ExtensionMetadataOutput {
+    Json(_): Json<RegisterExtensionInput>,
+) -> FnResult<Json<RegisterExtensionOutput>> {
+    Ok(Json(RegisterExtensionOutput {
         name: "Unpack".into(),
         description: Some("Unpack an archive into the provided destination.".into()),
         plugin_version: env!("CARGO_PKG_VERSION").into(),
