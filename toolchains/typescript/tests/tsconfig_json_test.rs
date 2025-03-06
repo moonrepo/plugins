@@ -1,4 +1,4 @@
-use moon_pdk::VirtualPath;
+use moon_pdk_api::VirtualPath;
 use starbase_sandbox::{create_empty_sandbox, locate_fixture};
 use starbase_utils::{
     json::{self, JsonValue},

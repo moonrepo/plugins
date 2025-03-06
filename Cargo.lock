@@ -1034,6 +1034,7 @@ dependencies = [
  "extension_common",
  "extism-pdk",
  "moon_pdk",
+ "moon_pdk_api",
  "moon_pdk_test_utils",
  "starbase_sandbox",
  "tokio",
@@ -2370,6 +2371,7 @@ dependencies = [
  "moon_common",
  "moon_config",
  "moon_pdk",
+ "moon_pdk_api",
  "moon_pdk_test_utils",
  "moon_target",
  "rustc-hash",
@@ -2389,6 +2391,7 @@ dependencies = [
  "moon_common",
  "moon_config",
  "moon_pdk",
+ "moon_pdk_api",
  "moon_pdk_test_utils",
  "moon_target",
  "rustc-hash",
@@ -2496,9 +2499,9 @@ dependencies = [
 
 [[package]]
 name = "moon_pdk"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "89892673aafae6f6d2d63776ffaaa26d9c489c8842ae08bf7d4368ee385f0305"
+checksum = "d2a2d756df68fd7380e5b78ad7b3d441fc7a9f48bf813c8f330a567e30d927e3"
 dependencies = [
  "clap",
  "extism-pdk",
@@ -2513,9 +2516,9 @@ dependencies = [
 
 [[package]]
 name = "moon_pdk_api"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f29eecaa2482ed53ddde058e38bed2fc348e3bcfdd7393f98f3c6baf7a920d9"
+checksum = "1e051521c5723fe1475292e2c702974209197e13924825ba71ce06a7a1416f24"
 dependencies = [
  "moon_common",
  "moon_config",
@@ -2660,6 +2663,7 @@ version = "0.0.1"
 dependencies = [
  "extism-pdk",
  "moon_pdk",
+ "moon_pdk_api",
  "node_tool",
  "schematic",
  "serde",
@@ -4745,6 +4749,7 @@ dependencies = [
  "moon_common",
  "moon_config",
  "moon_pdk",
+ "moon_pdk_api",
  "moon_pdk_test_utils",
  "moon_project",
  "moon_target",
@@ -4814,6 +4819,7 @@ dependencies = [
  "extension_common",
  "extism-pdk",
  "moon_pdk",
+ "moon_pdk_api",
  "moon_pdk_test_utils",
  "starbase_archive 0.9.4",
  "starbase_sandbox",

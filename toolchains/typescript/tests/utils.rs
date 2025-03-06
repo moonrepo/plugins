@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use moon_common::Id;
-use moon_pdk::{ProjectFragment, SyncOutput, TaskFragment};
+use moon_pdk_api::{ProjectFragment, SyncOutput, TaskFragment};
 use moon_target::Target;
 
 pub fn create_project(id: &str) -> ProjectFragment {

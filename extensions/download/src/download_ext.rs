@@ -2,6 +2,7 @@ use extension_common::download::download_from_url;
 use extension_common::format_virtual_path;
 use extism_pdk::*;
 use moon_pdk::*;
+use moon_pdk_api::{ExecuteExtensionInput, RegisterExtensionInput, RegisterExtensionOutput};
 
 #[host_fn]
 extern "ExtismHost" {

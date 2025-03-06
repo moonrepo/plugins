@@ -3,7 +3,8 @@ use crate::run_task::*;
 use crate::sync_project::*;
 use crate::tsconfig_json::TsConfigJson;
 use extism_pdk::*;
-use moon_pdk::*;
+use moon_pdk::{is_project_toolchain_enabled, parse_toolchain_config};
+use moon_pdk_api::*;
 use schematic::SchemaBuilder;
 
 #[plugin_fn]

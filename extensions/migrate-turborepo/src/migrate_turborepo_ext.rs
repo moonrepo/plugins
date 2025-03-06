@@ -1,6 +1,7 @@
 use crate::turbo_migrator::TurboMigrator;
 use extism_pdk::*;
 use moon_pdk::*;
+use moon_pdk_api::{ExecuteExtensionInput, RegisterExtensionInput, RegisterExtensionOutput};
 use starbase_utils::{fs, glob, json};
 
 #[host_fn]

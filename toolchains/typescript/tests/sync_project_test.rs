@@ -1,7 +1,7 @@
 mod utils;
 
 use moon_config::DependencyScope;
-use moon_pdk::SyncProjectInput;
+use moon_pdk_api::SyncProjectInput;
 use moon_pdk_test_utils::create_moon_sandbox;
 use serde_json::json;
 use starbase_sandbox::assert_snapshot;

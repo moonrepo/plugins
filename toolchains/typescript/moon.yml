@@ -1,0 +1,5 @@
+# tasks:
+#   test:
+#     options:
+#       # Windows fails to compile WASM
+#       os: ['linux', 'macos']

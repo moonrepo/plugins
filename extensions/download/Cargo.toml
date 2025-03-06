@@ -17,6 +17,7 @@ pre-release-replacements = [
 extension_common = { path = "../../crates/extension-common" }
 extism-pdk = { workspace = true }
 moon_pdk = { workspace = true }
+moon_pdk_api = { workspace = true }
 
 [dev-dependencies]
 moon_pdk_test_utils = { workspace = true }

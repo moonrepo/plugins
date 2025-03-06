@@ -1,6 +1,6 @@
 mod utils;
 
-use moon_pdk::HashTaskContentsInput;
+use moon_pdk_api::HashTaskContentsInput;
 use moon_pdk_test_utils::{create_empty_moon_sandbox, create_moon_sandbox};
 use serde_json::json;
 use utils::{create_project, create_task};

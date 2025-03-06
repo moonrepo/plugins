@@ -3,7 +3,7 @@ use extism_pdk::*;
 use moon_common::path::to_relative_virtual_string;
 #[cfg(feature = "wasm")]
 use moon_pdk::host_log;
-use moon_pdk::{AnyResult, VirtualPath, json_config, map_miette_error};
+use moon_pdk_api::{AnyResult, VirtualPath, anyhow, json_config};
 use starbase_utils::json::{self, JsonValue};
 use typescript_tsconfig_json::{
     CompilerOptions, CompilerOptionsPathsMap, CompilerPath, ProjectReference,
@@ -98,7 +98,7 @@ impl TsConfigJson {
     /// for use within tsconfig include, exclude, and other paths.
     pub fn to_relative_path(&self, path: impl AsRef<VirtualPath>) -> AnyResult<String> {
         to_relative_virtual_string(path.as_ref().any_path(), self.path.parent().any_path())
-            .map_err(map_miette_error)
+            .map_err(|error| anyhow!("{error}"))
     }
 
     /// Add an include pattern to the `include` field with the defined

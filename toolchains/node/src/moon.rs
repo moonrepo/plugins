@@ -1,5 +1,5 @@
 use extism_pdk::*;
-use moon_pdk::*;
+use moon_pdk_api::*;
 
 #[plugin_fn]
 pub fn register_toolchain(

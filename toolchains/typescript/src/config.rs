@@ -1,4 +1,4 @@
-use moon_pdk::config_struct;
+use moon_pdk_api::config_struct;
 use schematic::Schematic;
 
 config_struct!(
