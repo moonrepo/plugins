@@ -1,7 +1,7 @@
 use moon_common::Id;
 use moon_config::{
-    LanguageType, PartialInheritedTasksConfig, PartialProjectConfig, PartialProjectToolchainConfig,
-    PartialWorkspaceConfig,
+    LanguageType, OneOrMany, PartialInheritedTasksConfig, PartialProjectConfig,
+    PartialProjectToolchainConfig, PartialWorkspaceConfig,
 };
 use moon_pdk::{AnyResult, VirtualPath};
 use rustc_hash::FxHashMap;
@@ -71,7 +71,7 @@ impl Migrator {
                             },
                         ),
                         toolchain: Some(PartialProjectToolchainConfig {
-                            default: Some(self.toolchain.clone()),
+                            default: Some(OneOrMany::One(self.toolchain.clone())),
                             ..PartialProjectToolchainConfig::default()
                         }),
                         ..PartialProjectConfig::default()

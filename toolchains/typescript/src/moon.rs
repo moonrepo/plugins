@@ -25,8 +25,15 @@ pub fn register_toolchain(
             ".tsbuildinfo".into(),
             "*.tsbuildinfo".into(),
         ],
-        config_schema: Some(SchemaBuilder::build_root::<TypeScriptConfig>()),
+        exe_names: vec!["tsc".into(), "tsserver".into()],
         ..Default::default()
+    }))
+}
+
+#[plugin_fn]
+pub fn define_toolchain_config() -> FnResult<Json<DefineToolchainConfigOutput>> {
+    Ok(Json(DefineToolchainConfigOutput {
+        schema: SchemaBuilder::build_root::<TypeScriptConfig>(),
     }))
 }
 
@@ -96,11 +103,11 @@ pub fn hash_task_contents(
 }
 
 #[plugin_fn]
-pub fn docker_metadata(
-    Json(input): Json<DockerMetadataInput>,
-) -> FnResult<Json<DockerMetadataOutput>> {
+pub fn define_docker_metadata(
+    Json(input): Json<DefineDockerMetadataInput>,
+) -> FnResult<Json<DefineDockerMetadataOutput>> {
     let config = parse_toolchain_config::<TypeScriptConfig>(input.toolchain_config)?;
-    let mut output = DockerMetadataOutput::default();
+    let mut output = DefineDockerMetadataOutput::default();
 
     let with_root = |name: String| {
         if config.root.is_empty() || config.root == "." {
