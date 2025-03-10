@@ -25,7 +25,54 @@ pub fn register_toolchain(
             ".tsbuildinfo".into(),
             "*.tsbuildinfo".into(),
         ],
-        config_schema: Some(SchemaBuilder::build_root::<TypeScriptConfig>()),
+        exe_names: vec!["tsc".into(), "tsserver".into()],
+        ..Default::default()
+    }))
+}
+
+#[plugin_fn]
+pub fn define_toolchain_config() -> FnResult<Json<DefineToolchainConfigOutput>> {
+    Ok(Json(DefineToolchainConfigOutput {
+        schema: SchemaBuilder::build_root::<TypeScriptConfig>(),
+    }))
+}
+
+#[plugin_fn]
+pub fn initialize_toolchain(
+    Json(_): Json<InitializeToolchainInput>,
+) -> FnResult<Json<InitializeToolchainOutput>> {
+    Ok(Json(InitializeToolchainOutput {
+        config_url: Some("https://moonrepo.dev/docs/config/toolchain#typescript".into()),
+        docs_url: Some(
+            "https://moonrepo.dev/docs/guides/javascript/typescript-project-refs".into(),
+        ),
+        prompts: vec![
+            {
+                let mut prompt = SettingPrompt::new(
+                    "syncProjectReferences",
+                    "Sync project references?",
+                    PromptType::Confirm { default: true },
+                );
+                prompt.prompts.extend([
+                    SettingPrompt::new_full(
+                        "syncProjectReferencesToPaths",
+                        "Sync project references as <property>paths</property> aliases?",
+                        PromptType::Confirm { default: false },
+                    ),
+                    SettingPrompt::new_full(
+                        "includeProjectReferenceSources",
+                        "Append sources of project reference to each project's <property>include</property>?",
+                        PromptType::Confirm { default: false },
+                    ),
+                ]);
+                prompt
+            },
+            SettingPrompt::new(
+                "includeSharedTypes",
+                "Append shared types to each project's <property>include</property>?",
+                PromptType::Confirm { default: false },
+            ),
+        ],
         ..Default::default()
     }))
 }
@@ -96,11 +143,11 @@ pub fn hash_task_contents(
 }
 
 #[plugin_fn]
-pub fn docker_metadata(
-    Json(input): Json<DockerMetadataInput>,
-) -> FnResult<Json<DockerMetadataOutput>> {
+pub fn define_docker_metadata(
+    Json(input): Json<DefineDockerMetadataInput>,
+) -> FnResult<Json<DefineDockerMetadataOutput>> {
     let config = parse_toolchain_config::<TypeScriptConfig>(input.toolchain_config)?;
-    let mut output = DockerMetadataOutput::default();
+    let mut output = DefineDockerMetadataOutput::default();
 
     let with_root = |name: String| {
         if config.root.is_empty() || config.root == "." {

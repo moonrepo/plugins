@@ -7,7 +7,7 @@ members = ["backends/*", "crates/*", "extensions/*", "tools/*", "toolchains/*"]
 extism-pdk = { version = "1.3.0" }
 regex = { version = "1.11.1", default-features = false, features = ["std"] }
 rustc-hash = "2.1.1"
-schematic = { version = "0.18.0", default-features = false, features = [
+schematic = { version = "0.18.1", default-features = false, features = [
     "schema",
 ] }
 serde = { version = "1.0.218", features = ["derive"] }
@@ -20,11 +20,11 @@ toml = { version = "0.8.20", default-features = false, features = ["parse"] }
 
 # moon
 moon_common = { version = "0.1.0" }         # , path = "../../moon/crates/common" }
-moon_config = { version = "0.1.1" }         # , path = "../../moon/crates/config" }
+moon_config = { version = "0.1.2" }         # , path = "../../moon/crates/config" }
 moon_pdk = { version = "0.1.2" }            # , path = "../../moon/crates/pdk" }
-moon_pdk_api = { version = "0.1.2" }        # , path = "../../moon/crates/pdk-api" }
+moon_pdk_api = { version = "0.1.3" }        # , path = "../../moon/crates/pdk-api" }
 moon_pdk_test_utils = { version = "0.1.0" } # , path = "../../moon/crates/pdk-test-utils" }
-moon_project = { version = "0.1.0" }        # , path = "../../moon/crates/project" }
+moon_project = { version = "0.1.1" }        # , path = "../../moon/crates/project" }
 moon_target = { version = "0.1.0" }         # , path = "../../moon/crates/target" }
 
 # proto
