@@ -4755,9 +4755,9 @@ dependencies = [
 
 [[package]]
 name = "typescript_tsconfig_json"
-version = "0.4.1"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "29383fcd199604d8a038dfa15c11e7c560cc64f381cf2919b705e5d8f0482f97"
+checksum = "114e731df13a85c027e95bb2f33caa99ff945eb7c5ed61fc691f910581036534"
 dependencies = [
  "clean-path",
  "indexmap",
