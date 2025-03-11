@@ -2,6 +2,8 @@ pub mod config;
 pub mod tsconfig_json;
 
 #[cfg(feature = "wasm")]
+mod context;
+#[cfg(feature = "wasm")]
 mod moon;
 #[cfg(feature = "wasm")]
 mod run_task;

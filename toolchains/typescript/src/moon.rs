@@ -1,4 +1,5 @@
 use crate::config::TypeScriptConfig;
+use crate::context::*;
 use crate::run_task::*;
 use crate::sync_project::*;
 use crate::tsconfig_json::TsConfigJson;
@@ -83,9 +84,10 @@ pub fn sync_project(Json(input): Json<SyncProjectInput>) -> FnResult<Json<SyncOu
 
     if is_project_toolchain_enabled(&input.project) {
         let config = parse_toolchain_config::<TypeScriptConfig>(input.toolchain_config)?;
+        let context = create_typescript_context(&input.context, &config, &input.project);
 
         output.changed_files = sync_project_references(
-            &input.context,
+            &context,
             &config,
             &input.project,
             &input.project_dependencies,
@@ -102,26 +104,15 @@ pub fn hash_task_contents(
     Json(input): Json<HashTaskContentsInput>,
 ) -> FnResult<Json<HashTaskContentsOutput>> {
     let config = parse_toolchain_config::<TypeScriptConfig>(input.toolchain_config)?;
+    let context = create_typescript_context(&input.context, &config, &input.project);
     let mut output = HashTaskContentsOutput::default();
     let mut data = json::json!({});
     let mut has_data = false;
 
     for tsconfig_path in [
-        input
-            .context
-            .workspace_root
-            .join(&config.root)
-            .join(&config.root_config_file_name),
-        input
-            .context
-            .workspace_root
-            .join(&config.root)
-            .join(&config.root_options_config_file_name),
-        input
-            .context
-            .workspace_root
-            .join(&input.project.source)
-            .join(&config.project_config_file_name),
+        context.root_config,
+        context.root_options_config,
+        context.project_config,
     ] {
         if tsconfig_path.exists() {
             let tsconfig = TsConfigJson::load_with_extends(tsconfig_path)?;
