@@ -114,8 +114,6 @@ pub fn hash_task_contents(
         context.root_options_config,
         context.project_config,
     ] {
-        debug!("{:?} = {}", tsconfig_path, tsconfig_path.exists());
-
         if tsconfig_path.exists() {
             let tsconfig = TsConfigJson::load_with_extends(tsconfig_path)?;
 
