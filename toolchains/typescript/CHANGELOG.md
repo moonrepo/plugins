@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed some issues when tsconfig paths don't end with `.json`.
+
 ## 0.1.1
 
 #### 🚀 Updates
