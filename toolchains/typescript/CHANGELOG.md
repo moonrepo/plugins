@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Updated tsconfig parsing to not fail if an `extends` file is missing in the chain.
+
 ## 0.1.2
 
 #### 🐞 Fixes

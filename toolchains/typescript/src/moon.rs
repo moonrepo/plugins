@@ -115,13 +115,23 @@ pub fn hash_task_contents(
         context.project_config,
     ] {
         if tsconfig_path.exists() {
-            let tsconfig = TsConfigJson::load_with_extends(tsconfig_path)?;
+            // Don't error if extending fails, as one of the files may not
+            // exist yet, as they could be dynamically generated on-demand
+            match TsConfigJson::load_with_extends(tsconfig_path.clone()) {
+                Ok(tsconfig) => {
+                    if let Some(options) = &tsconfig.compiler_options {
+                        let next_data = hash_compiler_options(options);
 
-            if let Some(options) = &tsconfig.compiler_options {
-                let next_data = hash_compiler_options(options);
-
-                data = starbase_utils::json::merge(&data, &next_data);
-                has_data = true;
+                        data = starbase_utils::json::merge(&data, &next_data);
+                        has_data = true;
+                    }
+                }
+                Err(error) => {
+                    debug!(
+                        "Failed to load extends chain for {}: {error}",
+                        tsconfig_path
+                    );
+                }
             }
         }
     }
