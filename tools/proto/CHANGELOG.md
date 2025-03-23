@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Reverted shims support.
+
 ## 0.5.2
 
 #### 🚀 Updates
