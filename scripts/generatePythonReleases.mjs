@@ -1,6 +1,6 @@
 import fs from "fs";
 
-const OPT_LEVELS = ["pgo+lto", "pgo", "lto", "noopt"];
+const OPT_LEVELS = ["pgo+lto", "pgo", "lto", "lto+static", "noopt", "noopt+static"];
 const GH_TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
 
 const response = await fetch(
