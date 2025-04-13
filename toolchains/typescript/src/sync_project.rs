@@ -1,4 +1,4 @@
-use crate::config::TypeScriptConfig;
+use crate::config::TypeScriptToolchainConfig;
 use crate::context::TypeScriptContext;
 use crate::tsconfig_json::TsConfigJson;
 use moon_common::{Id, path::is_root_level_source};
@@ -41,7 +41,7 @@ fn create_missing_tsconfig(context: &TypeScriptContext) -> AnyResult<Option<Virt
 
 fn sync_root_project_reference(
     context: &TypeScriptContext,
-    config: &TypeScriptConfig,
+    config: &TypeScriptToolchainConfig,
     project: &ProjectFragment,
 ) -> AnyResult<Option<VirtualPath>> {
     let project_root = context.workspace_root.join(&project.source);
@@ -66,7 +66,7 @@ fn sync_root_project_reference(
 
 pub fn sync_project_options(
     context: &TypeScriptContext,
-    config: &TypeScriptConfig,
+    config: &TypeScriptToolchainConfig,
     project: &ProjectFragment,
     project_refs: &BTreeMap<Id, ReferenceData>,
 ) -> AnyResult<Option<VirtualPath>> {
@@ -163,7 +163,7 @@ pub fn sync_project_options(
 
 pub fn sync_project_references(
     context: &TypeScriptContext,
-    config: &TypeScriptConfig,
+    config: &TypeScriptToolchainConfig,
     project: &ProjectFragment,
     dependencies: &[ProjectFragment],
 ) -> AnyResult<Vec<VirtualPath>> {
