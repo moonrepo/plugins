@@ -189,6 +189,12 @@ pub fn download_prebuilt(
     };
 
     Ok(Json(DownloadPrebuiltOutput {
+        // Checksums were added in v2+
+        checksum_url: if version.is_latest() || version.as_version().is_some_and(|v| v.major >= 2) {
+            Some(format!("{download_url}.sha256sum"))
+        } else {
+            None
+        },
         download_url,
         download_name: Some(filename),
         ..DownloadPrebuiltOutput::default()

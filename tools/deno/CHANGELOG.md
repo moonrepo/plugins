@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added checksum support for versions >= v2.
+
 ## 0.15.1
 
 #### 🚀 Updates

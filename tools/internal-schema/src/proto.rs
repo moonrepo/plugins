@@ -346,10 +346,10 @@ fn create_executable_config(schema: ExecutableSchema) -> ExecutableConfig {
         no_bin: schema.no_bin,
         no_shim: schema.no_shim,
         parent_exe_name: schema.parent_exe_name,
-        primary: false,
         shim_before_args: schema.shim_before_args.map(StringOrVec::Vec),
         shim_after_args: schema.shim_after_args.map(StringOrVec::Vec),
         shim_env_vars: schema.shim_env_vars.map(HashMap::from_iter),
+        ..Default::default()
     }
 }
 
