@@ -3734,7 +3734,7 @@ dependencies = [
 
 [[package]]
 name = "schema_tool"
-version = "0.17.1"
+version = "0.17.2"
 dependencies = [
  "extism-pdk",
  "proto_pdk",
