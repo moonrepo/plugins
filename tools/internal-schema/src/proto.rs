@@ -188,14 +188,12 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
 
 #[plugin_fn]
 pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
-    let mut output = DetectVersionOutput::default();
     let schema = get_schema()?;
 
-    if let Some(files) = schema.detect.version_files {
-        output.files = files;
-    }
-
-    Ok(Json(output))
+    Ok(Json(DetectVersionOutput {
+        files: schema.detect.version_files,
+        ignore: schema.detect.ignore,
+    }))
 }
 
 fn interpolate_tokens(
@@ -345,6 +343,7 @@ fn create_executable_config(schema: ExecutableSchema) -> ExecutableConfig {
         exe_link_path: schema.exe_link_path,
         no_bin: schema.no_bin,
         no_shim: schema.no_shim,
+        parent_exe_args: schema.parent_exe_args,
         parent_exe_name: schema.parent_exe_name,
         shim_before_args: schema.shim_before_args.map(StringOrVec::Vec),
         shim_after_args: schema.shim_after_args.map(StringOrVec::Vec),
@@ -465,9 +464,14 @@ pub fn locate_executables(
 
     Ok(Json(LocateExecutablesOutput {
         exes: HashMap::from_iter(exes),
-        exes_dirs: match platform.exes_dir.as_ref() {
-            Some(dir) => vec![dir.into()],
-            None => vec![],
+        exes_dirs: if platform.exes_dirs.is_empty() {
+            #[allow(deprecated)]
+            match platform.exes_dir.as_ref() {
+                Some(dir) => vec![dir.into()],
+                None => vec![],
+            }
+        } else {
+            platform.exes_dirs.clone()
         },
         globals_lookup_dirs: schema.packages.globals_lookup_dirs,
         globals_prefix: schema.packages.globals_prefix,

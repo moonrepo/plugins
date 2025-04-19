@@ -154,6 +154,7 @@ pub fn download_prebuilt(
         ],
     )?;
 
+    let config = get_tool_config::<DenoPluginConfig>()?;
     let version = &input.context.version;
 
     let arch = match env.arch {
@@ -178,10 +179,11 @@ pub fn download_prebuilt(
     } else if version.is_latest() {
         let tag = fetch_text("https://dl.deno.land/release-latest.txt")?;
 
-        format!("https://dl.deno.land/release/{}/{filename}", tag.trim())
+        config
+            .dist_url
+            .replace("{version}", tag.trim().trim_start_matches('v'))
+            .replace("{file}", &filename)
     } else {
-        let config = get_tool_config::<DenoPluginConfig>()?;
-
         config
             .dist_url
             .replace("{version}", &version.to_string())

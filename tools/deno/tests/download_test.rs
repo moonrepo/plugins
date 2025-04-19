@@ -35,7 +35,7 @@ mod deno_tool {
             DownloadPrebuiltOutput {
                 download_name: Some("deno-aarch64-unknown-linux-gnu.zip".into()),
                 download_url:
-                    "https://dl.deno.land/release/v1.41.0/deno-aarch64-unknown-linux-gnu.zip".into(),
+                    "https://github.com/denoland/deno/releases/download/v1.41.0/deno-aarch64-unknown-linux-gnu.zip".into(),
                 ..Default::default()
             }
         );
@@ -63,7 +63,7 @@ mod deno_tool {
             DownloadPrebuiltOutput {
                 download_name: Some("deno-x86_64-unknown-linux-gnu.zip".into()),
                 download_url:
-                    "https://dl.deno.land/release/v1.2.0/deno-x86_64-unknown-linux-gnu.zip".into(),
+                    "https://github.com/denoland/deno/releases/download/v1.2.0/deno-x86_64-unknown-linux-gnu.zip".into(),
                 ..Default::default()
             }
         );
@@ -90,7 +90,7 @@ mod deno_tool {
                 .await,
             DownloadPrebuiltOutput {
                 download_name: Some("deno-aarch64-apple-darwin.zip".into()),
-                download_url: "https://dl.deno.land/release/v1.2.0/deno-aarch64-apple-darwin.zip"
+                download_url: "https://github.com/denoland/deno/releases/download/v1.2.0/deno-aarch64-apple-darwin.zip"
                     .into(),
                 ..Default::default()
             }
@@ -118,7 +118,7 @@ mod deno_tool {
                 .await,
             DownloadPrebuiltOutput {
                 download_name: Some("deno-x86_64-apple-darwin.zip".into()),
-                download_url: "https://dl.deno.land/release/v1.2.0/deno-x86_64-apple-darwin.zip"
+                download_url: "https://github.com/denoland/deno/releases/download/v1.2.0/deno-x86_64-apple-darwin.zip"
                     .into(),
                 ..Default::default()
             }
@@ -150,7 +150,7 @@ mod deno_tool {
             DownloadPrebuiltOutput {
                 download_name: Some("deno-aarch64-pc-windows-msvc.zip".into()),
                 download_url:
-                    "https://dl.deno.land/release/v1.2.0/deno-aarch64-pc-windows-msvc.zip".into(),
+                    "https://github.com/denoland/deno/releases/download/v1.2.0/deno-aarch64-pc-windows-msvc.zip".into(),
                 ..Default::default()
             }
         );
@@ -177,7 +177,7 @@ mod deno_tool {
                 .await,
             DownloadPrebuiltOutput {
                 download_name: Some("deno-x86_64-pc-windows-msvc.zip".into()),
-                download_url: "https://dl.deno.land/release/v1.2.0/deno-x86_64-pc-windows-msvc.zip"
+                download_url: "https://github.com/denoland/deno/releases/download/v1.2.0/deno-x86_64-pc-windows-msvc.zip"
                     .into(),
                 ..Default::default()
             }
@@ -235,6 +235,35 @@ mod deno_tool {
                 .unwrap()
                 .exe_path,
             Some("deno.exe".into())
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn supports_checksum_gte_v2() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("deno-test", |config| {
+                config.host(HostOS::Linux, HostArch::X64);
+            })
+            .await;
+
+        assert_eq!(
+            plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: ToolContext {
+                        version: VersionSpec::parse("2.1.0").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await,
+            DownloadPrebuiltOutput {
+                download_name: Some("deno-x86_64-unknown-linux-gnu.zip".into()),
+                download_url:
+                    "https://github.com/denoland/deno/releases/download/v2.1.0/deno-x86_64-unknown-linux-gnu.zip".into(),
+                checksum_url: Some("https://github.com/denoland/deno/releases/download/v2.1.0/deno-x86_64-unknown-linux-gnu.zip.sha256sum".into()),
+                ..Default::default()
+            }
         );
     }
 }

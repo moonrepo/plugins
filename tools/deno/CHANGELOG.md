@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Switched to GitHub releases for download URLs.
+
 ## 0.15.2
 
 #### 🚀 Updates
