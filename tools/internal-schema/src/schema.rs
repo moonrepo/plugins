@@ -10,7 +10,9 @@ pub struct PlatformMapper {
     pub archive_prefix: Option<String>,
     pub checksum_file: Option<String>,
     pub download_file: String,
+    #[deprecated]
     pub exes_dir: Option<PathBuf>,
+    pub exes_dirs: Vec<PathBuf>,
     pub exe_path: Option<PathBuf>,
     #[deprecated]
     pub bin_path: Option<PathBuf>,
@@ -19,7 +21,8 @@ pub struct PlatformMapper {
 #[derive(Debug, Default, Deserialize)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct DetectSchema {
-    pub version_files: Option<Vec<String>>,
+    pub ignore: Vec<String>,
+    pub version_files: Vec<String>,
 }
 
 // Keep in sync with the `ExecutableConfig` shape!
@@ -31,6 +34,7 @@ pub struct ExecutableSchema {
     pub exe_link_path: Option<PathBuf>,
     pub no_bin: bool,
     pub no_shim: bool,
+    pub parent_exe_args: Vec<String>,
     pub parent_exe_name: Option<String>,
     pub primary: bool,
     pub shim_before_args: Option<Vec<String>>,

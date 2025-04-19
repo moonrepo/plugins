@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added new fields for compatibility with WASM plugins.
+  - `platform.*.exes-dirs`
+  - `install.exes.*.parent-exe-args`
+  - `detect.ignore`
+
 ## 0.17.1
 
 #### 🚀 Updates
