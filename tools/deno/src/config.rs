@@ -7,7 +7,7 @@ pub struct DenoPluginConfig {
 impl Default for DenoPluginConfig {
     fn default() -> Self {
         Self {
-            dist_url: "https://dl.deno.land/release/v{version}/{file}".into(),
+            dist_url: "https://github.com/denoland/deno/releases/download/v{version}/{file}".into(),
         }
     }
 }
