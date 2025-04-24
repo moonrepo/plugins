@@ -22,11 +22,6 @@ config_struct!(
         /// List of Rust components to automatically install.
         pub components: Vec<String>,
 
-        /// A relative path from the moon workspace root, to the root of the Cargo
-        /// workspace that contains a `Cargo.lock` file.
-        #[schema(default = ".")]
-        pub root: String,
-
         /// When `version` is defined, syncs the version to `rust-toolchain.toml`.
         pub sync_toolchain_config: bool,
 
@@ -42,7 +37,6 @@ impl Default for RustToolchainConfig {
             bins: vec![],
             binstall_version: None,
             components: vec![],
-            root: ".".into(),
             sync_toolchain_config: false,
             targets: vec![],
         }
