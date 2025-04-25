@@ -23,6 +23,21 @@ impl CargoToml {
     ) -> AnyResult<Option<TomlValue>> {
         Ok(None)
     }
+
+    pub fn extract_members(&self) -> Option<Vec<String>> {
+        if let Some(workspace) = &self.workspace {
+            let mut list = workspace.members.clone();
+
+            // Requires negated globs to exclude
+            for ex in &workspace.exclude {
+                list.push(format!("!{ex}"));
+            }
+
+            Some(list)
+        } else {
+            None
+        }
+    }
 }
 
 // `cargo_toml::Manifest` does not implement `Default`,

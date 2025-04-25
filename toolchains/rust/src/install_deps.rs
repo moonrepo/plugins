@@ -2,21 +2,6 @@ use crate::cargo_toml::CargoToml;
 use extism_pdk::*;
 use moon_pdk_api::*;
 
-fn extract_members(manifest: CargoToml) -> Option<Vec<String>> {
-    if let Some(workspace) = &manifest.workspace {
-        let mut list = workspace.members.clone();
-
-        // Requires negated globs to exclude
-        for ex in &workspace.exclude {
-            list.push(format!("!{ex}"));
-        }
-
-        Some(list)
-    } else {
-        None
-    }
-}
-
 #[plugin_fn]
 pub fn locate_dependencies_root(
     Json(input): Json<LocateDependenciesRootInput>,
@@ -37,9 +22,7 @@ pub fn locate_dependencies_root(
         let manifest_path = dir.join("Cargo.toml");
 
         if manifest_path.exists() {
-            let manifest = CargoToml::load(manifest_path)?;
-
-            output.members = extract_members(manifest);
+            output.members = CargoToml::load(manifest_path)?.extract_members();
         }
     }
 
@@ -59,7 +42,7 @@ pub fn locate_dependencies_root(
 
             if manifest.workspace.is_some() {
                 output.root = Some(dir.to_owned());
-                output.members = extract_members(manifest);
+                output.members = manifest.extract_members();
                 break;
             }
         }

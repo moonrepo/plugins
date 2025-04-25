@@ -97,49 +97,49 @@ pub fn extend_project(
     Ok(Json(output))
 }
 
-#[plugin_fn]
-pub fn setup_toolchain(
-    Json(input): Json<SetupToolchainInput>,
-) -> FnResult<Json<SetupToolchainOutput>> {
-    let mut output = SetupToolchainOutput::default();
-    let config = parse_toolchain_config::<RustToolchainConfig>(input.toolchain_config)?;
-    let cargo_root = input.context.workspace_root.join(&config.root);
+// #[plugin_fn]
+// pub fn setup_toolchain(
+//     Json(input): Json<SetupToolchainInput>,
+// ) -> FnResult<Json<SetupToolchainOutput>> {
+//     let mut output = SetupToolchainOutput::default();
+//     let config = parse_toolchain_config::<RustToolchainConfig>(input.toolchain_config)?;
+//     let cargo_root = input.context.workspace_root.join(&config.root);
 
-    if cargo_root.join("Cargo.lock").exists() && config.sync_toolchain_config {
-        let legacy_toolchain_path = cargo_root.join("rust-toolchain");
-        let toolchain_path = cargo_root.join("rust-toolchain.toml");
+//     if cargo_root.join("Cargo.lock").exists() && config.sync_toolchain_config {
+//         let legacy_toolchain_path = cargo_root.join("rust-toolchain");
+//         let toolchain_path = cargo_root.join("rust-toolchain.toml");
 
-        // Convert rust-toolchain to rust-toolchain.toml
-        if legacy_toolchain_path.exists() {
-            let legacy_contents = fs::read_file(&legacy_toolchain_path)?;
+//         // Convert rust-toolchain to rust-toolchain.toml
+//         if legacy_toolchain_path.exists() {
+//             let legacy_contents = fs::read_file(&legacy_toolchain_path)?;
 
-            if legacy_contents.contains("[toolchain]") {
-                fs::rename(&legacy_toolchain_path, &toolchain_path)?;
-            } else {
-                fs::remove_file(&legacy_toolchain_path)?;
+//             if legacy_contents.contains("[toolchain]") {
+//                 fs::rename(&legacy_toolchain_path, &toolchain_path)?;
+//             } else {
+//                 fs::remove_file(&legacy_toolchain_path)?;
 
-                toml::write_file(
-                    &toolchain_path,
-                    &ToolchainToml {
-                        toolchain: ToolchainSection {
-                            channel: Some(legacy_contents),
-                        },
-                    },
-                    true,
-                )?;
-            }
+//                 toml::write_file(
+//                     &toolchain_path,
+//                     &ToolchainToml {
+//                         toolchain: ToolchainSection {
+//                             channel: Some(legacy_contents),
+//                         },
+//                     },
+//                     true,
+//                 )?;
+//             }
 
-            output.changed_files.push(legacy_toolchain_path);
-            output.changed_files.push(toolchain_path.clone());
-        }
+//             output.changed_files.push(legacy_toolchain_path);
+//             output.changed_files.push(toolchain_path.clone());
+//         }
 
-        let mut toolchain_toml = RustToolchainToml::load(toolchain_path)?;
-        toolchain_toml.data.toolchain.channel = Some(input.configured_version.to_string());
+//         let mut toolchain_toml = RustToolchainToml::load(toolchain_path)?;
+//         toolchain_toml.data.toolchain.channel = Some(input.configured_version.to_string());
 
-        if let Some(file) = toolchain_toml.save()? {
-            output.changed_files.push(file);
-        }
-    }
+//         if let Some(file) = toolchain_toml.save()? {
+//             output.changed_files.push(file);
+//         }
+//     }
 
-    Ok(Json(output))
-}
+//     Ok(Json(output))
+// }
