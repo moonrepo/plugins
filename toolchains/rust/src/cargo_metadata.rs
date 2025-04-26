@@ -1,3 +1,5 @@
+// `cargo metadata`
+
 use serde::Deserialize;
 use std::path::PathBuf;
 

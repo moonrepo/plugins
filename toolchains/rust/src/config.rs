@@ -1,7 +1,6 @@
 use moon_config::BinEntry;
-use moon_pdk_api::config_struct;
+use moon_pdk_api::{UnresolvedVersionSpec, Version, config_struct};
 use schematic::Schematic;
-use semver::Version;
 
 config_struct!(
     /// Configures and enables the Rust platform.
@@ -9,24 +8,29 @@ config_struct!(
     #[derive(Schematic)]
     pub struct RustToolchainConfig {
         /// When `version` is defined, syncs the version as a constraint to
-        /// `Cargo.toml` under the `package.rust-version` field.
+        /// `Cargo.toml` under the `workspace.package.rust-version` or
+        /// `package.rust-version` fields.
         pub add_msrv_constraint: bool,
 
         /// List of binaries to install into the environment using `cargo binstall`.
         #[schema(nested)]
         pub bins: Vec<BinEntry>,
 
-        /// The version of `cargo-binstall` to install. Defaults to latest if not defined.
+        /// The version of `cargo-binstall` to install. Defaults to "latest" if not defined.
         pub binstall_version: Option<Version>,
 
-        /// List of Rust components to automatically install.
+        /// List of Rust components to automatically install with `rustup`.
         pub components: Vec<String>,
 
-        /// When `version` is defined, syncs the version to `rust-toolchain.toml`.
+        /// When `version` is defined, syncs the version to `rust-toolchain.toml`
+        /// under the `toolchain.channel` field.
         pub sync_toolchain_config: bool,
 
-        /// List of Rust targets to automatically install.
+        /// List of Rust targets to automatically install with `rustup`.
         pub targets: Vec<String>,
+
+        /// Configured version (channel) to download and install with `rustup`.
+        pub version: Option<UnresolvedVersionSpec>,
     }
 );
 
@@ -39,6 +43,7 @@ impl Default for RustToolchainConfig {
             components: vec![],
             sync_toolchain_config: false,
             targets: vec![],
+            version: None,
         }
     }
 }

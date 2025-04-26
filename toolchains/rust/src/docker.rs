@@ -1,10 +1,29 @@
-use std::path::PathBuf;
-
 use crate::cargo_metadata::{CargoMetadata, PackageTargetCrateType, PackageTargetKind};
+use crate::config::RustToolchainConfig;
 use extism_pdk::*;
-use moon_pdk::{exec_captured, get_host_environment};
+use moon_pdk::{exec_captured, get_host_environment, parse_toolchain_config};
 use moon_pdk_api::*;
 use starbase_utils::fs;
+use std::path::PathBuf;
+
+#[plugin_fn]
+pub fn define_docker_metadata(
+    Json(input): Json<DefineDockerMetadataInput>,
+) -> FnResult<Json<DefineDockerMetadataOutput>> {
+    let config = parse_toolchain_config::<RustToolchainConfig>(input.toolchain_config)?;
+
+    Ok(Json(DefineDockerMetadataOutput {
+        default_image: Some(format!(
+            "rust:{}",
+            config
+                .version
+                .as_ref()
+                .map(|version| version.to_string())
+                .unwrap_or_else(|| "latest".into())
+        )),
+        ..Default::default()
+    }))
+}
 
 #[plugin_fn]
 pub fn scaffold_docker(
@@ -45,7 +64,13 @@ pub fn prune_docker(Json(input): Json<PruneDockerInput>) -> FnResult<Json<PruneD
     // to find a list of binaries to preserve
     let metadata = exec_captured(
         "cargo",
-        ["metadata --format-version 1 --no-deps --no-default-features"],
+        [
+            "metadata",
+            "--format-version",
+            "1",
+            "--no-deps",
+            "--no-default-features",
+        ],
     )?;
     let metadata: CargoMetadata = json::from_str(&metadata.stdout)?;
     let mut bin_names = vec![];
