@@ -1,10 +1,12 @@
+// `rust-toolchain.toml`
+
 #[cfg(feature = "wasm")]
 use extism_pdk::*;
 #[cfg(feature = "wasm")]
 use moon_pdk::host_log;
 use moon_pdk_api::{AnyResult, toml_config};
 use rust_tool::ToolchainToml as BaseToolchainToml;
-use starbase_utils::toml::TomlValue;
+use starbase_utils::toml::{TomlTable, TomlValue};
 
 #[cfg(feature = "wasm")]
 #[host_fn]
@@ -15,11 +17,53 @@ extern "ExtismHost" {
 toml_config!(ToolchainToml, BaseToolchainToml);
 
 impl ToolchainToml {
-    fn save_field(
-        &self,
-        _field: &str,
-        _current_value: Option<&TomlValue>,
-    ) -> AnyResult<Option<TomlValue>> {
-        Ok(None)
+    fn save_field(&self, field: &str, config: &mut TomlValue) -> AnyResult<()> {
+        let Some(root) = config.as_table_mut() else {
+            return Ok(());
+        };
+
+        match field {
+            "toolchain.channel" => {
+                if let Some(channel) = &self.toolchain.channel {
+                    let toolchain = root
+                        .entry("toolchain")
+                        .or_insert_with(|| TomlValue::Table(TomlTable::new()));
+
+                    toolchain["channel"] = TomlValue::String(channel.to_owned());
+                }
+            }
+            _ => {}
+        };
+
+        Ok(())
+    }
+}
+
+impl ToolchainToml {
+    pub fn set_channel(&mut self, channel: impl AsRef<str>) -> AnyResult<bool> {
+        let channel = channel.as_ref();
+
+        if channel.is_empty()
+            || self
+                .toolchain
+                .channel
+                .as_ref()
+                .is_some_and(|ch| ch == channel)
+        {
+            return Ok(false);
+        }
+
+        #[cfg(feature = "wasm")]
+        {
+            host_log!(
+                "Setting <property>toolchain.channel</file> in <path>{}</path>",
+                self.path.display(),
+            );
+        }
+
+        self.toolchain.channel = Some(channel.into());
+        self.dirty.push("toolchain.channel".into());
+
+        Ok(true)
     }
 }

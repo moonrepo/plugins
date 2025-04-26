@@ -67,7 +67,8 @@ pub fn install_dependencies(
     // However, if we don't detect a lockfile, we can attempt
     // to generate one!
     if !input.root.join("Cargo.lock").exists() {
-        output.install_command = Some(ExecCommandInput::pipe("cargo", ["generate-lockfile"]));
+        output.install_command =
+            Some(ExecCommandInput::inherit("cargo", ["generate-lockfile"]).into());
     }
 
     Ok(Json(output))
