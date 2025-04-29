@@ -346,6 +346,14 @@ pub fn post_install(Json(input): Json<InstallHook>) -> FnResult<()> {
 
     let mut args = vec!["install", "npm", "bundled"];
 
+    if input.forced {
+        args.push("--force");
+    }
+
+    if input.quiet {
+        args.push("--quiet");
+    }
+
     let passthrough_args = input
         .passthrough_args
         .iter()
