@@ -3,8 +3,8 @@ use extension_common::migrator::*;
 use moon_common::Id;
 use moon_config::{
     FilePath, InputPath, OutputPath, PartialTaskArgs, PartialTaskConfig, PartialTaskDependency,
-    PartialTaskOptionsConfig, PartialWorkspaceProjects, PortablePath, TaskOptionEnvFile,
-    TaskOutputStyle, TaskPreset,
+    PartialTaskOptionsConfig, PartialWorkspaceProjects, TaskOptionEnvFile, TaskOutputStyle,
+    TaskPreset,
 };
 use moon_pdk::*;
 use moon_pdk_api::MoonContext;

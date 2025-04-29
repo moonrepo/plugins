@@ -1,4 +1,4 @@
-use crate::config::TypeScriptConfig;
+use crate::config::TypeScriptToolchainConfig;
 use crate::context::*;
 use crate::run_task::*;
 use crate::sync_project::*;
@@ -34,7 +34,7 @@ pub fn register_toolchain(
 #[plugin_fn]
 pub fn define_toolchain_config() -> FnResult<Json<DefineToolchainConfigOutput>> {
     Ok(Json(DefineToolchainConfigOutput {
-        schema: SchemaBuilder::build_root::<TypeScriptConfig>(),
+        schema: SchemaBuilder::build_root::<TypeScriptToolchainConfig>(),
     }))
 }
 
@@ -83,7 +83,7 @@ pub fn sync_project(Json(input): Json<SyncProjectInput>) -> FnResult<Json<SyncOu
     let mut output = SyncOutput::default();
 
     if is_project_toolchain_enabled(&input.project) {
-        let config = parse_toolchain_config::<TypeScriptConfig>(input.toolchain_config)?;
+        let config = parse_toolchain_config::<TypeScriptToolchainConfig>(input.toolchain_config)?;
         let context = create_typescript_context(&input.context, &config, &input.project);
 
         output.changed_files = sync_project_references(
@@ -103,7 +103,7 @@ pub fn sync_project(Json(input): Json<SyncProjectInput>) -> FnResult<Json<SyncOu
 pub fn hash_task_contents(
     Json(input): Json<HashTaskContentsInput>,
 ) -> FnResult<Json<HashTaskContentsOutput>> {
-    let config = parse_toolchain_config::<TypeScriptConfig>(input.toolchain_config)?;
+    let config = parse_toolchain_config::<TypeScriptToolchainConfig>(input.toolchain_config)?;
     let context = create_typescript_context(&input.context, &config, &input.project);
     let mut output = HashTaskContentsOutput::default();
     let mut data = json::json!({});
@@ -147,7 +147,7 @@ pub fn hash_task_contents(
 pub fn define_docker_metadata(
     Json(input): Json<DefineDockerMetadataInput>,
 ) -> FnResult<Json<DefineDockerMetadataOutput>> {
-    let config = parse_toolchain_config::<TypeScriptConfig>(input.toolchain_config)?;
+    let config = parse_toolchain_config::<TypeScriptToolchainConfig>(input.toolchain_config)?;
     let mut output = DefineDockerMetadataOutput::default();
 
     let with_root = |name: String| {

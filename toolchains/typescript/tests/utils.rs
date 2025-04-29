@@ -6,6 +6,7 @@ use moon_target::Target;
 
 pub fn create_project(id: &str) -> ProjectFragment {
     ProjectFragment {
+        alias: None,
         dependency_scope: None,
         id: Id::raw(id),
         source: id.into(),
