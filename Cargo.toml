@@ -13,9 +13,9 @@ schematic = { version = "0.18.4", default-features = false, features = [
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.139"
 serial_test = "3.2.0"
-starbase_archive = { version = "0.10.3", default-features = false }
-starbase_sandbox = "0.9.1"
-starbase_utils = { version = "0.11.6", default-features = false }
+starbase_archive = { version = "0.10.4", default-features = false }
+starbase_sandbox = "0.9.2"
+starbase_utils = { version = "0.11.8", default-features = false }
 tokio = { version = "1.44.2", features = ["full"] }
 toml = { version = "0.8.20", default-features = false, features = ["parse"] }
 
@@ -29,9 +29,9 @@ moon_project = { version = "0.1.1" }        # , path = "../../moon/crates/projec
 moon_target = { version = "0.1.0" }         # , path = "../../moon/crates/target" }
 
 # proto
-proto_pdk = { version = "0.28.6" }            # , path = "../../proto/crates/pdk" }
-proto_pdk_api = { version = "0.27.9" }        # , path = "../../proto/crates/pdk-api" }
-proto_pdk_test_utils = { version = "0.36.1" } # , path = "../../proto/crates/pdk-test-utils" }
+proto_pdk = { version = "0.28.8" }            # , path = "../../proto/crates/pdk" }
+proto_pdk_api = { version = "0.27.11" }       # , path = "../../proto/crates/pdk-api" }
+proto_pdk_test_utils = { version = "0.36.2" } # , path = "../../proto/crates/pdk-test-utils" }
 
 # JavaScript
 nodejs_package_json = "0.3.2"
