@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Updated dependencies.
+
+#### 🐞 Fixes
+
+- Fixed `bundled-npm` install not respecting `--force` and `--quiet` args.
+
 ## 0.16.1
 
 #### 🚀 Updates
