@@ -54,7 +54,7 @@ pub fn prune_docker(Json(input): Json<PruneDockerInput>) -> FnResult<Json<PruneD
     let mut output = PruneDockerOutput::default();
     let target_dir = input.root.join("target");
 
-    if !target_dir.exists() {
+    if !target_dir.exists() || !input.docker_config.delete_vendor_directories {
         return Ok(Json(output));
     }
 
