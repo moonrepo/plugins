@@ -2644,7 +2644,7 @@ dependencies = [
 
 [[package]]
 name = "node_tool"
-version = "0.16.1"
+version = "0.16.2"
 dependencies = [
  "extism-pdk",
  "lang_node_common",
