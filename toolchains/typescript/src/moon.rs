@@ -86,12 +86,17 @@ pub fn sync_project(Json(input): Json<SyncProjectInput>) -> FnResult<Json<SyncOu
         let config = parse_toolchain_config::<TypeScriptToolchainConfig>(input.toolchain_config)?;
         let context = create_typescript_context(&input.context, &config, &input.project);
 
-        output.changed_files = sync_project_references(
-            &context,
-            &config,
-            &input.project,
-            &input.project_dependencies,
-        )?;
+        let (op, files) = Operation::track("sync-project-references", || {
+            sync_project_references(
+                &context,
+                &config,
+                &input.project,
+                &input.project_dependencies,
+            )
+        })?;
+
+        output.operations.push(op);
+        output.changed_files.extend(files);
     } else {
         output.skipped = true;
     }

@@ -3,7 +3,7 @@ use crate::config::RustToolchainConfig;
 use crate::toolchain_toml::ToolchainToml;
 use extism_pdk::*;
 use moon_config::BinEntry;
-use moon_pdk::parse_toolchain_config;
+use moon_pdk::{get_host_environment, parse_toolchain_config};
 use moon_pdk_api::*;
 use starbase_utils::fs;
 
@@ -16,16 +16,22 @@ pub fn setup_environment(
 
     // Sync `Cargo.toml` rust version
     if config.add_msrv_constraint {
-        output
-            .changed_files
-            .extend(sync_package_msrv(&config, &input.root)?);
+        let (op, files) = Operation::track("add-msrv-constraint", || {
+            sync_package_msrv(&config, &input.root)
+        })?;
+
+        output.operations.push(op);
+        output.changed_files.extend(files);
     }
 
-    // Sync `rust-toolchain.toml`
+    // Sync `rust-toolchain.toml` toolchain
     if config.sync_toolchain_config {
-        output
-            .changed_files
-            .extend(sync_toolchain_toml(&config, &input.root)?);
+        let (op, files) = Operation::track("sync-toolchain-config", || {
+            sync_toolchain_toml(&config, &input.root)
+        })?;
+
+        output.operations.push(op);
+        output.changed_files.extend(files);
     }
 
     // Install components
@@ -35,7 +41,7 @@ pub fn setup_environment(
 
         output
             .commands
-            .push(ExecCommandInput::inherit("rustup", args).into());
+            .push(ExecCommandInput::new("rustup", args).into());
     }
 
     // Install targets
@@ -45,7 +51,7 @@ pub fn setup_environment(
 
         output
             .commands
-            .push(ExecCommandInput::inherit("rustup", args).into());
+            .push(ExecCommandInput::new("rustup", args).into());
     }
 
     // Install binaries
@@ -56,10 +62,11 @@ pub fn setup_environment(
             "cargo-binstall".into()
         };
 
-        output.commands.push(
-            ExecCommandInput::inherit("cargo", ["install", &binstall_package, "--force"]).into(),
-        );
+        output
+            .commands
+            .push(ExecCommandInput::new("cargo", ["install", &binstall_package, "--force"]).into());
 
+        let env = get_host_environment()?;
         let mut force_bins = vec![];
         let mut non_force_bins = vec![];
 
@@ -69,12 +76,9 @@ pub fn setup_environment(
                     non_force_bins.push(inner.as_str());
                 }
                 BinEntry::Config(cfg) => {
-                    if cfg.local {
-                        // && is_ci() {
+                    if cfg.local && env.ci {
                         continue;
-                    }
-
-                    if cfg.force {
+                    } else if cfg.force {
                         force_bins.push(cfg.bin.as_str());
                     } else {
                         non_force_bins.push(cfg.bin.as_str());
@@ -89,7 +93,7 @@ pub fn setup_environment(
 
             output
                 .commands
-                .push(ExecCommandInput::inherit("cargo", args).into());
+                .push(ExecCommandInput::new("cargo", args).into());
         }
 
         if !non_force_bins.is_empty() {
@@ -98,7 +102,7 @@ pub fn setup_environment(
 
             output
                 .commands
-                .push(ExecCommandInput::inherit("cargo", args).into());
+                .push(ExecCommandInput::new("cargo", args).into());
         }
     }
 
@@ -144,7 +148,7 @@ fn sync_toolchain_toml(
             fs::remove_file(&legacy_toolchain_path)?;
             fs::write_file(
                 &toolchain_path,
-                format!("[toolchain]\nchannel = \"{legacy_contents}\""),
+                format!("[toolchain]\nchannel = \"{}\"", legacy_contents.trim()),
             )?;
         }
 

@@ -18,8 +18,6 @@ pub fn register_toolchain(
             "rust-toolchain".into(),
             "rust-toolchain.toml".into(),
         ],
-        lock_file_name: Some("Cargo.lock".into()),
-        manifest_file_name: Some("Cargo.toml".into()),
         exe_names: vec![
             "cargo".into(),
             "rustc".into(),
@@ -27,6 +25,9 @@ pub fn register_toolchain(
             "rustfmt".into(),
             "rustup".into(),
         ],
+        lock_file_name: Some("Cargo.lock".into()),
+        manifest_file_name: Some("Cargo.toml".into()),
+        vendor_dir_name: Some("target".into()),
         ..Default::default()
     }))
 }

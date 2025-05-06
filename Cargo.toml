@@ -36,7 +36,6 @@ moon_pdk_test_utils = { path = "../../moon/crates/pdk-test-utils" }
 moon_project = { path = "../../moon/crates/project" }
 moon_target = { path = "../../moon/crates/target" }
 
-
 # proto
 proto_pdk = { version = "0.28.9" }            # , path = "../../proto/crates/pdk" }
 proto_pdk_api = { version = "0.27.12" }       # , path = "../../proto/crates/pdk-api" }
