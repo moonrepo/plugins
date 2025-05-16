@@ -7,35 +7,35 @@ members = ["backends/*", "crates/*", "extensions/*", "tools/*", "toolchains/*"]
 extism-pdk = { version = "1.4.0" }
 regex = { version = "1.11.1", default-features = false, features = ["std"] }
 rustc-hash = "2.1.1"
-schematic = { version = "0.18.4", default-features = false, features = [
+schematic = { version = "0.18.5", default-features = false, features = [
     "schema",
 ] }
 serde = { version = "1.0.219", features = ["derive"] }
-serde_json = "1.0.139"
+serde_json = "1.0.140"
 serial_test = "3.2.0"
-starbase_archive = { version = "0.10.4", default-features = false }
-starbase_sandbox = "0.9.2"
-starbase_utils = { version = "0.11.8", default-features = false }
-tokio = { version = "1.44.2", features = ["full"] }
+starbase_archive = { version = "0.10.6", default-features = false }
+starbase_sandbox = "0.9.3"
+starbase_utils = { version = "0.11.10", default-features = false }
+tokio = { version = "1.45.0", features = ["full"] }
 toml = { version = "0.8.20", default-features = false, features = ["parse"] }
 
 # moon
-moon_common = { version = "0.1.0" }         # , path = "../../moon/crates/common" }
-moon_config = { version = "0.1.2" }         # , path = "../../moon/crates/config" }
-moon_pdk = { version = "0.1.2" }            # , path = "../../moon/crates/pdk" }
-moon_pdk_api = { version = "0.1.3" }        # , path = "../../moon/crates/pdk-api" }
-moon_pdk_test_utils = { version = "0.1.0" } # , path = "../../moon/crates/pdk-test-utils" }
-moon_project = { version = "0.1.1" }        # , path = "../../moon/crates/project" }
-moon_target = { version = "0.1.0" }         # , path = "../../moon/crates/target" }
+moon_common = { version = "0.1.1" }         # , path = "../../moon/crates/common" }
+moon_config = { version = "0.1.3" }         # , path = "../../moon/crates/config" }
+moon_pdk = { version = "0.1.3" }            # , path = "../../moon/crates/pdk" }
+moon_pdk_api = { version = "0.1.4" }        # , path = "../../moon/crates/pdk-api" }
+moon_pdk_test_utils = { version = "0.1.1" } # , path = "../../moon/crates/pdk-test-utils" }
+moon_project = { version = "0.1.2" }        # , path = "../../moon/crates/project" }
+moon_target = { version = "0.1.1" }         # , path = "../../moon/crates/target" }
 
 # proto
-proto_pdk = { version = "0.28.8" }            # , path = "../../proto/crates/pdk" }
-proto_pdk_api = { version = "0.27.11" }       # , path = "../../proto/crates/pdk-api" }
-proto_pdk_test_utils = { version = "0.36.2" } # , path = "../../proto/crates/pdk-test-utils" }
+proto_pdk = { version = "0.28.9" }            # , path = "../../proto/crates/pdk" }
+proto_pdk_api = { version = "0.27.12" }       # , path = "../../proto/crates/pdk-api" }
+proto_pdk_test_utils = { version = "0.37.0" } # , path = "../../proto/crates/pdk-test-utils" }
 
 # JavaScript
-nodejs_package_json = "0.3.2"
-typescript_tsconfig_json = { version = "0.4.3", features = ["serialize"] }
+nodejs_package_json = "0.4.0"
+typescript_tsconfig_json = { version = "0.5.0", features = ["serialize"] }
 
 [profile.release]
 codegen-units = 1

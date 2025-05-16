@@ -38,7 +38,7 @@ pub fn get_rustup_home(env: &HostEnvironment) -> Result<VirtualPath, Error> {
     // Cargo sets the RUSTUP_HOME env var when running tests,
     // which causes a ton of issues, so intercept it here!
     if let Some(test_env) = get_test_environment()? {
-        return Ok(into_virtual_path(test_env.sandbox)?.join(".home/.rustup"));
+        return Ok(test_env.sandbox.join(".home/.rustup"));
     }
 
     Ok(get_home_env("RUSTUP_HOME")?.unwrap_or_else(|| env.home_dir.join(".rustup")))
