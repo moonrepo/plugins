@@ -5,8 +5,8 @@ use moon_common::Id;
 use moon_config::{
     FilePath, InputPath, OneOrMany, OutputPath, PartialProjectDependsOn,
     PartialProjectMetadataConfig, PartialTaskArgs, PartialTaskConfig, PartialTaskDependency,
-    PartialTaskOptionsConfig, PartialVcsConfig, PartialWorkspaceProjects, PortablePath,
-    ProjectType, TaskOptionEnvFile,
+    PartialTaskOptionsConfig, PartialVcsConfig, PartialWorkspaceProjects, ProjectType,
+    TaskOptionEnvFile,
 };
 use moon_pdk::{AnyResult, map_miette_error};
 use moon_pdk_api::MoonContext;
