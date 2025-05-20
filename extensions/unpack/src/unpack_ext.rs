@@ -52,7 +52,7 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
             args.src
         );
 
-        virtual_path!(buf, input.context.get_absolute_path(args.src))
+        into_virtual_path(input.context.get_absolute_path(args.src))?
     };
 
     if !src_file
@@ -78,12 +78,11 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
     );
 
     // Convert the provided output into a virtual file path.
-    let dest_dir = virtual_path!(
-        buf,
+    let dest_dir = into_virtual_path(
         input
             .context
-            .get_absolute_path(args.dest.as_deref().unwrap_or_default())
-    );
+            .get_absolute_path(args.dest.as_deref().unwrap_or_default()),
+    )?;
 
     if dest_dir.exists() && dest_dir.is_file() {
         return Err(plugin_err!(
@@ -101,7 +100,7 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
     );
 
     // Attempt to unpack the archive!
-    let mut archive = Archiver::new(&dest_dir, &src_file);
+    let mut archive = Archiver::new(dest_dir.as_ref(), src_file.as_ref());
 
     // Diff against all files in the output dir
     archive.add_source_glob("**/*");

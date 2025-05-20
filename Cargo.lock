@@ -2524,9 +2524,9 @@ dependencies = [
 
 [[package]]
 name = "moon_pdk_api"
-version = "0.1.5"
+version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3e3cd4265c466ad33092b7f955f6b885dd3d3f4e8d5b01ee9f8fe1c2c2b5b9f"
+checksum = "caaafbbab9d25e4838fb95950e93e99b6a3a7ea62ef7ba3b24bac1c67be84ace"
 dependencies = [
  "moon_common",
  "moon_config",
@@ -4926,9 +4926,9 @@ dependencies = [
 
 [[package]]
 name = "warpgate_api"
-version = "0.14.1"
+version = "0.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be5ea03c42e18480da17743bd25054e91e62b82d338b4e2e1946e666815e3192"
+checksum = "f3b0847ab9f825d7aa9b3b36ae0a9736259f4bddf527f71a6e04009d77fd8d9e"
 dependencies = [
  "anyhow",
  "rustc-hash",

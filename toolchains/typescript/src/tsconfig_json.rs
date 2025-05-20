@@ -29,15 +29,43 @@ impl TsConfigJson {
         Ok(config)
     }
 
-    fn save_field(
-        &self,
-        field: &str,
-        current_value: Option<&JsonValue>,
-    ) -> AnyResult<Option<JsonValue>> {
-        Ok(match field {
-            "include" => self.include.as_ref().map(|include| {
-                JsonValue::from_iter(include.iter().map(|i| i.to_string()).collect::<Vec<_>>())
-            }),
+    fn save_field(&self, field: &str, config: &mut JsonValue) -> AnyResult<()> {
+        let Some(root) = config.as_object_mut() else {
+            return Ok(());
+        };
+
+        match field {
+            "compilerOptions" => {
+                if let Some(options) = &self.compiler_options {
+                    let current = root
+                        .entry("compilerOptions")
+                        .or_insert_with(|| json::json!({}));
+
+                    if let Some(out_dir) = &options.out_dir {
+                        current["outDir"] = JsonValue::from(out_dir.as_str());
+                    }
+
+                    if let Some(paths) = &options.paths {
+                        current["paths"] =
+                            JsonValue::from_iter(paths.iter().map(|(key, value)| {
+                                (
+                                    key.to_owned(),
+                                    value.iter().map(|v| v.to_string()).collect::<Vec<_>>(),
+                                )
+                            }));
+                    }
+                }
+            }
+            "include" => {
+                if let Some(include) = &self.include {
+                    root.insert(
+                        "include".into(),
+                        JsonValue::from_iter(
+                            include.iter().map(|i| i.to_string()).collect::<Vec<_>>(),
+                        ),
+                    );
+                }
+            }
             "references" => {
                 if let Some(references) = &self.references {
                     let mut list = vec![];
@@ -53,43 +81,13 @@ impl TsConfigJson {
                         list.push(item);
                     }
 
-                    Some(JsonValue::Array(list))
-                } else {
-                    None
+                    root.insert("references".into(), JsonValue::Array(list));
                 }
             }
-            "compilerOptions" => {
-                if let Some(options) = &self.compiler_options {
-                    let mut current = current_value.cloned().unwrap_or_default();
-                    let mut save = false;
+            _ => {}
+        };
 
-                    if !current.is_object() {
-                        current = json::json!({});
-                    }
-
-                    if let Some(out_dir) = &options.out_dir {
-                        save = true;
-                        current["outDir"] = JsonValue::from(out_dir.as_str());
-                    }
-
-                    if let Some(paths) = &options.paths {
-                        save = true;
-                        current["paths"] =
-                            JsonValue::from_iter(paths.iter().map(|(key, value)| {
-                                (
-                                    key.to_owned(),
-                                    value.iter().map(|v| v.to_string()).collect::<Vec<_>>(),
-                                )
-                            }));
-                    }
-
-                    if save { Some(current) } else { None }
-                } else {
-                    None
-                }
-            }
-            _ => None,
-        })
+        Ok(())
     }
 }
 
@@ -97,8 +95,11 @@ impl TsConfigJson {
     /// Convert an absolute virtual path to a relative virtual string,
     /// for use within tsconfig include, exclude, and other paths.
     pub fn to_relative_path(&self, path: impl AsRef<VirtualPath>) -> AnyResult<String> {
-        to_relative_virtual_string(path.as_ref().any_path(), self.path.parent().any_path())
-            .map_err(|error| anyhow!("{error}"))
+        to_relative_virtual_string(
+            path.as_ref().any_path(),
+            self.path.parent().unwrap().any_path(),
+        )
+        .map_err(|error| anyhow!("{error}"))
     }
 
     /// Add an include pattern to the `include` field with the defined
@@ -116,7 +117,7 @@ impl TsConfigJson {
         {
             host_log!(
                 "Adding <file>{include_path}</file> as an include to <path>{}</path>",
-                self.path.display(),
+                self.path,
             );
         }
 
@@ -150,7 +151,7 @@ impl TsConfigJson {
         {
             host_log!(
                 "Adding <file>{ref_path}</file> as a reference to <path>{}</path>",
-                self.path.display(),
+                self.path,
             );
         }
 
