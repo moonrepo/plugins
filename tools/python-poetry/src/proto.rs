@@ -69,23 +69,14 @@ pub fn native_install(
     let result = exec(ExecCommandInput {
         command: "python".into(),
         args: vec![
-            script_path
-                .real_path()
-                .unwrap()
-                .to_string_lossy()
-                .to_string(),
+            script_path.real_path_string().unwrap(),
             "--force".into(),
             "--yes".into(),
         ],
         env: HashMap::from_iter([
             (
                 "POETRY_HOME".into(),
-                input
-                    .install_dir
-                    .real_path()
-                    .unwrap()
-                    .to_string_lossy()
-                    .to_string(),
+                input.install_dir.real_path_string().unwrap(),
             ),
             ("POETRY_VERSION".into(), input.context.version.to_string()),
         ]),

@@ -108,17 +108,15 @@ fn create_script(
     }
 
     if let Some(dir) = tool_dir {
-        input.env.insert(
-            "ASDF_INSTALL_PATH".into(),
-            dir.real_path().unwrap().to_string_lossy().to_string(),
-        );
+        input
+            .env
+            .insert("ASDF_INSTALL_PATH".into(), dir.real_path_string().unwrap());
     }
 
     if let Some(dir) = temp_dir {
-        input.env.insert(
-            "ASDF_DOWNLOAD_PATH".into(),
-            dir.real_path().unwrap().to_string_lossy().to_string(),
-        );
+        input
+            .env
+            .insert("ASDF_DOWNLOAD_PATH".into(), dir.real_path_string().unwrap());
     }
 
     Ok(input)
@@ -262,14 +260,7 @@ pub fn parse_version_file(
         // https://asdf-vm.com/plugins/create.html#bin-parse-legacy-file
         if script_path.exists() {
             let mut script = create_script_from_unresolved_context(&script_path, &input.context)?;
-            script.args.push(
-                input
-                    .path
-                    .real_path()
-                    .unwrap()
-                    .to_string_lossy()
-                    .to_string(),
-            );
+            script.args.push(input.path.real_path_string().unwrap());
 
             let data = exec_script(script)?;
 
