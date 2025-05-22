@@ -2389,7 +2389,7 @@ dependencies = [
 
 [[package]]
 name = "migrate_nx_extension"
-version = "0.0.9"
+version = "0.0.10"
 dependencies = [
  "extension_common",
  "extism-pdk",
