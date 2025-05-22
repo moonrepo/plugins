@@ -124,7 +124,7 @@ impl CargoToml {
             {
                 host_log!(
                     "Setting <property>{field}</file> in <path>{}</path>",
-                    self.path.display(),
+                    self.path,
                 );
             }
 

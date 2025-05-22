@@ -9,11 +9,11 @@ pub fn locate_dependencies_root(
     let mut output = LocateDependenciesRootOutput::default();
 
     // Attempt to find `Cargo.lock` first
-    let mut dir = input.starting_dir.clone();
+    let mut current_dir = Some(input.starting_dir.clone());
 
-    while !dir.to_str().is_some_and(|d| d == "/") {
+    while let Some(dir) = &current_dir {
         if !dir.join("Cargo.lock").exists() {
-            dir = dir.parent();
+            current_dir = dir.parent();
             continue;
         }
 
@@ -28,13 +28,13 @@ pub fn locate_dependencies_root(
 
     // Otherwise find a `Cargo.toml` workspace
     if output.root.is_none() {
-        let mut dir = input.starting_dir.clone();
+        let mut current_dir = Some(input.starting_dir.clone());
 
-        while !dir.to_str().is_some_and(|d| d == "/") {
+        while let Some(dir) = &current_dir {
             let manifest_path = dir.join("Cargo.toml");
 
             if !manifest_path.exists() {
-                dir = dir.parent();
+                current_dir = dir.parent();
                 continue;
             }
 

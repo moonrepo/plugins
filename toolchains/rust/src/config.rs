@@ -5,7 +5,7 @@ use schematic::Schematic;
 config_struct!(
     /// Configures and enables the Rust platform.
     /// Docs: https://moonrepo.dev/docs/config/toolchain#rust
-    #[derive(Schematic)]
+    #[derive(Default, Schematic)]
     pub struct RustToolchainConfig {
         /// When `version` is defined, syncs the version as a constraint to
         /// `Cargo.toml` under the `workspace.package.rust-version` or
@@ -34,16 +34,16 @@ config_struct!(
     }
 );
 
-impl Default for RustToolchainConfig {
-    fn default() -> Self {
-        Self {
-            add_msrv_constraint: false,
-            bins: vec![],
-            binstall_version: None,
-            components: vec![],
-            sync_toolchain_config: false,
-            targets: vec![],
-            version: None,
-        }
-    }
-}
+// impl Default for RustToolchainConfig {
+//     fn default() -> Self {
+//         Self {
+//             add_msrv_constraint: false,
+//             bins: vec![],
+//             binstall_version: None,
+//             components: vec![],
+//             sync_toolchain_config: false,
+//             targets: vec![],
+//             version: None,
+//         }
+//     }
+// }

@@ -22,17 +22,14 @@ impl ToolchainToml {
             return Ok(());
         };
 
-        match field {
-            "toolchain.channel" => {
-                if let Some(channel) = &self.toolchain.channel {
-                    let toolchain = root
-                        .entry("toolchain")
-                        .or_insert_with(|| TomlValue::Table(TomlTable::new()));
+        if field == "toolchain.channel" {
+            if let Some(channel) = &self.toolchain.channel {
+                let toolchain = root
+                    .entry("toolchain")
+                    .or_insert_with(|| TomlValue::Table(TomlTable::new()));
 
-                    toolchain["channel"] = TomlValue::String(channel.to_owned());
-                }
+                toolchain["channel"] = TomlValue::String(channel.to_owned());
             }
-            _ => {}
         };
 
         Ok(())
@@ -57,7 +54,7 @@ impl ToolchainToml {
         {
             host_log!(
                 "Setting <property>toolchain.channel</file> in <path>{}</path>",
-                self.path.display(),
+                self.path,
             );
         }
 
