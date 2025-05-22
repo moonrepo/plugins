@@ -64,7 +64,7 @@ pub fn setup_environment(
 
         output
             .commands
-            .push(ExecCommandInput::new("cargo", ["install", &binstall_package, "--force"]).into());
+            .push(ExecCommandInput::new("cargo", ["install", &binstall_package]).into());
 
         let env = get_host_environment()?;
         let mut force_bins = vec![];

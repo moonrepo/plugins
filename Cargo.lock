@@ -3584,6 +3584,7 @@ dependencies = [
  "moon_pdk",
  "moon_pdk_api",
  "rust_tool",
+ "rustc-hash",
  "schematic",
  "semver",
  "serde",
