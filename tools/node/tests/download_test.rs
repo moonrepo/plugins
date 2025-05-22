@@ -113,6 +113,44 @@ mod node_tool {
     }
 
     #[tokio::test(flavor = "multi_thread")]
+    async fn supports_linux_x64_musl() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("node-test", |config| {
+                config.host_environment(HostEnvironment {
+                    arch: HostArch::X64,
+                    libc: HostLibc::Musl,
+                    os: HostOS::Linux,
+                    ..Default::default()
+                });
+            })
+            .await;
+
+        assert_eq!(
+            plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: ToolContext {
+                        version: VersionSpec::parse("20.0.0").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await,
+            DownloadPrebuiltOutput {
+                archive_prefix: Some("node-v20.0.0-linux-x64-musl".into()),
+                checksum_url: Some(
+                    "https://unofficial-builds.nodejs.org/download/release/v20.0.0/SHASUMS256.txt".into()
+                ),
+                download_name: Some("node-v20.0.0-linux-x64-musl.tar.xz".into()),
+                download_url:
+                    "https://unofficial-builds.nodejs.org/download/release/v20.0.0/node-v20.0.0-linux-x64-musl.tar.xz"
+                        .into(),
+                ..Default::default()
+            }
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
     async fn supports_linux_s390x() {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
