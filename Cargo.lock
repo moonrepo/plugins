@@ -2646,7 +2646,7 @@ checksum = "a785740271256c230f57462d3b83e52f998433a7062fc18f96d5999474a9f915"
 
 [[package]]
 name = "node_depman_tool"
-version = "0.15.1"
+version = "0.15.2"
 dependencies = [
  "extism-pdk",
  "lang_node_common",
