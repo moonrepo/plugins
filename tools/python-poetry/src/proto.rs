@@ -85,9 +85,13 @@ pub fn native_install(
     })?;
 
     Ok(Json(NativeInstallOutput {
-        error: if result.stdout.contains("poetry-installer-error") && result.stdout.contains(".log")
+        error: if !result.stdout.is_empty()
+            && result.stdout.contains("poetry-installer-error")
+            && result.stdout.contains(".log")
         {
             Some("An error log has been written to the current directory.".into())
+        } else if !result.stderr.is_empty() {
+            Some(result.stderr)
         } else {
             None
         },
