@@ -257,6 +257,13 @@ pub fn download_prebuilt(
         }
     }
 
+    // Support unofficial MUSL builds
+    // https://github.com/nodejs/unofficial-builds
+    if env.os.is_linux() && env.libc == HostLibc::Musl && env.arch == HostArch::X64 {
+        arch.push_str("-musl");
+        host = "https://unofficial-builds.nodejs.org/download/release/v{version}/{file}".into();
+    }
+
     // When canary, extract the latest version from the index
     if version.is_canary() {
         let response: Vec<NodeDistVersion> =
