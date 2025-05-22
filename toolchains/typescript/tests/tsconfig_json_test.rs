@@ -19,8 +19,7 @@ mod tsconfig_json {
         sandbox.create_file("tsconfig.json", json);
 
         let config_path = sandbox.path().join("tsconfig.json");
-        let mut tsc =
-            TsConfigJsonContainer::load(VirtualPath::OnlyReal(config_path.clone())).unwrap();
+        let mut tsc = TsConfigJsonContainer::load(VirtualPath::Real(config_path.clone())).unwrap();
 
         // Trigger dirty
         tsc.dirty.push("unknown".into());
@@ -154,10 +153,9 @@ mod tsconfig_json {
     #[test]
     fn parse_basic_file() {
         let fixture = locate_fixture("configs");
-        let tsc = TsConfigJsonContainer::load(VirtualPath::OnlyReal(
-            fixture.join("tsconfig.default.json"),
-        ))
-        .unwrap();
+        let tsc =
+            TsConfigJsonContainer::load(VirtualPath::Real(fixture.join("tsconfig.default.json")))
+                .unwrap();
 
         assert_eq!(
             tsc.data.compiler_options.clone().unwrap().target,
@@ -176,7 +174,7 @@ mod tsconfig_json {
         #[test]
         fn adds_if_not_set() {
             let mut tsc = TsConfigJsonContainer {
-                path: VirtualPath::OnlyReal(PathBuf::from("/base/tsconfig.json")),
+                path: VirtualPath::Real(PathBuf::from("/base/tsconfig.json")),
                 ..Default::default()
             };
 
@@ -184,7 +182,7 @@ mod tsconfig_json {
 
             assert!(
                 tsc.add_project_ref(
-                    &VirtualPath::OnlyReal(PathBuf::from("/sibling")),
+                    &VirtualPath::Real(PathBuf::from("/sibling")),
                     "tsconfig.json"
                 )
                 .unwrap()
@@ -209,13 +207,13 @@ mod tsconfig_json {
                     }]),
                     ..TsConfigJson::default()
                 },
-                path: VirtualPath::OnlyReal(PathBuf::from("/base/tsconfig.json")),
+                path: VirtualPath::Real(PathBuf::from("/base/tsconfig.json")),
                 ..Default::default()
             };
 
             assert!(
                 !tsc.add_project_ref(
-                    &VirtualPath::OnlyReal(PathBuf::from("/sibling")),
+                    &VirtualPath::Real(PathBuf::from("/sibling")),
                     "tsconfig.json"
                 )
                 .unwrap()
@@ -236,7 +234,7 @@ mod tsconfig_json {
                 data: TsConfigJson {
                     ..TsConfigJson::default()
                 },
-                path: VirtualPath::OnlyReal(PathBuf::from("/base/tsconfig.json")),
+                path: VirtualPath::Real(PathBuf::from("/base/tsconfig.json")),
                 ..Default::default()
             };
 
@@ -244,7 +242,7 @@ mod tsconfig_json {
 
             assert!(
                 tsc.add_project_ref(
-                    &VirtualPath::OnlyReal(PathBuf::from("/sibling")),
+                    &VirtualPath::Real(PathBuf::from("/sibling")),
                     "tsconfig.ref.json"
                 )
                 .unwrap()
@@ -266,7 +264,7 @@ mod tsconfig_json {
                 data: TsConfigJson {
                     ..TsConfigJson::default()
                 },
-                path: VirtualPath::OnlyReal(PathBuf::from("C:\\base\\dir\\tsconfig.json")),
+                path: VirtualPath::Real(PathBuf::from("C:\\base\\dir\\tsconfig.json")),
                 ..Default::default()
             };
 
@@ -274,7 +272,7 @@ mod tsconfig_json {
 
             assert!(
                 tsc.add_project_ref(
-                    &VirtualPath::OnlyReal(PathBuf::from("C:\\base\\sibling")),
+                    &VirtualPath::Real(PathBuf::from("C:\\base\\sibling")),
                     "tsconfig.json"
                 )
                 .unwrap()
@@ -299,13 +297,13 @@ mod tsconfig_json {
                     }]),
                     ..TsConfigJson::default()
                 },
-                path: VirtualPath::OnlyReal(PathBuf::from("/base/tsconfig.json")),
+                path: VirtualPath::Real(PathBuf::from("/base/tsconfig.json")),
                 ..Default::default()
             };
 
             assert!(
                 tsc.add_project_ref(
-                    &VirtualPath::OnlyReal(PathBuf::from("/brother")),
+                    &VirtualPath::Real(PathBuf::from("/brother")),
                     "tsconfig.json"
                 )
                 .unwrap()

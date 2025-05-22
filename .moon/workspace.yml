@@ -30,5 +30,5 @@ projects:
   node-toolchain: toolchains/node
   typescript-toolchain: toolchains/typescript
 
-runner:
+pipeline:
   logRunningCommand: true

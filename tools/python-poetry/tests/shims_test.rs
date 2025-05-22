@@ -1,8 +1,6 @@
-use proto_pdk_test_utils::*;
-
+#[cfg(unix)]
 mod python_poetry_tool {
-    use super::*;
+    use proto_pdk_test_utils::*;
 
-    #[cfg(not(windows))]
     generate_shims_test!("poetry-test", ["poetry"]);
 }

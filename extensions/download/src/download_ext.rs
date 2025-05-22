@@ -45,12 +45,11 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
     // Determine destination directory
     debug!("Determining destination directory");
 
-    let dest_dir = virtual_path!(
-        buf,
+    let dest_dir = into_virtual_path(
         input
             .context
-            .get_absolute_path(args.dest.as_deref().unwrap_or_default())
-    );
+            .get_absolute_path(args.dest.as_deref().unwrap_or_default()),
+    )?;
 
     if dest_dir.exists() && dest_dir.is_file() {
         return Err(plugin_err!(

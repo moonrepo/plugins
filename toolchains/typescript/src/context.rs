@@ -15,12 +15,12 @@ pub struct TypeScriptContext {
 
 fn create_virtual_path(base: &VirtualPath, path: PathBuf) -> VirtualPath {
     match base {
-        VirtualPath::OnlyReal(_) => VirtualPath::OnlyReal(path),
-        VirtualPath::WithReal {
+        VirtualPath::Real(_) => VirtualPath::Real(path),
+        VirtualPath::Virtual {
             virtual_prefix,
             real_prefix,
             ..
-        } => VirtualPath::WithReal {
+        } => VirtualPath::Virtual {
             path,
             virtual_prefix: virtual_prefix.to_owned(),
             real_prefix: real_prefix.to_owned(),

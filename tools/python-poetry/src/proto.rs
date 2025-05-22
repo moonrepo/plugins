@@ -69,23 +69,14 @@ pub fn native_install(
     let result = exec(ExecCommandInput {
         command: "python".into(),
         args: vec![
-            script_path
-                .real_path()
-                .unwrap()
-                .to_string_lossy()
-                .to_string(),
+            script_path.real_path_string().unwrap(),
             "--force".into(),
             "--yes".into(),
         ],
         env: HashMap::from_iter([
             (
                 "POETRY_HOME".into(),
-                input
-                    .install_dir
-                    .real_path()
-                    .unwrap()
-                    .to_string_lossy()
-                    .to_string(),
+                input.install_dir.real_path_string().unwrap(),
             ),
             ("POETRY_VERSION".into(), input.context.version.to_string()),
         ]),
@@ -94,9 +85,13 @@ pub fn native_install(
     })?;
 
     Ok(Json(NativeInstallOutput {
-        error: if result.stdout.contains("poetry-installer-error") && result.stdout.contains(".log")
+        error: if !result.stdout.is_empty()
+            && result.stdout.contains("poetry-installer-error")
+            && result.stdout.contains(".log")
         {
             Some("An error log has been written to the current directory.".into())
+        } else if !result.stderr.is_empty() {
+            Some(result.stderr)
         } else {
             None
         },

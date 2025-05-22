@@ -440,11 +440,7 @@ pub fn pre_run(Json(input): Json<RunHook>) -> FnResult<Json<RunHookResult>> {
     let manager = PackageManager::detect()?;
 
     // Includes trailing /bin folder
-    let globals_bin_dir = globals_dir
-        .real_path()
-        .unwrap()
-        .to_string_lossy()
-        .to_string();
+    let globals_bin_dir = globals_dir.real_path_string().unwrap();
     // Parent directory, doesn't include /bin folder
     let globals_root_dir = globals_dir
         .real_path()

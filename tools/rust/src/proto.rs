@@ -126,7 +126,7 @@ pub fn native_install(
         }
 
         exec(ExecCommandInput {
-            command: script_path.to_string_lossy().to_string(),
+            command: script_path.real_path_string().unwrap(),
             args: vec!["--default-toolchain".into(), "none".into(), "-y".into()],
             set_executable: true,
             stream: true,
