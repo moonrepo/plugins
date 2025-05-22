@@ -3705,9 +3705,9 @@ dependencies = [
 
 [[package]]
 name = "rustversion"
-version = "1.0.20"
+version = "1.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eded382c5f5f786b989652c49544c4877d9f015cc22e145a5ea8ea66c2921cd2"
+checksum = "8a0d197bd2c9dc6e53b84da9556a69ba4cdfab8619eb41a8bd1cc2027a0f6b1d"
 
 [[package]]
 name = "ryu"
@@ -4951,9 +4951,9 @@ dependencies = [
 
 [[package]]
 name = "warpgate_api"
-version = "0.14.2"
+version = "0.14.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3b0847ab9f825d7aa9b3b36ae0a9736259f4bddf527f71a6e04009d77fd8d9e"
+checksum = "3ffd9dd50009e7688545b281746177602f78bf929b7f7edcdbc9e65d7def6ca1"
 dependencies = [
  "anyhow",
  "rustc-hash",
