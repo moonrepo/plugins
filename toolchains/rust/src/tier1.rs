@@ -28,7 +28,7 @@ pub fn register_toolchain(
         ],
         lock_file_name: Some("Cargo.lock".into()),
         manifest_file_name: Some("Cargo.toml".into()),
-        proto_id: Some("rust".into()),
+        // proto_id: Some("rust".into()),
         vendor_dir_name: Some("target".into()),
         ..Default::default()
     }))
