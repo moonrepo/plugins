@@ -28,6 +28,7 @@ projects:
   schema-tool: tools/internal-schema
   # Toolchains
   node-toolchain: toolchains/node
+  rust-toolchain: toolchains/rust
   typescript-toolchain: toolchains/typescript
 
 pipeline:

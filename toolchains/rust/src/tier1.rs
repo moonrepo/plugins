@@ -28,6 +28,7 @@ pub fn register_toolchain(
         ],
         lock_file_name: Some("Cargo.lock".into()),
         manifest_file_name: Some("Cargo.toml".into()),
+        proto_id: Some("rust".into()),
         vendor_dir_name: Some("target".into()),
         ..Default::default()
     }))
@@ -88,8 +89,13 @@ pub fn scaffold_docker(
         fs::write_file(&lib_file, "")?;
         fs::write_file(&main_file, "")?;
 
-        output.copied_files.push(lib_file);
-        output.copied_files.push(main_file);
+        if let Some(file) = lib_file.virtual_path() {
+            output.copied_files.push(file);
+        }
+
+        if let Some(file) = main_file.virtual_path() {
+            output.copied_files.push(file);
+        }
     }
 
     Ok(Json(output))
@@ -155,7 +161,9 @@ pub fn prune_docker(Json(input): Json<PruneDockerInput>) -> FnResult<Json<PruneD
     // We can now delete the target directory, this may take a while...
     fs::remove_dir_all(&target_dir)?;
 
-    output.changed_files.push(target_dir.clone());
+    if let Some(file) = target_dir.virtual_path() {
+        output.changed_files.push(file);
+    }
 
     // If we preserved bins, rename the temp directory to the target,
     // so that other tools will find them at their original location

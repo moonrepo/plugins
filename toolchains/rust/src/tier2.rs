@@ -4,7 +4,6 @@ use extism_pdk::*;
 use moon_config::DependencyScope;
 use moon_pdk::{get_host_env_var, get_host_environment};
 use moon_pdk_api::*;
-use rustc_hash::FxHashMap;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
@@ -26,6 +25,7 @@ pub fn extend_project_graph(
                         project_output.dependencies.push(ProjectDependency {
                             id: dep_name.into(),
                             scope,
+                            via: Some(format!("crate {dep_name}")),
                         });
                     }
                 }
@@ -37,7 +37,6 @@ pub fn extend_project_graph(
             let cargo = CargoToml::load(cargo_toml_path.clone())?;
 
             if let Some(package) = &cargo.package {
-                output.input_files.push(cargo_toml_path);
                 project_output.alias = Some(package.name.clone());
 
                 extract_implicit_deps(&cargo.dependencies, DependencyScope::Production)?;
@@ -45,6 +44,10 @@ pub fn extend_project_graph(
                 extract_implicit_deps(&cargo.build_dependencies, DependencyScope::Build)?;
 
                 output.extended_projects.insert(id, project_output);
+
+                if let Some(file) = cargo_toml_path.virtual_path() {
+                    output.input_files.push(file);
+                }
             }
         }
     }
@@ -123,18 +126,19 @@ pub fn locate_dependencies_root(
     let mut current_dir = Some(input.starting_dir.clone());
 
     while let Some(dir) = &current_dir {
-        if !dir.join("Cargo.lock").exists() {
-            current_dir = dir.parent();
-            continue;
+        if dir.join("Cargo.lock").exists() {
+            output.root = dir.virtual_path();
+
+            let manifest_path = dir.join("Cargo.toml");
+
+            if manifest_path.exists() {
+                output.members = CargoToml::load(manifest_path)?.extract_members();
+            }
+
+            break;
         }
 
-        output.root = Some(dir.to_owned());
-
-        let manifest_path = dir.join("Cargo.toml");
-
-        if manifest_path.exists() {
-            output.members = CargoToml::load(manifest_path)?.extract_members();
-        }
+        current_dir = dir.parent();
     }
 
     // Otherwise find a `Cargo.toml` workspace
@@ -144,24 +148,23 @@ pub fn locate_dependencies_root(
         while let Some(dir) = &current_dir {
             let manifest_path = dir.join("Cargo.toml");
 
-            if !manifest_path.exists() {
-                current_dir = dir.parent();
-                continue;
+            if manifest_path.exists() {
+                let manifest = CargoToml::load(manifest_path)?;
+
+                if manifest.workspace.is_some() {
+                    output.root = dir.virtual_path();
+                    output.members = manifest.extract_members();
+                    break;
+                }
             }
 
-            let manifest = CargoToml::load(manifest_path)?;
-
-            if manifest.workspace.is_some() {
-                output.root = Some(dir.to_owned());
-                output.members = manifest.extract_members();
-                break;
-            }
+            current_dir = dir.parent();
         }
     }
 
     // Else the current directory may be a stand-alone project
     if output.root.is_none() && input.starting_dir.join("Cargo.toml").exists() {
-        output.root = Some(input.starting_dir);
+        output.root = input.starting_dir.virtual_path();
     }
 
     Ok(Json(output))
@@ -217,30 +220,30 @@ pub fn parse_manifest(
     let manifest = CargoToml::load(input.path)?;
 
     let extract_deps = |in_deps: &BTreeMap<String, Dependency>,
-                        out_deps: &mut FxHashMap<String, ManifestDependency>|
+                        out_deps: &mut BTreeMap<String, ManifestDependency>|
      -> AnyResult<()> {
         for (name, in_dep) in in_deps {
-            let mut out_dep = ManifestDependency::default();
-
-            match in_dep {
-                Dependency::Simple(req) => {
-                    out_dep.version = Some(UnresolvedVersionSpec::parse(req)?);
-                }
-                Dependency::Inherited(cfg) => {
-                    out_dep.features = cfg.features.clone();
-                    out_dep.inherited = true;
-                }
-                Dependency::Detailed(cfg) => {
-                    out_dep.features = cfg.features.clone();
-                    out_dep.inherited = cfg.inherited;
-
-                    if let Some(version) = &cfg.version {
-                        out_dep.version = Some(UnresolvedVersionSpec::parse(version)?);
+            out_deps.insert(
+                name.to_owned(),
+                match in_dep {
+                    Dependency::Simple(req) => {
+                        ManifestDependency::Version(UnresolvedVersionSpec::parse(req)?)
                     }
-                }
-            };
-
-            out_deps.insert(name.to_owned(), out_dep);
+                    Dependency::Inherited(cfg) => ManifestDependency::Config {
+                        inherited: true,
+                        features: cfg.features.clone(),
+                        version: None,
+                    },
+                    Dependency::Detailed(cfg) => ManifestDependency::Config {
+                        inherited: cfg.inherited,
+                        features: cfg.features.clone(),
+                        version: match &cfg.version {
+                            Some(version) => Some(UnresolvedVersionSpec::parse(version)?),
+                            None => None,
+                        },
+                    },
+                },
+            );
         }
         Ok(())
     };

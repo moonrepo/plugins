@@ -4971,9 +4971,9 @@ dependencies = [
 
 [[package]]
 name = "warpgate_api"
-version = "0.14.3"
+version = "0.14.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ffd9dd50009e7688545b281746177602f78bf929b7f7edcdbc9e65d7def6ca1"
+checksum = "8ad8ccf52fdd98b3d1335327186af4f9b513befa93cc3fd38e3e586efb1e6473"
 dependencies = [
  "anyhow",
  "rustc-hash",

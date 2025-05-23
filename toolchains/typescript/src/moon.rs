@@ -96,7 +96,9 @@ pub fn sync_project(Json(input): Json<SyncProjectInput>) -> FnResult<Json<SyncOu
         })?;
 
         output.operations.push(op);
-        output.changed_files.extend(files);
+        output
+            .changed_files
+            .extend(files.into_iter().filter_map(|file| file.virtual_path()));
     } else {
         output.skipped = true;
     }

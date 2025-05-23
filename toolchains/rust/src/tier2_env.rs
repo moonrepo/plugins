@@ -21,7 +21,9 @@ pub fn setup_environment(
         })?;
 
         output.operations.push(op);
-        output.changed_files.extend(files);
+        output
+            .changed_files
+            .extend(files.into_iter().filter_map(|file| file.virtual_path()));
     }
 
     // Sync `rust-toolchain.toml` toolchain
@@ -31,7 +33,9 @@ pub fn setup_environment(
         })?;
 
         output.operations.push(op);
-        output.changed_files.extend(files);
+        output
+            .changed_files
+            .extend(files.into_iter().filter_map(|file| file.virtual_path()));
     }
 
     // Install components
@@ -39,9 +43,9 @@ pub fn setup_environment(
         let mut args = vec!["component", "add"];
         args.extend(config.components.iter().map(|c| c.as_str()));
 
-        output
-            .commands
-            .push(ExecCommandInput::new("rustup", args).into());
+        output.commands.push(
+            ExecCommand::new(ExecCommandInput::new("rustup", args)).cache("rustup-component-add"),
+        );
     }
 
     // Install targets
@@ -49,9 +53,9 @@ pub fn setup_environment(
         let mut args = vec!["target", "add"];
         args.extend(config.targets.iter().map(|c| c.as_str()));
 
-        output
-            .commands
-            .push(ExecCommandInput::new("rustup", args).into());
+        output.commands.push(
+            ExecCommand::new(ExecCommandInput::new("rustup", args)).cache("rustup-target-add"),
+        );
     }
 
     // Install binaries
@@ -62,9 +66,13 @@ pub fn setup_environment(
             "cargo-binstall".into()
         };
 
-        output
-            .commands
-            .push(ExecCommandInput::new("cargo", ["install", &binstall_package]).into());
+        output.commands.push(
+            ExecCommand::new(ExecCommandInput::new(
+                "cargo",
+                ["install", &binstall_package],
+            ))
+            .cache("cargo-binstall"),
+        );
 
         let env = get_host_environment()?;
         let mut force_bins = vec![];
@@ -91,9 +99,9 @@ pub fn setup_environment(
             let mut args = vec!["binstall", "--no-confirm", "--log-level", "info", "--force"];
             args.extend(force_bins);
 
-            output
-                .commands
-                .push(ExecCommandInput::new("cargo", args).into());
+            output.commands.push(
+                ExecCommand::new(ExecCommandInput::new("cargo", args)).cache("cargo-bins-forced"),
+            );
         }
 
         if !non_force_bins.is_empty() {
@@ -102,7 +110,7 @@ pub fn setup_environment(
 
             output
                 .commands
-                .push(ExecCommandInput::new("cargo", args).into());
+                .push(ExecCommand::new(ExecCommandInput::new("cargo", args)).cache("cargo-bins"));
         }
     }
 
