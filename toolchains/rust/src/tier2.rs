@@ -55,12 +55,24 @@ pub fn extend_project_graph(
     Ok(Json(output))
 }
 
-fn gather_shared_paths(env: &HostEnvironment, paths: &mut Vec<PathBuf>) -> AnyResult<()> {
-    if let Some(value) = get_host_env_var("CARGO_INSTALL_ROOT")? {
-        paths.push(PathBuf::from(value).join("bin"));
+fn gather_shared_paths(
+    env: &HostEnvironment,
+    globals_dir: Option<&VirtualPath>,
+    paths: &mut Vec<PathBuf>,
+) -> AnyResult<()> {
+    if let Some(globals_dir) = globals_dir {
+        if let Some(value) = globals_dir.real_path() {
+            paths.push(value);
+
+            // Avoid the host env overhead if we already
+            // have a valid globals directory!
+            return Ok(());
+        }
     }
 
-    if let Some(value) = get_host_env_var("CARGO_HOME")? {
+    if let Some(value) = get_host_env_var("CARGO_INSTALL_ROOT")? {
+        paths.push(PathBuf::from(value).join("bin"));
+    } else if let Some(value) = get_host_env_var("CARGO_HOME")? {
         paths.push(PathBuf::from(value).join("bin"));
     } else if let Some(value) = env.home_dir.join(".cargo/bin").real_path() {
         paths.push(value);
@@ -98,20 +110,20 @@ pub fn extend_task_command(
     }
 
     // Always include Cargo specific paths for all commands
-    gather_shared_paths(&env, &mut output.paths)?;
+    gather_shared_paths(&env, input.globals_dir.as_ref(), &mut output.paths)?;
 
     Ok(Json(output))
 }
 
 #[plugin_fn]
 pub fn extend_task_script(
-    Json(_): Json<ExtendTaskScriptInput>,
+    Json(input): Json<ExtendTaskScriptInput>,
 ) -> FnResult<Json<ExtendTaskScriptOutput>> {
     let mut output = ExtendTaskScriptOutput::default();
     let env = get_host_environment()?;
 
     // Always include Cargo specific paths for all commands
-    gather_shared_paths(&env, &mut output.paths)?;
+    gather_shared_paths(&env, input.globals_dir.as_ref(), &mut output.paths)?;
 
     Ok(Json(output))
 }
@@ -229,19 +241,31 @@ pub fn parse_manifest(
                     Dependency::Simple(req) => {
                         ManifestDependency::Version(UnresolvedVersionSpec::parse(req)?)
                     }
-                    Dependency::Inherited(cfg) => ManifestDependency::Config {
-                        inherited: true,
-                        features: cfg.features.clone(),
-                        version: None,
-                    },
-                    Dependency::Detailed(cfg) => ManifestDependency::Config {
-                        inherited: cfg.inherited,
-                        features: cfg.features.clone(),
-                        version: match &cfg.version {
-                            Some(version) => Some(UnresolvedVersionSpec::parse(version)?),
-                            None => None,
-                        },
-                    },
+                    Dependency::Inherited(cfg) => {
+                        if cfg.features.is_empty() {
+                            ManifestDependency::Inherited(true)
+                        } else {
+                            ManifestDependency::Config {
+                                inherited: true,
+                                features: cfg.features.clone(),
+                                version: None,
+                            }
+                        }
+                    }
+                    Dependency::Detailed(cfg) => {
+                        if cfg.features.is_empty() && cfg.version.is_none() {
+                            ManifestDependency::Inherited(cfg.inherited)
+                        } else {
+                            ManifestDependency::Config {
+                                inherited: cfg.inherited,
+                                features: cfg.features.clone(),
+                                version: match &cfg.version {
+                                    Some(version) => Some(UnresolvedVersionSpec::parse(version)?),
+                                    None => None,
+                                },
+                            }
+                        }
+                    }
                 },
             );
         }
