@@ -1,3 +1,5 @@
+// `tsconfig.json`
+
 #[cfg(feature = "wasm")]
 use extism_pdk::*;
 use moon_common::path::to_relative_virtual_string;

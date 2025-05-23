@@ -5,7 +5,7 @@ config_struct!(
     /// Configures and enables the TypeScript toolchain.
     /// Docs: https://moonrepo.dev/docs/config/toolchain#typescript
     #[derive(Schematic)]
-    pub struct TypeScriptConfig {
+    pub struct TypeScriptToolchainConfig {
         /// When `syncProjectReferences` is enabled, will create a `tsconfig.json`
         /// in referenced projects if it does not exist.
         #[schema(default = true)]
@@ -51,7 +51,7 @@ config_struct!(
     }
 );
 
-impl Default for TypeScriptConfig {
+impl Default for TypeScriptToolchainConfig {
     fn default() -> Self {
         Self {
             create_missing_config: true,

@@ -1,4 +1,4 @@
-use crate::config::TypeScriptConfig;
+use crate::config::TypeScriptToolchainConfig;
 use moon_pdk::VirtualPath;
 use moon_pdk_api::MoonContext;
 use moon_project::ProjectFragment;
@@ -30,7 +30,7 @@ fn create_virtual_path(base: &VirtualPath, path: PathBuf) -> VirtualPath {
 
 pub fn create_typescript_context(
     base: &MoonContext,
-    config: &TypeScriptConfig,
+    config: &TypeScriptToolchainConfig,
     project: &ProjectFragment,
 ) -> TypeScriptContext {
     let root_config = CompilerPath::resolve(
