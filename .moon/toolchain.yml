@@ -1,7 +1,8 @@
 $schema: "https://moonrepo.dev/schemas/toolchain.json"
 
-unstable_rust:
-  plugin: "file:///Users/miles/.cargo/shared-target/wasm32-wasip1/release/rust_toolchain.wasm"
+# unstable_rust:
+#   plugin: "file:///Users/miles/.cargo/shared-target/wasm32-wasip1/release/rust_toolchain.wasm"
+rust:
   version: "1.87.0"
   bins: ["cargo-nextest"]
   components: ["clippy", "rustfmt"]

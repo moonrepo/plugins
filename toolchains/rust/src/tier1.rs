@@ -1,7 +1,7 @@
 use crate::cargo_metadata::{CargoMetadata, PackageTargetCrateType, PackageTargetKind};
 use crate::config::RustToolchainConfig;
 use extism_pdk::*;
-use moon_pdk::{exec_captured, get_host_environment, parse_toolchain_config};
+use moon_pdk::{exec, get_host_environment, parse_toolchain_config};
 use moon_pdk_api::*;
 use schematic::SchemaBuilder;
 use starbase_utils::fs;
@@ -114,16 +114,18 @@ pub fn prune_docker(Json(input): Json<PruneDockerInput>) -> FnResult<Json<PruneD
 
     // Before we can remove the target directory, we need
     // to find a list of binaries to preserve
-    let metadata = exec_captured(
-        "cargo",
-        [
-            "metadata",
-            "--format-version",
-            "1",
-            "--no-deps",
-            "--no-default-features",
+    let metadata = exec(ExecCommandInput {
+        command: "cargo".into(),
+        args: vec![
+            "metadata".into(),
+            "--format-version".into(),
+            "1".into(),
+            "--no-deps".into(),
+            "--no-default-features".into(),
         ],
-    )?;
+        working_dir: Some(input.root.clone()),
+        ..Default::default()
+    })?;
     let metadata: CargoMetadata = json::from_str(&metadata.stdout)?;
     let mut bin_names = vec![];
 
