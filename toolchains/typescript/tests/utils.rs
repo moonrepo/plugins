@@ -33,5 +33,5 @@ pub fn has_changed_file(output: &SyncOutput, name: &str) -> bool {
     output
         .changed_files
         .iter()
-        .any(|file| file.any_path().as_os_str() == name)
+        .any(|file| file.as_os_str() == name)
 }

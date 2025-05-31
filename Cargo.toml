@@ -17,8 +17,8 @@ serial_test = "3.2.0"
 starbase_archive = { version = "0.10.6", default-features = false }
 starbase_sandbox = "0.9.3"
 starbase_utils = { version = "0.11.10", default-features = false }
-tokio = { version = "1.45.0", features = ["full"] }
-toml = { version = "0.8.20", default-features = false, features = ["parse"] }
+tokio = { version = "1.45.1", features = ["full"] }
+toml = { version = "0.8.22", default-features = false, features = ["parse"] }
 
 # moon
 # moon_common = { version = "0.1.2" }
