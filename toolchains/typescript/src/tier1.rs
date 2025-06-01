@@ -1,8 +1,6 @@
 use crate::config::TypeScriptToolchainConfig;
 use crate::context::*;
-use crate::run_task::*;
-use crate::sync_project::*;
-use crate::tsconfig_json::TsConfigJson;
+use crate::tier1_sync::*;
 use extism_pdk::*;
 use moon_pdk::{is_project_toolchain_enabled, parse_toolchain_config};
 use moon_pdk_api::*;
@@ -101,50 +99,6 @@ pub fn sync_project(Json(input): Json<SyncProjectInput>) -> FnResult<Json<SyncOu
             .extend(files.into_iter().filter_map(|file| file.virtual_path()));
     } else {
         output.skipped = true;
-    }
-
-    Ok(Json(output))
-}
-
-#[plugin_fn]
-pub fn hash_task_contents(
-    Json(input): Json<HashTaskContentsInput>,
-) -> FnResult<Json<HashTaskContentsOutput>> {
-    let config = parse_toolchain_config::<TypeScriptToolchainConfig>(input.toolchain_config)?;
-    let context = create_typescript_context(&input.context, &config, &input.project);
-    let mut output = HashTaskContentsOutput::default();
-    let mut data = json::json!({});
-    let mut has_data = false;
-
-    for tsconfig_path in [
-        context.root_config,
-        context.root_options_config,
-        context.project_config,
-    ] {
-        if tsconfig_path.exists() {
-            // Don't error if extending fails, as one of the files may not
-            // exist yet, as they could be dynamically generated on-demand
-            match TsConfigJson::load_with_extends(tsconfig_path.clone()) {
-                Ok(tsconfig) => {
-                    if let Some(options) = &tsconfig.compiler_options {
-                        let next_data = hash_compiler_options(options);
-
-                        data = starbase_utils::json::merge(&data, &next_data);
-                        has_data = true;
-                    }
-                }
-                Err(error) => {
-                    debug!(
-                        "Failed to load extends chain for {}: {error}",
-                        tsconfig_path
-                    );
-                }
-            }
-        }
-    }
-
-    if has_data && data.as_object().is_some_and(|obj| !obj.is_empty()) {
-        output.contents.push(data);
     }
 
     Ok(Json(output))

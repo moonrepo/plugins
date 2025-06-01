@@ -8,7 +8,7 @@ use starbase_sandbox::assert_snapshot;
 use starbase_utils::fs;
 use utils::*;
 
-mod sync_project {
+mod typescript_toolchain_tier1 {
     use super::*;
 
     mod create_missing_config {
