@@ -3,7 +3,7 @@ use moon_pdk_api::{UnresolvedVersionSpec, Version, config_struct};
 use schematic::Schematic;
 
 config_struct!(
-    /// Configures and enables the Rust platform.
+    /// Configures and enables the Rust toolchain.
     /// Docs: https://moonrepo.dev/docs/config/toolchain#rust
     #[derive(Default, Schematic)]
     pub struct RustToolchainConfig {

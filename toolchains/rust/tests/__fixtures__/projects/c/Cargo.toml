@@ -1,0 +1,9 @@
+[package]
+name = "c"
+version = "1.0.0"
+
+[dependencies]
+a = { path = "../a" }
+
+[dev-dependencies]
+b = { path = "../b" }

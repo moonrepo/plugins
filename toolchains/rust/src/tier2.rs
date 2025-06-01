@@ -174,9 +174,24 @@ pub fn locate_dependencies_root(
         }
     }
 
-    // Else the current directory may be a stand-alone project
-    if output.root.is_none() && input.starting_dir.join("Cargo.toml").exists() {
-        output.root = input.starting_dir.virtual_path();
+    // Else may be a stand-alone project
+    if output.root.is_none() {
+        let mut current_dir = Some(input.starting_dir.clone());
+
+        while let Some(dir) = &current_dir {
+            let manifest_path = dir.join("Cargo.toml");
+
+            if manifest_path.exists() {
+                let manifest = CargoToml::load(manifest_path)?;
+
+                if manifest.package.is_some() {
+                    output.root = dir.virtual_path();
+                    break;
+                }
+            }
+
+            current_dir = dir.parent();
+        }
     }
 
     Ok(Json(output))
@@ -193,7 +208,10 @@ pub fn install_dependencies(
     // However, if we don't detect a lockfile, we can attempt
     // to generate one!
     if !input.root.join("Cargo.lock").exists() {
-        output.install_command = Some(ExecCommandInput::new("cargo", ["generate-lockfile"]).into());
+        let mut cmd = ExecCommandInput::new("cargo", ["generate-lockfile"]);
+        cmd.working_dir = Some(input.root);
+
+        output.install_command = Some(cmd.into());
     }
 
     Ok(Json(output))

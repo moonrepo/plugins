@@ -41,7 +41,11 @@ pub fn initialize_toolchain(
     Ok(Json(InitializeToolchainOutput {
         config_url: Some("https://moonrepo.dev/docs/guides/rust/handbook".into()),
         docs_url: Some("https://moonrepo.dev/docs/config/toolchain#rust".into()),
-        prompts: vec![], // TODO
+        prompts: vec![SettingPrompt::new(
+            "syncToolchainConfig",
+            "Sync <property>version</property> to <file>rust-toolchain.toml</file>?",
+            PromptType::Confirm { default: true },
+        )],
         ..Default::default()
     }))
 }
