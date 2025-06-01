@@ -127,7 +127,7 @@ fn sync_package_msrv(
     if let Some(version) = &config.version {
         if manifest_path.exists() {
             let mut manifest = CargoToml::load(manifest_path)?;
-            manifest.set_package_msrv(version.to_string())?;
+            manifest.set_msrv(version.to_string())?;
 
             if let Some(file) = manifest.save()? {
                 changed_files.push(file);

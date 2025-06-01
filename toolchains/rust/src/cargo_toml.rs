@@ -1,13 +1,13 @@
 // `Cargo.toml`
 
-use cargo_toml::{Inheritable, Manifest as BaseCargoToml};
+pub use cargo_toml::{Inheritable, Manifest as BaseCargoToml};
 #[cfg(feature = "wasm")]
 use extism_pdk::*;
 #[cfg(feature = "wasm")]
 use moon_pdk::host_log;
 use moon_pdk_api::{AnyResult, toml_config};
 use serde::{Deserialize, Serialize};
-use starbase_utils::toml::{self, TomlTable, TomlValue};
+pub use starbase_utils::toml::{self, TomlTable, TomlValue};
 
 #[cfg(feature = "wasm")]
 #[host_fn]
@@ -22,7 +22,7 @@ fn new_table() -> TomlValue {
 }
 
 impl CargoToml {
-    fn save_field(&self, field: &str, config: &mut TomlValue) -> AnyResult<()> {
+    pub fn save_field(&self, field: &str, config: &mut TomlValue) -> AnyResult<()> {
         let Some(root) = config.as_table_mut() else {
             return Ok(());
         };
@@ -42,7 +42,9 @@ impl CargoToml {
                         .entry("package")
                         .or_insert_with(new_table);
 
-                    package["rust-version"] = TomlValue::String(version.into());
+                    if let Some(inner) = package.as_table_mut() {
+                        inner.insert("rust-version".into(), TomlValue::String(version.into()));
+                    }
                 }
             }
 
@@ -54,7 +56,9 @@ impl CargoToml {
                 {
                     let package = root.entry("package").or_insert_with(new_table);
 
-                    package["rust-version"] = TomlValue::String(version.into());
+                    if let Some(inner) = package.as_table_mut() {
+                        inner.insert("rust-version".into(), TomlValue::String(version.into()));
+                    }
                 }
             }
             _ => {}
@@ -83,7 +87,7 @@ impl CargoToml {
 impl CargoToml {
     /// Set the minimum supported rust version (MSRV). If the manifest is a workspace,
     /// update `workspace.package.rust-version`, otherwise update `package.rust-version`.
-    pub fn set_package_msrv(&mut self, version: impl AsRef<str>) -> AnyResult<bool> {
+    pub fn set_msrv(&mut self, version: impl AsRef<str>) -> AnyResult<bool> {
         let version = version.as_ref();
         let mut dirty = None;
 
@@ -91,11 +95,9 @@ impl CargoToml {
             return Ok(false);
         }
 
-        if let Some(package) = self
-            .workspace
-            .as_mut()
-            .and_then(|workspace| workspace.package.as_mut())
-        {
+        if let Some(workspace) = &mut self.workspace {
+            let package = workspace.package.get_or_insert_default();
+
             if package.rust_version.is_none()
                 || package
                     .rust_version
@@ -142,9 +144,19 @@ impl CargoToml {
 #[derive(Deserialize, Serialize)]
 pub struct CargoTomlInner(BaseCargoToml);
 
+impl CargoTomlInner {
+    pub fn new_package() -> Self {
+        Self(toml::parse("[package]\nname = \"\"").unwrap())
+    }
+
+    pub fn new_workspace() -> Self {
+        Self(toml::parse("[workspace]\nresolver = \"2\"").unwrap())
+    }
+}
+
 impl Default for CargoTomlInner {
     fn default() -> Self {
-        Self(toml::parse("").unwrap())
+        Self::new_package()
     }
 }
 

@@ -13,15 +13,33 @@ pub fn extend_project_graph(
 ) -> FnResult<Json<ExtendProjectGraphOutput>> {
     let mut output = ExtendProjectGraphOutput::default();
 
+    // First pass, gather all packages and their manifests
+    let mut packages = BTreeMap::default();
+
     for (id, source) in input.project_sources {
         let cargo_toml_path = input.context.workspace_root.join(source).join("Cargo.toml");
+
+        if cargo_toml_path.exists() {
+            let manifest = CargoToml::load(cargo_toml_path.clone())?;
+
+            if let Some(package) = &manifest.package {
+                packages.insert(package.name().to_owned(), (id, manifest));
+            }
+        }
+    }
+
+    // Second pass, extract packages and their relationships
+    for (id, manifest) in packages.values() {
         let mut project_output = ExtendProjectOutput::default();
 
         let mut extract_implicit_deps =
             |package_deps: &DepsSet, scope: DependencyScope| -> AnyResult<()> {
                 for (dep_name, dep) in package_deps {
-                    // Only inherit if the dependency is using the local `path = "..."` syntax
-                    if dep.detail().is_some_and(|det| det.path.is_some()) {
+                    // Only inherit if the dependency is using the local `path = "..."` syntax,
+                    // and the package name exists in our gathered map
+                    if dep.detail().is_some_and(|det| det.path.is_some())
+                        && packages.contains_key(dep_name)
+                    {
                         project_output.dependencies.push(ProjectDependency {
                             id: dep_name.into(),
                             scope,
@@ -33,21 +51,17 @@ pub fn extend_project_graph(
                 Ok(())
             };
 
-        if cargo_toml_path.exists() {
-            let cargo = CargoToml::load(cargo_toml_path.clone())?;
+        if let Some(package) = &manifest.package {
+            project_output.alias = Some(package.name.clone());
 
-            if let Some(package) = &cargo.package {
-                project_output.alias = Some(package.name.clone());
+            extract_implicit_deps(&manifest.dependencies, DependencyScope::Production)?;
+            extract_implicit_deps(&manifest.dev_dependencies, DependencyScope::Development)?;
+            extract_implicit_deps(&manifest.build_dependencies, DependencyScope::Build)?;
 
-                extract_implicit_deps(&cargo.dependencies, DependencyScope::Production)?;
-                extract_implicit_deps(&cargo.dev_dependencies, DependencyScope::Development)?;
-                extract_implicit_deps(&cargo.build_dependencies, DependencyScope::Build)?;
+            output.extended_projects.insert(id.into(), project_output);
 
-                output.extended_projects.insert(id, project_output);
-
-                if let Some(file) = cargo_toml_path.virtual_path() {
-                    output.input_files.push(file);
-                }
+            if let Some(file) = manifest.path.virtual_path() {
+                output.input_files.push(file);
             }
         }
     }
