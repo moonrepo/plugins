@@ -166,6 +166,7 @@ mod rust_toolchain_tier2 {
         async fn prefixes_with_cargo_if_a_cargo_bin() {
             let sandbox = create_empty_moon_sandbox();
             sandbox.create_file(".home/.cargo/bin/cargo-nextest", "");
+            sandbox.create_file(".home/.cargo/bin/cargo-nextest.exe", "");
 
             let plugin = sandbox.create_toolchain("rust").await;
 
@@ -204,6 +205,7 @@ mod rust_toolchain_tier2 {
         async fn doesnt_prefix_with_cargo_if_a_global_bin() {
             let sandbox = create_empty_moon_sandbox();
             sandbox.create_file(".home/.cargo/bin/nextest", "");
+            sandbox.create_file(".home/.cargo/bin/nextest.exe", "");
 
             let plugin = sandbox.create_toolchain("rust").await;
 
@@ -224,6 +226,7 @@ mod rust_toolchain_tier2 {
         async fn doesnt_prefix_if_already_rust_or_cargo() {
             let sandbox = create_empty_moon_sandbox();
             sandbox.create_file(".home/.cargo/bin/cargo-nextest", "");
+            sandbox.create_file(".home/.cargo/bin/cargo-nextest.exe", "");
 
             let plugin = sandbox.create_toolchain("rust").await;
 
