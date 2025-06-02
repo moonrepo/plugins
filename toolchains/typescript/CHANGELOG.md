@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Support new toolchain APIs.
+
+#### ⚙️ Internal
+
+- Updated dependencies.
+
 ## 0.1.4
 
 #### ⚙️ Internal

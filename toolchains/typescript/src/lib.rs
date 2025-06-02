@@ -4,11 +4,13 @@ pub mod tsconfig_json;
 #[cfg(feature = "wasm")]
 mod context;
 #[cfg(feature = "wasm")]
-mod moon;
+mod tier1;
 #[cfg(feature = "wasm")]
-mod run_task;
+mod tier1_sync;
 #[cfg(feature = "wasm")]
-mod sync_project;
+mod tier2;
 
 #[cfg(feature = "wasm")]
-pub use moon::*;
+pub use tier1::*;
+#[cfg(feature = "wasm")]
+pub use tier2::*;

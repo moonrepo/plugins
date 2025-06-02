@@ -1,0 +1,38 @@
+[package]
+name = "rust_toolchain"
+version = "0.0.1"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[package.metadata.release]
+pre-release-replacements = [
+    { file = "./CHANGELOG.md", search = "Unreleased", replace = "{{version}}" },
+]
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+rust_tool = { path = "../../tools/rust", default-features = false }
+cargo-lock = "10.1.0"
+cargo_toml = "0.22.1"
+extism-pdk = { workspace = true }
+moon_config = { workspace = true }
+moon_pdk = { workspace = true, features = ["schematic"] }
+moon_pdk_api = { workspace = true }
+rustc-hash = { workspace = true }
+schematic = { workspace = true, features = ["config"] }
+semver = { workspace = true }
+serde = { workspace = true }
+starbase_utils = { workspace = true, features = ["editor-config", "toml"] }
+
+[dev-dependencies]
+moon_pdk_test_utils = { workspace = true }
+serde_json = { workspace = true }
+starbase_sandbox = { workspace = true }
+tokio = { workspace = true }
+
+[features]
+default = ["wasm"]
+wasm = ["rust_tool/wasm"]

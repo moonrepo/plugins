@@ -1,0 +1,9 @@
+---
+source: toolchains/typescript/tests/tier1_sync_test.rs
+expression: "fs::read_file(sandbox.path().join(\"no-options/tsconfig.json\")).unwrap()"
+---
+{
+  "compilerOptions": {
+    "outDir": "../.moon/cache/types/no-options"
+  }
+}

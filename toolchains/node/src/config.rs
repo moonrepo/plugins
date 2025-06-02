@@ -2,7 +2,7 @@ use moon_pdk_api::config_struct;
 use schematic::Schematic;
 
 config_struct!(
-    /// Configures and enables the Node.js platform.
+    /// Configures and enables the Node.js toolchain.
     /// Docs: https://moonrepo.dev/docs/config/toolchain#node
     #[derive(Default, Schematic)]
     pub struct NodeConfig {
