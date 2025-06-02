@@ -1,6 +1,5 @@
 use extism_pdk::*;
 use proto_pdk::*;
-use std::path::PathBuf;
 
 #[host_fn]
 extern "ExtismHost" {
@@ -10,22 +9,11 @@ extern "ExtismHost" {
 
 fn get_home_env(key: &str) -> Result<Option<VirtualPath>, Error> {
     match get_host_env_var(key)? {
-        Some(value) => {
-            if value.is_empty() {
-                return Ok(None);
-            }
-
-            let path = PathBuf::from(value);
-
-            // Variable returns a real path, so convert to virtual
-            let path = if path.is_absolute() {
-                into_virtual_path(path)?
-            } else {
-                into_virtual_path("/cwd")?.join(path)
-            };
-
-            Ok(Some(path))
-        }
+        Some(value) => Ok(if value.is_empty() {
+            None
+        } else {
+            into_virtual_path(value).ok()
+        }),
         None => Ok(None),
     }
 }

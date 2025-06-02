@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed Cargo/Rustup home directory detection.
+
 ## 0.13.3
 
 #### ⚙️ Internal
