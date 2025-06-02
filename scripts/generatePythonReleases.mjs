@@ -4,7 +4,7 @@ const OPT_LEVELS = ["pgo+lto", "pgo", "lto", "lto+static", "noopt", "noopt+stati
 const GH_TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
 
 const response = await fetch(
-  "https://api.github.com/repos/astral-sh/python-build-standalone/releases?per_page=100",
+  "https://api.github.com/repos/astral-sh/python-build-standalone/releases?per_page=5",
   {
     headers: {
       Accept: "application/vnd.github+json",
@@ -12,8 +12,21 @@ const response = await fetch(
     },
   },
 );
-const releases = await response.json();
-const data = {};
+
+// Load the existing dataset so we can reduce the amount of API calls required
+const data = JSON.parse(fs.readFileSync("tools/python/releases.json", "utf8"));
+
+// The endpoint sometimes returns HTML, so we can't always parse it as JSON!
+const releases = [];
+const text = await response.text();
+
+if (text.startsWith("[")) {
+  releases.push(...JSON.parse(text));
+} else {
+  console.log(text);
+
+  throw new Error("GitHub API returned a non-JSON response!");
+}
 
 function mapTriple(triple) {
   switch (triple) {
