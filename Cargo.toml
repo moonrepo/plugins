@@ -37,8 +37,8 @@ moon_project = { path = "../../moon/crates/project" }
 moon_target = { path = "../../moon/crates/target" }
 
 # proto
-proto_pdk = { version = "0.28.9" }            # , path = "../../proto/crates/pdk" }
-proto_pdk_api = { version = "0.27.12" }       # , path = "../../proto/crates/pdk-api" }
+proto_pdk = { version = "0.28.10" }           # , path = "../../proto/crates/pdk" }
+proto_pdk_api = { version = "0.27.13" }       # , path = "../../proto/crates/pdk-api" }
 proto_pdk_test_utils = { version = "0.37.1" } # , path = "../../proto/crates/pdk-test-utils" }
 
 # JavaScript

@@ -3,19 +3,25 @@ use crate::config::RustToolchainConfig;
 use crate::toolchain_toml::ToolchainToml;
 use extism_pdk::*;
 use moon_config::BinEntry;
-use moon_pdk::{get_host_environment, parse_toolchain_config};
+use moon_pdk::{get_host_environment, parse_toolchain_config_schema};
 use moon_pdk_api::*;
 use starbase_utils::fs;
+
+fn create_command(bin: &str, args: Vec<&str>, cwd: &VirtualPath) -> ExecCommandInput {
+    let mut input = ExecCommandInput::new(bin, args);
+    input.working_dir = Some(cwd.to_owned());
+    input
+}
 
 #[plugin_fn]
 pub fn setup_environment(
     Json(input): Json<SetupEnvironmentInput>,
 ) -> FnResult<Json<SetupEnvironmentOutput>> {
-    let config = parse_toolchain_config::<RustToolchainConfig>(input.toolchain_config)?;
+    let config = parse_toolchain_config_schema::<RustToolchainConfig>(input.toolchain_config)?;
     let mut output = SetupEnvironmentOutput::default();
 
     // Sync `Cargo.toml` rust version
-    if config.add_msrv_constraint {
+    if config.add_msrv_constraint && config.version.is_some() {
         let (op, files) = Operation::track("add-msrv-constraint", || {
             sync_package_msrv(&config, &input.root)
         })?;
@@ -44,7 +50,8 @@ pub fn setup_environment(
         args.extend(config.components.iter().map(|c| c.as_str()));
 
         output.commands.push(
-            ExecCommand::new(ExecCommandInput::new("rustup", args)).cache("rustup-component-add"),
+            ExecCommand::new(create_command("rustup", args, &input.root))
+                .cache("rustup-component-add"),
         );
     }
 
@@ -54,7 +61,8 @@ pub fn setup_environment(
         args.extend(config.targets.iter().map(|c| c.as_str()));
 
         output.commands.push(
-            ExecCommand::new(ExecCommandInput::new("rustup", args)).cache("rustup-target-add"),
+            ExecCommand::new(create_command("rustup", args, &input.root))
+                .cache("rustup-target-add"),
         );
     }
 
@@ -67,9 +75,10 @@ pub fn setup_environment(
         };
 
         output.commands.push(
-            ExecCommand::new(ExecCommandInput::new(
+            ExecCommand::new(create_command(
                 "cargo",
-                ["install", &binstall_package],
+                vec!["install", &binstall_package],
+                &input.root,
             ))
             .cache("cargo-binstall"),
         );
@@ -100,7 +109,8 @@ pub fn setup_environment(
             args.extend(force_bins);
 
             output.commands.push(
-                ExecCommand::new(ExecCommandInput::new("cargo", args)).cache("cargo-bins-forced"),
+                ExecCommand::new(create_command("cargo", args, &input.root))
+                    .cache("cargo-bins-forced"),
             );
         }
 
@@ -108,9 +118,9 @@ pub fn setup_environment(
             let mut args = vec!["binstall", "--no-confirm", "--log-level", "info"];
             args.extend(non_force_bins);
 
-            output
-                .commands
-                .push(ExecCommand::new(ExecCommandInput::new("cargo", args)).cache("cargo-bins"));
+            output.commands.push(
+                ExecCommand::new(create_command("cargo", args, &input.root)).cache("cargo-bins"),
+            );
         }
     }
 
@@ -169,7 +179,9 @@ fn sync_toolchain_toml(
         contents.set_channel(version.to_string())?;
 
         if let Some(file) = contents.save()? {
-            changed_files.push(file);
+            if !changed_files.contains(&file) {
+                changed_files.push(file);
+            }
         }
     }
 

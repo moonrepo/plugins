@@ -1,11 +1,11 @@
 use moon_config::BinEntry;
 use moon_pdk_api::{UnresolvedVersionSpec, Version, config_struct};
-use schematic::Schematic;
+use schematic::Config;
 
 config_struct!(
     /// Configures and enables the Rust toolchain.
     /// Docs: https://moonrepo.dev/docs/config/toolchain#rust
-    #[derive(Default, Schematic)]
+    #[derive(Config)]
     pub struct RustToolchainConfig {
         /// When `version` is defined, syncs the version as a constraint to
         /// `Cargo.toml` under the `workspace.package.rust-version` or
@@ -13,7 +13,7 @@ config_struct!(
         pub add_msrv_constraint: bool,
 
         /// List of binaries to install into the environment using `cargo binstall`.
-        #[schema(nested)]
+        #[setting(nested)]
         pub bins: Vec<BinEntry>,
 
         /// The version of `cargo-binstall` to install. Defaults to "latest" if not defined.
@@ -33,17 +33,3 @@ config_struct!(
         pub version: Option<UnresolvedVersionSpec>,
     }
 );
-
-// impl Default for RustToolchainConfig {
-//     fn default() -> Self {
-//         Self {
-//             add_msrv_constraint: false,
-//             bins: vec![],
-//             binstall_version: None,
-//             components: vec![],
-//             sync_toolchain_config: false,
-//             targets: vec![],
-//             version: None,
-//         }
-//     }
-// }
