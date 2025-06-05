@@ -392,8 +392,10 @@ mod rust_toolchain_tier2 {
                 output.commands,
                 [
                     ExecCommand::new({
-                        let mut input =
-                            ExecCommandInput::new("cargo", ["install", "cargo-binstall"]);
+                        let mut input = ExecCommandInput::new(
+                            "cargo",
+                            ["install", "cargo-binstall", "--force"],
+                        );
                         input.working_dir = Some(plugin.plugin.to_virtual_path(sandbox.path()));
                         input
                     })
@@ -443,8 +445,10 @@ mod rust_toolchain_tier2 {
                 output.commands,
                 [
                     ExecCommand::new({
-                        let mut input =
-                            ExecCommandInput::new("cargo", ["install", "cargo-binstall"]);
+                        let mut input = ExecCommandInput::new(
+                            "cargo",
+                            ["install", "cargo-binstall", "--force"],
+                        );
                         input.working_dir = Some(plugin.plugin.to_virtual_path(sandbox.path()));
                         input
                     })
@@ -481,6 +485,92 @@ mod rust_toolchain_tier2 {
                     })
                     .cache("cargo-bins")
                 ]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn can_set_binstall_version() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "binstallVersion": "1.2.3",
+                        "bins": ["cargo-nextest"]
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.commands,
+                [
+                    ExecCommand::new({
+                        let mut input = ExecCommandInput::new(
+                            "cargo",
+                            ["install", "cargo-binstall@1.2.3", "--force"],
+                        );
+                        input.working_dir = Some(plugin.plugin.to_virtual_path(sandbox.path()));
+                        input
+                    })
+                    .cache("cargo-binstall"),
+                    ExecCommand::new({
+                        let mut input = ExecCommandInput::new(
+                            "cargo",
+                            [
+                                "binstall",
+                                "--no-confirm",
+                                "--log-level",
+                                "info",
+                                "cargo-nextest",
+                            ],
+                        );
+                        input.working_dir = Some(plugin.plugin.to_virtual_path(sandbox.path()));
+                        input
+                    })
+                    .cache("cargo-bins")
+                ]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn doesnt_install_binstall_if_a_cargo_bin_exists() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(".cargo-bins/cargo-binstall", "");
+            sandbox.create_file(".cargo-bins/cargo-binstall.exe", "");
+
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    globals_dir: Some(VirtualPath::Real(sandbox.path().join(".cargo-bins"))),
+                    toolchain_config: json!({
+                        "bins": ["cargo-nextest"]
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.commands,
+                [ExecCommand::new({
+                    let mut input = ExecCommandInput::new(
+                        "cargo",
+                        [
+                            "binstall",
+                            "--no-confirm",
+                            "--log-level",
+                            "info",
+                            "cargo-nextest",
+                        ],
+                    );
+                    input.working_dir = Some(plugin.plugin.to_virtual_path(sandbox.path()));
+                    input
+                })
+                .cache("cargo-bins")]
             );
         }
     }

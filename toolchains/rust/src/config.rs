@@ -16,7 +16,8 @@ config_struct!(
         #[setting(nested)]
         pub bins: Vec<BinEntry>,
 
-        /// The version of `cargo-binstall` to install. Defaults to "latest" if not defined.
+        /// The fully-qualified version of `cargo-binstall` to install.
+        /// Defaults to "latest" if not defined.
         pub binstall_version: Option<Version>,
 
         /// List of Rust components to automatically install with `rustup`.

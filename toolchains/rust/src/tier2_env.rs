@@ -7,10 +7,11 @@ use moon_pdk::{get_host_environment, parse_toolchain_config_schema};
 use moon_pdk_api::*;
 use starbase_utils::fs;
 
-fn create_command(bin: &str, args: Vec<&str>, cwd: &VirtualPath) -> ExecCommandInput {
+fn create_command(bin: &str, args: Vec<&str>, cwd: &VirtualPath) -> ExecCommand {
     let mut input = ExecCommandInput::new(bin, args);
     input.working_dir = Some(cwd.to_owned());
-    input
+
+    ExecCommand::new(input)
 }
 
 #[plugin_fn]
@@ -49,10 +50,9 @@ pub fn setup_environment(
         let mut args = vec!["component", "add"];
         args.extend(config.components.iter().map(|c| c.as_str()));
 
-        output.commands.push(
-            ExecCommand::new(create_command("rustup", args, &input.root))
-                .cache("rustup-component-add"),
-        );
+        output
+            .commands
+            .push(create_command("rustup", args, &input.root).cache("rustup-component-add"));
     }
 
     // Install targets
@@ -60,30 +60,36 @@ pub fn setup_environment(
         let mut args = vec!["target", "add"];
         args.extend(config.targets.iter().map(|c| c.as_str()));
 
-        output.commands.push(
-            ExecCommand::new(create_command("rustup", args, &input.root))
-                .cache("rustup-target-add"),
-        );
+        output
+            .commands
+            .push(create_command("rustup", args, &input.root).cache("rustup-target-add"));
     }
 
     // Install binaries
     if !config.bins.is_empty() {
-        let binstall_package = if let Some(version) = &config.binstall_version {
-            format!("cargo-binstall@{version}")
-        } else {
-            "cargo-binstall".into()
-        };
-
-        output.commands.push(
-            ExecCommand::new(create_command(
-                "cargo",
-                vec!["install", &binstall_package],
-                &input.root,
-            ))
-            .cache("cargo-binstall"),
-        );
-
         let env = get_host_environment()?;
+
+        // Only install if we can't find the binary
+        if input
+            .globals_dir
+            .is_none_or(|dir| !dir.join(env.os.get_exe_name("cargo-binstall")).exists())
+        {
+            let binstall_package = if let Some(version) = &config.binstall_version {
+                format!("cargo-binstall@{version}")
+            } else {
+                "cargo-binstall".into()
+            };
+
+            output.commands.push(
+                create_command(
+                    "cargo",
+                    vec!["install", &binstall_package, "--force"],
+                    &input.root,
+                )
+                .cache("cargo-binstall"),
+            );
+        }
+
         let mut force_bins = vec![];
         let mut non_force_bins = vec![];
 
@@ -108,19 +114,18 @@ pub fn setup_environment(
             let mut args = vec!["binstall", "--no-confirm", "--log-level", "info", "--force"];
             args.extend(force_bins);
 
-            output.commands.push(
-                ExecCommand::new(create_command("cargo", args, &input.root))
-                    .cache("cargo-bins-forced"),
-            );
+            output
+                .commands
+                .push(create_command("cargo", args, &input.root).cache("cargo-bins-forced"));
         }
 
         if !non_force_bins.is_empty() {
             let mut args = vec!["binstall", "--no-confirm", "--log-level", "info"];
             args.extend(non_force_bins);
 
-            output.commands.push(
-                ExecCommand::new(create_command("cargo", args, &input.root)).cache("cargo-bins"),
-            );
+            output
+                .commands
+                .push(create_command("cargo", args, &input.root).cache("cargo-bins"));
         }
     }
 

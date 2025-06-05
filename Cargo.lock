@@ -2526,9 +2526,9 @@ dependencies = [
 
 [[package]]
 name = "moon_config"
-version = "0.1.4"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ccd63f89f1166aed7d453038f07d2b31b7cfa74d84b15d671d760fbe91928095"
+checksum = "4264077585662e8eaeb24e94aa10075c236ca7470b22e4fb880d4be79b5a8c1a"
 dependencies = [
  "indexmap",
  "miette 7.6.0",
@@ -2591,9 +2591,9 @@ dependencies = [
 
 [[package]]
 name = "moon_pdk_api"
-version = "0.2.0"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1c6c7a5916002f71faf928e477e6572169e723a725949d8e1f272d45cf9005d5"
+checksum = "bc89d3c50738ab90405759280f2ad9f1465ba8a3020122ca566475a3ec5474b4"
 dependencies = [
  "derive_setters",
  "moon_common",
@@ -2610,9 +2610,9 @@ dependencies = [
 
 [[package]]
 name = "moon_pdk_test_utils"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a96c3483b4b9e61462c1788fa55f8f95019e36d5aac2cf2d97989358c2af794b"
+checksum = "4a3bd82d5963cae1df219051f8feb9802b1598fce8ea5f0f9a268484ef7a5f61"
 dependencies = [
  "extism",
  "moon_pdk_api",
@@ -3822,9 +3822,9 @@ dependencies = [
 
 [[package]]
 name = "schematic"
-version = "0.18.5"
+version = "0.18.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1bbdefb8813c5c5905cc2af1eebd1f89ec89cd397745b98055a10c0883df92d8"
+checksum = "a2c0e1ae5bc89b759800c421bafff0d2e455d62dcd840ab7f18ee9e0137b32cc"
 dependencies = [
  "garde",
  "indexmap",
@@ -3844,9 +3844,9 @@ dependencies = [
 
 [[package]]
 name = "schematic_macros"
-version = "0.18.4"
+version = "0.18.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b57b72efd10abf9fa6fc064b3a0616f7b588321c914fe7da6e3a94ecc266e36"
+checksum = "d8b6301a0ecdc83813fa711755d58c942226e408eb8fdc075ca929563e07b593"
 dependencies = [
  "convert_case",
  "darling",
@@ -3857,9 +3857,9 @@ dependencies = [
 
 [[package]]
 name = "schematic_types"
-version = "0.10.2"
+version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b57d406829eeb15dcdb5e8b450310458cfe337f298f804e2e5c0d2c59eb764e4"
+checksum = "df2deb654ef5193a523af751173ef6e93e728db875ca7086b085d92196beda9a"
 dependencies = [
  "indexmap",
  "rpkl",

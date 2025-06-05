@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed `cargo-binstall` failing in CI when the binary already exists.
+
 ## 0.1.1
 
 #### 🐞 Fixes
