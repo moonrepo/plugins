@@ -6,7 +6,7 @@ mod python_tool {
     generate_resolve_versions_tests!("python-test", {
         "2.3" => "2.3.7",
         "3.10.1" => "3.10.1",
-        "3.10" => "3.10.17",
+        "3.10" => "3.10.18",
         // "3" => "3.12.4",
     });
 
