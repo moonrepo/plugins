@@ -1,6 +1,6 @@
-$schema: "https://moonrepo.dev/schemas/toolchain.json"
+$schema: "./cache/schemas/toolchain.json"
 
-rust:
+unstable_rust:
   version: "1.87.0"
   bins: ["cargo-nextest"]
   components: ["clippy", "rustfmt"]
