@@ -83,12 +83,28 @@ fn create_script(
         .into());
     }
 
+    let mut shell = "bash".to_owned();
+
+    // Extract the shell to use from the shebang
+    if let Ok(script_contents) = fs::read_file(virtual_script_path) {
+        if let Some(line) = script_contents.lines().next() {
+            if line.starts_with("#!") {
+                let mut parts = line.trim().split(' ');
+
+                if let Some(last) = parts.next_back() {
+                    shell = last.to_owned();
+                }
+            }
+        }
+    }
+
     let mut input = ExecCommandInput {
-        command: "bash".into(),
-        working_dir: tool_dir.cloned(),
+        command: shell,
+        cwd: tool_dir.cloned(),
         ..Default::default()
     };
 
+    // Resolve the real path since this is executed in the console
     input.args.push(
         match virtual_script_path.strip_prefix("/proto/backends") {
             Ok(suffix) => backend_root()?.join(suffix),
