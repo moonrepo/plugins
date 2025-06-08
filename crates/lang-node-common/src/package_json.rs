@@ -7,7 +7,7 @@ pub fn extract_version_from_text(content: &str) -> Option<&str> {
     for line in content.lines() {
         let line = line.trim();
 
-        if line.is_empty() || line.starts_with('#') {
+        if line.is_empty() || line.starts_with('#') || line.starts_with("//") {
             continue;
         } else {
             return Some(line);

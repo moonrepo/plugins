@@ -1,6 +1,7 @@
 use extism_pdk::*;
 use proto_pdk::*;
 use std::collections::HashMap;
+use toml::Value;
 
 #[host_fn]
 extern "ExtismHost" {
@@ -17,6 +18,51 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
         self_upgrade_commands: vec!["self upgrade".into()],
         ..RegisterToolOutput::default()
     }))
+}
+
+#[plugin_fn]
+pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
+    Ok(Json(DetectVersionOutput {
+        files: vec!["uv.toml".into(), "pyproject.toml".into()],
+        ignore: vec![],
+    }))
+}
+
+#[plugin_fn]
+pub fn parse_version_file(
+    Json(input): Json<ParseVersionFileInput>,
+) -> FnResult<Json<ParseVersionFileOutput>> {
+    let mut version = None;
+
+    // https://peps.python.org/pep-0440/#version-specifiers
+    fn parse_pep(version: &str) -> AnyResult<UnresolvedVersionSpec> {
+        Ok(UnresolvedVersionSpec::parse(
+            version
+                .replace("~=", "~")
+                .replace("===", "^")
+                .replace("==", "="),
+        )?)
+    }
+
+    if input.file == "uv.toml" {
+        if let Ok(uv_toml) = toml::from_str::<Value>(&input.content) {
+            if let Some(Value::String(constraint)) = uv_toml.get("required-version") {
+                version = Some(parse_pep(constraint)?);
+            }
+        }
+    } else if input.file == "pyproject.toml" {
+        if let Ok(project_toml) = toml::from_str::<Value>(&input.content) {
+            if let Some(tool_field) = project_toml.get("tool") {
+                if let Some(uv_field) = tool_field.get("uv") {
+                    if let Some(Value::String(constraint)) = uv_field.get("required-version") {
+                        version = Some(parse_pep(constraint)?);
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(Json(ParseVersionFileOutput { version }))
 }
 
 #[plugin_fn]
