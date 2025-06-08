@@ -14,7 +14,7 @@ pre-release-replacements = [
 crate-type = ["cdylib", "lib"]
 
 [dependencies]
-lang_node_common = { path = "../../crates/lang-node-common" }
+lang_javascript_common = { path = "../../crates/lang-javascript-common" }
 extism-pdk = { workspace = true }
 nodejs_package_json = { workspace = true }
 proto_pdk = { workspace = true }

@@ -1,6 +1,6 @@
 use crate::config::BunPluginConfig;
 use extism_pdk::*;
-use lang_node_common::{
+use lang_javascript_common::{
     extract_engine_version, extract_package_manager_version, extract_version_from_text,
     extract_volta_version,
 };

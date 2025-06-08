@@ -2,7 +2,7 @@ use crate::config::NodeDepmanPluginConfig;
 use crate::npm_registry::parse_registry_response;
 use crate::package_manager::PackageManager;
 use extism_pdk::*;
-use lang_node_common::{
+use lang_javascript_common::{
     NodeDistVersion, extract_engine_version, extract_package_manager_version, extract_volta_version,
 };
 use nodejs_package_json::PackageJson;

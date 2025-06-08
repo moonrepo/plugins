@@ -240,7 +240,7 @@ name = "bun_tool"
 version = "0.15.2"
 dependencies = [
  "extism-pdk",
- "lang_node_common",
+ "lang_javascript_common",
  "nodejs_package_json",
  "proto_pdk",
  "proto_pdk_test_utils 0.37.2",
@@ -2178,7 +2178,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "lang_node_common"
+name = "lang_javascript_common"
 version = "0.1.0"
 dependencies = [
  "nodejs_package_json",
@@ -2699,7 +2699,7 @@ name = "node_depman_tool"
 version = "0.15.2"
 dependencies = [
  "extism-pdk",
- "lang_node_common",
+ "lang_javascript_common",
  "nodejs_package_json",
  "proto_pdk",
  "proto_pdk_api 0.27.14",
@@ -2717,7 +2717,7 @@ name = "node_tool"
 version = "0.16.4"
 dependencies = [
  "extism-pdk",
- "lang_node_common",
+ "lang_javascript_common",
  "nodejs_package_json",
  "proto_pdk",
  "proto_pdk_test_utils 0.37.2",

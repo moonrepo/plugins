@@ -68,8 +68,8 @@ pub fn extract_volta_version(
             if extends_path.exists() && extends_path.is_file() {
                 let content = fs::read_to_string(&extends_path)?;
 
-                if let Ok(package_json) = serde_json::from_str::<PackageJson>(&content) {
-                    return extract_volta_version(&package_json, &extends_path, key);
+                if let Ok(other_package_json) = serde_json::from_str::<PackageJson>(&content) {
+                    return extract_volta_version(&other_package_json, &extends_path, key);
                 }
             }
         }

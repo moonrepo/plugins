@@ -1,10 +1,12 @@
 use crate::config::NodePluginConfig;
 use extism_pdk::*;
-use lang_node_common::{extract_engine_version, extract_version_from_text, extract_volta_version};
+use lang_javascript_common::{
+    NodeDistLTS, NodeDistVersion, extract_engine_version, extract_version_from_text,
+    extract_volta_version,
+};
 use nodejs_package_json::PackageJson;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
-use serde::Deserialize;
 use std::collections::HashMap;
 
 #[host_fn]
@@ -61,21 +63,6 @@ pub fn parse_version_file(
     }
 
     Ok(Json(ParseVersionFileOutput { version }))
-}
-
-#[derive(Deserialize)]
-#[serde(untagged)]
-pub enum NodeDistLTS {
-    Name(String),
-    State(bool),
-}
-
-#[derive(Deserialize)]
-pub struct NodeDistVersion {
-    pub files: Vec<String>,
-    pub lts: NodeDistLTS,
-    pub npm: Option<String>, // No v prefix
-    pub version: String,     // With v prefix
 }
 
 #[plugin_fn]
