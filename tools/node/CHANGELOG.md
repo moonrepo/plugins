@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added support for `volta.extends` when detecting a version.
+
 ## 0.16.4
 
 #### 🚀 Updates

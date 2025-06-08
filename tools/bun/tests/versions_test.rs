@@ -30,4 +30,118 @@ mod bun_tool {
         assert!(output.aliases.contains_key("latest"));
         assert_eq!(output.aliases.get("latest"), output.latest.as_ref());
     }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn parses_engines() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("bun-test").await;
+
+        assert_eq!(
+            plugin
+                .parse_version_file(ParseVersionFileInput {
+                    content: r#"{ "engines": { "bun": ">=1" } }"#.into(),
+                    file: "package.json".into(),
+                    ..Default::default()
+                })
+                .await,
+            ParseVersionFileOutput {
+                version: Some(UnresolvedVersionSpec::parse(">=1").unwrap()),
+            }
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn parses_volta() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("bun-test").await;
+
+        assert_eq!(
+            plugin
+                .parse_version_file(ParseVersionFileInput {
+                    content: r#"{ "volta": { "bun": "1.20.2" } }"#.into(),
+                    file: "package.json".into(),
+                    ..Default::default()
+                })
+                .await,
+            ParseVersionFileOutput {
+                version: Some(UnresolvedVersionSpec::parse("1.20.2").unwrap()),
+            }
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn parses_bumrc() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("bun-test").await;
+
+        assert_eq!(
+            plugin
+                .parse_version_file(ParseVersionFileInput {
+                    content: "~2".into(),
+                    file: ".bumrc".into(),
+                    ..Default::default()
+                })
+                .await,
+            ParseVersionFileOutput {
+                version: Some(UnresolvedVersionSpec::parse("~2").unwrap()),
+            }
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn parses_bumrc_with_comment() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("bun-test").await;
+
+        assert_eq!(
+            plugin
+                .parse_version_file(ParseVersionFileInput {
+                    content: "# comment\n^2.1".into(),
+                    file: ".bumrc".into(),
+                    ..Default::default()
+                })
+                .await,
+            ParseVersionFileOutput {
+                version: Some(UnresolvedVersionSpec::parse("^2.1").unwrap()),
+            }
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn parses_bun_version() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("bun-test").await;
+
+        assert_eq!(
+            plugin
+                .parse_version_file(ParseVersionFileInput {
+                    content: "~2".into(),
+                    file: ".bun-version".into(),
+                    ..Default::default()
+                })
+                .await,
+            ParseVersionFileOutput {
+                version: Some(UnresolvedVersionSpec::parse("~2").unwrap()),
+            }
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn parses_bun_version_with_comment() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("bun-test").await;
+
+        assert_eq!(
+            plugin
+                .parse_version_file(ParseVersionFileInput {
+                    content: "# comment\n^2.1".into(),
+                    file: ".bun-version".into(),
+                    ..Default::default()
+                })
+                .await,
+            ParseVersionFileOutput {
+                version: Some(UnresolvedVersionSpec::parse("^2.1").unwrap()),
+            }
+        );
+    }
 }

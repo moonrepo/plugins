@@ -2,13 +2,13 @@ use crate::config::NodeDepmanPluginConfig;
 use crate::npm_registry::parse_registry_response;
 use crate::package_manager::PackageManager;
 use extism_pdk::*;
-use lang_node_common::{NodeDistVersion, VoltaField};
+use lang_node_common::{
+    NodeDistVersion, extract_engine_version, extract_package_manager_version, extract_volta_version,
+};
 use nodejs_package_json::PackageJson;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
 use std::collections::HashMap;
-use std::fs;
-use std::path::Path;
 
 #[host_fn]
 extern "ExtismHost" {
@@ -45,43 +45,6 @@ pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
     }))
 }
 
-fn parse_volta_version_from_package(
-    manager_name: &str,
-    package_path: &Path,
-    package_json: &PackageJson,
-) -> AnyResult<Option<UnresolvedVersionSpec>> {
-    if let Some(volta_raw) = package_json.other_fields.get("volta") {
-        let volta: VoltaField = json::from_value(volta_raw.to_owned())?;
-
-        if let Some(volta_tool_version) = match manager_name {
-            "npm" => volta.npm,
-            "pnpm" => volta.pnpm,
-            "yarn" => volta.yarn,
-            _ => None,
-        } {
-            return Ok(Some(UnresolvedVersionSpec::parse(volta_tool_version)?));
-        }
-
-        if let Some(extends_from) = volta.extends {
-            let extends_path = package_path.parent().unwrap().join(extends_from);
-
-            if extends_path.exists() && extends_path.is_file() {
-                let content = fs::read_to_string(&extends_path)?;
-
-                if let Ok(package_json) = json::from_str::<PackageJson>(&content) {
-                    return parse_volta_version_from_package(
-                        manager_name,
-                        &extends_path,
-                        &package_json,
-                    );
-                }
-            }
-        }
-    }
-
-    Ok(None)
-}
-
 #[plugin_fn]
 pub fn parse_version_file(
     Json(input): Json<ParseVersionFileInput>,
@@ -92,39 +55,22 @@ pub fn parse_version_file(
         if let Ok(package_json) = json::from_str::<PackageJson>(&input.content) {
             let manager_name = PackageManager::detect()?.to_string();
 
-            if let Some(pm) = &package_json.package_manager {
-                let mut parts = pm.split('@');
-                let name = parts.next().unwrap_or_default();
+            if let Some(constraint) = extract_package_manager_version(&package_json, &manager_name)
+            {
+                version = Some(UnresolvedVersionSpec::parse(constraint)?);
+            }
 
-                if name == manager_name {
-                    let value = if let Some(value) = parts.next() {
-                        // Remove corepack build metadata hash
-                        if let Some(index) = value.find('+') {
-                            &value[0..index]
-                        } else {
-                            value
-                        }
-                    } else {
-                        "latest"
-                    };
-
-                    version = Some(UnresolvedVersionSpec::parse(value)?);
+            if version.is_none() {
+                if let Some(constraint) =
+                    extract_volta_version(&package_json, &input.path, &manager_name)?
+                {
+                    version = Some(UnresolvedVersionSpec::parse(constraint)?);
                 }
             }
 
             if version.is_none() {
-                version = parse_volta_version_from_package(
-                    &manager_name,
-                    input.path.any_path(),
-                    &package_json,
-                )?;
-            }
-
-            if version.is_none() {
-                if let Some(engines) = package_json.engines {
-                    if let Some(constraint) = engines.get(&manager_name) {
-                        version = Some(UnresolvedVersionSpec::parse(constraint)?);
-                    }
+                if let Some(constraint) = extract_engine_version(&package_json, &manager_name) {
+                    version = Some(UnresolvedVersionSpec::parse(constraint)?);
                 }
             }
         }

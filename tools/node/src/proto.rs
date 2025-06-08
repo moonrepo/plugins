@@ -1,9 +1,10 @@
 use crate::config::NodePluginConfig;
 use extism_pdk::*;
-use lang_node_common::{NodeDistLTS, NodeDistVersion, VoltaField};
+use lang_node_common::{extract_engine_version, extract_version_from_text, extract_volta_version};
 use nodejs_package_json::PackageJson;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
+use serde::Deserialize;
 use std::collections::HashMap;
 
 #[host_fn]
@@ -44,37 +45,37 @@ pub fn parse_version_file(
     let mut version = None;
 
     if input.file == "package.json" {
-        if let Ok(mut package_json) = json::from_str::<PackageJson>(&input.content) {
-            if let Some(engines) = package_json.engines {
-                if let Some(constraint) = engines.get("node") {
-                    version = Some(UnresolvedVersionSpec::parse(constraint)?);
-                }
+        if let Ok(package_json) = json::from_str::<PackageJson>(&input.content) {
+            if let Some(constraint) = extract_volta_version(&package_json, &input.path, "node")? {
+                version = Some(UnresolvedVersionSpec::parse(constraint)?);
             }
 
             if version.is_none() {
-                if let Some(volta_raw) = package_json.other_fields.remove("volta") {
-                    let volta: VoltaField = json::from_value(volta_raw)?;
-
-                    if let Some(volta_node_version) = volta.node {
-                        version = Some(UnresolvedVersionSpec::parse(volta_node_version)?);
-                    }
+                if let Some(constraint) = extract_engine_version(&package_json, "node") {
+                    version = Some(UnresolvedVersionSpec::parse(constraint)?);
                 }
             }
         }
-    } else {
-        for line in input.content.lines() {
-            let line = line.trim();
-
-            if line.is_empty() || line.starts_with('#') {
-                continue;
-            } else {
-                version = Some(UnresolvedVersionSpec::parse(line)?);
-                break;
-            }
-        }
+    } else if let Some(constraint) = extract_version_from_text(&input.content) {
+        version = Some(UnresolvedVersionSpec::parse(constraint)?);
     }
 
     Ok(Json(ParseVersionFileOutput { version }))
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+pub enum NodeDistLTS {
+    Name(String),
+    State(bool),
+}
+
+#[derive(Deserialize)]
+pub struct NodeDistVersion {
+    pub files: Vec<String>,
+    pub lts: NodeDistLTS,
+    pub npm: Option<String>, // No v prefix
+    pub version: String,     // With v prefix
 }
 
 #[plugin_fn]

@@ -6,4 +6,7 @@ license = "MIT"
 publish = false
 
 [dependencies]
+nodejs_package_json = { workspace = true }
+proto_pdk_api = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
