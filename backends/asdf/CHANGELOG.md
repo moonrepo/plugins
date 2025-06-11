@@ -4,6 +4,7 @@
 
 #### 🚀 Updates
 
+- Updated the backend ID/path to `asdf/<tool>` instead of `asdf-<tool>`.
 - Updated scripts to extract the command/shell to execute with from its shebang.
 
 #### ⚙️ Internal
