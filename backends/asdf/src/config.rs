@@ -30,13 +30,14 @@ impl AsdfPluginConfig {
     }
 
     pub fn get_backend_id(&self) -> AnyResult<String> {
-        Ok(format!("asdf-{}", self.get_shortname()?))
+        self.get_shortname()
     }
 
     pub fn get_backend_path(&self) -> AnyResult<PathBuf> {
-        let backend_id = self.get_backend_id()?;
-
-        Ok(PathBuf::from(format!("/proto/backends/{backend_id}")))
+        Ok(PathBuf::from(format!(
+            "/proto/backends/asdf/{}",
+            self.get_backend_id()?
+        )))
     }
 
     pub fn get_script_path(&self, script: &str) -> AnyResult<PathBuf> {

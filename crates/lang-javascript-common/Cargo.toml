@@ -1,0 +1,12 @@
+[package]
+name = "lang_javascript_common"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[dependencies]
+nodejs_package_json = { workspace = true }
+proto_pdk_api = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }

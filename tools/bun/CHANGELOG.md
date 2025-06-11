@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added detection sources: `.bumrc`, `.bun-version`, `package.json` (volta, engines, packageManager)
+
 ## 0.15.2
 
 #### ⚙️ Internal

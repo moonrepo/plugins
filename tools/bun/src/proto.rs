@@ -1,5 +1,10 @@
 use crate::config::BunPluginConfig;
 use extism_pdk::*;
+use lang_javascript_common::{
+    extract_engine_version, extract_package_manager_version, extract_version_from_text,
+    extract_volta_version,
+};
+use nodejs_package_json::PackageJson;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
 use std::collections::HashMap;
@@ -22,6 +27,49 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
         self_upgrade_commands: vec!["upgrade".into()],
         ..RegisterToolOutput::default()
     }))
+}
+
+#[plugin_fn]
+pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
+    Ok(Json(DetectVersionOutput {
+        files: vec![
+            ".bumrc".into(),
+            ".bun-version".into(),
+            "package.json".into(),
+        ],
+        ignore: vec!["node_modules".into()],
+    }))
+}
+
+#[plugin_fn]
+pub fn parse_version_file(
+    Json(input): Json<ParseVersionFileInput>,
+) -> FnResult<Json<ParseVersionFileOutput>> {
+    let mut version = None;
+
+    if input.file == "package.json" {
+        if let Ok(package_json) = json::from_str::<PackageJson>(&input.content) {
+            if let Some(constraint) = extract_volta_version(&package_json, &input.path, "bun")? {
+                version = Some(UnresolvedVersionSpec::parse(constraint)?);
+            }
+
+            if version.is_none() {
+                if let Some(constraint) = extract_engine_version(&package_json, "bun") {
+                    version = Some(UnresolvedVersionSpec::parse(constraint)?);
+                }
+            }
+
+            if version.is_none() {
+                if let Some(constraint) = extract_package_manager_version(&package_json, "bun") {
+                    version = Some(UnresolvedVersionSpec::parse(constraint)?);
+                }
+            }
+        }
+    } else if let Some(constraint) = extract_version_from_text(&input.content) {
+        version = Some(UnresolvedVersionSpec::parse(constraint)?);
+    }
+
+    Ok(Json(ParseVersionFileOutput { version }))
 }
 
 #[plugin_fn]

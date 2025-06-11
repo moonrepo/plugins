@@ -1,9 +1,0 @@
-[package]
-name = "lang_node_common"
-version = "0.1.0"
-edition = "2024"
-license = "MIT"
-publish = false
-
-[dependencies]
-serde = { workspace = true }

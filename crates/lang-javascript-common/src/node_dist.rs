@@ -3,8 +3,8 @@ use serde::Deserialize;
 #[derive(Deserialize)]
 #[serde(untagged)]
 pub enum NodeDistLTS {
-    Name(String),
     State(bool),
+    Name(String),
 }
 
 #[derive(Deserialize)]

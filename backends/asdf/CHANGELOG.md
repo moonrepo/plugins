@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Updated scripts to extract the command/shell to execute with from its shebang.
+
+#### ⚙️ Internal
+
+- Updated dependencies.
+
 ## 0.2.1
 
 #### ⚙️ Internal

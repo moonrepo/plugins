@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added detection sources: `uv.toml`, `pyproject.toml`
+
 ## 0.2.2
 
 #### ⚙️ Internal

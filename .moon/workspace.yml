@@ -6,7 +6,7 @@ projects:
   asdf-backend: backends/asdf
   # Common
   extension-common: crates/extension-common
-  lang-node-common: crates/lang-node-common
+  lang-javascript-common: crates/lang-javascript-common
   # Extensions
   download-extension: extensions/download
   migrate-nx-extension: extensions/migrate-nx
