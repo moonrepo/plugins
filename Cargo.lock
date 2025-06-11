@@ -237,7 +237,7 @@ dependencies = [
 
 [[package]]
 name = "bun_tool"
-version = "0.15.2"
+version = "0.16.0"
 dependencies = [
  "extism-pdk",
  "lang_javascript_common",
