@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Improved `package.json` parsing.
+
 ## 0.15.2
 
 #### ⚙️ Internal
