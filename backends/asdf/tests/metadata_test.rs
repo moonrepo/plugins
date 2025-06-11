@@ -27,7 +27,7 @@ mod asdf_backend {
             .register_backend(RegisterBackendInput::default())
             .await;
 
-        assert_eq!(metadata.backend_id, "asdf-zig");
+        assert_eq!(metadata.backend_id, "zig");
 
         if let SourceLocation::Git(git) = metadata.source.unwrap() {
             assert_eq!(git.url, "https://github.com/cheetah/asdf-zig");

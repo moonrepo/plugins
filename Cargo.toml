@@ -37,12 +37,12 @@ moon_target = { version = "0.1.2" }
 # moon_target = { path = "../../moon/crates/target" }
 
 # proto
-# proto_pdk = { version = "0.28.10" }
-# proto_pdk_api = { version = "0.27.14" }
-# proto_pdk_test_utils = { version = "0.37.1" }
-proto_pdk = { path = "../../proto/crates/pdk" }
-proto_pdk_api = { path = "../../proto/crates/pdk-api" }
-proto_pdk_test_utils = { path = "../../proto/crates/pdk-test-utils" }
+proto_pdk = { version = "0.29.0" }
+proto_pdk_api = { version = "0.28.0" }
+proto_pdk_test_utils = { version = "0.38.0" }
+# proto_pdk = { path = "../../proto/crates/pdk" }
+# proto_pdk_api = { path = "../../proto/crates/pdk-api" }
+# proto_pdk_test_utils = { path = "../../proto/crates/pdk-test-utils" }
 
 # JavaScript
 nodejs_package_json = "0.4.0"
