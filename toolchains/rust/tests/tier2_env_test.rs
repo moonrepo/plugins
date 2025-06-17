@@ -285,12 +285,10 @@ mod rust_toolchain_tier2 {
 
             assert_eq!(
                 output.commands,
-                [ExecCommand::new({
-                    let mut input =
-                        ExecCommandInput::new("rustup", ["component", "add", "rustfmt", "clippy"]);
-                    input.working_dir = Some(plugin.plugin.to_virtual_path(sandbox.path()));
-                    input
-                })
+                [ExecCommand::new(
+                    ExecCommandInput::new("rustup", ["component", "add", "rustfmt", "clippy"])
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )
                 .cache("rustup-component-add")]
             );
         }
@@ -334,14 +332,10 @@ mod rust_toolchain_tier2 {
 
             assert_eq!(
                 output.commands,
-                [ExecCommand::new({
-                    let mut input = ExecCommandInput::new(
-                        "rustup",
-                        ["target", "add", "wasm32-wasi", "nightly"],
-                    );
-                    input.working_dir = Some(plugin.plugin.to_virtual_path(sandbox.path()));
-                    input
-                })
+                [ExecCommand::new(
+                    ExecCommandInput::new("rustup", ["target", "add", "wasm32-wasi", "nightly"],)
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )
                 .cache("rustup-target-add")]
             );
         }
@@ -391,17 +385,13 @@ mod rust_toolchain_tier2 {
             assert_eq!(
                 output.commands,
                 [
-                    ExecCommand::new({
-                        let mut input = ExecCommandInput::new(
-                            "cargo",
-                            ["install", "cargo-binstall", "--force"],
-                        );
-                        input.working_dir = Some(plugin.plugin.to_virtual_path(sandbox.path()));
-                        input
-                    })
+                    ExecCommand::new(
+                        ExecCommandInput::new("cargo", ["install", "cargo-binstall", "--force"],)
+                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
                     .cache("cargo-binstall"),
-                    ExecCommand::new({
-                        let mut input = ExecCommandInput::new(
+                    ExecCommand::new(
+                        ExecCommandInput::new(
                             "cargo",
                             [
                                 "binstall",
@@ -411,10 +401,9 @@ mod rust_toolchain_tier2 {
                                 "cargo-nextest",
                                 "just@1",
                             ],
-                        );
-                        input.working_dir = Some(plugin.plugin.to_virtual_path(sandbox.path()));
-                        input
-                    })
+                        )
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
                     .cache("cargo-bins")
                 ]
             );
@@ -444,17 +433,13 @@ mod rust_toolchain_tier2 {
             assert_eq!(
                 output.commands,
                 [
-                    ExecCommand::new({
-                        let mut input = ExecCommandInput::new(
-                            "cargo",
-                            ["install", "cargo-binstall", "--force"],
-                        );
-                        input.working_dir = Some(plugin.plugin.to_virtual_path(sandbox.path()));
-                        input
-                    })
+                    ExecCommand::new(
+                        ExecCommandInput::new("cargo", ["install", "cargo-binstall", "--force"],)
+                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
                     .cache("cargo-binstall"),
-                    ExecCommand::new({
-                        let mut input = ExecCommandInput::new(
+                    ExecCommand::new(
+                        ExecCommandInput::new(
                             "cargo",
                             [
                                 "binstall",
@@ -464,13 +449,12 @@ mod rust_toolchain_tier2 {
                                 "--force",
                                 "just",
                             ],
-                        );
-                        input.working_dir = Some(plugin.plugin.to_virtual_path(sandbox.path()));
-                        input
-                    })
+                        )
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
                     .cache("cargo-bins-forced"),
-                    ExecCommand::new({
-                        let mut input = ExecCommandInput::new(
+                    ExecCommand::new(
+                        ExecCommandInput::new(
                             "cargo",
                             [
                                 "binstall",
@@ -479,10 +463,9 @@ mod rust_toolchain_tier2 {
                                 "info",
                                 "cargo-nextest",
                             ],
-                        );
-                        input.working_dir = Some(plugin.plugin.to_virtual_path(sandbox.path()));
-                        input
-                    })
+                        )
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
                     .cache("cargo-bins")
                 ]
             );
@@ -507,17 +490,16 @@ mod rust_toolchain_tier2 {
             assert_eq!(
                 output.commands,
                 [
-                    ExecCommand::new({
-                        let mut input = ExecCommandInput::new(
+                    ExecCommand::new(
+                        ExecCommandInput::new(
                             "cargo",
                             ["install", "cargo-binstall@1.2.3", "--force"],
-                        );
-                        input.working_dir = Some(plugin.plugin.to_virtual_path(sandbox.path()));
-                        input
-                    })
+                        )
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
                     .cache("cargo-binstall"),
-                    ExecCommand::new({
-                        let mut input = ExecCommandInput::new(
+                    ExecCommand::new(
+                        ExecCommandInput::new(
                             "cargo",
                             [
                                 "binstall",
@@ -526,10 +508,9 @@ mod rust_toolchain_tier2 {
                                 "info",
                                 "cargo-nextest",
                             ],
-                        );
-                        input.working_dir = Some(plugin.plugin.to_virtual_path(sandbox.path()));
-                        input
-                    })
+                        )
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
                     .cache("cargo-bins")
                 ]
             );
@@ -556,8 +537,8 @@ mod rust_toolchain_tier2 {
 
             assert_eq!(
                 output.commands,
-                [ExecCommand::new({
-                    let mut input = ExecCommandInput::new(
+                [ExecCommand::new(
+                    ExecCommandInput::new(
                         "cargo",
                         [
                             "binstall",
@@ -566,10 +547,9 @@ mod rust_toolchain_tier2 {
                             "info",
                             "cargo-nextest",
                         ],
-                    );
-                    input.working_dir = Some(plugin.plugin.to_virtual_path(sandbox.path()));
-                    input
-                })
+                    )
+                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )
                 .cache("cargo-bins")]
             );
         }

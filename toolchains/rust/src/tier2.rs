@@ -222,10 +222,11 @@ pub fn install_dependencies(
     // However, if we don't detect a lockfile, we can attempt
     // to generate one!
     if !input.root.join("Cargo.lock").exists() {
-        let mut cmd = ExecCommandInput::new("cargo", ["generate-lockfile"]);
-        cmd.working_dir = Some(input.root);
-
-        output.install_command = Some(cmd.into());
+        output.install_command = Some(
+            ExecCommandInput::new("cargo", ["generate-lockfile"])
+                .cwd(input.root)
+                .into(),
+        );
     }
 
     Ok(Json(output))

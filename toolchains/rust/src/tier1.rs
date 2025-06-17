@@ -118,18 +118,19 @@ pub fn prune_docker(Json(input): Json<PruneDockerInput>) -> FnResult<Json<PruneD
 
     // Before we can remove the target directory, we need
     // to find a list of binaries to preserve
-    let metadata = exec(ExecCommandInput {
-        command: "cargo".into(),
-        args: vec![
-            "metadata".into(),
-            "--format-version".into(),
-            "1".into(),
-            "--no-deps".into(),
-            "--no-default-features".into(),
-        ],
-        working_dir: Some(input.root.clone()),
-        ..Default::default()
-    })?;
+    let metadata = exec(
+        ExecCommandInput::pipe(
+            "cargo",
+            [
+                "metadata",
+                "--format-version",
+                "1",
+                "--no-deps",
+                "--no-default-features",
+            ],
+        )
+        .cwd(input.root.clone()),
+    )?;
     let metadata: CargoMetadata = json::from_str(&metadata.stdout)?;
     let mut bin_names = vec![];
 

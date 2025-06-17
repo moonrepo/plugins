@@ -428,11 +428,10 @@ mod rust_toolchain_tier2 {
 
             assert_eq!(
                 output.install_command.unwrap(),
-                ExecCommand::new({
-                    let mut input = ExecCommandInput::new("cargo", ["generate-lockfile"]);
-                    input.working_dir = Some(plugin.plugin.to_virtual_path(sandbox.path()));
-                    input
-                })
+                ExecCommand::new(
+                    ExecCommandInput::new("cargo", ["generate-lockfile"])
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )
             );
             assert!(output.dedupe_command.is_none());
         }

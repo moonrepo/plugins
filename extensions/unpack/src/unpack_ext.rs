@@ -112,15 +112,7 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
 
     // Unpack the files
     if let Err(error) = archive.unpack_from_ext() {
-        let mut message = error.to_string();
-
-        // Miette hides the real error
-        if let Some(source) = error.source() {
-            message.push(' ');
-            message.push_str(&source.to_string());
-        }
-
-        return Err(plugin_err!("{message}"));
+        return Err(plugin_err!("{}", error.to_string()));
     };
 
     host_log!(stdout, "Unpacked archive!");
