@@ -1,4 +1,4 @@
-moon = "1.37.1"
+moon = "1.37.3"
 
 [plugins]
 # bun-test = "file://./target/wasm32-wasip1/release/bun_tool.wasm"
