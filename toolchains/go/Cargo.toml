@@ -20,11 +20,9 @@ gomod-parser = "0.0.3"
 moon_config = { workspace = true }
 moon_pdk = { workspace = true, features = ["schematic"] }
 moon_pdk_api = { workspace = true }
-rustc-hash = { workspace = true }
 schematic = { workspace = true, features = ["config"] }
-semver = { workspace = true }
 serde = { workspace = true }
-starbase_utils = { workspace = true, features = ["editor-config", "toml"] }
+starbase_utils = { workspace = true }
 
 [dev-dependencies]
 moon_pdk_test_utils = { workspace = true }
