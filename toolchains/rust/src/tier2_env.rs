@@ -8,10 +8,7 @@ use moon_pdk_api::*;
 use starbase_utils::fs;
 
 fn create_command(bin: &str, args: Vec<&str>, cwd: &VirtualPath) -> ExecCommand {
-    let mut input = ExecCommandInput::new(bin, args);
-    input.cwd = Some(cwd.to_owned());
-
-    ExecCommand::new(input)
+    ExecCommand::new(ExecCommandInput::new(bin, args).cwd(cwd.to_owned()))
 }
 
 #[plugin_fn]
