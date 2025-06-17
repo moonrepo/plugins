@@ -1584,6 +1584,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "go_toolchain"
+version = "0.0.1"
+dependencies = [
+ "extism-pdk",
+ "go_tool",
+ "moon_config",
+ "moon_pdk",
+ "moon_pdk_api",
+ "moon_pdk_test_utils",
+ "rustc-hash",
+ "schematic",
+ "semver",
+ "serde",
+ "serde_json",
+ "starbase_sandbox",
+ "starbase_utils",
+ "tokio",
+]
+
+[[package]]
 name = "grid"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
