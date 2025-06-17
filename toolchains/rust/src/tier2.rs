@@ -223,7 +223,7 @@ pub fn install_dependencies(
     // to generate one!
     if !input.root.join("Cargo.lock").exists() {
         let mut cmd = ExecCommandInput::new("cargo", ["generate-lockfile"]);
-        cmd.working_dir = Some(input.root);
+        cmd.cwd = Some(input.root);
 
         output.install_command = Some(cmd.into());
     }

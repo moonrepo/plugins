@@ -288,7 +288,7 @@ mod rust_toolchain_tier2 {
                 [ExecCommand::new({
                     let mut input =
                         ExecCommandInput::new("rustup", ["component", "add", "rustfmt", "clippy"]);
-                    input.working_dir = Some(plugin.plugin.to_virtual_path(sandbox.path()));
+                    input.cwd = Some(plugin.plugin.to_virtual_path(sandbox.path()));
                     input
                 })
                 .cache("rustup-component-add")]
@@ -339,7 +339,7 @@ mod rust_toolchain_tier2 {
                         "rustup",
                         ["target", "add", "wasm32-wasi", "nightly"],
                     );
-                    input.working_dir = Some(plugin.plugin.to_virtual_path(sandbox.path()));
+                    input.cwd = Some(plugin.plugin.to_virtual_path(sandbox.path()));
                     input
                 })
                 .cache("rustup-target-add")]
@@ -396,7 +396,7 @@ mod rust_toolchain_tier2 {
                             "cargo",
                             ["install", "cargo-binstall", "--force"],
                         );
-                        input.working_dir = Some(plugin.plugin.to_virtual_path(sandbox.path()));
+                        input.cwd = Some(plugin.plugin.to_virtual_path(sandbox.path()));
                         input
                     })
                     .cache("cargo-binstall"),
@@ -412,7 +412,7 @@ mod rust_toolchain_tier2 {
                                 "just@1",
                             ],
                         );
-                        input.working_dir = Some(plugin.plugin.to_virtual_path(sandbox.path()));
+                        input.cwd = Some(plugin.plugin.to_virtual_path(sandbox.path()));
                         input
                     })
                     .cache("cargo-bins")
@@ -449,7 +449,7 @@ mod rust_toolchain_tier2 {
                             "cargo",
                             ["install", "cargo-binstall", "--force"],
                         );
-                        input.working_dir = Some(plugin.plugin.to_virtual_path(sandbox.path()));
+                        input.cwd = Some(plugin.plugin.to_virtual_path(sandbox.path()));
                         input
                     })
                     .cache("cargo-binstall"),
@@ -465,7 +465,7 @@ mod rust_toolchain_tier2 {
                                 "just",
                             ],
                         );
-                        input.working_dir = Some(plugin.plugin.to_virtual_path(sandbox.path()));
+                        input.cwd = Some(plugin.plugin.to_virtual_path(sandbox.path()));
                         input
                     })
                     .cache("cargo-bins-forced"),
@@ -480,7 +480,7 @@ mod rust_toolchain_tier2 {
                                 "cargo-nextest",
                             ],
                         );
-                        input.working_dir = Some(plugin.plugin.to_virtual_path(sandbox.path()));
+                        input.cwd = Some(plugin.plugin.to_virtual_path(sandbox.path()));
                         input
                     })
                     .cache("cargo-bins")
@@ -512,7 +512,7 @@ mod rust_toolchain_tier2 {
                             "cargo",
                             ["install", "cargo-binstall@1.2.3", "--force"],
                         );
-                        input.working_dir = Some(plugin.plugin.to_virtual_path(sandbox.path()));
+                        input.cwd = Some(plugin.plugin.to_virtual_path(sandbox.path()));
                         input
                     })
                     .cache("cargo-binstall"),
@@ -527,7 +527,7 @@ mod rust_toolchain_tier2 {
                                 "cargo-nextest",
                             ],
                         );
-                        input.working_dir = Some(plugin.plugin.to_virtual_path(sandbox.path()));
+                        input.cwd = Some(plugin.plugin.to_virtual_path(sandbox.path()));
                         input
                     })
                     .cache("cargo-bins")
@@ -567,7 +567,7 @@ mod rust_toolchain_tier2 {
                             "cargo-nextest",
                         ],
                     );
-                    input.working_dir = Some(plugin.plugin.to_virtual_path(sandbox.path()));
+                    input.cwd = Some(plugin.plugin.to_virtual_path(sandbox.path()));
                     input
                 })
                 .cache("cargo-bins")]

@@ -430,7 +430,7 @@ mod rust_toolchain_tier2 {
                 output.install_command.unwrap(),
                 ExecCommand::new({
                     let mut input = ExecCommandInput::new("cargo", ["generate-lockfile"]);
-                    input.working_dir = Some(plugin.plugin.to_virtual_path(sandbox.path()));
+                    input.cwd = Some(plugin.plugin.to_virtual_path(sandbox.path()));
                     input
                 })
             );

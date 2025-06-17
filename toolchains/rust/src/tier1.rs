@@ -127,7 +127,7 @@ pub fn prune_docker(Json(input): Json<PruneDockerInput>) -> FnResult<Json<PruneD
             "--no-deps".into(),
             "--no-default-features".into(),
         ],
-        working_dir: Some(input.root.clone()),
+        cwd: Some(input.root.clone()),
         ..Default::default()
     })?;
     let metadata: CargoMetadata = json::from_str(&metadata.stdout)?;

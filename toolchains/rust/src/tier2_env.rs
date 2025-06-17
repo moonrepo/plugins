@@ -9,7 +9,7 @@ use starbase_utils::fs;
 
 fn create_command(bin: &str, args: Vec<&str>, cwd: &VirtualPath) -> ExecCommand {
     let mut input = ExecCommandInput::new(bin, args);
-    input.working_dir = Some(cwd.to_owned());
+    input.cwd = Some(cwd.to_owned());
 
     ExecCommand::new(input)
 }
