@@ -3,8 +3,10 @@ use crate::go_mod::parse_go_mod;
 use crate::go_sum::GoSum;
 use crate::go_work::GoWork;
 use extism_pdk::*;
-use moon_config::DependencyScope;
-use moon_pdk::{get_host_env_var, get_host_environment, parse_toolchain_config};
+use moon_config::{BinEntry, DependencyScope};
+use moon_pdk::{
+    get_host_env_var, get_host_environment, parse_toolchain_config, parse_toolchain_config_schema,
+};
 use moon_pdk_api::*;
 use starbase_utils::fs;
 use std::collections::BTreeMap;
@@ -229,6 +231,57 @@ pub fn parse_manifest(
             dep.module.module_path,
             ManifestDependency::Version(UnresolvedVersionSpec::parse(dep.module.version)?),
         );
+    }
+
+    Ok(Json(output))
+}
+
+#[plugin_fn]
+pub fn setup_environment(
+    Json(input): Json<SetupEnvironmentInput>,
+) -> FnResult<Json<SetupEnvironmentOutput>> {
+    let config = parse_toolchain_config_schema::<GoToolchainConfig>(input.toolchain_config)?;
+    let mut output = SetupEnvironmentOutput::default();
+
+    // Install binaries
+    // https://go.dev/ref/mod#go-install
+    // https://pkg.go.dev/cmd/go#hdr-Compile_and_install_packages_and_dependencies
+    if !config.bins.is_empty() {
+        let env = get_host_environment()?;
+        let mut bins_by_version = BTreeMap::default();
+
+        for bin in &config.bins {
+            let name = match bin {
+                BinEntry::Name(inner) => inner,
+                BinEntry::Config(cfg) => {
+                    if cfg.local && env.ci {
+                        continue;
+                    } else {
+                        cfg.bin.as_str()
+                    }
+                }
+            };
+
+            let version = name
+                .split_once('@')
+                .map(|inner| inner.1)
+                .unwrap_or("latest");
+
+            bins_by_version
+                .entry(version)
+                .or_insert_with(Vec::new)
+                .push(name);
+        }
+
+        for (version, bins) in bins_by_version {
+            let mut args = vec!["install", "-v"];
+            args.extend(bins);
+
+            output.commands.push(
+                ExecCommand::new(ExecCommandInput::new("go", args).cwd(input.root.to_owned()))
+                    .cache(format!("go-bins-{version}")),
+            );
+        }
     }
 
     Ok(Json(output))
