@@ -18,12 +18,12 @@ impl GoWork {
     }
 
     // https://go.dev/ref/mod#go-work-file
-    pub fn parse(content: String) -> AnyResult<Self> {
+    pub fn parse(content: impl AsRef<str>) -> AnyResult<Self> {
         let mut work = Self::default();
         let mut in_use_block = false;
         let mut in_replace_block = false;
 
-        for line in content.lines() {
+        for line in content.as_ref().lines() {
             // go 1.2.3
             if let Some(version) = line.strip_prefix("go ") {
                 work.version = Some(version.into());

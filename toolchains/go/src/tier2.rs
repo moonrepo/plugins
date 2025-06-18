@@ -1,9 +1,10 @@
-use std::str::FromStr;
+use std::path::PathBuf;
 
+use crate::go_mod::parse_go_mod;
 use crate::go_sum::GoSum;
 use crate::go_work::GoWork;
 use extism_pdk::*;
-use gomod_parser::GoMod;
+use moon_pdk::{get_host_env_var, get_host_environment};
 use moon_pdk_api::*;
 use starbase_utils::fs;
 
@@ -40,13 +41,65 @@ pub fn extend_project_graph(
     Ok(Json(output))
 }
 
+fn gather_shared_paths(
+    env: &HostEnvironment,
+    globals_dir: Option<&VirtualPath>,
+    paths: &mut Vec<PathBuf>,
+) -> AnyResult<()> {
+    if let Some(globals_dir) = globals_dir {
+        if let Some(value) = globals_dir.real_path() {
+            paths.push(value);
+
+            // Avoid the host env overhead if we already
+            // have a valid globals directory!
+            return Ok(());
+        }
+    }
+
+    if let Some(value) = get_host_env_var("GOBIN")? {
+        paths.push(PathBuf::from(value));
+    } else if let Some(value) = get_host_env_var("GOPATH")? {
+        paths.push(PathBuf::from(value).join("bin"));
+    } else if let Some(value) = env.home_dir.join("go/bin").real_path() {
+        paths.push(value);
+    }
+
+    Ok(())
+}
+
+#[plugin_fn]
+pub fn extend_task_command(
+    Json(input): Json<ExtendTaskCommandInput>,
+) -> FnResult<Json<ExtendTaskCommandOutput>> {
+    let mut output = ExtendTaskCommandOutput::default();
+    let env = get_host_environment()?;
+
+    // Always include Go specific paths for all commands
+    gather_shared_paths(&env, input.globals_dir.as_ref(), &mut output.paths)?;
+
+    Ok(Json(output))
+}
+
+#[plugin_fn]
+pub fn extend_task_script(
+    Json(input): Json<ExtendTaskScriptInput>,
+) -> FnResult<Json<ExtendTaskScriptOutput>> {
+    let mut output = ExtendTaskScriptOutput::default();
+    let env = get_host_environment()?;
+
+    // Always include Go specific paths for all commands
+    gather_shared_paths(&env, input.globals_dir.as_ref(), &mut output.paths)?;
+
+    Ok(Json(output))
+}
+
 #[plugin_fn]
 pub fn locate_dependencies_root(
     Json(input): Json<LocateDependenciesRootInput>,
 ) -> FnResult<Json<LocateDependenciesRootOutput>> {
     let mut output = LocateDependenciesRootOutput::default();
 
-    let traverse = |starting_dir: &VirtualPath, file: &str| -> Option<VirtualPath> {
+    let locate = |starting_dir: &VirtualPath, file: &str| -> Option<VirtualPath> {
         let mut current_dir = Some(starting_dir.to_owned());
 
         while let Some(dir) = current_dir {
@@ -61,7 +114,7 @@ pub fn locate_dependencies_root(
     };
 
     // Find `go.work` first
-    if let Some(root) = traverse(&input.starting_dir, "go.work") {
+    if let Some(root) = locate(&input.starting_dir, "go.work") {
         let go_work = GoWork::parse(fs::read_file(root.join("go.work"))?)?;
 
         if !go_work.modules.is_empty() {
@@ -73,14 +126,16 @@ pub fn locate_dependencies_root(
 
     // Then `go.sum` second
     if output.root.is_none() {
-        if let Some(root) = traverse(&input.starting_dir, "go.sum") {
+        if let Some(root) = locate(&input.starting_dir, "go.sum") {
             output.root = root.virtual_path();
         }
     }
 
     // Otherwise assume `go.mod`
     if output.root.is_none() {
-        output.root = input.starting_dir.virtual_path();
+        if let Some(root) = locate(&input.starting_dir, "go.mod") {
+            output.root = root.virtual_path();
+        }
     }
 
     Ok(Json(output))
@@ -98,20 +153,20 @@ pub fn install_dependencies(
                 .cwd(input.root.clone())
                 .into(),
         );
-    }
-
-    if input.root.join("go.mod").exists() {
+    } else if input.root.join("go.mod").exists() {
         output.install_command = Some(
             ExecCommandInput::new("go", ["mod", "download"])
                 .cwd(input.root.clone())
                 .into(),
         );
 
-        output.dedupe_command = Some(
-            ExecCommandInput::new("go", ["mod", "tidy"])
-                .cwd(input.root)
-                .into(),
-        );
+        if input.root.join("go.sum").exists() {
+            output.dedupe_command = Some(
+                ExecCommandInput::new("go", ["mod", "tidy"])
+                    .cwd(input.root)
+                    .into(),
+            );
+        }
     }
 
     Ok(Json(output))
@@ -145,12 +200,11 @@ pub fn parse_manifest(
     Json(input): Json<ParseManifestInput>,
 ) -> FnResult<Json<ParseManifestOutput>> {
     let mut output = ParseManifestOutput::default();
-    let go_mod =
-        GoMod::from_str(&fs::read_file(input.path)?).map_err(|error| anyhow!("{error}"))?;
+    let go_mod = parse_go_mod(fs::read_file(input.path)?)?;
 
     for dep in go_mod.require {
         // Ignore transitive deps, as we only care about
-        // direct project deps
+        // direct project deps during task hashing
         if dep.indirect {
             continue;
         }

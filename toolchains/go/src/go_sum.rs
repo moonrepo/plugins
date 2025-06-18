@@ -15,12 +15,12 @@ pub struct GoSum {
 
 impl GoSum {
     // https://go.dev/ref/mod#go-sum-files
-    pub fn parse(content: String) -> AnyResult<Self> {
+    pub fn parse(content: impl AsRef<str>) -> AnyResult<Self> {
         let mut sum = Self {
             dependencies: BTreeMap::new(),
         };
 
-        for line in content.lines() {
+        for line in content.as_ref().lines() {
             let mut parts = line.splitn(3, ' ');
             let module = parts.next().unwrap_or_default();
             let version = parts.next().unwrap_or_default();
