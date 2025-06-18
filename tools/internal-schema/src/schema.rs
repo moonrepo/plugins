@@ -1,4 +1,4 @@
-use proto_pdk::{HostArch, HostLibc, HostOS, UnresolvedVersionSpec, VersionSpec};
+use proto_pdk::{HostArch, HostLibc, HostOS, UnresolvedVersionSpec, Version, VersionSpec};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -105,6 +105,8 @@ impl Default for ResolveSchema {
 #[derive(Debug, Default, Deserialize)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct MetadataSchema {
+    pub default_version: Option<UnresolvedVersionSpec>,
+    pub plugin_version: Option<Version>,
     pub requires: Vec<String>,
     pub self_upgrade_commands: Vec<String>,
 }
