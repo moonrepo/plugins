@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added `metadata.default-version` and `metadata.plugin-version` fields.
+
 ## 0.17.3
 
 #### ⚙️ Internal

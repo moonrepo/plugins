@@ -72,7 +72,11 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
             SchemaType::VersionManager => PluginType::VersionManager,
         },
         minimum_proto_version: Some(Version::new(0, 46, 0)),
-        plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
+        default_version: schema.metadata.default_version,
+        plugin_version: match schema.metadata.plugin_version {
+            Some(version) => Some(version),
+            None => Version::parse(env!("CARGO_PKG_VERSION")).ok(),
+        },
         self_upgrade_commands: schema.metadata.self_upgrade_commands,
         deprecations,
         requires: schema.metadata.requires,
