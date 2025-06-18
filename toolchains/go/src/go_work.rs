@@ -39,11 +39,9 @@ impl GoWork {
             }
 
             // replace <path>
-            if !in_replace_block {
-                if line.starts_with("replace ") {
-                    // Ignore for now!
-                    continue;
-                }
+            if !in_replace_block && line.starts_with("replace ") {
+                // Ignore for now!
+                continue;
             }
 
             // use (), replace ()

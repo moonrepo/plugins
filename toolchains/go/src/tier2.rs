@@ -1,12 +1,14 @@
-use std::path::PathBuf;
-
+use crate::config::GoToolchainConfig;
 use crate::go_mod::parse_go_mod;
 use crate::go_sum::GoSum;
 use crate::go_work::GoWork;
 use extism_pdk::*;
-use moon_pdk::{get_host_env_var, get_host_environment};
+use moon_config::DependencyScope;
+use moon_pdk::{get_host_env_var, get_host_environment, parse_toolchain_config};
 use moon_pdk_api::*;
 use starbase_utils::fs;
+use std::collections::BTreeMap;
+use std::path::PathBuf;
 
 #[plugin_fn]
 pub fn extend_project_graph(
@@ -14,28 +16,41 @@ pub fn extend_project_graph(
 ) -> FnResult<Json<ExtendProjectGraphOutput>> {
     let mut output = ExtendProjectGraphOutput::default();
 
-    // Extract the module name as an alias
+    // First pass, gather all packages and their manifests
+    let mut packages = BTreeMap::default();
+
     for (id, source) in input.project_sources {
         let go_mod_path = input.context.workspace_root.join(source).join("go.mod");
 
         if go_mod_path.exists() {
-            let go_mod = fs::read_file(go_mod_path)?;
-            let mut project_output = ExtendProjectOutput::default();
-            let mut inject = false;
+            let manifest = parse_go_mod(fs::read_file(&go_mod_path)?)?;
 
-            for line in go_mod.lines() {
-                if let Some(module) = line.strip_prefix("module") {
-                    project_output.alias = Some(module.trim().to_owned());
-                    inject = true;
+            packages.insert(manifest.module.clone(), (id, manifest));
 
-                    break;
-                }
-            }
-
-            if inject {
-                output.extended_projects.insert(id, project_output);
+            if let Some(file) = go_mod_path.virtual_path() {
+                output.input_files.push(file);
             }
         }
+    }
+
+    // Second pass, extract packages and their relationships
+    for (id, manifest) in packages.values() {
+        let mut project_output = ExtendProjectOutput {
+            alias: Some(manifest.module.clone()),
+            ..Default::default()
+        };
+
+        for dep in &manifest.require {
+            if packages.contains_key(&dep.module.module_path) {
+                project_output.dependencies.push(ProjectDependency {
+                    id: dep.module.module_path.clone(),
+                    scope: DependencyScope::Production,
+                    via: Some(format!("module {}", dep.module.module_path)),
+                });
+            }
+        }
+
+        output.extended_projects.insert(id.into(), project_output);
     }
 
     Ok(Json(output))
@@ -146,6 +161,7 @@ pub fn install_dependencies(
     Json(input): Json<InstallDependenciesInput>,
 ) -> FnResult<Json<InstallDependenciesOutput>> {
     let mut output = InstallDependenciesOutput::default();
+    let config = parse_toolchain_config::<GoToolchainConfig>(input.toolchain_config)?;
 
     if input.root.join("go.work").exists() {
         output.install_command = Some(
@@ -160,7 +176,7 @@ pub fn install_dependencies(
                 .into(),
         );
 
-        if input.root.join("go.sum").exists() {
+        if input.root.join("go.sum").exists() && config.tidy_on_change {
             output.dedupe_command = Some(
                 ExecCommandInput::new("go", ["mod", "tidy"])
                     .cwd(input.root)
