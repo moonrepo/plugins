@@ -2,7 +2,7 @@
 
 use moon_pdk::AnyResult;
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct GoWork {
     pub modules: Vec<String>,
     pub version: Option<String>,
@@ -23,24 +23,16 @@ impl GoWork {
         let mut in_use_block = false;
         let mut in_replace_block = false;
 
-        for line in content.as_ref().lines() {
+        for mut line in content.as_ref().lines() {
+            if line.starts_with("//") {
+                continue;
+            } else if let Some(index) = line.find("//") {
+                line = &line[0..index];
+            }
+
             // go 1.2.3
             if let Some(version) = line.strip_prefix("go ") {
                 work.version = Some(version.into());
-                continue;
-            }
-
-            // use <path>
-            if !in_use_block {
-                if let Some(path) = line.strip_prefix("use ") {
-                    work.add_module(path);
-                    continue;
-                }
-            }
-
-            // replace <path>
-            if !in_replace_block && line.starts_with("replace ") {
-                // Ignore for now!
                 continue;
             }
 
@@ -55,6 +47,20 @@ impl GoWork {
                 } else if in_replace_block {
                     in_replace_block = false;
                 }
+            }
+
+            // use <path>
+            if !in_use_block {
+                if let Some(path) = line.strip_prefix("use ") {
+                    work.add_module(path);
+                    continue;
+                }
+            }
+
+            // replace <path>
+            if !in_replace_block && line.starts_with("replace ") {
+                // Ignore for now!
+                continue;
             }
 
             // <path>

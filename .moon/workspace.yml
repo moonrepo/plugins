@@ -27,6 +27,7 @@ projects:
   rust-tool: tools/rust
   schema-tool: tools/internal-schema
   # Toolchains
+  go-toolchain: toolchains/go
   node-toolchain: toolchains/node
   rust-toolchain: toolchains/rust
   typescript-toolchain: toolchains/typescript

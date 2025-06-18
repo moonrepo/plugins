@@ -4,11 +4,13 @@ use moon_config::VersionSpec;
 use moon_pdk::AnyResult;
 use std::collections::BTreeMap;
 
+#[derive(Debug, PartialEq)]
 pub struct GoSumDependency {
     pub checksum: String,
     pub version: VersionSpec,
 }
 
+#[derive(Debug)]
 pub struct GoSum {
     pub dependencies: BTreeMap<String, GoSumDependency>,
 }
@@ -20,11 +22,17 @@ impl GoSum {
             dependencies: BTreeMap::new(),
         };
 
-        for line in content.as_ref().lines() {
-            let mut parts = line.splitn(3, ' ');
-            let module = parts.next().unwrap_or_default();
-            let version = parts.next().unwrap_or_default();
-            let hash = parts.next().unwrap_or_default();
+        for mut line in content.as_ref().lines() {
+            if line.starts_with("//") {
+                continue;
+            } else if let Some(index) = line.find("//") {
+                line = &line[0..index];
+            }
+
+            let mut parts = line.trim().splitn(3, ' ');
+            let module = parts.next().unwrap_or_default().trim();
+            let version = parts.next().unwrap_or_default().trim();
+            let hash = parts.next().unwrap_or_default().trim();
 
             if module.is_empty()
                 || version.is_empty()
