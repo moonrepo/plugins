@@ -4,9 +4,7 @@ use crate::go_sum::GoSum;
 use crate::go_work::GoWork;
 use extism_pdk::*;
 use moon_config::{BinEntry, DependencyScope};
-use moon_pdk::{
-    get_host_env_var, get_host_environment, parse_toolchain_config, parse_toolchain_config_schema,
-};
+use moon_pdk::{get_host_env_var, get_host_environment, parse_toolchain_config_schema};
 use moon_pdk_api::*;
 use starbase_utils::fs;
 use std::collections::BTreeMap;
@@ -73,12 +71,24 @@ fn gather_shared_paths(
         }
     }
 
-    if let Some(value) = get_host_env_var("GOBIN")? {
-        paths.push(PathBuf::from(value));
-    } else if let Some(value) = get_host_env_var("GOPATH")? {
-        paths.push(PathBuf::from(value).join("bin"));
-    } else if let Some(value) = env.home_dir.join("go/bin").real_path() {
-        paths.push(value);
+    if let Some(dir) = var::get::<String>("bin_dir")? {
+        paths.push(PathBuf::from(dir));
+    } else {
+        let maybe_dir = if let Some(value) = get_host_env_var("GOBIN")? {
+            Some(PathBuf::from(value))
+        } else if let Some(value) = get_host_env_var("GOPATH")? {
+            Some(PathBuf::from(value).join("bin"))
+        } else {
+            env.home_dir.join("go").join("bin").real_path()
+        };
+
+        if let Some(dir) = maybe_dir {
+            if let Some(dir_str) = dir.to_str() {
+                var::set("bin_dir", dir_str)?;
+            }
+
+            paths.push(dir);
+        }
     }
 
     Ok(())
@@ -114,6 +124,8 @@ pub fn extend_task_script(
 pub fn locate_dependencies_root(
     Json(input): Json<LocateDependenciesRootInput>,
 ) -> FnResult<Json<LocateDependenciesRootOutput>> {
+    // TODO
+    // let config = parse_toolchain_config_schema::<GoToolchainConfig>(input.toolchain_config)?;
     let mut output = LocateDependenciesRootOutput::default();
 
     let locate = |starting_dir: &VirtualPath, file: &str| -> Option<VirtualPath> {
@@ -131,6 +143,7 @@ pub fn locate_dependencies_root(
     };
 
     // Find `go.work` first
+    // if config.workspaces {
     if let Some(root) = locate(&input.starting_dir, "go.work") {
         let go_work = GoWork::parse(fs::read_file(root.join("go.work"))?)?;
 
@@ -140,6 +153,7 @@ pub fn locate_dependencies_root(
 
         output.root = root.virtual_path();
     }
+    //  }
 
     // Then `go.sum` second
     if output.root.is_none() {
@@ -162,16 +176,18 @@ pub fn locate_dependencies_root(
 pub fn install_dependencies(
     Json(input): Json<InstallDependenciesInput>,
 ) -> FnResult<Json<InstallDependenciesOutput>> {
+    let config = parse_toolchain_config_schema::<GoToolchainConfig>(input.toolchain_config)?;
     let mut output = InstallDependenciesOutput::default();
-    let config = parse_toolchain_config::<GoToolchainConfig>(input.toolchain_config)?;
 
-    if input.root.join("go.work").exists() {
+    if config.workspaces && input.root.join("go.work").exists() {
         output.install_command = Some(
             ExecCommandInput::new("go", ["work", "sync"])
                 .cwd(input.root.clone())
                 .into(),
         );
-    } else if input.root.join("go.mod").exists() {
+    }
+
+    if output.install_command.is_none() && input.root.join("go.mod").exists() {
         output.install_command = Some(
             ExecCommandInput::new("go", ["mod", "download"])
                 .cwd(input.root.clone())

@@ -84,12 +84,24 @@ fn gather_shared_paths(
         }
     }
 
-    if let Some(value) = get_host_env_var("CARGO_INSTALL_ROOT")? {
-        paths.push(PathBuf::from(value).join("bin"));
-    } else if let Some(value) = get_host_env_var("CARGO_HOME")? {
-        paths.push(PathBuf::from(value).join("bin"));
-    } else if let Some(value) = env.home_dir.join(".cargo/bin").real_path() {
-        paths.push(value);
+    if let Some(dir) = var::get::<String>("bin_dir")? {
+        paths.push(PathBuf::from(dir));
+    } else {
+        let maybe_dir = if let Some(value) = get_host_env_var("CARGO_INSTALL_ROOT")? {
+            Some(PathBuf::from(value).join("bin"))
+        } else if let Some(value) = get_host_env_var("CARGO_HOME")? {
+            Some(PathBuf::from(value).join("bin"))
+        } else {
+            env.home_dir.join(".cargo").join("bin").real_path()
+        };
+
+        if let Some(dir) = maybe_dir {
+            if let Some(dir_str) = dir.to_str() {
+                var::set("bin_dir", dir_str)?;
+            }
+
+            paths.push(dir);
+        }
     }
 
     Ok(())
