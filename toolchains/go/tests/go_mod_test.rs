@@ -12,7 +12,7 @@ mod go_mod {
             parse_go_mod(fs::read_to_string(sandbox.path().join("basic.mod")).unwrap()).unwrap();
 
         assert_eq!(go_mod.module, "github.com/org/repo");
-        assert_eq!(go_mod.go.unwrap(), "1.24");
+        assert_eq!(go_mod.go.unwrap(), "1.24.0");
         assert_eq!(go_mod.require.len(), 22);
     }
 

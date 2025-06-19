@@ -1,4 +1,4 @@
-use proto_pdk::VersionSpec;
+use proto_pdk_api::VersionSpec;
 
 pub fn from_go_version(version: &str) -> String {
     // Zero releases don't end in ".0",

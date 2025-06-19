@@ -1,5 +1,6 @@
 // `go.work`
 
+use go_tool::version::from_go_version;
 use moon_pdk::AnyResult;
 
 #[derive(Debug, Default)]
@@ -32,7 +33,7 @@ impl GoWork {
 
             // go 1.2.3
             if let Some(version) = line.strip_prefix("go ") {
-                work.version = Some(version.into());
+                work.version = Some(from_go_version(version));
                 continue;
             }
 

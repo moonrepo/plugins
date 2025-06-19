@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### ⚙️ Internal
+
+- Changes to support the moon Go toolchain.
+
 ## 0.16.2
 
 #### ⚙️ Internal
