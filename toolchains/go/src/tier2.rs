@@ -194,7 +194,7 @@ pub fn install_dependencies(
                 .into(),
         );
 
-        if input.root.join("go.sum").exists() && config.tidy_on_change {
+        if config.tidy_on_change && input.root.join("go.sum").exists() {
             output.dedupe_command = Some(
                 ExecCommandInput::new("go", ["mod", "tidy"])
                     .cwd(input.root)

@@ -1,6 +1,7 @@
 use moon_config::DependencyScope;
 use moon_pdk_api::*;
 use moon_pdk_test_utils::{create_empty_moon_sandbox, create_moon_sandbox};
+use serde_json::json;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
@@ -270,6 +271,348 @@ mod go_toolchain_tier2 {
 
             assert_eq!(output.members.unwrap(), ["modules/a"]);
             assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/workspace"));
+        }
+    }
+
+    mod install_dependencies {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn does_nothing_if_no_files() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .install_dependencies(InstallDependenciesInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({}),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.install_command.is_none());
+            assert!(output.dedupe_command.is_none());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn sets_install_command_for_go_work_if_enabled() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("go.work", "");
+
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .install_dependencies(InstallDependenciesInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "workspaces": true
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.install_command.unwrap(),
+                ExecCommand::new(
+                    ExecCommandInput::new("go", ["work", "sync"])
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )
+            );
+            assert!(output.dedupe_command.is_none());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn doesnt_set_install_command_for_go_work_if_disabled() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("go.work", "");
+
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .install_dependencies(InstallDependenciesInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "workspaces": false
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.install_command.is_none());
+            assert!(output.dedupe_command.is_none());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn workspaces_take_precedence() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("go.work", "");
+            sandbox.create_file("go.mod", "");
+            sandbox.create_file("go.sum", "");
+
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .install_dependencies(InstallDependenciesInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "tidyOnChange": true,
+                        "workspaces": true
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.install_command.unwrap(),
+                ExecCommand::new(
+                    ExecCommandInput::new("go", ["work", "sync"])
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )
+            );
+            assert!(output.dedupe_command.is_none());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn sets_install_command_for_go_mod() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("go.mod", "");
+
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .install_dependencies(InstallDependenciesInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({}),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.install_command.unwrap(),
+                ExecCommand::new(
+                    ExecCommandInput::new("go", ["mod", "download"])
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )
+            );
+            assert!(output.dedupe_command.is_none());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn sets_dedupe_command_for_go_sum_if_enabled() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("go.mod", "");
+            sandbox.create_file("go.sum", "");
+
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .install_dependencies(InstallDependenciesInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "tidyOnChange": true
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.install_command.unwrap(),
+                ExecCommand::new(
+                    ExecCommandInput::new("go", ["mod", "download"])
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )
+            );
+            assert_eq!(
+                output.dedupe_command.unwrap(),
+                ExecCommand::new(
+                    ExecCommandInput::new("go", ["mod", "tidy"])
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn doesnt_set_dedupe_command_for_go_sum_if_disabled() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("go.mod", "");
+            sandbox.create_file("go.sum", "");
+
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .install_dependencies(InstallDependenciesInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "tidyOnChange": false
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.install_command.unwrap(),
+                ExecCommand::new(
+                    ExecCommandInput::new("go", ["mod", "download"])
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )
+            );
+            assert!(output.dedupe_command.is_none());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn doesnt_set_dedupe_command_for_go_sum_if_no_file() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("go.mod", "");
+
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .install_dependencies(InstallDependenciesInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "tidyOnChange": true
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.install_command.unwrap(),
+                ExecCommand::new(
+                    ExecCommandInput::new("go", ["mod", "download"])
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )
+            );
+            assert!(output.dedupe_command.is_none());
+        }
+    }
+
+    mod parse_lock {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn parses_go_sum() {
+            let sandbox = create_moon_sandbox("sum-files");
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .parse_lock(ParseLockInput {
+                    path: VirtualPath::Real(sandbox.path().join("basic.sum")),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.packages.is_empty());
+            assert_eq!(
+                output.dependencies,
+                BTreeMap::from_iter([
+                    (
+                        "github.com/atotto/clipboard".into(),
+                        vec![LockDependency {
+                            hash: Some("EH0zSVneZPSuFR11BlR9YppQTVDbh5+16AmcJi4g1z4=".into()),
+                            version: Some(VersionSpec::parse("0.1.4").unwrap()),
+                            ..Default::default()
+                        }]
+                    ),
+                    (
+                        "github.com/charmbracelet/bubbles".into(),
+                        vec![LockDependency {
+                            hash: Some("9TdC97SdRVg/1aaXNVWfFH3nnLAwOXr8Fn6u6mfQdFs=".into()),
+                            version: Some(VersionSpec::parse("0.21.0").unwrap()),
+                            ..Default::default()
+                        }]
+                    ),
+                    (
+                        "github.com/charmbracelet/bubbletea".into(),
+                        vec![LockDependency {
+                            hash: Some("JAMNLTbqMOhSwoELIr0qyP4VidFq72/6E9j7HHmRKQc=".into()),
+                            version: Some(VersionSpec::parse("1.3.5").unwrap()),
+                            ..Default::default()
+                        }]
+                    ),
+                ])
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn parses_go_work_sum() {
+            let sandbox = create_moon_sandbox("work-files");
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .parse_lock(ParseLockInput {
+                    path: VirtualPath::Real(sandbox.path().join("basic.work.sum")),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.packages.is_empty());
+            assert_eq!(
+                output.dependencies,
+                BTreeMap::from_iter([
+                    (
+                        "github.com/atotto/clipboard".into(),
+                        vec![LockDependency {
+                            hash: Some("EH0zSVneZPSuFR11BlR9YppQTVDbh5+16AmcJi4g1z4=".into()),
+                            version: Some(VersionSpec::parse("0.1.4").unwrap()),
+                            ..Default::default()
+                        }]
+                    ),
+                    (
+                        "github.com/charmbracelet/bubbles".into(),
+                        vec![LockDependency {
+                            hash: Some("9TdC97SdRVg/1aaXNVWfFH3nnLAwOXr8Fn6u6mfQdFs=".into()),
+                            version: Some(VersionSpec::parse("0.21.0").unwrap()),
+                            ..Default::default()
+                        }]
+                    ),
+                    (
+                        "github.com/charmbracelet/bubbletea".into(),
+                        vec![LockDependency {
+                            hash: Some("JAMNLTbqMOhSwoELIr0qyP4VidFq72/6E9j7HHmRKQc=".into()),
+                            version: Some(VersionSpec::parse("1.3.5").unwrap()),
+                            ..Default::default()
+                        }]
+                    ),
+                ])
+            );
+        }
+    }
+
+    mod parse_manifest {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn parses_package() {
+            let sandbox = create_moon_sandbox("projects");
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .parse_manifest(ParseManifestInput {
+                    path: VirtualPath::Real(sandbox.path().join("c/go.mod")),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.version.is_none());
+            assert!(!output.publishable);
+            assert!(output.peer_dependencies.is_empty());
+            assert!(output.dev_dependencies.is_empty());
+            assert!(output.build_dependencies.is_empty());
+
+            assert_eq!(
+                output.dependencies,
+                BTreeMap::from_iter([
+                    (
+                        "example.com/org/a".into(),
+                        ManifestDependency::Version(UnresolvedVersionSpec::parse("1.2.3").unwrap())
+                    ),
+                    (
+                        "example.com/org/b".into(),
+                        ManifestDependency::Version(UnresolvedVersionSpec::parse("4.5.6").unwrap())
+                    )
+                ])
+            );
         }
     }
 }
