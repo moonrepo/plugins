@@ -16,5 +16,10 @@ config_struct!(
 
         /// Configured version to download and install`.
         pub version: Option<UnresolvedVersionSpec>,
+
+        /// Support Go workspaces by locating and parsing `go.work` and `go.work.sum`
+        /// files. This functionality will take precedence over `go.sum` files.
+        #[setting(default = true)]
+        pub workspaces: bool,
     }
 );
