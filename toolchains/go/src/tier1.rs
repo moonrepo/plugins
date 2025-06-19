@@ -12,10 +12,10 @@ pub fn register_toolchain(
     Ok(Json(RegisterToolchainOutput {
         name: "Go".into(),
         plugin_version: env!("CARGO_PKG_VERSION").into(),
-        config_file_globs: vec!["go.work".into(), "go.work.sum".into()],
+        config_file_globs: vec![],
         exe_names: vec!["go".into(), "gofmt".into()],
-        lock_file_name: Some("go.sum".into()),
-        manifest_file_name: Some("go.mod".into()),
+        lock_file_names: vec!["go.sum".into(), "go.work.sum".into()],
+        manifest_file_names: vec!["go.mod".into(), "go.work".into()],
         vendor_dir_name: Some("vendor".into()), // go mod vendor
         ..Default::default()
     }))

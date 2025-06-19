@@ -4,7 +4,9 @@ use crate::go_sum::GoSum;
 use crate::go_work::GoWork;
 use extism_pdk::*;
 use moon_config::{BinEntry, DependencyScope};
-use moon_pdk::{get_host_env_var, get_host_environment, parse_toolchain_config_schema};
+use moon_pdk::{
+    get_host_env_var, get_host_environment, locate_root, parse_toolchain_config_schema,
+};
 use moon_pdk_api::*;
 use starbase_utils::fs;
 use std::collections::BTreeMap;
@@ -124,47 +126,32 @@ pub fn extend_task_script(
 pub fn locate_dependencies_root(
     Json(input): Json<LocateDependenciesRootInput>,
 ) -> FnResult<Json<LocateDependenciesRootOutput>> {
-    // TODO
-    // let config = parse_toolchain_config_schema::<GoToolchainConfig>(input.toolchain_config)?;
+    let config = parse_toolchain_config_schema::<GoToolchainConfig>(input.toolchain_config)?;
     let mut output = LocateDependenciesRootOutput::default();
 
-    let locate = |starting_dir: &VirtualPath, file: &str| -> Option<VirtualPath> {
-        let mut current_dir = Some(starting_dir.to_owned());
+    // Find `go.work` first
+    if config.workspaces {
+        if let Some(root) = locate_root(&input.starting_dir, "go.work") {
+            let go_work = GoWork::parse(fs::read_file(root.join("go.work"))?)?;
 
-        while let Some(dir) = current_dir {
-            if dir.join(file).exists() {
-                return Some(dir);
+            if !go_work.modules.is_empty() {
+                output.members = Some(go_work.modules);
             }
 
-            current_dir = dir.parent();
+            output.root = root.virtual_path();
         }
-
-        None
-    };
-
-    // Find `go.work` first
-    // if config.workspaces {
-    if let Some(root) = locate(&input.starting_dir, "go.work") {
-        let go_work = GoWork::parse(fs::read_file(root.join("go.work"))?)?;
-
-        if !go_work.modules.is_empty() {
-            output.members = Some(go_work.modules);
-        }
-
-        output.root = root.virtual_path();
     }
-    //  }
 
     // Then `go.sum` second
     if output.root.is_none() {
-        if let Some(root) = locate(&input.starting_dir, "go.sum") {
+        if let Some(root) = locate_root(&input.starting_dir, "go.sum") {
             output.root = root.virtual_path();
         }
     }
 
     // Otherwise assume `go.mod`
     if output.root.is_none() {
-        if let Some(root) = locate(&input.starting_dir, "go.mod") {
+        if let Some(root) = locate_root(&input.starting_dir, "go.mod") {
             output.root = root.virtual_path();
         }
     }
@@ -234,19 +221,28 @@ pub fn parse_manifest(
     Json(input): Json<ParseManifestInput>,
 ) -> FnResult<Json<ParseManifestOutput>> {
     let mut output = ParseManifestOutput::default();
-    let go_mod = parse_go_mod(fs::read_file(input.path)?)?;
 
-    for dep in go_mod.require {
-        // Ignore transitive deps, as we only care about
-        // direct project deps during task hashing
-        if dep.indirect {
-            continue;
+    match input.path.file_name().and_then(|name| name.to_str()) {
+        Some("go.mod") => {
+            let go_mod = parse_go_mod(fs::read_file(input.path)?)?;
+
+            for dep in go_mod.require {
+                // Ignore transitive deps, as we only care about
+                // direct project deps during task hashing
+                if dep.indirect {
+                    continue;
+                }
+
+                output.dependencies.insert(
+                    dep.module.module_path,
+                    ManifestDependency::Version(UnresolvedVersionSpec::parse(dep.module.version)?),
+                );
+            }
         }
-
-        output.dependencies.insert(
-            dep.module.module_path,
-            ManifestDependency::Version(UnresolvedVersionSpec::parse(dep.module.version)?),
-        );
+        Some("go.work") => {
+            // Do nothing for now...
+        }
+        _ => {}
     }
 
     Ok(Json(output))
