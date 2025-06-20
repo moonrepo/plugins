@@ -47,8 +47,6 @@ mod go_sum {
         let go_sum =
             GoSum::parse(fs::read_to_string(sandbox.path().join("advanced.sum")).unwrap()).unwrap();
 
-        dbg!(&go_sum);
-
         assert_eq!(
             go_sum.dependencies,
             BTreeMap::from_iter([

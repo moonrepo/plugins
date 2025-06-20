@@ -615,4 +615,139 @@ mod go_toolchain_tier2 {
             );
         }
     }
+
+    mod bins {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn doesnt_add_command_if_empty() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "bins": []
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.commands.is_empty());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn adds_commands_if_not_empty() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "bins": [
+                            "golang.org/x/tools/gopls",
+                            {
+                                "bin": "github.com/revel/cmd/revel"
+                            }
+                        ]
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.commands,
+                [ExecCommand::new(
+                    ExecCommandInput::new(
+                        "go",
+                        [
+                            "install",
+                            "-v",
+                            "golang.org/x/tools/gopls",
+                            "github.com/revel/cmd/revel"
+                        ],
+                    )
+                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )
+                .cache("go-bins-latest")]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn separates_commands_by_version() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "bins": [
+                            "golang.org/x/tools/gopls@1",
+                            {
+                                "bin": "github.com/revel/cmd/revel@2"
+                            }
+                        ]
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.commands,
+                [
+                    ExecCommand::new(
+                        ExecCommandInput::new(
+                            "go",
+                            ["install", "-v", "golang.org/x/tools/gopls@1"],
+                        )
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
+                    .cache("go-bins-1"),
+                    ExecCommand::new(
+                        ExecCommandInput::new(
+                            "go",
+                            ["install", "-v", "github.com/revel/cmd/revel@2"],
+                        )
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
+                    .cache("go-bins-2")
+                ]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn skips_local_bins_when_ci() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.enable_logging();
+
+            let plugin = sandbox
+                .create_toolchain_with_config("go", |config| {
+                    config.host_environment(HostEnvironment {
+                        ci: true,
+                        ..Default::default()
+                    });
+                })
+                .await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "bins": [
+                            {
+                                "bin": "github.com/revel/cmd/revel",
+                                "local": true
+                            }
+                        ]
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.commands.is_empty());
+        }
+    }
 }

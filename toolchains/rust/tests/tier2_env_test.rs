@@ -472,6 +472,37 @@ mod rust_toolchain_tier2 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn skips_local_bins_when_ci() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox
+                .create_toolchain_with_config("rust", |config| {
+                    config.host_environment(HostEnvironment {
+                        ci: true,
+                        ..Default::default()
+                    });
+                })
+                .await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "bins": [
+                            {
+                                "bin": "just",
+                                "local": true
+                            }
+                        ]
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            // binstall command
+            assert_eq!(output.commands.len(), 1);
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn can_set_binstall_version() {
             let sandbox = create_empty_moon_sandbox();
             let plugin = sandbox.create_toolchain("rust").await;
