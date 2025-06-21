@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+#### 🚀 Updates
+
+- Cached the globals bin directory when extending task commands/scripts.
+
 #### ⚙️ Internal
 
 - Updated dependencies.

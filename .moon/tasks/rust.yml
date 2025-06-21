@@ -18,6 +18,8 @@ tasks:
     inputs:
       - "@group(cargo)"
       - "@group(sources)"
+    # outputs:
+    #   - "/target/wasm32-wasip1/release/*.wasm"
     env: &env
       CARGO_TERM_COLOR: "always"
       # CARGO_TERM_QUIET: "true"

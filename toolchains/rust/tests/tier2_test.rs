@@ -2,6 +2,7 @@ use moon_config::DependencyScope;
 use moon_pdk_api::*;
 use moon_pdk_test_utils::{create_empty_moon_sandbox, create_moon_sandbox};
 use std::collections::BTreeMap;
+use std::env;
 use std::path::PathBuf;
 
 mod rust_toolchain_tier2 {
@@ -145,6 +146,11 @@ mod rust_toolchain_tier2 {
             let sandbox = create_empty_moon_sandbox();
             let plugin = sandbox.create_toolchain("rust").await;
 
+            unsafe {
+                env::remove_var("CARGO_INSTALL_ROOT");
+                env::remove_var("CARGO_HOME");
+            }
+
             let output = plugin
                 .extend_task_command(ExtendTaskCommandInput {
                     command: "unknown".into(),
@@ -158,7 +164,7 @@ mod rust_toolchain_tier2 {
             assert!(output.env_remove.is_empty());
             assert_eq!(
                 output.paths,
-                [std::env::home_dir().unwrap().join(".cargo").join("bin")]
+                [sandbox.path().join(".home").join(".cargo").join("bin")]
             );
         }
 
@@ -283,6 +289,11 @@ mod rust_toolchain_tier2 {
             let sandbox = create_empty_moon_sandbox();
             let plugin = sandbox.create_toolchain("rust").await;
 
+            unsafe {
+                env::remove_var("CARGO_INSTALL_ROOT");
+                env::remove_var("CARGO_HOME");
+            }
+
             let output = plugin
                 .extend_task_script(ExtendTaskScriptInput {
                     script: "unknown".into(),
@@ -294,7 +305,7 @@ mod rust_toolchain_tier2 {
             assert!(output.env_remove.is_empty());
             assert_eq!(
                 output.paths,
-                [std::env::home_dir().unwrap().join(".cargo").join("bin")]
+                [sandbox.path().join(".home").join(".cargo").join("bin")]
             );
         }
     }

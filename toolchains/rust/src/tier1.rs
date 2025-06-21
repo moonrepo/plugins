@@ -26,8 +26,8 @@ pub fn register_toolchain(
             "rustfmt".into(),
             "rustup".into(),
         ],
-        lock_file_name: Some("Cargo.lock".into()),
-        manifest_file_name: Some("Cargo.toml".into()),
+        lock_file_names: vec!["Cargo.lock".into()],
+        manifest_file_names: vec!["Cargo.toml".into()],
         // proto_tool_id: Some("rust".into()),
         vendor_dir_name: Some("target".into()),
         ..Default::default()

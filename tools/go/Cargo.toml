@@ -11,11 +11,12 @@ pre-release-replacements = [
 ]
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "lib"]
 
 [dependencies]
 extism-pdk = { workspace = true }
 proto_pdk = { workspace = true }
+proto_pdk_api = { workspace = true }
 schematic = { workspace = true }
 serde = { workspace = true }
 

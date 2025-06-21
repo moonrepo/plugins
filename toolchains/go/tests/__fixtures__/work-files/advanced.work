@@ -1,0 +1,23 @@
+go 1.23.0
+
+use ./a
+
+// Line comment
+use ./b
+
+replace example.com/bad/thing v1.4.5 => example.com/good/thing v1.4.5
+
+use (
+	../c
+	d // Trailing comment
+	.
+	./e
+)
+
+// Line comment
+replace (
+	example.com/bad/thing v1.4.5 => example.com/good/thing v1.4.5
+	example.com/bad/thing2 v1.4.5 => example.com/good/thing2 v1.4.5
+)
+
+use f
