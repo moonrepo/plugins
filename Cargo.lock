@@ -2582,9 +2582,9 @@ dependencies = [
 
 [[package]]
 name = "moon_pdk"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a08e55d9fca607c07e2b25e01a56b6170ba18faaad6347fba53947179b612afd"
+checksum = "6246b31bc3925597c122990999326056c690945c7a4de10787336e0bf956caa4"
 dependencies = [
  "clap",
  "extism-pdk",
@@ -2619,9 +2619,9 @@ dependencies = [
 
 [[package]]
 name = "moon_pdk_test_utils"
-version = "0.2.3"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "783a725bb2a0db8685b80e97c511f875d57af4164e685daa317306363fb425df"
+checksum = "5dffb9c84d6030d8edb85341a1da3f1811a7d743bc7838afe1b9fe3d0b6c27b0"
 dependencies = [
  "extism",
  "moon_pdk_api",
@@ -5071,9 +5071,9 @@ dependencies = [
 
 [[package]]
 name = "warpgate"
-version = "0.25.2"
+version = "0.25.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "386222b4fb798488eed83bd890ef062630bf1329cd43c7d93d2a3f3903b38e09"
+checksum = "436398240a42a12537e933e300550e5e7933b3fcad4e6b49fa31a1e405cd8066"
 dependencies = [
  "async-trait",
  "compact_str 0.9.0",
