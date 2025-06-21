@@ -1,7 +1,7 @@
 // `go.mod`
 
 use go_tool::version::from_go_version;
-use moon_pdk::{AnyResult, anyhow};
+use moon_pdk_api::{AnyResult, anyhow};
 use std::str::FromStr;
 
 pub use gomod_parser::*;

@@ -1,7 +1,7 @@
 // `go.sum`, `go.work.sum`
 
 use moon_config::VersionSpec;
-use moon_pdk::AnyResult;
+use moon_pdk_api::AnyResult;
 use std::collections::BTreeMap;
 
 #[derive(Debug, PartialEq)]

@@ -1,7 +1,7 @@
 // `go.work`
 
 use go_tool::version::from_go_version;
-use moon_pdk::AnyResult;
+use moon_pdk_api::AnyResult;
 
 #[derive(Debug, Default)]
 pub struct GoWork {
