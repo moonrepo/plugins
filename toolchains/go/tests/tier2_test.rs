@@ -3,6 +3,7 @@ use moon_pdk_api::*;
 use moon_pdk_test_utils::{create_empty_moon_sandbox, create_moon_sandbox};
 use serde_json::json;
 use std::collections::BTreeMap;
+use std::env;
 use std::path::PathBuf;
 
 mod go_toolchain_tier2 {
@@ -137,9 +138,14 @@ mod go_toolchain_tier2 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
-        async fn fallsback_to_cargo_dir_when_no_globals_dir() {
+        async fn fallsback_to_go_dir_when_no_globals_dir() {
             let sandbox = create_empty_moon_sandbox();
             let plugin = sandbox.create_toolchain("go").await;
+
+            unsafe {
+                env::remove_var("GOBIN");
+                env::remove_var("GOPATH");
+            }
 
             let output = plugin
                 .extend_task_command(ExtendTaskCommandInput {
@@ -154,7 +160,7 @@ mod go_toolchain_tier2 {
             assert!(output.env_remove.is_empty());
             assert_eq!(
                 output.paths,
-                [std::env::home_dir().unwrap().join("go").join("bin")]
+                [sandbox.path().join(".home").join("go").join("bin")]
             );
         }
     }
@@ -181,9 +187,14 @@ mod go_toolchain_tier2 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
-        async fn fallsback_to_cargo_dir_when_no_globals_dir() {
+        async fn fallsback_to_go_dir_when_no_globals_dir() {
             let sandbox = create_empty_moon_sandbox();
             let plugin = sandbox.create_toolchain("go").await;
+
+            unsafe {
+                env::remove_var("GOBIN");
+                env::remove_var("GOPATH");
+            }
 
             let output = plugin
                 .extend_task_script(ExtendTaskScriptInput {
@@ -196,7 +207,7 @@ mod go_toolchain_tier2 {
             assert!(output.env_remove.is_empty());
             assert_eq!(
                 output.paths,
-                [std::env::home_dir().unwrap().join("go").join("bin")]
+                [sandbox.path().join(".home").join("go").join("bin")]
             );
         }
     }
