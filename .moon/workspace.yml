@@ -34,3 +34,11 @@ projects:
 
 pipeline:
   logRunningCommand: true
+
+unstable_remote:
+  host: "grpcs://cache.depot.dev"
+  auth:
+    token: "DEPOT_TOKEN"
+    headers:
+      "X-Depot-Org": "1xtpjd084j"
+      "X-Depot-Project": "n30s525s5q"
