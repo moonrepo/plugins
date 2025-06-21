@@ -29,6 +29,29 @@ pub fn define_toolchain_config() -> FnResult<Json<DefineToolchainConfigOutput>> 
 }
 
 #[plugin_fn]
+pub fn initialize_toolchain(
+    Json(_): Json<InitializeToolchainInput>,
+) -> FnResult<Json<InitializeToolchainOutput>> {
+    Ok(Json(InitializeToolchainOutput {
+        config_url: Some("https://moonrepo.dev/docs/config/toolchain#go".into()),
+        docs_url: None,
+        prompts: vec![
+            SettingPrompt::new(
+                "workspaces",
+                "Support Go workspaces via <file>go.work</file>?",
+                PromptType::Confirm { default: true },
+            ),
+            SettingPrompt::new(
+                "tidyOnChange",
+                "Run tidy on dependencies change?",
+                PromptType::Confirm { default: false },
+            ),
+        ],
+        ..Default::default()
+    }))
+}
+
+#[plugin_fn]
 pub fn define_docker_metadata(
     Json(input): Json<DefineDockerMetadataInput>,
 ) -> FnResult<Json<DefineDockerMetadataOutput>> {
@@ -49,8 +72,11 @@ pub fn define_docker_metadata(
 
 #[plugin_fn]
 pub fn prune_docker(Json(input): Json<PruneDockerInput>) -> FnResult<Json<PruneDockerOutput>> {
+    let config = parse_toolchain_config::<GoToolchainConfig>(input.toolchain_config)?;
     let mut output = PruneDockerOutput::default();
-    let vendor_dir = input.root.join("vendor");
+    let vendor_dir = input
+        .root
+        .join(config.vendor_dir.as_deref().unwrap_or("vendor"));
 
     if vendor_dir.exists() && input.docker_config.delete_vendor_directories {
         fs::remove_dir_all(&vendor_dir)?;

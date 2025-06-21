@@ -100,9 +100,38 @@ mod go_toolchain_tier1 {
                 })
                 .await;
 
-            assert!(!sandbox.path().join("vendor/file").exists());
+            assert!(!sandbox.path().join("vendor").exists());
 
             assert_eq!(output.changed_files, [PathBuf::from("/workspace/vendor")]);
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn removes_custom_vendor_dir() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("nested/.vendor/file", "");
+
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .prune_docker(PruneDockerInput {
+                    docker_config: DockerPruneConfig {
+                        delete_vendor_directories: true,
+                        ..Default::default()
+                    },
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "vendorDir": "nested/.vendor"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(!sandbox.path().join("nested/.vendor").exists());
+
+            assert_eq!(
+                output.changed_files,
+                [PathBuf::from("/workspace/nested/.vendor")]
+            );
         }
     }
 }

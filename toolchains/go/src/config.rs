@@ -10,9 +10,13 @@ config_struct!(
         #[setting(nested)]
         pub bins: Vec<BinEntry>,
 
-        /// Tidy modules when dependencies or `go.sum` changes
-        /// by running `go mod tidy`.
+        /// Tidy modules when dependencies or `go.sum` changes by running `go mod tidy`.
+        /// This setting is ignored when using Go workspaces.
         pub tidy_on_change: bool,
+
+        /// Relative path to the vendor directory generated with `go mod vendor`.
+        /// If vendored with the default name of "vendor", this setting can be omitted.
+        pub vendor_dir: Option<String>,
 
         /// Configured version to download and install`.
         pub version: Option<UnresolvedVersionSpec>,
