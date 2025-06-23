@@ -298,3 +298,19 @@ pub fn setup_environment(
 
     Ok(Json(output))
 }
+
+#[plugin_fn]
+pub fn hash_task_contents(
+    Json(_): Json<HashTaskContentsInput>,
+) -> FnResult<Json<HashTaskContentsOutput>> {
+    let env = get_host_environment()?;
+
+    let mut map = json::Map::default();
+    map.insert("os".into(), json::Value::String(env.os.to_string()));
+    map.insert("arch".into(), json::Value::String(env.arch.to_string()));
+    map.insert("libc".into(), json::Value::String(env.libc.to_string()));
+
+    Ok(Json(HashTaskContentsOutput {
+        contents: vec![json::Value::Object(map)],
+    }))
+}

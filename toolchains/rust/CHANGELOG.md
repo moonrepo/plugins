@@ -5,6 +5,7 @@
 #### 🚀 Updates
 
 - Cached the globals bin directory when extending task commands/scripts.
+- Task hashing now includes the host OS, arch, and libc.
 
 #### ⚙️ Internal
 
