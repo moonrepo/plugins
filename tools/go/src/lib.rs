@@ -1,8 +1,7 @@
-mod config;
+pub mod config;
 #[cfg(feature = "wasm")]
 mod proto;
-#[cfg(feature = "wasm")]
-mod version;
+pub mod version;
 
 #[cfg(feature = "wasm")]
 pub use proto::*;

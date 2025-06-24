@@ -27,9 +27,18 @@ projects:
   rust-tool: tools/rust
   schema-tool: tools/internal-schema
   # Toolchains
+  go-toolchain: toolchains/go
   node-toolchain: toolchains/node
   rust-toolchain: toolchains/rust
   typescript-toolchain: toolchains/typescript
 
 pipeline:
   logRunningCommand: true
+
+unstable_remote:
+  host: "grpcs://cache.depot.dev"
+  auth:
+    token: "DEPOT_TOKEN"
+    headers:
+      "X-Depot-Org": "1xtpjd084j"
+      "X-Depot-Project": "n30s525s5q"

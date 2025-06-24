@@ -1,0 +1,35 @@
+[package]
+name = "go_toolchain"
+version = "0.0.1"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[package.metadata.release]
+pre-release-replacements = [
+    { file = "./CHANGELOG.md", search = "Unreleased", replace = "{{version}}" },
+]
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+go_tool = { path = "../../tools/go", default-features = false }
+extism-pdk = { workspace = true }
+gomod-parser2 = "0.4.0"
+moon_config = { workspace = true }
+moon_pdk = { workspace = true, features = ["schematic"] }
+moon_pdk_api = { workspace = true }
+schematic = { workspace = true, features = ["config"] }
+serde = { workspace = true }
+starbase_utils = { workspace = true }
+
+[dev-dependencies]
+moon_pdk_test_utils = { workspace = true }
+serde_json = { workspace = true }
+starbase_sandbox = { workspace = true }
+tokio = { workspace = true }
+
+[features]
+default = ["wasm"]
+wasm = ["go_tool/wasm"]

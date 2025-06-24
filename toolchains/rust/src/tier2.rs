@@ -2,7 +2,7 @@ use crate::cargo_toml::CargoToml;
 use cargo_toml::{Dependency, DepsSet, Publish};
 use extism_pdk::*;
 use moon_config::DependencyScope;
-use moon_pdk::{get_host_env_var, get_host_environment};
+use moon_pdk::{get_host_env_var, get_host_environment, locate_root, locate_root_with_check};
 use moon_pdk_api::*;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -84,12 +84,24 @@ fn gather_shared_paths(
         }
     }
 
-    if let Some(value) = get_host_env_var("CARGO_INSTALL_ROOT")? {
-        paths.push(PathBuf::from(value).join("bin"));
-    } else if let Some(value) = get_host_env_var("CARGO_HOME")? {
-        paths.push(PathBuf::from(value).join("bin"));
-    } else if let Some(value) = env.home_dir.join(".cargo/bin").real_path() {
-        paths.push(value);
+    if let Some(dir) = var::get::<String>("bin_dir")? {
+        paths.push(PathBuf::from(dir));
+    } else {
+        let maybe_dir = if let Some(value) = get_host_env_var("CARGO_INSTALL_ROOT")? {
+            Some(PathBuf::from(value).join("bin"))
+        } else if let Some(value) = get_host_env_var("CARGO_HOME")? {
+            Some(PathBuf::from(value).join("bin"))
+        } else {
+            env.home_dir.join(".cargo").join("bin").real_path()
+        };
+
+        if let Some(dir) = maybe_dir {
+            if let Some(dir_str) = dir.to_str() {
+                var::set("bin_dir", dir_str)?;
+            }
+
+            paths.push(dir);
+        }
     }
 
     Ok(())
@@ -149,63 +161,40 @@ pub fn locate_dependencies_root(
     let mut output = LocateDependenciesRootOutput::default();
 
     // Attempt to find `Cargo.lock` first
-    let mut current_dir = Some(input.starting_dir.clone());
-
-    while let Some(dir) = &current_dir {
-        if dir.join("Cargo.lock").exists() {
-            output.root = dir.virtual_path();
-
-            let manifest_path = dir.join("Cargo.toml");
-
-            if manifest_path.exists() {
-                output.members = CargoToml::load(manifest_path)?.extract_members();
-            }
-
-            break;
-        }
-
-        current_dir = dir.parent();
+    if let Some(root) = locate_root(&input.starting_dir, "Cargo.lock") {
+        output.root = root.virtual_path();
+        output.members = CargoToml::load(root.join("Cargo.toml"))?.extract_members();
     }
 
     // Otherwise find a `Cargo.toml` workspace
     if output.root.is_none() {
-        let mut current_dir = Some(input.starting_dir.clone());
+        locate_root_with_check(&input.starting_dir, "Cargo.toml", |root| {
+            let manifest = CargoToml::load(root.join("Cargo.toml"))?;
+            let mut found = false;
 
-        while let Some(dir) = &current_dir {
-            let manifest_path = dir.join("Cargo.toml");
-
-            if manifest_path.exists() {
-                let manifest = CargoToml::load(manifest_path)?;
-
-                if manifest.workspace.is_some() {
-                    output.root = dir.virtual_path();
-                    output.members = manifest.extract_members();
-                    break;
-                }
+            if manifest.workspace.is_some() {
+                output.root = root.virtual_path();
+                output.members = manifest.extract_members();
+                found = true;
             }
 
-            current_dir = dir.parent();
-        }
+            Ok(found)
+        })?;
     }
 
     // Else may be a stand-alone project
     if output.root.is_none() {
-        let mut current_dir = Some(input.starting_dir.clone());
+        locate_root_with_check(&input.starting_dir, "Cargo.toml", |root| {
+            let manifest = CargoToml::load(root.join("Cargo.toml"))?;
+            let mut found = false;
 
-        while let Some(dir) = &current_dir {
-            let manifest_path = dir.join("Cargo.toml");
-
-            if manifest_path.exists() {
-                let manifest = CargoToml::load(manifest_path)?;
-
-                if manifest.package.is_some() {
-                    output.root = dir.virtual_path();
-                    break;
-                }
+            if manifest.package.is_some() {
+                output.root = root.virtual_path();
+                found = true;
             }
 
-            current_dir = dir.parent();
-        }
+            Ok(found)
+        })?;
     }
 
     Ok(Json(output))
@@ -327,4 +316,20 @@ pub fn parse_manifest(
     extract_deps(&manifest.build_dependencies, &mut output.build_dependencies)?;
 
     Ok(Json(output))
+}
+
+#[plugin_fn]
+pub fn hash_task_contents(
+    Json(_): Json<HashTaskContentsInput>,
+) -> FnResult<Json<HashTaskContentsOutput>> {
+    let env = get_host_environment()?;
+
+    let mut map = json::Map::default();
+    map.insert("os".into(), json::Value::String(env.os.to_string()));
+    map.insert("arch".into(), json::Value::String(env.arch.to_string()));
+    map.insert("libc".into(), json::Value::String(env.libc.to_string()));
+
+    Ok(Json(HashTaskContentsOutput {
+        contents: vec![json::Value::Object(map)],
+    }))
 }
