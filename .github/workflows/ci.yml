@@ -11,6 +11,7 @@ env:
   NEXTEST_TEST_THREADS: 3
   NEXTEST_RETRIES: 2
   PROTO_LOG: trace
+  MOON_LOG: trace
 
 jobs:
   # format:
