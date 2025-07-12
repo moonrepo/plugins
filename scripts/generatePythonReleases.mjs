@@ -59,6 +59,9 @@ function mapTriple(triple) {
     case "x86_64-pc-windows-msvc-static":
       return "x86_64-pc-windows-msvc";
 
+    case "aarch64-pc-windows-msvc":
+      return "aarch64-pc-windows-msvc";
+
     case "linux64":
     case "x86_64-unknown-linux-gnu":
     case "x86_64_v2-unknown-linux-gnu":
