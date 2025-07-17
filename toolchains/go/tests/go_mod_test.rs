@@ -17,6 +17,18 @@ mod go_mod {
     }
 
     #[test]
+    fn parses_basic_without_trailing() {
+        let sandbox = create_sandbox("mod-files");
+
+        parse_go_mod(
+            fs::read_to_string(sandbox.path().join("basic.mod"))
+                .unwrap()
+                .trim(),
+        )
+        .unwrap();
+    }
+
+    #[test]
     fn parses_advanced() {
         let sandbox = create_sandbox("mod-files");
         let go_mod =
@@ -73,5 +85,17 @@ mod go_mod {
             go_mod.retract,
             vec![ModuleRetract::Range("v1.9.0".into(), "v1.9.5".into())]
         );
+    }
+
+    #[test]
+    fn parses_advanced_without_trailing() {
+        let sandbox = create_sandbox("mod-files");
+
+        parse_go_mod(
+            fs::read_to_string(sandbox.path().join("advanced.mod"))
+                .unwrap()
+                .trim(),
+        )
+        .unwrap();
     }
 }

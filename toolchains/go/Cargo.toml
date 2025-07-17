@@ -16,7 +16,7 @@ crate-type = ["cdylib", "lib"]
 [dependencies]
 go_tool = { path = "../../tools/go", default-features = false }
 extism-pdk = { workspace = true }
-gomod-parser2 = "0.4.0"
+gomod-parser2 = "0.4.1"
 moon_config = { workspace = true }
 moon_pdk = { workspace = true, features = ["schematic"] }
 moon_pdk_api = { workspace = true }

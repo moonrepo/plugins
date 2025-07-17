@@ -42,6 +42,18 @@ mod go_sum {
     }
 
     #[test]
+    fn parses_basic_without_trailing() {
+        let sandbox = create_sandbox("sum-files");
+
+        GoSum::parse(
+            fs::read_to_string(sandbox.path().join("basic.sum"))
+                .unwrap()
+                .trim(),
+        )
+        .unwrap();
+    }
+
+    #[test]
     fn parses_advanced() {
         let sandbox = create_sandbox("sum-files");
         let go_sum =
@@ -73,5 +85,17 @@ mod go_sum {
                 )
             ])
         );
+    }
+
+    #[test]
+    fn parses_advanced_without_trailing() {
+        let sandbox = create_sandbox("sum-files");
+
+        GoSum::parse(
+            fs::read_to_string(sandbox.path().join("advanced.sum"))
+                .unwrap()
+                .trim(),
+        )
+        .unwrap();
     }
 }
