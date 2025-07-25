@@ -4010,7 +4010,7 @@ dependencies = [
 
 [[package]]
 name = "rust_tool"
-version = "0.13.4"
+version = "0.13.5"
 dependencies = [
  "extism-pdk",
  "proto_pdk",
