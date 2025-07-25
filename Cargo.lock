@@ -991,7 +991,7 @@ dependencies = [
 
 [[package]]
 name = "deno_tool"
-version = "0.15.4"
+version = "0.15.5"
 dependencies = [
  "extism-pdk",
  "proto_pdk",
