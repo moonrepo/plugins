@@ -302,7 +302,7 @@ fn migrate_inputs(raw_inputs: &[NxInput], for_file_groups: bool) -> AnyResult<Ve
                 inputs.push(Input::EnvVar(env.to_owned()));
             }
             NxInput::Fileset { fileset } => {
-                inputs.push(Input::parse(&replace_tokens(fileset, true))?);
+                inputs.push(Input::parse(replace_tokens(fileset, true))?);
             }
             NxInput::Runtime { .. } => {
                 // Not supported, moon includes tool version automatically
@@ -310,7 +310,7 @@ fn migrate_inputs(raw_inputs: &[NxInput], for_file_groups: bool) -> AnyResult<Ve
             NxInput::Source(source) => {
                 // File path or glob
                 if is_path_or_glob(source) {
-                    inputs.push(Input::parse(&replace_tokens(source, true))?);
+                    inputs.push(Input::parse(replace_tokens(source, true))?);
                 }
                 // Named input
                 else if !source.starts_with('^') && !for_file_groups {
