@@ -3987,7 +3987,7 @@ dependencies = [
 
 [[package]]
 name = "ruby_tool"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "extism-pdk",
  "proto_pdk",
