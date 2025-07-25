@@ -18,7 +18,10 @@ starbase_archive = { version = "0.11.4", default-features = false }
 starbase_sandbox = "0.9.4"
 starbase_utils = { version = "0.11.13", default-features = false }
 tokio = { version = "1.46.1", features = ["full"] }
-toml = { version = "0.8.23", default-features = false, features = ["parse"] }
+toml = { version = "0.9.2", default-features = false, features = [
+    "parse",
+    "serde",
+] }
 
 # moon
 moon_common = { version = "0.1.3" }
