@@ -2401,6 +2401,7 @@ dependencies = [
  "proto_pdk_api",
  "serde",
  "serde_json",
+ "starbase_utils",
 ]
 
 [[package]]
@@ -3558,6 +3559,7 @@ dependencies = [
  "proto_pdk_test_utils",
  "serde",
  "starbase_sandbox",
+ "starbase_utils",
  "tokio",
  "tool_common",
 ]
@@ -4012,6 +4014,7 @@ dependencies = [
  "proto_pdk_test_utils",
  "serde",
  "starbase_sandbox",
+ "starbase_utils",
  "tokio",
  "toml 0.8.23",
  "tool_common",
@@ -5437,6 +5440,7 @@ dependencies = [
  "moon_pdk_test_utils",
  "starbase_archive",
  "starbase_sandbox",
+ "starbase_utils",
  "tokio",
 ]
 

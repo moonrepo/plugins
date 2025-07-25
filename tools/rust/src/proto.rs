@@ -2,8 +2,8 @@ use crate::helpers::*;
 use crate::toolchain_toml::ToolchainToml;
 use extism_pdk::*;
 use proto_pdk::*;
+use starbase_utils::fs;
 use std::collections::HashMap;
-use std::fs;
 use tool_common::enable_tracing;
 
 #[host_fn]
@@ -118,7 +118,7 @@ pub fn native_install(
         });
 
         if !script_path.exists() {
-            fs::write(
+            fs::write_file(
                 &script_path,
                 fetch_bytes(if is_windows {
                     "https://win.rustup.rs"
@@ -241,7 +241,7 @@ pub fn sync_manifest(Json(_): Json<SyncManifestInput>) -> FnResult<Json<SyncMani
     };
 
     for dir in dirs {
-        let dir = dir?.path();
+        let dir = dir.path();
 
         if !dir.is_dir() {
             continue;

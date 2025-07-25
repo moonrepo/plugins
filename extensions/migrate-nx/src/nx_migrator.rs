@@ -2,6 +2,8 @@ use crate::nx_json::*;
 use crate::nx_project_json::*;
 use extension_common::migrator::*;
 use moon_common::Id;
+use moon_config::GlobInput;
+use moon_config::GlobPath;
 use moon_config::{
     FilePath, Input, LayerType, OneOrMany, OutputPath, PartialProjectDependsOn,
     PartialProjectMetadataConfig, PartialTaskArgs, PartialTaskConfig, PartialTaskDependency,
@@ -310,7 +312,22 @@ fn migrate_inputs(raw_inputs: &[NxInput], for_file_groups: bool) -> AnyResult<Ve
             NxInput::Source(source) => {
                 // File path or glob
                 if is_path_or_glob(source) {
-                    inputs.push(Input::parse(replace_tokens(source, true))?);
+                    let path = replace_tokens(source, true);
+
+                    if path.contains('?') {
+                        let glob = GlobInput {
+                            glob: GlobPath(path.into()),
+                            ..Default::default()
+                        };
+
+                        inputs.push(if glob.is_workspace_relative() {
+                            Input::WorkspaceGlob(glob)
+                        } else {
+                            Input::ProjectGlob(glob)
+                        });
+                    } else {
+                        inputs.push(Input::parse(path)?);
+                    }
                 }
                 // Named input
                 else if !source.starts_with('^') && !for_file_groups {

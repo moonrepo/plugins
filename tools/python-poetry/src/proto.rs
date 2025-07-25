@@ -1,7 +1,7 @@
 use extism_pdk::*;
 use proto_pdk::*;
+use starbase_utils::fs;
 use std::collections::HashMap;
-use std::fs;
 use tool_common::enable_tracing;
 
 #[host_fn]
@@ -66,7 +66,7 @@ pub fn native_install(
             script = script.replace("symlinks=False", "symlinks=True");
         }
 
-        fs::write(&script_path, script)?;
+        fs::write_file(&script_path, script)?;
     }
 
     let result = exec(ExecCommandInput {

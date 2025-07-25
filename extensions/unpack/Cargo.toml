@@ -19,6 +19,7 @@ extism-pdk = { workspace = true }
 moon_pdk = { workspace = true }
 moon_pdk_api = { workspace = true }
 starbase_archive = { workspace = true, features = ["tar-gz", "zip"] }
+starbase_utils = { workspace = true }
 
 [dev-dependencies]
 moon_pdk_test_utils = { workspace = true }

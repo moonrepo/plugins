@@ -5,11 +5,17 @@ expression: "fs::read_to_string(sandbox.path().join(\".moon/tasks/node.yml\")).u
 fileGroups:
   variants:
   - $FOO_BAR
-  - '**/*'
-  - '**/*'
-  - '!**/*'
-  - /**/*
-  - '!/**/*'
-  - src/file.ts
-  - src/file.*
-  - src
+  - glob: '**/*'
+    cache: true
+  - glob: '**/*'
+    cache: true
+  - glob: '!**/*'
+    cache: true
+  - glob: /**/*
+    cache: true
+  - glob: '!/**/*'
+    cache: true
+  - file: src/file.ts
+  - glob: src/file.*
+    cache: true
+  - file: src

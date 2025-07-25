@@ -4,11 +4,13 @@ expression: "fs::read_to_string(sandbox.path().join(\".moon/tasks/node.yml\")).u
 ---
 fileGroups:
   default:
-  - '**/*'
+  - glob: '**/*'
+    cache: true
   - $FOO_BAR
   production:
-  - '!**/*.spec.tsx'
-  - /static
+  - glob: '!**/*.spec.tsx'
+    cache: true
+  - file: /static
 tasks:
   build:
     command: js tsc

@@ -4,10 +4,13 @@ expression: "fs::read_to_string(sandbox.path().join(\"baz/moon.yml\")).unwrap()"
 ---
 fileGroups:
   default:
-  - '**/*'
+  - glob: '**/*'
+    cache: true
   production:
-  - '!jest.config.ts'
-  - '!**/?(*.)+(spec|test).ts'
+  - glob: '!jest.config.ts'
+    cache: true
+  - glob: '!**/?(*.)+(spec|test).ts'
+    cache: true
 language: javascript
 tasks:
   build:

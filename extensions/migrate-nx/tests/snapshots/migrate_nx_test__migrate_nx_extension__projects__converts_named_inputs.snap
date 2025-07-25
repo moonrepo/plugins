@@ -5,14 +5,20 @@ expression: "fs::read_to_string(sandbox.path().join(\"moon.yml\")).unwrap()"
 fileGroups:
   variants:
   - $FOO_BAR
-  - '**/*'
-  - '**/*'
-  - '!**/*'
-  - /**/*
-  - '!/**/*'
-  - src/file.ts
-  - src/file.*
-  - src
+  - glob: '**/*'
+    cache: true
+  - glob: '**/*'
+    cache: true
+  - glob: '!**/*'
+    cache: true
+  - glob: /**/*
+    cache: true
+  - glob: '!/**/*'
+    cache: true
+  - file: src/file.ts
+  - glob: src/file.*
+    cache: true
+  - file: src
 language: javascript
 toolchain:
   default: node

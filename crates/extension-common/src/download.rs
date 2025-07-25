@@ -1,7 +1,7 @@
 use crate::format_virtual_path;
 use extism_pdk::debug;
 use moon_pdk::{AnyResult, VirtualPath, fetch_bytes};
-use std::fs;
+use starbase_utils::fs;
 
 pub fn download_from_url<U: AsRef<str>, P: AsRef<VirtualPath>>(
     src_url: U,
@@ -23,7 +23,7 @@ pub fn download_from_url<U: AsRef<str>, P: AsRef<VirtualPath>>(
     let file = dir.join(file_name);
 
     fs::create_dir_all(dir)?;
-    fs::write(&file, bytes)?;
+    fs::write_file(&file, bytes)?;
 
     debug!("Downloaded to <path>{}</path>", format_virtual_path(&file));
 
