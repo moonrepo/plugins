@@ -2,11 +2,12 @@ use crate::nx_json::*;
 use crate::nx_project_json::*;
 use extension_common::migrator::*;
 use moon_common::Id;
+use moon_config::GlobInput;
+use moon_config::GlobPath;
 use moon_config::{
-    FilePath, InputPath, OneOrMany, OutputPath, PartialProjectDependsOn,
+    FilePath, Input, LayerType, OneOrMany, OutputPath, PartialProjectDependsOn,
     PartialProjectMetadataConfig, PartialTaskArgs, PartialTaskConfig, PartialTaskDependency,
-    PartialTaskOptionsConfig, PartialVcsConfig, PartialWorkspaceProjects, ProjectType,
-    TaskOptionEnvFile,
+    PartialTaskOptionsConfig, PartialVcsConfig, PartialWorkspaceProjects, TaskOptionEnvFile,
 };
 use moon_pdk::{AnyResult, map_miette_error};
 use moon_pdk_api::MoonContext;
@@ -42,10 +43,7 @@ impl NxMigrator {
             let file_groups = tasks_config.file_groups.get_or_insert(FxHashMap::default());
 
             if !file_groups.contains_key("default") {
-                file_groups.insert(
-                    Id::raw("default"),
-                    vec![InputPath::ProjectGlob("**/*".into())],
-                );
+                file_groups.insert(Id::raw("default"), vec![Input::parse("**/*")?]);
             }
 
             if !file_groups.contains_key("production") {
@@ -180,9 +178,9 @@ impl NxMigrator {
 
         if let Some(project_type) = project_json.project_type {
             if project_type == "library" || project_type == "lib" {
-                config.type_of = Some(ProjectType::Library);
+                config.layer = Some(LayerType::Library);
             } else if project_type == "application" || project_type == "app" {
-                config.type_of = Some(ProjectType::Application);
+                config.layer = Some(LayerType::Application);
             }
         }
 
@@ -288,7 +286,7 @@ fn replace_tokens(value: &str, for_sources: bool) -> String {
     result
 }
 
-fn migrate_inputs(raw_inputs: &[NxInput], for_file_groups: bool) -> AnyResult<Vec<InputPath>> {
+fn migrate_inputs(raw_inputs: &[NxInput], for_file_groups: bool) -> AnyResult<Vec<Input>> {
     let mut inputs = vec![];
 
     for input in raw_inputs {
@@ -303,10 +301,10 @@ fn migrate_inputs(raw_inputs: &[NxInput], for_file_groups: bool) -> AnyResult<Ve
                 // Not supported, moon parses lockfiles automatically
             }
             NxInput::Env { env } => {
-                inputs.push(InputPath::EnvVar(env.to_owned()));
+                inputs.push(Input::EnvVar(env.to_owned()));
             }
             NxInput::Fileset { fileset } => {
-                inputs.push(InputPath::from_str(&replace_tokens(fileset, true))?);
+                inputs.push(Input::parse(replace_tokens(fileset, true))?);
             }
             NxInput::Runtime { .. } => {
                 // Not supported, moon includes tool version automatically
@@ -314,11 +312,26 @@ fn migrate_inputs(raw_inputs: &[NxInput], for_file_groups: bool) -> AnyResult<Ve
             NxInput::Source(source) => {
                 // File path or glob
                 if is_path_or_glob(source) {
-                    inputs.push(InputPath::from_str(&replace_tokens(source, true))?);
+                    let path = replace_tokens(source, true);
+
+                    if path.contains('?') {
+                        let glob = GlobInput {
+                            glob: GlobPath(path.into()),
+                            ..Default::default()
+                        };
+
+                        inputs.push(if glob.is_workspace_relative() {
+                            Input::WorkspaceGlob(glob)
+                        } else {
+                            Input::ProjectGlob(glob)
+                        });
+                    } else {
+                        inputs.push(Input::parse(path)?);
+                    }
                 }
                 // Named input
                 else if !source.starts_with('^') && !for_file_groups {
-                    inputs.push(InputPath::TokenFunc(format!("@group({source})")));
+                    inputs.push(Input::TokenFunc(format!("@group({source})")));
                 }
             }
         };

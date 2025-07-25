@@ -5,6 +5,7 @@ use regex::Captures;
 use serde_json::Value as JsonValue;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
+use tool_common::enable_tracing;
 
 #[host_fn]
 extern "ExtismHost" {
@@ -37,6 +38,8 @@ fn get_platform<'schema>(
 
 #[plugin_fn]
 pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {
+    enable_tracing();
+
     let env = get_host_environment()?;
     let schema = get_schema()?;
     let platform = get_platform(&schema, &env)?;

@@ -1,6 +1,6 @@
-use cargo_toml::Value;
 use moon_pdk_api::VirtualPath;
 use rust_toolchain::toolchain_toml::*;
+use starbase_utils::toml::TomlValue;
 use std::path::PathBuf;
 
 mod toolchain_toml {
@@ -68,11 +68,14 @@ mod toolchain_toml {
 
             tc.set_channel("stable").unwrap();
 
-            let mut root = Value::Table(Default::default());
+            let mut root = TomlValue::Table(Default::default());
 
             tc.save_field("toolchain.channel", &mut root).unwrap();
 
-            assert_eq!(root["toolchain"]["channel"], Value::String("stable".into()));
+            assert_eq!(
+                root["toolchain"]["channel"],
+                TomlValue::String("stable".into())
+            );
         }
 
         #[test]
@@ -82,7 +85,7 @@ mod toolchain_toml {
                 ..Default::default()
             };
 
-            let mut root = Value::Table(Default::default());
+            let mut root = TomlValue::Table(Default::default());
 
             tc.save_field("toolchain.channel", &mut root).unwrap();
 

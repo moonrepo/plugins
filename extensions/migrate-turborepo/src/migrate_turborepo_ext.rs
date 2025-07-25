@@ -1,4 +1,5 @@
 use crate::turbo_migrator::TurboMigrator;
+use extension_common::enable_tracing;
 use extism_pdk::*;
 use moon_pdk::*;
 use moon_pdk_api::{ExecuteExtensionInput, RegisterExtensionInput, RegisterExtensionOutput};
@@ -13,6 +14,8 @@ extern "ExtismHost" {
 pub fn register_extension(
     Json(_): Json<RegisterExtensionInput>,
 ) -> FnResult<Json<RegisterExtensionOutput>> {
+    enable_tracing();
+
     Ok(Json(RegisterExtensionOutput {
         name: "Migrate Turborepo".into(),
         description: Some("Migrate a Turborepo repository to moon by converting all <file>turbo.json</file> files into moon configuration files.".into()),

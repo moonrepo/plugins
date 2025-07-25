@@ -12,6 +12,7 @@ pre-release-replacements = [
 crate-type = ["cdylib"]
 
 [dependencies]
+backend_common = { path = "../../crates/backend-common" }
 extism-pdk = { workspace = true }
 proto_pdk = { workspace = true }
 rustc-hash = { workspace = true }

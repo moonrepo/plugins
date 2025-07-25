@@ -1,7 +1,6 @@
 use nodejs_package_json::PackageJson;
 use proto_pdk_api::{AnyResult, VirtualPath};
-use serde_json::Value;
-use std::fs;
+use starbase_utils::{fs, json};
 
 pub fn extract_version_from_text(content: &str) -> Option<&str> {
     for line in content.lines() {
@@ -58,17 +57,17 @@ pub fn extract_volta_version(
     key: &str,
 ) -> AnyResult<Option<String>> {
     if let Some(volta) = package_json.other_fields.get("volta") {
-        if let Some(Value::String(inner)) = volta.get(key) {
+        if let Some(json::JsonValue::String(inner)) = volta.get(key) {
             return Ok(Some(inner.into()));
         }
 
-        if let Some(Value::String(extends_from)) = volta.get("extends") {
+        if let Some(json::JsonValue::String(extends_from)) = volta.get("extends") {
             let extends_path = package_path.parent().unwrap().join(extends_from);
 
             if extends_path.exists() && extends_path.is_file() {
-                let content = fs::read_to_string(&extends_path)?;
+                let content = fs::read_file(&extends_path)?;
 
-                if let Ok(other_package_json) = serde_json::from_str::<PackageJson>(&content) {
+                if let Ok(other_package_json) = json::parse::<&str, PackageJson>(&content) {
                     return extract_volta_version(&other_package_json, &extends_path, key);
                 }
             }

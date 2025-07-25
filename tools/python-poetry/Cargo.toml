@@ -14,9 +14,11 @@ pre-release-replacements = [
 crate-type = ["cdylib"]
 
 [dependencies]
+tool_common = { path = "../../crates/tool-common" }
 extism-pdk = { workspace = true }
 proto_pdk = { workspace = true }
 serde = { workspace = true }
+starbase_utils = { workspace = true }
 
 [dev-dependencies]
 proto_pdk_test_utils = { workspace = true }

@@ -4,6 +4,7 @@
 
 #### ⚙️ Internal
 
+- Enabled experimental trace logging.
 - Updated dependencies.
 
 ## 0.0.6

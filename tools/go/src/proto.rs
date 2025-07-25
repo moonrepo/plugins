@@ -4,6 +4,7 @@ use extism_pdk::*;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
 use std::collections::HashMap;
+use tool_common::enable_tracing;
 
 #[host_fn]
 extern "ExtismHost" {
@@ -14,6 +15,8 @@ static NAME: &str = "Go";
 
 #[plugin_fn]
 pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {
+    enable_tracing();
+
     Ok(Json(RegisterToolOutput {
         name: NAME.into(),
         type_of: PluginType::Language,

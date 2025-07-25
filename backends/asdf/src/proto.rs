@@ -1,4 +1,5 @@
 use crate::config::AsdfPluginConfig;
+use backend_common::enable_tracing;
 use extism_pdk::*;
 use proto_pdk::*;
 use rustc_hash::FxHashMap;
@@ -159,6 +160,8 @@ fn handle_exec_result(script_path: String, result: ExecCommandOutput) -> AnyResu
 
 #[plugin_fn]
 pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {
+    enable_tracing();
+
     Ok(Json(RegisterToolOutput {
         name: if input.id == "asdf" {
             input.id.clone()
