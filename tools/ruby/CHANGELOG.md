@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+#### ⚙️ Internal
+
+- Enabled experimental trace logging.
+- Updated dependencies.
+
 ## 0.2.2
 
 #### ⚙️ Internal
