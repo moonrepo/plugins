@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed a "wasm `unreachable` instruction executed" error.
+
 ## 0.2.1
 
 #### ⚙️ Internal
