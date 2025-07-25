@@ -4025,7 +4025,7 @@ dependencies = [
 
 [[package]]
 name = "rust_toolchain"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "cargo-lock",
  "cargo_toml",
