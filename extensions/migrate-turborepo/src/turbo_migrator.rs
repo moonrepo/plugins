@@ -2,7 +2,7 @@ use crate::turbo_json::*;
 use extension_common::migrator::*;
 use moon_common::Id;
 use moon_config::{
-    FilePath, InputPath, OutputPath, PartialTaskArgs, PartialTaskConfig, PartialTaskDependency,
+    FilePath, Input, OutputPath, PartialTaskArgs, PartialTaskConfig, PartialTaskDependency,
     PartialTaskOptionsConfig, PartialWorkspaceProjects, TaskOptionEnvFile, TaskOutputStyle,
     TaskPreset,
 };
@@ -96,19 +96,19 @@ impl TurboMigrator {
 
         if let Some(global_deps) = turbo_json.global_dependencies.take() {
             for dep in global_deps {
-                implicit_inputs.push(InputPath::from_str(&dep)?);
+                implicit_inputs.push(Input::parse(&dep)?);
             }
         }
 
         if let Some(global_dot_env) = turbo_json.global_dot_env.take() {
             for env_file in global_dot_env {
-                implicit_inputs.push(InputPath::from_str(&env_file)?);
+                implicit_inputs.push(Input::parse(&env_file)?);
             }
         }
 
         if let Some(global_env) = turbo_json.global_env.take() {
             for env in global_env {
-                implicit_inputs.push(InputPath::EnvVar(env.to_owned()));
+                implicit_inputs.push(Input::EnvVar(env.to_owned()));
             }
         }
 
@@ -220,7 +220,7 @@ impl TurboMigrator {
             for dep in depends_on {
                 // $ENV input
                 if let Some(env) = dep.strip_prefix('$') {
-                    inputs.push(InputPath::EnvVar(env.into()));
+                    inputs.push(Input::EnvVar(env.into()));
                     continue;
                 }
 
@@ -260,7 +260,7 @@ impl TurboMigrator {
         // Inputs
         if let Some(env_vars) = &turbo_task.env {
             for env in env_vars {
-                inputs.push(InputPath::EnvVar(env.into()));
+                inputs.push(Input::EnvVar(env.into()));
             }
         }
 
@@ -270,7 +270,7 @@ impl TurboMigrator {
                     continue;
                 }
 
-                inputs.push(InputPath::from_str(input)?);
+                inputs.push(Input::parse(input)?);
             }
         }
 
