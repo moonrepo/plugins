@@ -1,16 +1,25 @@
-import fs from "fs";
+// @ts-check
+import fs from "node:fs";
 
-const OPT_LEVELS = ["pgo+lto", "pgo", "lto", "lto+static", "noopt", "noopt+static"];
+const OPT_LEVELS = [
+  "pgo+lto",
+  "pgo",
+  "lto",
+  "lto+static",
+  "noopt",
+  "noopt+static",
+];
 const GH_TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
 
 const response = await fetch(
   "https://api.github.com/repos/astral-sh/python-build-standalone/releases?per_page=5",
   {
+    // @ts-expect-error
     headers: {
       Accept: "application/vnd.github+json",
       Authorization: GH_TOKEN ? `Bearer ${GH_TOKEN}` : undefined,
     },
-  },
+  }
 );
 
 // Load the existing dataset so we can reduce the amount of API calls required
@@ -142,7 +151,10 @@ function extractTripleInfo(assetName, releaseName) {
 
 function processAssets(assets, releaseName, optLevel) {
   assets.forEach((asset) => {
-    const { version, triple, sha256 } = extractTripleInfo(asset.name, releaseName);
+    const { version, triple, sha256 } = extractTripleInfo(
+      asset.name,
+      releaseName
+    );
 
     if (!data[version]) {
       data[version] = {};
@@ -182,7 +194,7 @@ const FILTER_WORDS = [
 releases.forEach((release) => {
   // Remove debug, install only, and unwanted builds
   const assets = release.assets.filter((asset) =>
-    FILTER_WORDS.every((word) => !asset.name.includes(word)),
+    FILTER_WORDS.every((word) => !asset.name.includes(word))
   );
 
   // Process assets in order of most wanted to least wanted
@@ -190,7 +202,7 @@ releases.forEach((release) => {
     processAssets(
       assets.filter((asset) => asset.name.includes(optLevel)),
       release.name,
-      optLevel,
+      optLevel
     );
   });
 });
