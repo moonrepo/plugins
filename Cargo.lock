@@ -94,6 +94,7 @@ checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
 name = "asdf_backend"
 version = "0.3.0"
 dependencies = [
+ "backend_common",
  "extism-pdk",
  "proto_pdk",
  "proto_pdk_test_utils",
@@ -158,6 +159,13 @@ name = "autocfg"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
+
+[[package]]
+name = "backend_common"
+version = "0.0.0"
+dependencies = [
+ "common",
+]
 
 [[package]]
 name = "backtrace"
@@ -260,6 +268,7 @@ dependencies = [
  "serde",
  "starbase_sandbox",
  "tokio",
+ "tool_common",
 ]
 
 [[package]]
@@ -533,6 +542,13 @@ checksum = "ba5a308b75df32fe02788e748662718f03fde005016435c444eea572398219fd"
 dependencies = [
  "bytes",
  "memchr",
+]
+
+[[package]]
+name = "common"
+version = "0.0.0"
+dependencies = [
+ "proto_pdk",
 ]
 
 [[package]]
@@ -981,6 +997,7 @@ dependencies = [
  "serde",
  "starbase_sandbox",
  "tokio",
+ "tool_common",
 ]
 
 [[package]]
@@ -1243,6 +1260,7 @@ dependencies = [
 name = "extension_common"
 version = "0.1.1"
 dependencies = [
+ "common",
  "extism-pdk",
  "moon_common",
  "moon_config",
@@ -1704,6 +1722,7 @@ dependencies = [
  "serde",
  "starbase_sandbox",
  "tokio",
+ "tool_common",
 ]
 
 [[package]]
@@ -1723,6 +1742,7 @@ dependencies = [
  "starbase_sandbox",
  "starbase_utils",
  "tokio",
+ "toolchain_common",
 ]
 
 [[package]]
@@ -2878,6 +2898,7 @@ dependencies = [
  "serde",
  "starbase_sandbox",
  "tokio",
+ "tool_common",
 ]
 
 [[package]]
@@ -2919,6 +2940,7 @@ dependencies = [
  "serde_json",
  "starbase_sandbox",
  "tokio",
+ "tool_common",
 ]
 
 [[package]]
@@ -2935,6 +2957,7 @@ dependencies = [
  "serial_test",
  "starbase_sandbox",
  "tokio",
+ "tool_common",
 ]
 
 [[package]]
@@ -2947,6 +2970,7 @@ dependencies = [
  "node_tool",
  "schematic",
  "serde",
+ "toolchain_common",
 ]
 
 [[package]]
@@ -3502,6 +3526,7 @@ dependencies = [
  "extism-pdk",
  "proto_pdk",
  "serde",
+ "tool_common",
 ]
 
 [[package]]
@@ -3534,6 +3559,7 @@ dependencies = [
  "serde",
  "starbase_sandbox",
  "tokio",
+ "tool_common",
 ]
 
 [[package]]
@@ -3547,6 +3573,7 @@ dependencies = [
  "serde",
  "starbase_sandbox",
  "tokio",
+ "tool_common",
 ]
 
 [[package]]
@@ -3560,6 +3587,7 @@ dependencies = [
  "starbase_sandbox",
  "tokio",
  "toml 0.8.23",
+ "tool_common",
 ]
 
 [[package]]
@@ -3962,6 +3990,7 @@ dependencies = [
  "serde",
  "starbase_sandbox",
  "tokio",
+ "tool_common",
 ]
 
 [[package]]
@@ -3985,6 +4014,7 @@ dependencies = [
  "starbase_sandbox",
  "tokio",
  "toml 0.8.23",
+ "tool_common",
 ]
 
 [[package]]
@@ -4007,6 +4037,7 @@ dependencies = [
  "starbase_sandbox",
  "starbase_utils",
  "tokio",
+ "toolchain_common",
 ]
 
 [[package]]
@@ -4192,6 +4223,7 @@ dependencies = [
  "serde_json",
  "starbase_sandbox",
  "tokio",
+ "tool_common",
 ]
 
 [[package]]
@@ -5169,6 +5201,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fcc842091f2def52017664b53082ecbbeb5c7731092bad69d2c63050401dfd64"
 
 [[package]]
+name = "tool_common"
+version = "0.0.0"
+dependencies = [
+ "common",
+]
+
+[[package]]
+name = "toolchain_common"
+version = "0.0.0"
+dependencies = [
+ "common",
+]
+
+[[package]]
 name = "tower"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5316,6 +5362,7 @@ dependencies = [
  "starbase_sandbox",
  "starbase_utils",
  "tokio",
+ "toolchain_common",
  "typescript_tsconfig_json",
 ]
 
@@ -5591,6 +5638,8 @@ checksum = "7203045f6d25026fcbe090aa71aa1178344814be6edbbc66b7fa76abb26eca6f"
 dependencies = [
  "extism-pdk",
  "serde",
+ "tracing",
+ "tracing-subscriber",
  "warpgate_api",
 ]
 

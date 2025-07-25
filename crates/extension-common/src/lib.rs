@@ -2,6 +2,7 @@ pub mod download;
 pub mod migrator;
 pub mod project_graph;
 
+pub use common::*;
 use moon_pdk::VirtualPath;
 use std::borrow::Cow;
 

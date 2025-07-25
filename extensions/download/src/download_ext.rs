@@ -1,5 +1,5 @@
 use extension_common::download::download_from_url;
-use extension_common::format_virtual_path;
+use extension_common::{enable_tracing, format_virtual_path};
 use extism_pdk::*;
 use moon_pdk::*;
 use moon_pdk_api::{ExecuteExtensionInput, RegisterExtensionInput, RegisterExtensionOutput};
@@ -14,6 +14,8 @@ extern "ExtismHost" {
 pub fn register_extension(
     Json(_): Json<RegisterExtensionInput>,
 ) -> FnResult<Json<RegisterExtensionOutput>> {
+    enable_tracing();
+
     Ok(Json(RegisterExtensionOutput {
         name: "Download".into(),
         description: Some("Download a file from a URL into the current working directory.".into()),

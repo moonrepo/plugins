@@ -7,6 +7,9 @@ export function getArgs() {
   const { values: args } = parseArgs({
     args: process.argv.slice(2),
     options: {
+      message: {
+        type: "string",
+      },
       bump: {
         type: "string",
         default: "patch",

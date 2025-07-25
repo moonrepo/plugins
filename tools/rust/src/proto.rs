@@ -4,6 +4,7 @@ use extism_pdk::*;
 use proto_pdk::*;
 use std::collections::HashMap;
 use std::fs;
+use tool_common::enable_tracing;
 
 #[host_fn]
 extern "ExtismHost" {
@@ -19,6 +20,8 @@ fn get_toolchain_dir(env: &HostEnvironment) -> AnyResult<VirtualPath> {
 
 #[plugin_fn]
 pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {
+    enable_tracing();
+
     let env = get_host_environment()?;
 
     Ok(Json(RegisterToolOutput {

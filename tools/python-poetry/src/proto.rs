@@ -2,6 +2,7 @@ use extism_pdk::*;
 use proto_pdk::*;
 use std::collections::HashMap;
 use std::fs;
+use tool_common::enable_tracing;
 
 #[host_fn]
 extern "ExtismHost" {
@@ -10,6 +11,8 @@ extern "ExtismHost" {
 
 #[plugin_fn]
 pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {
+    enable_tracing();
+
     Ok(Json(RegisterToolOutput {
         name: "Poetry".into(),
         type_of: PluginType::CommandLine,

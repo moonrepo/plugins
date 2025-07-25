@@ -4,11 +4,14 @@ use moon_pdk::parse_toolchain_config;
 use moon_pdk_api::*;
 use schematic::SchemaBuilder;
 use starbase_utils::fs;
+use toolchain_common::enable_tracing;
 
 #[plugin_fn]
 pub fn register_toolchain(
     Json(_): Json<RegisterToolchainInput>,
 ) -> FnResult<Json<RegisterToolchainOutput>> {
+    enable_tracing();
+
     Ok(Json(RegisterToolchainOutput {
         name: "Go".into(),
         plugin_version: env!("CARGO_PKG_VERSION").into(),

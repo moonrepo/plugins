@@ -4,6 +4,7 @@ use proto_pdk::*;
 use regex::Regex;
 use serde::Deserialize;
 use std::collections::{BTreeMap, HashMap};
+use tool_common::enable_tracing;
 
 #[host_fn]
 extern "ExtismHost" {
@@ -15,6 +16,8 @@ static NAME: &str = "Python";
 
 #[plugin_fn]
 pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {
+    enable_tracing();
+
     Ok(Json(RegisterToolOutput {
         name: NAME.into(),
         type_of: PluginType::Language,
