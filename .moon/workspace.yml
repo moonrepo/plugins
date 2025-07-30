@@ -6,9 +6,6 @@ projects:
   root: .
   # Backends
   asdf-backend: backends/asdf
-  # Common
-  extension-common: crates/extension-common
-  lang-javascript-common: crates/lang-javascript-common
   # Extensions
   download-extension: extensions/download
   migrate-nx-extension: extensions/migrate-nx
@@ -30,6 +27,7 @@ projects:
   schema-tool: tools/internal-schema
   # Toolchains
   go-toolchain: toolchains/go
+  javascript-toolchain: toolchains/javascript
   node-toolchain: toolchains/node
   rust-toolchain: toolchains/rust
   typescript-toolchain: toolchains/typescript

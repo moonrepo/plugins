@@ -1,0 +1,27 @@
+[package]
+name = "javascript_toolchain"
+version = "0.0.1"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[package.metadata.release]
+pre-release-replacements = [
+    { file = "./CHANGELOG.md", search = "Unreleased", replace = "{{version}}" },
+]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+toolchain_common = { path = "../../crates/toolchain-common" }
+lang_javascript_common = { path = "../../crates/lang-javascript-common" }
+extism-pdk = { workspace = true }
+moon_pdk = { workspace = true }
+moon_pdk_api = { workspace = true }
+schematic = { workspace = true, features = ["config"] }
+serde = { workspace = true }
+
+[features]
+default = ["wasm"]
+wasm = []

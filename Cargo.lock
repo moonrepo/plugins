@@ -2313,6 +2313,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "javascript_toolchain"
+version = "0.0.1"
+dependencies = [
+ "extism-pdk",
+ "lang_javascript_common",
+ "moon_pdk",
+ "moon_pdk_api",
+ "schematic",
+ "serde",
+ "toolchain_common",
+]
+
+[[package]]
 name = "jni"
 version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
