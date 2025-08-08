@@ -2974,11 +2974,13 @@ name = "node_toolchain"
 version = "0.0.1"
 dependencies = [
  "extism-pdk",
+ "moon_config",
  "moon_pdk",
  "moon_pdk_api",
  "node_tool",
  "schematic",
  "serde",
+ "starbase_utils",
  "toolchain_common",
 ]
 

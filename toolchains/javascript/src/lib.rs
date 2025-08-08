@@ -1,6 +1,6 @@
 mod config;
 #[cfg(feature = "wasm")]
-mod moon;
+mod tier1;
 
 #[cfg(feature = "wasm")]
-pub use moon::*;
+pub use tier1::*;

@@ -1,8 +1,11 @@
 mod config;
 #[cfg(feature = "wasm")]
-mod moon;
+mod tier1;
+mod tier2;
+#[cfg(feature = "wasm")]
+mod tier3;
 
 #[cfg(feature = "wasm")]
-pub use moon::*;
+pub use tier1::*;
 #[cfg(feature = "wasm")]
-pub use node_tool::*;
+pub use tier3::*;
