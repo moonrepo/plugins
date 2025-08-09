@@ -1,0 +1,29 @@
+[package]
+name = "bun_toolchain"
+version = "0.0.1"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[package.metadata.release]
+pre-release-replacements = [
+    { file = "./CHANGELOG.md", search = "Unreleased", replace = "{{version}}" },
+]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+toolchain_common = { path = "../../crates/toolchain-common" }
+bun_tool = { path = "../../tools/bun", default-features = false }
+extism-pdk = { workspace = true }
+moon_config = { workspace = true }
+moon_pdk = { workspace = true }
+moon_pdk_api = { workspace = true }
+schematic = { workspace = true }
+serde = { workspace = true }
+starbase_utils = { workspace = true }
+
+[features]
+default = ["wasm"]
+wasm = ["bun_tool/wasm"]

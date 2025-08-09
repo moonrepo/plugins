@@ -272,6 +272,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "bun_toolchain"
+version = "0.0.1"
+dependencies = [
+ "bun_tool",
+ "extism-pdk",
+ "moon_config",
+ "moon_pdk",
+ "moon_pdk_api",
+ "schematic",
+ "serde",
+ "starbase_utils",
+ "toolchain_common",
+]
+
+[[package]]
 name = "bytemuck"
 version = "1.23.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
