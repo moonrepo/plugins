@@ -24,6 +24,12 @@ schematic = { workspace = true }
 serde = { workspace = true }
 starbase_utils = { workspace = true }
 
+[dev-dependencies]
+moon_pdk_test_utils = { workspace = true }
+serde_json = { workspace = true }
+starbase_sandbox = { workspace = true }
+tokio = { workspace = true }
+
 [features]
 default = ["wasm"]
 wasm = ["node_depman_tool/wasm"]

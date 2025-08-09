@@ -2955,10 +2955,14 @@ dependencies = [
  "moon_config",
  "moon_pdk",
  "moon_pdk_api",
+ "moon_pdk_test_utils",
  "node_depman_tool",
  "schematic",
  "serde",
+ "serde_json",
+ "starbase_sandbox",
  "starbase_utils",
+ "tokio",
  "toolchain_common",
 ]
 
