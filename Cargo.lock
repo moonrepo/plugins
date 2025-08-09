@@ -2968,6 +2968,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "node_depman_toolchain"
+version = "0.0.1"
+dependencies = [
+ "extism-pdk",
+ "moon_config",
+ "moon_pdk",
+ "moon_pdk_api",
+ "node_depman_tool",
+ "schematic",
+ "serde",
+ "starbase_utils",
+ "toolchain_common",
+]
+
+[[package]]
 name = "node_tool"
 version = "0.17.1"
 dependencies = [

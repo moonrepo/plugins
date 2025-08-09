@@ -26,9 +26,11 @@ projects:
   rust-tool: tools/rust
   schema-tool: tools/internal-schema
   # Toolchains
+  bun-toolchain: toolchains/bun
   go-toolchain: toolchains/go
   javascript-toolchain: toolchains/javascript
   node-toolchain: toolchains/node
+  node-depman-toolchain: toolchains/node-depman
   rust-toolchain: toolchains/rust
   typescript-toolchain: toolchains/typescript
 
