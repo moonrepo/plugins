@@ -22,11 +22,12 @@ config_struct!(
     /// Docs: https://moonrepo.dev/docs/config/toolchain#node
     #[derive(Config)]
     pub struct NodeToolchainConfig {
-        /// List of arguments to pass to all `node` executions.
+        /// List of arguments to pass to all `node` executions (via task commands).
         /// Arguments will be appended after `node` but before other arguments.
         pub execute_args: Vec<String>,
 
-        /// Enable the v8 profiler for all `node` task executions.
+        /// Enable the v8 profiler for all `node` executions (via task commands).
+        /// Note: This should only be enabled for debugging purposes!
         pub profile_execution: Option<NodeProfileType>,
 
         /// When `version` is defined, syncs the version to the chosen config.

@@ -7,7 +7,7 @@ config_struct!(
     /// Docs: https://moonrepo.dev/docs/config/toolchain#bun
     #[derive(Config)]
     pub struct BunToolchainConfig {
-        /// List of arguments to pass to all `bun` executions.
+        /// List of arguments to pass to all `bun` executions (via task commands).
         /// Arguments will be appended after `bun` but before other arguments.
         pub execute_args: Vec<String>,
 
