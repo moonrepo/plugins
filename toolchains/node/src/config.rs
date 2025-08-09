@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 /// The available version managers for Node.js.
 #[derive(ConfigEnum, Clone, Copy, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum NodeVersionManager {
     Nodenv,
     Nvm,
@@ -12,6 +13,7 @@ pub enum NodeVersionManager {
 
 /// The type of profiling operation to use.
 #[derive(ConfigEnum, Clone, Copy, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum NodeProfileType {
     Cpu,
     Heap,

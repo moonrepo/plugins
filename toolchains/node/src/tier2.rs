@@ -23,7 +23,7 @@ pub fn setup_environment(
                 NodeVersionManager::Nvm => ".nvmrc",
             });
 
-            fs::write_file(&rc_path, version.to_string())?;
+            fs::write_file(&rc_path, version.to_partial_string())?;
 
             Ok(rc_path)
         })?;

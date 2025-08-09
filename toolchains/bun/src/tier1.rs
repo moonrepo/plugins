@@ -53,7 +53,7 @@ pub fn define_docker_metadata(
             config
                 .version
                 .as_ref()
-                .map(|version| version.to_string())
+                .map(|version| version.to_partial_string())
                 .unwrap_or_else(|| "latest".into())
         )),
         scaffold_globs: vec![
