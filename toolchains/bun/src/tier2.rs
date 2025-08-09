@@ -4,20 +4,6 @@ use crate::config::BunToolchainConfig;
 use extism_pdk::*;
 use moon_pdk::parse_toolchain_config;
 use moon_pdk_api::*;
-use std::path::PathBuf;
-
-fn gather_shared_paths(
-    globals_dir: Option<&VirtualPath>,
-    paths: &mut Vec<PathBuf>,
-) -> AnyResult<()> {
-    if let Some(globals_dir) = globals_dir {
-        if let Some(value) = globals_dir.real_path() {
-            paths.push(value);
-        }
-    }
-
-    Ok(())
-}
 
 #[plugin_fn]
 pub fn extend_task_command(
@@ -30,7 +16,9 @@ pub fn extend_task_command(
         output.args = Some(Extend::Prepend(config.execute_args));
     }
 
-    gather_shared_paths(input.globals_dir.as_ref(), &mut output.paths)?;
+    if let Some(globals_dir) = input.globals_dir.and_then(|dir| dir.real_path()) {
+        output.paths.push(globals_dir);
+    }
 
     Ok(Json(output))
 }
@@ -41,7 +29,9 @@ pub fn extend_task_script(
 ) -> FnResult<Json<ExtendTaskScriptOutput>> {
     let mut output = ExtendTaskScriptOutput::default();
 
-    gather_shared_paths(input.globals_dir.as_ref(), &mut output.paths)?;
+    if let Some(globals_dir) = input.globals_dir.and_then(|dir| dir.real_path()) {
+        output.paths.push(globals_dir);
+    }
 
     Ok(Json(output))
 }
