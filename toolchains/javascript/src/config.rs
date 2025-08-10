@@ -70,12 +70,7 @@ impl JavaScriptDependencyVersionFormat {
 config_struct!(
     /// Configures and enables the JavaScript toolchain.
     #[derive(Config)]
-    pub struct JavaScriptConfig {
-        /// When a `version` is defined for a JavaScript runtime toolchain,
-        /// syncs the version as a constraint to `package.json` engines.
-        #[setting(default = true)]
-        pub add_engines_constraint: bool,
-
+    pub struct JavaScriptToolchainConfig {
         /// Automatically dedupes the lockfile when dependencies have changed.
         #[setting(default = true)]
         pub dedupe_on_lockfile_change: bool,
@@ -88,11 +83,16 @@ config_struct!(
         pub infer_tasks_from_scripts: bool,
 
         /// The package manager to use for installing dependencies.
-        pub package_manager: JavaScriptPackageManager,
+        pub package_manager: Option<JavaScriptPackageManager>,
 
         /// Enforces that only the root `package.json` can be used for dependencies,
         /// which supports the "one version policy" pattern.
         pub root_package_only: bool,
+
+        /// When a `version` is defined for a JavaScript runtime toolchain,
+        /// syncs the version as a constraint to `package.json` engines.
+        #[setting(default = true)]
+        pub sync_engines_constraint: bool,
 
         /// Automatically syncs the configured package manager version
         /// to the root `packageManager` field in `package.json`.

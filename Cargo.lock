@@ -2339,8 +2339,14 @@ dependencies = [
  "lang_javascript_common",
  "moon_pdk",
  "moon_pdk_api",
+ "moon_pdk_test_utils",
+ "nodejs_package_json",
  "schematic",
  "serde",
+ "serde_json",
+ "starbase_sandbox",
+ "starbase_utils",
+ "tokio",
  "toolchain_common",
 ]
 
