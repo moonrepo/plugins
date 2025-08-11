@@ -1,9 +1,9 @@
 use crate::config::{JavaScriptPackageManager, JavaScriptToolchainConfig};
+use crate::package_json::PackageJson;
 use extism_pdk::*;
 use moon_pdk_api::*;
-use nodejs_package_json::PackageJson;
 use schematic::SchemaBuilder;
-use starbase_utils::json::{self, JsonValue};
+use starbase_utils::json::JsonValue;
 use std::str::FromStr;
 use toolchain_common::enable_tracing;
 
@@ -39,6 +39,7 @@ pub fn register_toolchain(
             "bun.lockb".into(),
             // npm
             "package-lock.json".into(),
+            "npm-shrinkwrap.json".into(),
             // pnpm
             "pnpm-lock.yaml".into(),
             // yarn
@@ -109,21 +110,17 @@ pub fn define_toolchain_config() -> FnResult<Json<DefineToolchainConfigOutput>> 
 }
 
 fn detect_package_manager(root: &VirtualPath) -> AnyResult<Option<JavaScriptPackageManager>> {
-    let package_path = root.join("package.json");
+    let package = PackageJson::load(root.join("package.json"))?;
 
-    if package_path.exists() {
-        let package: PackageJson = json::read_file(package_path)?;
+    if let Some(pm) = &package.package_manager {
+        let pm_name = pm.split_once('@').map(|parts| parts.0).unwrap_or(pm);
 
-        if let Some(pm) = &package.package_manager {
-            let pm_name = pm.split_once('@').map(|parts| parts.0).unwrap_or(pm);
-
-            return Ok(Some(JavaScriptPackageManager::from_str(&pm_name)?));
-        }
+        return Ok(Some(JavaScriptPackageManager::from_str(&pm_name)?));
     }
 
     if root.join("bun.lock").exists() || root.join("bun.lockb").exists() {
         return Ok(Some(JavaScriptPackageManager::Bun));
-    } else if root.join("package-lock.json").exists() {
+    } else if root.join("package-lock.json").exists() || root.join("npm-shrinkwrap.json").exists() {
         return Ok(Some(JavaScriptPackageManager::Npm));
     } else if root.join("pnpm-lock.yaml").exists() {
         return Ok(Some(JavaScriptPackageManager::Pnpm));

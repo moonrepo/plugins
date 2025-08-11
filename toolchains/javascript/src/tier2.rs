@@ -1,4 +1,10 @@
+use crate::config::*;
+use crate::package_json::PackageJson;
 use extism_pdk::*;
+use moon_pdk::{
+    get_host_environment, load_toolchain_config, locate_root, locate_root_many,
+    locate_root_with_check, parse_toolchain_config, parse_toolchain_config_schema,
+};
 use moon_pdk_api::*;
 use std::path::PathBuf;
 
@@ -62,6 +68,220 @@ pub fn extend_task_script(
         input.globals_dir.as_ref(),
         &mut output.paths,
     )?;
+
+    Ok(Json(output))
+}
+
+#[plugin_fn]
+pub fn locate_dependencies_root(
+    Json(input): Json<LocateDependenciesRootInput>,
+) -> FnResult<Json<LocateDependenciesRootOutput>> {
+    let config = parse_toolchain_config::<JavaScriptToolchainConfig>(input.toolchain_config)?;
+    let mut output = LocateDependenciesRootOutput::default();
+
+    let Some(package_manager) = config.package_manager else {
+        return Ok(Json(output));
+    };
+
+    // Attempt to find a lock file first
+    let lock_names = match package_manager {
+        JavaScriptPackageManager::Bun => vec!["bun.lock", "bun.lockb"],
+        JavaScriptPackageManager::Npm => vec!["package-lock.json", "npm-shrinkwrap.json"],
+        JavaScriptPackageManager::Pnpm => vec!["pnpm-lock.yaml"],
+        JavaScriptPackageManager::Yarn => vec!["yarn.lock"],
+    };
+
+    if let Some(root) = locate_root_many(&input.starting_dir, &lock_names) {
+        output.root = root.virtual_path();
+        output.members = PackageJson::load(root.join("package.json"))?.extract_members();
+    }
+
+    // Otherwise find a `package.json` workspace
+    if output.root.is_none() {
+        locate_root_with_check(&input.starting_dir, "package.json", |root| {
+            let manifest = PackageJson::load(root.join("package.json"))?;
+            let mut found = false;
+
+            if manifest.workspaces.is_some() {
+                output.root = root.virtual_path();
+                output.members = manifest.extract_members();
+                found = true;
+            }
+
+            Ok(found)
+        })?;
+    }
+
+    // Else may be a stand-alone project
+    if output.root.is_none() {
+        if let Some(root) = locate_root(&input.starting_dir, "package.json") {
+            output.root = root.virtual_path();
+        }
+    }
+
+    Ok(Json(output))
+}
+
+#[plugin_fn]
+pub fn install_dependencies(
+    Json(input): Json<InstallDependenciesInput>,
+) -> FnResult<Json<InstallDependenciesOutput>> {
+    let config =
+        parse_toolchain_config_schema::<JavaScriptToolchainConfig>(input.toolchain_config)?;
+    let mut output = InstallDependenciesOutput::default();
+
+    let Some(package_manager) = config.package_manager else {
+        return Ok(Json(output));
+    };
+
+    let env = get_host_environment()?;
+    let package_manager_config =
+        load_toolchain_config::<SharedPackageManagerConfig>(package_manager.to_string())?;
+    let mut inherit_install_args = true;
+
+    // Install
+    let mut command = match package_manager {
+        JavaScriptPackageManager::Bun => {
+            let mut cmd = ExecCommandInput::new("bun", ["install"]);
+
+            if input.production {
+                cmd.args.push("--production".into());
+            }
+
+            for package_name in input.packages {
+                cmd.args.push("--filter".into());
+                cmd.args.push(package_name);
+            }
+
+            cmd
+        }
+        JavaScriptPackageManager::Npm => {
+            let mut cmd = ExecCommandInput::new(
+                "npm",
+                if env.ci && input.root.join("package-lock.json").exists() {
+                    ["ci"]
+                } else {
+                    ["install"]
+                },
+            );
+
+            if input.production {
+                cmd.args.push("--production".into());
+            }
+
+            for package_name in input.packages {
+                cmd.args.push("--workspace".into());
+                cmd.args.push(package_name);
+            }
+
+            cmd
+        }
+        JavaScriptPackageManager::Pnpm => {
+            let mut cmd = ExecCommandInput::new("pnpm", ["install"]);
+
+            if input.production {
+                cmd.args.push("--prod".into());
+            }
+
+            for package_name in input.packages {
+                cmd.args.push(if input.production {
+                    "--filter-prod".into()
+                } else {
+                    "--filter".into()
+                });
+
+                // https://pnpm.io/filtering#--filter-package_name-1
+                cmd.args.push(format!("{package_name}..."));
+            }
+
+            cmd
+        }
+        JavaScriptPackageManager::Yarn => {
+            let mut cmd = ExecCommandInput::new("yarn", ["install"]);
+
+            if !input.packages.is_empty() && package_manager_config.version_satisfies(">=2.0.0") {
+                cmd = ExecCommandInput::new("yarn", ["workspaces", "focus"]);
+                cmd.args.extend(input.packages);
+
+                inherit_install_args = false;
+            };
+
+            if input.production {
+                cmd.args.push("--production".into());
+            }
+
+            cmd
+        }
+    };
+
+    if inherit_install_args {
+        command
+            .args
+            .extend(package_manager_config.install_args.clone());
+    }
+
+    command.cwd = Some(input.root.clone());
+
+    output.install_command = Some(command.into());
+
+    // Dedupe
+    if config.dedupe_on_lockfile_change {
+        match package_manager {
+            JavaScriptPackageManager::Bun => {
+                // N/A
+            }
+            JavaScriptPackageManager::Npm => {
+                output.dedupe_command = Some(
+                    ExecCommandInput::new("npm", ["dedupe"])
+                        .cwd(input.root)
+                        .into(),
+                );
+            }
+            JavaScriptPackageManager::Pnpm => {
+                output.dedupe_command =
+                    Some(if package_manager_config.version_satisfies(">=7.26.0") {
+                        ExecCommandInput::new("pnpm", ["dedupe"])
+                            .cwd(input.root)
+                            .into()
+                    } else {
+                        ExecCommandInput::new(
+                            "npx",
+                            [
+                                "--quiet",
+                                "--package",
+                                "pnpm-deduplicate",
+                                "--",
+                                "pnpm-deduplicate",
+                            ],
+                        )
+                        .cwd(input.root)
+                        .into()
+                    });
+            }
+            JavaScriptPackageManager::Yarn => {
+                output.dedupe_command =
+                    Some(if package_manager_config.version_satisfies(">=2.0.0") {
+                        ExecCommandInput::new("yarn", ["dedupe"])
+                            .cwd(input.root)
+                            .into()
+                    } else {
+                        ExecCommandInput::new(
+                            "npx",
+                            [
+                                "--quiet",
+                                "--package",
+                                "yarn-deduplicate",
+                                "--",
+                                "yarn-deduplicate",
+                                "yarn.lock",
+                            ],
+                        )
+                        .cwd(input.root)
+                        .into()
+                    });
+            }
+        };
+    }
 
     Ok(Json(output))
 }

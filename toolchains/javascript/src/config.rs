@@ -1,4 +1,4 @@
-use moon_pdk_api::config_struct;
+use moon_pdk_api::{UnresolvedVersionSpec, Version, VersionReq, config_struct};
 use schematic::{Config, ConfigEnum};
 use serde::{Deserialize, Serialize};
 
@@ -105,3 +105,41 @@ config_struct!(
         pub sync_project_workspace_dependencies: bool,
     }
 );
+
+// This config represents shared package manager configuration
+// that is loaded from external toolchains, primarily `node-depman-toolchain`.
+config_struct!(
+    #[derive(Default)]
+    pub struct SharedPackageManagerConfig {
+        pub install_args: Vec<String>,
+        pub version: Option<UnresolvedVersionSpec>,
+    }
+);
+
+impl SharedPackageManagerConfig {
+    pub fn version_satisfies(&self, req: &str) -> bool {
+        let Some(spec) = &self.version else {
+            return false;
+        };
+
+        let req = VersionReq::parse(req).unwrap();
+
+        match spec {
+            UnresolvedVersionSpec::Canary => true,
+            UnresolvedVersionSpec::Req(value) => {
+                let value = value.comparators.first().unwrap();
+                let mut version = Version::new(
+                    value.major,
+                    value.minor.unwrap_or(0),
+                    value.patch.unwrap_or(0),
+                );
+                version.pre = value.pre.clone();
+
+                req.matches(&version)
+            }
+            UnresolvedVersionSpec::Calendar(version) => req.matches(version),
+            UnresolvedVersionSpec::Semantic(version) => req.matches(version),
+            _ => false,
+        }
+    }
+}
