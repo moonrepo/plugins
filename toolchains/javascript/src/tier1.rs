@@ -115,7 +115,7 @@ fn detect_package_manager(root: &VirtualPath) -> AnyResult<Option<JavaScriptPack
     if let Some(pm) = &package.package_manager {
         let pm_name = pm.split_once('@').map(|parts| parts.0).unwrap_or(pm);
 
-        return Ok(Some(JavaScriptPackageManager::from_str(&pm_name)?));
+        return Ok(Some(JavaScriptPackageManager::from_str(pm_name)?));
     }
 
     if root.join("bun.lock").exists() || root.join("bun.lockb").exists() {

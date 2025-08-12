@@ -274,12 +274,18 @@ pub fn parse_manifest(
                         }
                     }
                     Dependency::Detailed(cfg) => {
-                        if cfg.features.is_empty() && cfg.version.is_none() {
+                        if cfg.features.is_empty()
+                            && cfg.version.is_none()
+                            && cfg.path.is_none()
+                            && cfg.git.is_none()
+                        {
                             ManifestDependency::Inherited(cfg.inherited)
                         } else {
                             ManifestDependency::Config(ManifestDependencyConfig {
                                 inherited: cfg.inherited,
                                 features: cfg.features.clone(),
+                                path: cfg.path.as_ref().map(PathBuf::from),
+                                url: cfg.git.clone(),
                                 version: match &cfg.version {
                                     Some(version) => Some(UnresolvedVersionSpec::parse(version)?),
                                     None => None,
@@ -291,6 +297,7 @@ pub fn parse_manifest(
                 },
             );
         }
+
         Ok(())
     };
 

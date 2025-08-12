@@ -1,6 +1,7 @@
 use moon_pdk_api::*;
 use moon_pdk_test_utils::{create_empty_moon_sandbox, create_moon_sandbox};
 use serde_json::json;
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 mod javascript_toolchain_tier2 {
@@ -35,7 +36,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(sandbox.path().join("package").into()),
+                    starting_dir: VirtualPath::Real(sandbox.path().join("package")),
                     toolchain_config: json!({
                         "packageManager": null
                     }),
@@ -685,7 +686,7 @@ mod javascript_toolchain_tier2 {
             }
 
             #[tokio::test(flavor = "multi_thread")]
-            async fn mordern_dedupe_for_newer_versions() {
+            async fn modern_dedupe_for_newer_versions() {
                 let mut sandbox = create_empty_moon_sandbox();
 
                 sandbox
@@ -870,7 +871,7 @@ mod javascript_toolchain_tier2 {
             }
 
             #[tokio::test(flavor = "multi_thread")]
-            async fn mordern_dedupe_for_newer_versions() {
+            async fn modern_dedupe_for_newer_versions() {
                 let mut sandbox = create_empty_moon_sandbox();
 
                 sandbox
@@ -898,6 +899,112 @@ mod javascript_toolchain_tier2 {
                     )
                 );
             }
+        }
+    }
+
+    mod parse_manifest {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn parses_workspace() {
+            let sandbox = create_moon_sandbox("files");
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .parse_manifest(ParseManifestInput {
+                    path: VirtualPath::Real(sandbox.path().join("package.json")),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.version.is_none());
+            assert!(output.dev_dependencies.is_empty());
+            assert!(output.build_dependencies.is_empty());
+            assert!(output.peer_dependencies.is_empty());
+            assert!(!output.publishable);
+
+            assert_eq!(
+                output.dependencies,
+                BTreeMap::from_iter([
+                    (
+                        "a".into(),
+                        ManifestDependency::Version(UnresolvedVersionSpec::parse("1.2.3").unwrap())
+                    ),
+                    (
+                        "b".into(),
+                        ManifestDependency::Version(
+                            UnresolvedVersionSpec::parse("^4.5.6").unwrap()
+                        ),
+                    ),
+                    (
+                        "c".into(),
+                        ManifestDependency::Version(
+                            UnresolvedVersionSpec::parse("~7.8.9").unwrap()
+                        ),
+                    )
+                ])
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn parses_package() {
+            let sandbox = create_moon_sandbox("files");
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .parse_manifest(ParseManifestInput {
+                    path: VirtualPath::Real(sandbox.path().join("package/package.json")),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.version.unwrap(), Version::parse("1.0.0").unwrap());
+            assert!(output.publishable);
+
+            assert_eq!(
+                output.dependencies,
+                BTreeMap::from_iter([
+                    (
+                        "a".into(),
+                        ManifestDependency::Version(UnresolvedVersionSpec::parse("1.2.3").unwrap())
+                    ),
+                    (
+                        "e".into(),
+                        ManifestDependency::Version(
+                            UnresolvedVersionSpec::parse("=7.8.9").unwrap()
+                        ),
+                    )
+                ])
+            );
+
+            assert_eq!(
+                output.dev_dependencies,
+                BTreeMap::from_iter([
+                    (
+                        "b".into(),
+                        ManifestDependency::Version(
+                            UnresolvedVersionSpec::parse("^4.5.6").unwrap()
+                        ),
+                    ),
+                    ("f".into(), ManifestDependency::path("../other".into()))
+                ])
+            );
+
+            assert_eq!(
+                output.build_dependencies,
+                BTreeMap::from_iter([(
+                    "c".into(),
+                    ManifestDependency::Version(UnresolvedVersionSpec::parse("*").unwrap())
+                )])
+            );
+
+            assert_eq!(
+                output.peer_dependencies,
+                BTreeMap::from_iter([(
+                    "d".into(),
+                    ManifestDependency::Version(UnresolvedVersionSpec::parse(">=1").unwrap())
+                )])
+            );
         }
     }
 }

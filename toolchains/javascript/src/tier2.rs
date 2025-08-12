@@ -6,7 +6,8 @@ use moon_pdk::{
     locate_root_with_check, parse_toolchain_config, parse_toolchain_config_schema,
 };
 use moon_pdk_api::*;
-use std::path::PathBuf;
+use nodejs_package_json::{VersionProtocol, WorkspaceProtocol};
+use std::{collections::BTreeMap, path::PathBuf};
 
 fn gather_shared_paths(
     context: &MoonContext,
@@ -297,7 +298,81 @@ pub fn parse_lock(Json(input): Json<ParseLockInput>) -> FnResult<Json<ParseLockO
 pub fn parse_manifest(
     Json(input): Json<ParseManifestInput>,
 ) -> FnResult<Json<ParseManifestOutput>> {
+    let manifest = PackageJson::load(input.path)?;
     let mut output = ParseManifestOutput::default();
+
+    let extract_deps = |in_deps: &BTreeMap<String, VersionProtocol>,
+                        out_deps: &mut BTreeMap<String, ManifestDependency>|
+     -> AnyResult<()> {
+        for (name, version) in in_deps {
+            let dep = match version {
+                VersionProtocol::Catalog(_) => {
+                    continue;
+                }
+                VersionProtocol::File(path)
+                | VersionProtocol::Link(path)
+                | VersionProtocol::Portal(path) => ManifestDependency::path(path.to_owned()),
+                VersionProtocol::Git { url, .. } => ManifestDependency::url(url.to_owned()),
+                VersionProtocol::GitHub {
+                    reference,
+                    owner,
+                    repo,
+                } => ManifestDependency::url(format!(
+                    "https://github.com/{owner}/{repo}.git#{}",
+                    reference.as_deref().unwrap_or("latest")
+                )),
+                VersionProtocol::Range(version_reqs) => {
+                    ManifestDependency::Version(UnresolvedVersionSpec::parse(
+                        version_reqs
+                            .iter()
+                            .map(|req| req.to_string())
+                            .collect::<Vec<_>>()
+                            .join(" || "),
+                    )?)
+                }
+                VersionProtocol::Requirement(version_req) => ManifestDependency::Version(
+                    UnresolvedVersionSpec::parse(version_req.to_string())?,
+                ),
+                VersionProtocol::Url(url) => ManifestDependency::url(url.to_owned()),
+                VersionProtocol::Version(version) => {
+                    ManifestDependency::Version(UnresolvedVersionSpec::parse(version.to_string())?)
+                }
+                VersionProtocol::Workspace(ws) => match ws {
+                    WorkspaceProtocol::File(path) => ManifestDependency::path(path.to_owned()),
+                    _ => ManifestDependency::Version(UnresolvedVersionSpec::parse(
+                        version.to_string(),
+                    )?),
+                },
+            };
+
+            out_deps.insert(name.to_owned(), dep);
+        }
+
+        Ok(())
+    };
+
+    if let Some(deps) = &manifest.dependencies {
+        extract_deps(deps, &mut output.dependencies)?;
+    }
+
+    if let Some(deps) = &manifest.dev_dependencies {
+        extract_deps(deps, &mut output.dev_dependencies)?;
+    }
+
+    if let Some(deps) = &manifest.peer_dependencies {
+        extract_deps(deps, &mut output.peer_dependencies)?;
+    }
+
+    if let Some(deps) = &manifest.optional_dependencies {
+        extract_deps(deps, &mut output.build_dependencies)?;
+    }
+
+    if let Some(version) = &manifest.version {
+        output.version = Some(version.to_owned());
+    }
+
+    output.publishable = manifest.version.is_some()
+        && (manifest.main.is_some() || manifest.module.is_some() || manifest.exports.is_some());
 
     Ok(Json(output))
 }
