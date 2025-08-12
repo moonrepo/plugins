@@ -285,3 +285,19 @@ pub fn install_dependencies(
 
     Ok(Json(output))
 }
+
+#[plugin_fn]
+pub fn parse_lock(Json(input): Json<ParseLockInput>) -> FnResult<Json<ParseLockOutput>> {
+    let mut output = ParseLockOutput::default();
+
+    Ok(Json(output))
+}
+
+#[plugin_fn]
+pub fn parse_manifest(
+    Json(input): Json<ParseManifestInput>,
+) -> FnResult<Json<ParseManifestOutput>> {
+    let mut output = ParseManifestOutput::default();
+
+    Ok(Json(output))
+}
