@@ -16,6 +16,7 @@ crate-type = ["cdylib"]
 [dependencies]
 toolchain_common = { path = "../../crates/toolchain-common" }
 lang_javascript_common = { path = "../../crates/lang-javascript-common" }
+chaste = "0.5.0"
 extism-pdk = { workspace = true }
 moon_pdk = { workspace = true, features = ["schematic"] }
 moon_pdk_api = { workspace = true }

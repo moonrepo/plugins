@@ -1,6 +1,7 @@
 use moon_pdk_api::*;
 use moon_pdk_test_utils::{create_empty_moon_sandbox, create_moon_sandbox};
 use serde_json::json;
+use starbase_utils::fs;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
@@ -1005,6 +1006,320 @@ mod javascript_toolchain_tier2 {
                     ManifestDependency::Version(UnresolvedVersionSpec::parse(">=1").unwrap())
                 )])
             );
+        }
+    }
+
+    mod parse_lock {
+        use super::*;
+        use moon_pdk_test_utils::MoonWasmSandbox;
+
+        fn create_lockfile_sandbox(pm: &str) -> MoonWasmSandbox {
+            let sandbox = create_moon_sandbox("deps");
+            let lockfiles = create_moon_sandbox("lockfiles");
+
+            fs::copy_dir_all(
+                lockfiles.path().join(pm),
+                lockfiles.path().join(pm),
+                sandbox.path(),
+            )
+            .unwrap();
+
+            sandbox.debug_files();
+
+            sandbox
+        }
+
+        fn expected_packages() -> BTreeMap<String, Option<Version>> {
+            BTreeMap::from_iter([
+                ("a".into(), Some(Version::new(1, 0, 0))),
+                ("b".into(), Some(Version::new(2, 0, 0))),
+                ("c".into(), Some(Version::new(3, 0, 0))),
+            ])
+        }
+
+        fn expected_base_dependencies() -> BTreeMap<String, Vec<LockDependency>> {
+            BTreeMap::from_iter([
+                (
+                    "csstype".into(),
+                    vec![LockDependency {
+                        hash: Some(
+                            "sha512-M1uQkMl8rQK/szD0LNhtqxIPLpimGm8sOBwU7lLnCpSbTyY3yeU1Vc7l4KT5zT4s/yOxHH5O7tIuuLOCnLADRw=="
+                                .into()
+                        ),
+                        version: Some(VersionSpec::parse("3.1.3").unwrap()),
+                        ..Default::default()
+                    }]
+                ),
+                (
+                    "react".into(),
+                    vec![LockDependency {
+                        hash: Some(
+                            "sha512-w8nqGImo45dmMIfljjMwOGtbmC/mk4CMYhWIicdSflH91J9TyCyczcPFXJzrZ/ZXcgGRFeP6BU0BEJTw6tZdfQ=="
+                                .into()
+                        ),
+                        version: Some(VersionSpec::parse("19.1.1").unwrap()),
+                        ..Default::default()
+                    }]
+                ),
+                (
+                    "seroval".into(),
+                    vec![LockDependency {
+                        hash: Some(
+                            "sha512-RbcPH1n5cfwKrru7v7+zrZvjLurgHhGyso3HTyGtRivGWgYjbOmGuivCQaORNELjNONoK35nj28EoWul9sb1zQ=="
+                                .into()
+                        ),
+                        version: Some(VersionSpec::parse("1.3.2").unwrap()),
+                        ..Default::default()
+                    }]
+                ),
+                (
+                    "seroval-plugins".into(),
+                    vec![LockDependency {
+                        hash: Some(
+                            "sha512-0QvCV2lM3aj/U3YozDiVwx9zpH0q8A60CTWIv4Jszj/givcudPb48B+rkU5D51NJ0pTpweGMttHjboPa9/zoIQ=="
+                                .into()
+                        ),
+                        version: Some(VersionSpec::parse("1.3.2").unwrap()),
+                        ..Default::default()
+                    }]
+                ),
+                (
+                    "solid-js".into(),
+                    vec![LockDependency {
+                        hash: Some(
+                            "sha512-A0ZBPJQldAeGCTW0YRYJmt7RCeh5rbFfPZ2aOttgYnctHE7HgKeHCBB/PVc2P7eOfmNXqMFFFoYYdm3S4dcbkA=="
+                                .into()
+                        ),
+                        version: Some(VersionSpec::parse("1.9.9").unwrap()),
+                        ..Default::default()
+                    }]
+                ),
+                (
+                    "typescript".into(),
+                    vec![LockDependency {
+                        hash: Some(
+                            "sha512-CWBzXQrc/qOkhidw1OzBTQuYRbfyxDXJMVJ1XNwUHGROVmuaeiEm3OslpZ1RV96d7SKKjZKrSJu3+t/xlw3R9A=="
+                                .into()
+                        ),
+                        version: Some(VersionSpec::parse("5.9.2").unwrap()),
+                        ..Default::default()
+                    }]
+                ),
+            ])
+        }
+
+        fn expected_dependencies() -> BTreeMap<String, Vec<LockDependency>> {
+            let mut map = BTreeMap::from_iter([
+                (
+                    "a".into(),
+                    vec![LockDependency {
+                        version: Some(VersionSpec::parse("1.0.0").unwrap()),
+                        ..Default::default()
+                    }],
+                ),
+                (
+                    "b".into(),
+                    vec![LockDependency {
+                        version: Some(VersionSpec::parse("2.0.0").unwrap()),
+                        ..Default::default()
+                    }],
+                ),
+                (
+                    "c".into(),
+                    vec![LockDependency {
+                        version: Some(VersionSpec::parse("3.0.0").unwrap()),
+                        ..Default::default()
+                    }],
+                ),
+            ]);
+            map.extend(expected_base_dependencies());
+            map
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn parses_bun() {
+            let sandbox = create_lockfile_sandbox("bun");
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .parse_lock(ParseLockInput {
+                    path: VirtualPath::Real(sandbox.path().to_path_buf()),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.packages, expected_packages());
+            assert_eq!(output.dependencies, expected_dependencies());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn parses_npm() {
+            let sandbox = create_lockfile_sandbox("npm");
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .parse_lock(ParseLockInput {
+                    path: VirtualPath::Real(sandbox.path().to_path_buf()),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.packages, expected_packages());
+            assert_eq!(output.dependencies, expected_dependencies());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn parses_pnpm() {
+            let sandbox = create_lockfile_sandbox("pnpm");
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .parse_lock(ParseLockInput {
+                    path: VirtualPath::Real(sandbox.path().to_path_buf()),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.packages, expected_packages());
+            assert_eq!(output.dependencies, expected_dependencies());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn parses_yarn() {
+            let sandbox = create_lockfile_sandbox("yarn");
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .parse_lock(ParseLockInput {
+                    path: VirtualPath::Real(sandbox.path().to_path_buf()),
+                    ..Default::default()
+                })
+                .await;
+
+            dbg!(&output);
+
+            // Workspace packages in the lockfile have their version
+            // set to `0.0.0-use.local` instead of the actual version
+
+            assert_eq!(
+                output.packages,
+                BTreeMap::from_iter([
+                    ("a".into(), Version::parse("0.0.0-use.local").ok()),
+                    ("b".into(), Version::parse("0.0.0-use.local").ok()),
+                    ("c".into(), Version::parse("0.0.0-use.local").ok()),
+                ])
+            );
+
+            assert_eq!(
+                output.dependencies,
+                BTreeMap::from_iter([
+                    (
+                        "a".into(),
+                        vec![LockDependency {
+                            version: VersionSpec::parse("0.0.0-use.local").ok(),
+                            ..Default::default()
+                        }],
+                    ),
+                    (
+                        "b".into(),
+                        vec![LockDependency {
+                            version: VersionSpec::parse("0.0.0-use.local").ok(),
+                            ..Default::default()
+                        }],
+                    ),
+                    (
+                        "c".into(),
+                        vec![LockDependency {
+                            version: VersionSpec::parse("0.0.0-use.local").ok(),
+                            ..Default::default()
+                        }],
+                    ),
+                    (
+                        "csstype".into(),
+                        vec![LockDependency {
+                            hash: Some(
+                                "sha512-gMCJ1vfgxbK9g88FOatBR0GYV5WE+hDYbQyv4GQiAjQ8vBGeB2oLGuzhkZiUdwgUFdZsn++/PJV/wvxLcAnySA=="
+                                    .into()
+                            ),
+                            version: Some(VersionSpec::parse("3.1.3").unwrap()),
+                            ..Default::default()
+                        }]
+                    ),
+                    (
+                        "react".into(),
+                        vec![LockDependency {
+                            hash: Some(
+                                "sha512-jJdpot/QLmA69kRQWDJebIoktHsYXQ5GH2amRUdl3crss/CpAYSDbGi7UJ88OCSDWe28QvDQfCPrUApcMMh7Tg=="
+                                    .into()
+                            ),
+                            version: Some(VersionSpec::parse("19.1.1").unwrap()),
+                            ..Default::default()
+                        }]
+                    ),
+                    (
+                        "seroval".into(),
+                        vec![LockDependency {
+                            hash: Some(
+                                "sha512-GedIJWQ3htIuXFgFS9KAZSON4BVlRa+6gvmn0+5w6k8CSbQn8xe8a/mDhJ3ejkGQJkco2QyEYgqhY7+8WXHxvA=="
+                                    .into()
+                            ),
+                            version: Some(VersionSpec::parse("1.3.2").unwrap()),
+                            ..Default::default()
+                        }]
+                    ),
+                    (
+                        "seroval-plugins".into(),
+                        vec![LockDependency {
+                            hash: Some(
+                                "sha512-Z7EIs8vBiazKRFtRLr134RtVxqo9FhDDoLSCK2PlxtCkQmrG5QV0dyzHQyV/ChaopNEuXk8ootqOH1g7AKJ7vg=="
+                                    .into()
+                            ),
+                            version: Some(VersionSpec::parse("1.3.2").unwrap()),
+                            ..Default::default()
+                        }]
+                    ),
+                    (
+                        "solid-js".into(),
+                        vec![LockDependency {
+                            hash: Some(
+                                "sha512-vT/aIrZsSVW7Tykja2Itz7Ebfzfsf6l082YpK+8QdnUPreLmVtWEzZd/UDVLI8/KQCborlFT6ZHIwRKxWyHJ4w=="
+                                    .into()
+                            ),
+                            version: Some(VersionSpec::parse("1.9.9").unwrap()),
+                            ..Default::default()
+                        }]
+                    ),
+                    (
+                        "typescript".into(),
+                        vec![LockDependency {
+                            hash: Some(
+                                "sha512-zWNdUPAtbPmO1C3i92KJcBwexYejYzaSVfAe0VqvIr4IEyJr/zxT6Z2XH5tUDgs8x1g9vgX63tSbGwvtL2OKGA=="
+                                    .into()
+                            ),
+                            version: Some(VersionSpec::parse("5.9.2").unwrap()),
+                            ..Default::default()
+                        }]
+                    ),
+                ])
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn parses_yarn_classic() {
+            let sandbox = create_lockfile_sandbox("yarn-classic");
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .parse_lock(ParseLockInput {
+                    path: VirtualPath::Real(sandbox.path().to_path_buf()),
+                    ..Default::default()
+                })
+                .await;
+
+            dbg!(&output);
+
+            assert_eq!(output.packages, expected_packages());
+            assert_eq!(output.dependencies, expected_dependencies());
         }
     }
 }
