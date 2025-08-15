@@ -1,6 +1,7 @@
 use crate::config::{JavaScriptPackageManager, JavaScriptToolchainConfig};
 use crate::package_json::PackageJson;
 use extism_pdk::*;
+use moon_pdk::{parse_toolchain_config_schema, plugin_err};
 use moon_pdk_api::*;
 use schematic::SchemaBuilder;
 use starbase_utils::json::JsonValue;
@@ -105,13 +106,6 @@ pub fn initialize_toolchain(
     Ok(Json(output))
 }
 
-#[plugin_fn]
-pub fn define_toolchain_config() -> FnResult<Json<DefineToolchainConfigOutput>> {
-    Ok(Json(DefineToolchainConfigOutput {
-        schema: SchemaBuilder::build_root::<JavaScriptToolchainConfig>(),
-    }))
-}
-
 fn detect_package_manager(root: &VirtualPath) -> AnyResult<Option<JavaScriptPackageManager>> {
     let package = PackageJson::load(root.join("package.json"))?;
 
@@ -125,11 +119,45 @@ fn detect_package_manager(root: &VirtualPath) -> AnyResult<Option<JavaScriptPack
         return Ok(Some(JavaScriptPackageManager::Bun));
     } else if root.join("package-lock.json").exists() || root.join("npm-shrinkwrap.json").exists() {
         return Ok(Some(JavaScriptPackageManager::Npm));
-    } else if root.join("pnpm-lock.yaml").exists() {
+    } else if root.join("pnpm-lock.yaml").exists() || root.join("pnpm-workspace.yaml").exists() {
         return Ok(Some(JavaScriptPackageManager::Pnpm));
     } else if root.join("yarn.lock").exists() {
         return Ok(Some(JavaScriptPackageManager::Yarn));
     }
 
     Ok(None)
+}
+
+#[plugin_fn]
+pub fn define_toolchain_config() -> FnResult<Json<DefineToolchainConfigOutput>> {
+    Ok(Json(DefineToolchainConfigOutput {
+        schema: SchemaBuilder::build_root::<JavaScriptToolchainConfig>(),
+    }))
+}
+
+#[plugin_fn]
+pub fn sync_project(Json(input): Json<SyncProjectInput>) -> FnResult<Json<SyncOutput>> {
+    let config =
+        parse_toolchain_config_schema::<JavaScriptToolchainConfig>(input.toolchain_config)?;
+    let mut output = SyncOutput::default();
+
+    let project_root = input.context.get_project_root(&input.project);
+
+    // Enforce single version policy
+    if config.root_package_dependencies_only && project_root != input.context.workspace_root {
+        let package = PackageJson::load(project_root.join("package.json"))?;
+
+        if package.dependencies.is_some()
+            || package.dev_dependencies.is_some()
+            || package.peer_dependencies.is_some()
+            || package.optional_dependencies.is_some()
+        {
+            return Err(plugin_err!(
+                "Dependencies can only be defined in the root <file>package.json</file>, found dependencies in project <id>{}</id>.\nThis is enforced through the <property>javascript.rootPackageDependenciesOnly</property> toolchain setting.",
+                input.project.id
+            ));
+        }
+    }
+
+    Ok(Json(output))
 }

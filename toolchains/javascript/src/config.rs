@@ -93,7 +93,7 @@ config_struct!(
 
         /// Enforces that only the root `package.json` can be used for dependencies,
         /// which supports the "one version policy" pattern.
-        pub root_package_only: bool,
+        pub root_package_dependencies_only: bool,
 
         /// Automatically syncs the configured package manager version
         /// to the root `packageManager` field in `package.json`.

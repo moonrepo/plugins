@@ -12,14 +12,14 @@ use starbase_utils::yaml;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-// - [x] `extend_project_graph` - javascript
-// - [xx] `extend_task_command` - bun/node/npm/pnpm/yarn
-// - [xx] `extend_task_script` - bun/node/npm/pnpm/yarn
+// - [] `extend_project_graph` - javascript
+// - [x] `extend_task_command` - bun/node/npm/pnpm/yarn
+// - [x] `extend_task_script` - bun/node/npm/pnpm/yarn
 // - [x] `hash_task_contents` - javascript
-// - [xx] `install_dependencies` - javascript
-// - [xx] `locate_dependencies_root` - javascript
-// - [xx] `parse_lock` - javascript
-// - [xx] `parse_manifest` - javascript
+// - [x] `install_dependencies` - javascript
+// - [x] `locate_dependencies_root` - javascript
+// - [x] `parse_lock` - javascript
+// - [x] `parse_manifest` - javascript
 // - [x] `setup_environment` - node/javascript
 
 fn gather_shared_paths(
@@ -49,6 +49,15 @@ fn gather_shared_paths(
                 break;
             }
         }
+    }
+
+    if let Some(bin_dir) = context
+        .workspace_root
+        .join("node_modules")
+        .join(".bin")
+        .real_path()
+    {
+        paths.push(bin_dir);
     }
 
     Ok(())

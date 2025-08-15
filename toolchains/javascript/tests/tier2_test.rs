@@ -8,6 +8,118 @@ use std::path::PathBuf;
 mod javascript_toolchain_tier2 {
     use super::*;
 
+    mod extend_task_command {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn inherits_globals_dir() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .extend_task_command(ExtendTaskCommandInput {
+                    command: "unknown".into(),
+                    globals_dir: Some(VirtualPath::Real(sandbox.path().join(".js-global"))),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.command.is_none());
+            assert!(output.args.is_none());
+            assert!(output.env.is_empty());
+            assert!(output.env_remove.is_empty());
+            assert_eq!(
+                output.paths,
+                [
+                    sandbox.path().join(".js-global"),
+                    sandbox.path().join("node_modules/.bin")
+                ]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn inherits_node_module_bins_for_each_parent_dir() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .extend_task_command(ExtendTaskCommandInput {
+                    command: "unknown".into(),
+                    project: ProjectFragment {
+                        source: "some/nested/path".into(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.paths,
+                [
+                    sandbox.path().join("some/nested/path/node_modules/.bin"),
+                    sandbox.path().join("some/nested/node_modules/.bin"),
+                    sandbox.path().join("some/node_modules/.bin"),
+                    sandbox.path().join("node_modules/.bin")
+                ]
+            );
+        }
+    }
+
+    mod extend_task_script {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn inherits_globals_dir() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .extend_task_script(ExtendTaskScriptInput {
+                    script: "unknown".into(),
+                    globals_dir: Some(VirtualPath::Real(sandbox.path().join(".js-global"))),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.env.is_empty());
+            assert!(output.env_remove.is_empty());
+            assert_eq!(
+                output.paths,
+                [
+                    sandbox.path().join(".js-global"),
+                    sandbox.path().join("node_modules/.bin")
+                ]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn inherits_node_module_bins_for_each_parent_dir() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .extend_task_script(ExtendTaskScriptInput {
+                    script: "unknown".into(),
+                    project: ProjectFragment {
+                        source: "some/nested/path".into(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.paths,
+                [
+                    sandbox.path().join("some/nested/path/node_modules/.bin"),
+                    sandbox.path().join("some/nested/node_modules/.bin"),
+                    sandbox.path().join("some/node_modules/.bin"),
+                    sandbox.path().join("node_modules/.bin")
+                ]
+            );
+        }
+    }
+
     mod locate_dependencies_root {
         use super::*;
 
