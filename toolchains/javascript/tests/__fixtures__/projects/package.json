@@ -1,0 +1,6 @@
+{
+  "workspaces": ["a", "b", "c"],
+  "dependencies": {
+    "react": "19"
+  }
+}

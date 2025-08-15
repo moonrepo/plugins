@@ -2370,6 +2370,8 @@ dependencies = [
  "chaste-pnpm",
  "extism-pdk",
  "lang_javascript_common",
+ "moon_common",
+ "moon_config",
  "moon_pdk",
  "moon_pdk_api",
  "moon_pdk_test_utils",

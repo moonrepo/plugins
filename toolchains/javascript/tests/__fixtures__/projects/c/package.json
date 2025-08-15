@@ -1,0 +1,10 @@
+{
+  "name": "@org/c",
+  "version": "1.0.0",
+  "dependencies": {
+    "a": "workspace:*"
+  },
+  "devDependencies": {
+    "@b/lib": "file:../b"
+  }
+}

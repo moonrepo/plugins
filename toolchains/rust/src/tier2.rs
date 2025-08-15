@@ -35,13 +35,15 @@ pub fn extend_project_graph(
         let mut extract_implicit_deps =
             |package_deps: &DepsSet, scope: DependencyScope| -> AnyResult<()> {
                 for (dep_name, dep) in package_deps {
+                    let Some((dep_id, _)) = packages.get(dep_name) else {
+                        continue;
+                    };
+
                     // Only inherit if the dependency is using the local `path = "..."` syntax,
                     // and the package name exists in our gathered map
-                    if dep.detail().is_some_and(|det| det.path.is_some())
-                        && packages.contains_key(dep_name)
-                    {
+                    if dep.detail().is_some_and(|det| det.path.is_some()) {
                         project_output.dependencies.push(ProjectDependency {
-                            id: dep_name.into(),
+                            id: dep_id.into(),
                             scope,
                             via: Some(format!("crate {dep_name}")),
                         });

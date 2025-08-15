@@ -2,6 +2,8 @@ use crate::config::*;
 use crate::lockfiles::*;
 use crate::package_json::PackageJson;
 use extism_pdk::*;
+use moon_common::path::paths_are_equal;
+use moon_config::DependencyScope;
 use moon_pdk::{
     get_host_environment, load_toolchain_config, locate_root, locate_root_many,
     locate_root_with_check, parse_toolchain_config, parse_toolchain_config_schema,
@@ -21,6 +23,87 @@ use std::path::PathBuf;
 // - [x] `parse_lock` - javascript
 // - [x] `parse_manifest` - javascript
 // - [x] `setup_environment` - node/javascript
+
+#[plugin_fn]
+pub fn extend_project_graph(
+    Json(input): Json<ExtendProjectGraphInput>,
+) -> FnResult<Json<ExtendProjectGraphOutput>> {
+    let mut output = ExtendProjectGraphOutput::default();
+
+    // First pass, gather all packages and their manifests
+    let mut packages = BTreeMap::default();
+
+    for (id, source) in input.project_sources {
+        let project_root = input.context.get_project_root_from_source(&source);
+        let package_path = project_root.join("package.json");
+
+        if package_path.exists() {
+            let manifest = PackageJson::load(package_path)?;
+
+            if let Some(name) = &manifest.name {
+                packages.insert(name.to_owned(), (id, project_root, manifest));
+            }
+        }
+    }
+
+    // Second pass, extract packages and their relationships
+    for (id, project_root, manifest) in packages.values() {
+        let mut project_output = ExtendProjectOutput::default();
+
+        let mut extract_implicit_deps =
+            |package_deps: &Option<BTreeMap<String, VersionProtocol>>,
+             scope: DependencyScope|
+             -> AnyResult<()> {
+                let Some(deps) = package_deps else {
+                    return Ok(());
+                };
+
+                for (dep_name, dep_version) in deps {
+                    let Some((dep_id, dep_root, _)) = packages.get(dep_name) else {
+                        continue;
+                    };
+
+                    // Only inherit if the dependency is in the local workspace
+                    let is_local = match dep_version {
+                        VersionProtocol::File(rel_path)
+                        | VersionProtocol::Link(rel_path)
+                        | VersionProtocol::Portal(rel_path) => {
+                            paths_are_equal(dep_root, project_root.join(rel_path))
+                        }
+                        VersionProtocol::Workspace(_) => true,
+                        _ => false,
+                    };
+
+                    if is_local {
+                        project_output.dependencies.push(ProjectDependency {
+                            id: dep_id.into(),
+                            scope,
+                            via: Some(format!("package {dep_name}")),
+                        });
+                    }
+                }
+
+                Ok(())
+            };
+
+        if let Some(name) = &manifest.name {
+            project_output.alias = Some(name.to_owned());
+        }
+
+        extract_implicit_deps(&manifest.dependencies, DependencyScope::Production)?;
+        extract_implicit_deps(&manifest.dev_dependencies, DependencyScope::Development)?;
+        extract_implicit_deps(&manifest.peer_dependencies, DependencyScope::Peer)?;
+        extract_implicit_deps(&manifest.optional_dependencies, DependencyScope::Build)?;
+
+        output.extended_projects.insert(id.into(), project_output);
+
+        if let Some(file) = manifest.path.virtual_path() {
+            output.input_files.push(file);
+        }
+    }
+
+    Ok(Json(output))
+}
 
 fn gather_shared_paths(
     context: &MoonContext,
