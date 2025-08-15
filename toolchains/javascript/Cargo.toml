@@ -22,7 +22,7 @@ moon_pdk_api = { workspace = true }
 nodejs_package_json = { workspace = true, features = ["serialize"] }
 schematic = { workspace = true, features = ["config"] }
 serde = { workspace = true }
-starbase_utils = { workspace = true, features = ["json"] }
+starbase_utils = { workspace = true, features = ["json", "yaml"] }
 
 # Lockfiles
 chaste-pnpm = "0.5.0"

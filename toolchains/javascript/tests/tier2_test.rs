@@ -220,6 +220,29 @@ mod javascript_toolchain_tier2 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn finds_workspace_with_pnpm() {
+            let sandbox = create_moon_sandbox("locate");
+            sandbox.create_file("workspace/pnpm-workspace.yaml", "packages: ['apps/*']");
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .locate_dependencies_root(LocateDependenciesRootInput {
+                    starting_dir: VirtualPath::Real(
+                        sandbox.path().join("workspace/packages/a/nested"),
+                    ),
+                    toolchain_config: json!({
+                        "packageManager": "pnpm"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.members.unwrap(), ["apps/*"]);
+            assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/workspace"));
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn finds_workspace_with_pnpm_lock() {
             let sandbox = create_moon_sandbox("locate");
             sandbox.create_file("workspace/pnpm-lock.yaml", "");

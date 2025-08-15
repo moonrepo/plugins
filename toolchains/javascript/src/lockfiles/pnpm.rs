@@ -1,6 +1,7 @@
 use super::{parse_version, parse_version_spec};
 use moon_pdk::{AnyResult, VirtualPath};
 use moon_pdk_api::{LockDependency, ParseLockOutput};
+use serde::Deserialize;
 
 pub fn parse_pnpm_lock_yaml(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyResult<()> {
     let lock = chaste_pnpm::parse(path.parent().unwrap())?;
@@ -49,4 +50,10 @@ pub fn parse_pnpm_lock_yaml(path: &VirtualPath, output: &mut ParseLockOutput) ->
     }
 
     Ok(())
+}
+
+#[derive(Default, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct PnpmWorkspace {
+    pub packages: Option<Vec<String>>,
 }

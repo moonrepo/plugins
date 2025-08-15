@@ -7,6 +7,9 @@ use starbase_utils::json::JsonValue;
 use std::str::FromStr;
 use toolchain_common::enable_tracing;
 
+// - [ ] `sync_project`
+// - [ ] `sync_workspace`
+
 #[plugin_fn]
 pub fn register_toolchain(
     Json(_): Json<RegisterToolchainInput>,

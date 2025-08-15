@@ -8,7 +8,9 @@ use moon_pdk::{
 };
 use moon_pdk_api::*;
 use nodejs_package_json::{VersionProtocol, WorkspaceProtocol};
-use std::{collections::BTreeMap, path::PathBuf};
+use starbase_utils::yaml;
+use std::collections::BTreeMap;
+use std::path::PathBuf;
 
 // - [x] `extend_project_graph` - javascript
 // - [xx] `extend_task_command` - bun/node/npm/pnpm/yarn
@@ -99,13 +101,22 @@ pub fn locate_dependencies_root(
     let lock_names = match package_manager {
         JavaScriptPackageManager::Bun => vec!["bun.lock", "bun.lockb"],
         JavaScriptPackageManager::Npm => vec!["package-lock.json", "npm-shrinkwrap.json"],
-        JavaScriptPackageManager::Pnpm => vec!["pnpm-lock.yaml"],
+        JavaScriptPackageManager::Pnpm => vec!["pnpm-lock.yaml", "pnpm-workspace.yaml"],
         JavaScriptPackageManager::Yarn => vec!["yarn.lock"],
     };
 
     if let Some(root) = locate_root_many(&input.starting_dir, &lock_names) {
         output.root = root.virtual_path();
-        output.members = PackageJson::load(root.join("package.json"))?.extract_members();
+
+        if package_manager == JavaScriptPackageManager::Pnpm
+            && root.join("pnpm-workspace.yaml").exists()
+        {
+            let workspace: PnpmWorkspace = yaml::read_file(root.join("pnpm-workspace.yaml"))?;
+
+            output.members = workspace.packages;
+        } else {
+            output.members = PackageJson::load(root.join("package.json"))?.extract_members();
+        }
     }
 
     // Otherwise find a `package.json` workspace
@@ -393,6 +404,44 @@ pub fn parse_manifest(
 
     output.publishable = manifest.version.is_some()
         && (manifest.main.is_some() || manifest.module.is_some() || manifest.exports.is_some());
+
+    Ok(Json(output))
+}
+
+#[plugin_fn]
+pub fn setup_environment(
+    Json(input): Json<SetupEnvironmentInput>,
+) -> FnResult<Json<SetupEnvironmentOutput>> {
+    let config =
+        parse_toolchain_config_schema::<JavaScriptToolchainConfig>(input.toolchain_config)?;
+    let mut output = SetupEnvironmentOutput::default();
+
+    // Sync `packageManager` field
+    if config.sync_package_manager_field
+        && let Some(package_manager) = config.package_manager
+        && package_manager.is_for_node()
+    {
+        let package_manager_config =
+            load_toolchain_config::<SharedPackageManagerConfig>(package_manager.to_string())?;
+        let package_path = input.root.join("package.json");
+
+        if package_path.exists()
+            && let Some(version) = package_manager_config.version
+            && matches!(version, UnresolvedVersionSpec::Semantic(_))
+        {
+            let (op, file) = Operation::track("sync-package-manager", || {
+                let mut package = PackageJson::load(package_path)?;
+                package.set_package_manager(format!("{package_manager}@{version}"))?;
+                package.save()
+            })?;
+
+            output.operations.push(op);
+
+            if let Some(file) = file.and_then(|file| file.virtual_path()) {
+                output.changed_files.push(file);
+            }
+        }
+    }
 
     Ok(Json(output))
 }

@@ -14,6 +14,12 @@ pub enum JavaScriptPackageManager {
     Yarn,
 }
 
+impl JavaScriptPackageManager {
+    pub fn is_for_node(&self) -> bool {
+        matches!(self, Self::Npm | Self::Pnpm | Self::Yarn)
+    }
+}
+
 /// Formats that a `package.json` dependency version can be.
 #[derive(ConfigEnum, Clone, Copy, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -88,11 +94,6 @@ config_struct!(
         /// Enforces that only the root `package.json` can be used for dependencies,
         /// which supports the "one version policy" pattern.
         pub root_package_only: bool,
-
-        /// When a `version` is defined for a JavaScript runtime toolchain,
-        /// syncs the version as a constraint to `package.json` engines.
-        #[setting(default = true)]
-        pub sync_engines_constraint: bool,
 
         /// Automatically syncs the configured package manager version
         /// to the root `packageManager` field in `package.json`.
