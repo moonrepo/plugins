@@ -1,4 +1,5 @@
 mod config;
+mod lockfiles;
 mod package_json;
 #[cfg(feature = "wasm")]
 mod tier1;

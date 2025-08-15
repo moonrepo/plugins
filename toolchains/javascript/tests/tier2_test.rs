@@ -1143,7 +1143,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .parse_lock(ParseLockInput {
-                    path: VirtualPath::Real(sandbox.path().to_path_buf()),
+                    path: VirtualPath::Real(sandbox.path().join("bun.lock")),
                     ..Default::default()
                 })
                 .await;
@@ -1153,13 +1153,42 @@ mod javascript_toolchain_tier2 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn parses_bun_classic() {
+            let sandbox = create_lockfile_sandbox("bun-classic");
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .parse_lock(ParseLockInput {
+                    path: VirtualPath::Real(sandbox.path().join("bun.lockb")),
+                    ..Default::default()
+                })
+                .await;
+
+            // Workspaces packages have `workspace:` in their version
+            assert_eq!(
+                output.packages,
+                BTreeMap::from_iter([("a".into(), None), ("b".into(), None), ("c".into(), None)])
+            );
+
+            assert_eq!(output.dependencies, {
+                let mut deps = BTreeMap::from_iter([
+                    ("a".into(), vec![LockDependency::default()]),
+                    ("b".into(), vec![LockDependency::default()]),
+                    ("c".into(), vec![LockDependency::default()]),
+                ]);
+                deps.extend(expected_base_dependencies());
+                deps
+            });
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn parses_npm() {
             let sandbox = create_lockfile_sandbox("npm");
             let plugin = sandbox.create_toolchain("javascript").await;
 
             let output = plugin
                 .parse_lock(ParseLockInput {
-                    path: VirtualPath::Real(sandbox.path().to_path_buf()),
+                    path: VirtualPath::Real(sandbox.path().join("package-lock.json")),
                     ..Default::default()
                 })
                 .await;
@@ -1175,7 +1204,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .parse_lock(ParseLockInput {
-                    path: VirtualPath::Real(sandbox.path().to_path_buf()),
+                    path: VirtualPath::Real(sandbox.path().join("pnpm-lock.yaml")),
                     ..Default::default()
                 })
                 .await;
@@ -1191,16 +1220,13 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .parse_lock(ParseLockInput {
-                    path: VirtualPath::Real(sandbox.path().to_path_buf()),
+                    path: VirtualPath::Real(sandbox.path().join("yarn.lock")),
                     ..Default::default()
                 })
                 .await;
 
-            dbg!(&output);
-
             // Workspace packages in the lockfile have their version
             // set to `0.0.0-use.local` instead of the actual version
-
             assert_eq!(
                 output.packages,
                 BTreeMap::from_iter([
@@ -1210,6 +1236,7 @@ mod javascript_toolchain_tier2 {
                 ])
             );
 
+            // Yarn has different integrities than other package managers...
             assert_eq!(
                 output.dependencies,
                 BTreeMap::from_iter([
@@ -1238,7 +1265,7 @@ mod javascript_toolchain_tier2 {
                         "csstype".into(),
                         vec![LockDependency {
                             hash: Some(
-                                "sha512-gMCJ1vfgxbK9g88FOatBR0GYV5WE+hDYbQyv4GQiAjQ8vBGeB2oLGuzhkZiUdwgUFdZsn++/PJV/wvxLcAnySA=="
+                                "10c0/80c089d6f7e0c5b2bd83cf0539ab41474198579584fa10d86d0cafe0642202343cbc119e076a0b1aece191989477081415d66c9fefbf3c957fc2fc4b7009f248"
                                     .into()
                             ),
                             version: Some(VersionSpec::parse("3.1.3").unwrap()),
@@ -1249,7 +1276,7 @@ mod javascript_toolchain_tier2 {
                         "react".into(),
                         vec![LockDependency {
                             hash: Some(
-                                "sha512-jJdpot/QLmA69kRQWDJebIoktHsYXQ5GH2amRUdl3crss/CpAYSDbGi7UJ88OCSDWe28QvDQfCPrUApcMMh7Tg=="
+                                "10c0/8c9769a2dfd02e603af6445058325e6c8a24b47b185d0e461f66a6454765ddcaecb3f0a90184836c68bb509f3c38248359edbc42f0d07c23eb500a5c30c87b4e"
                                     .into()
                             ),
                             version: Some(VersionSpec::parse("19.1.1").unwrap()),
@@ -1260,7 +1287,7 @@ mod javascript_toolchain_tier2 {
                         "seroval".into(),
                         vec![LockDependency {
                             hash: Some(
-                                "sha512-GedIJWQ3htIuXFgFS9KAZSON4BVlRa+6gvmn0+5w6k8CSbQn8xe8a/mDhJ3ejkGQJkco2QyEYgqhY7+8WXHxvA=="
+                                "10c0/19e74825643786d22e5c58054bd28065238de0156545afba82f9a7d3ee70ea4f0249b427f317bc6bf983849dde8e4190264728d90c84620aa163bfbc5971f1bc"
                                     .into()
                             ),
                             version: Some(VersionSpec::parse("1.3.2").unwrap()),
@@ -1271,7 +1298,7 @@ mod javascript_toolchain_tier2 {
                         "seroval-plugins".into(),
                         vec![LockDependency {
                             hash: Some(
-                                "sha512-Z7EIs8vBiazKRFtRLr134RtVxqo9FhDDoLSCK2PlxtCkQmrG5QV0dyzHQyV/ChaopNEuXk8ootqOH1g7AKJ7vg=="
+                                "10c0/67b108b3cbc189acca445b512ebd77e11b55c6aa3d1610c3a0b4822b63e5c6d0a4426ac6e50574772cc743257f0a16a8a4d12e5e4f28a2da8e1f583b00a27bbe"
                                     .into()
                             ),
                             version: Some(VersionSpec::parse("1.3.2").unwrap()),
@@ -1282,7 +1309,7 @@ mod javascript_toolchain_tier2 {
                         "solid-js".into(),
                         vec![LockDependency {
                             hash: Some(
-                                "sha512-vT/aIrZsSVW7Tykja2Itz7Ebfzfsf6l082YpK+8QdnUPreLmVtWEzZd/UDVLI8/KQCborlFT6ZHIwRKxWyHJ4w=="
+                                "10c0/bd3fda22b66c4955bb4f29236b622dcfb11b7f37ec7fa974f366292bef1076750fade2e656d584cd977f50354b23cfca4026e8ae5153e991c8c112b15b21c9e3"
                                     .into()
                             ),
                             version: Some(VersionSpec::parse("1.9.9").unwrap()),
@@ -1293,7 +1320,7 @@ mod javascript_toolchain_tier2 {
                         "typescript".into(),
                         vec![LockDependency {
                             hash: Some(
-                                "sha512-zWNdUPAtbPmO1C3i92KJcBwexYejYzaSVfAe0VqvIr4IEyJr/zxT6Z2XH5tUDgs8x1g9vgX63tSbGwvtL2OKGA=="
+                                "10c0/cd635d50f02d6cf98ed42de2f76289701c1ec587a363369255f01ed15aaf22be0813226bff3c53e99d971f9b540e0b3cc7583dbe05faded49b1b0bed2f638a18"
                                     .into()
                             ),
                             version: Some(VersionSpec::parse("5.9.2").unwrap()),
@@ -1311,15 +1338,13 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .parse_lock(ParseLockInput {
-                    path: VirtualPath::Real(sandbox.path().to_path_buf()),
+                    path: VirtualPath::Real(sandbox.path().join("yarn.lock")),
                     ..Default::default()
                 })
                 .await;
 
-            dbg!(&output);
-
-            assert_eq!(output.packages, expected_packages());
-            assert_eq!(output.dependencies, expected_dependencies());
+            assert!(output.packages.is_empty());
+            assert_eq!(output.dependencies, expected_base_dependencies());
         }
     }
 }

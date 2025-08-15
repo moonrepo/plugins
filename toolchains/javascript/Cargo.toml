@@ -16,14 +16,18 @@ crate-type = ["cdylib"]
 [dependencies]
 toolchain_common = { path = "../../crates/toolchain-common" }
 lang_javascript_common = { path = "../../crates/lang-javascript-common" }
-chaste = "0.5.0"
 extism-pdk = { workspace = true }
 moon_pdk = { workspace = true, features = ["schematic"] }
 moon_pdk_api = { workspace = true }
 nodejs_package_json = { workspace = true, features = ["serialize"] }
 schematic = { workspace = true, features = ["config"] }
 serde = { workspace = true }
-starbase_utils = { workspace = true }
+starbase_utils = { workspace = true, features = ["json"] }
+
+# Lockfiles
+chaste-pnpm = "0.5.0"
+package-lock-json-parser = "0.4.0"
+yarn-lock-parser = "0.11.0"
 
 [dev-dependencies]
 moon_pdk_test_utils = { workspace = true }

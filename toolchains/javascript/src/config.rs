@@ -106,8 +106,8 @@ config_struct!(
     }
 );
 
-// This config represents shared package manager configuration
-// that is loaded from external toolchains, primarily `node-depman-toolchain`.
+// This config represents shared package manager configuration that
+// is loaded from external toolchains, primarily `node_depman_toolchain`.
 config_struct!(
     #[derive(Default)]
     pub struct SharedPackageManagerConfig {

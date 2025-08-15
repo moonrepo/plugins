@@ -495,45 +495,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
-name = "chaste"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3a6ca326312d1e71b4ee55bcbcf7e7d201cd36e6ca27ffb2a81c22238147388b"
-dependencies = [
- "chaste-bun",
- "chaste-npm",
- "chaste-pnpm",
- "chaste-types",
- "chaste-yarn",
- "thiserror 2.0.12",
-]
-
-[[package]]
-name = "chaste-bun"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fce80c330ae760905b117976861d42c2dbebe1429827301a08613a1a65de7be"
-dependencies = [
- "chaste-types",
- "json5",
- "nom 8.0.0",
- "serde",
- "thiserror 2.0.12",
-]
-
-[[package]]
-name = "chaste-npm"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7fe6fc65ba78960ecea261580aac0ef967186363122d712ecd83ed144e152c05"
-dependencies = [
- "chaste-types",
- "serde",
- "serde_json",
- "thiserror 2.0.12",
-]
-
-[[package]]
 name = "chaste-pnpm"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -557,21 +518,6 @@ dependencies = [
  "nom 8.0.0",
  "ssri",
  "thiserror 2.0.12",
-]
-
-[[package]]
-name = "chaste-yarn"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e4e5d0785709ec66af15575a645382ac031f70b1de347fa764d1fe5d7858179"
-dependencies = [
- "chaste-types",
- "nom 8.0.0",
- "serde",
- "serde_json",
- "thiserror 2.0.12",
- "yarn-lock-parser",
- "yarn-state",
 ]
 
 [[package]]
@@ -2421,13 +2367,14 @@ dependencies = [
 name = "javascript_toolchain"
 version = "0.0.1"
 dependencies = [
- "chaste",
+ "chaste-pnpm",
  "extism-pdk",
  "lang_javascript_common",
  "moon_pdk",
  "moon_pdk_api",
  "moon_pdk_test_utils",
  "nodejs_package_json",
+ "package-lock-json-parser",
  "schematic",
  "serde",
  "serde_json",
@@ -2435,6 +2382,7 @@ dependencies = [
  "starbase_utils",
  "tokio",
  "toolchain_common",
+ "yarn-lock-parser",
 ]
 
 [[package]]
@@ -2486,17 +2434,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b271732a960335e715b6b2ae66a086f115c74eb97360e996d2bd809bfc063bba"
 dependencies = [
  "memchr",
-]
-
-[[package]]
-name = "json5"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96b0db21af676c1ce64250b5f40f3ce2cf27e4e47cb91ed91eb6fe9350b430c1"
-dependencies = [
- "pest",
- "pest_derive",
- "serde",
 ]
 
 [[package]]
@@ -3378,6 +3315,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48dd4f4a2c8405440fd0462561f0e5806bd0f77e86f51c761481bdd4018b545e"
 
 [[package]]
+name = "package-lock-json-parser"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8707d34f4a67f9c733970b8afc7b82d8623bc0746ff17b460aa6f2ea5ef487d3"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tracing",
+]
+
+[[package]]
 name = "parking_lot"
 version = "0.12.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3411,50 +3360,6 @@ name = "percent-encoding"
 version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3148f5046208a5d56bcfc03053e3ca6334e51da8dfb19b6cdc8b306fae3283e"
-
-[[package]]
-name = "pest"
-version = "2.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1db05f56d34358a8b1066f67cbb203ee3e7ed2ba674a6263a1d5ec6db2204323"
-dependencies = [
- "memchr",
- "thiserror 2.0.12",
- "ucd-trie",
-]
-
-[[package]]
-name = "pest_derive"
-version = "2.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb056d9e8ea77922845ec74a1c4e8fb17e7c218cc4fc11a15c5d25e189aa40bc"
-dependencies = [
- "pest",
- "pest_generator",
-]
-
-[[package]]
-name = "pest_generator"
-version = "2.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87e404e638f781eb3202dc82db6760c8ae8a1eeef7fb3fa8264b2ef280504966"
-dependencies = [
- "pest",
- "pest_meta",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "pest_meta"
-version = "2.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "edd1101f170f5903fde0914f899bb503d9ff5271d7ba76bbb70bea63690cc0d5"
-dependencies = [
- "pest",
- "sha2",
-]
 
 [[package]]
 name = "pin-project-lite"
@@ -5694,12 +5599,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ucd-trie"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2896d95c02a80c6d6a5d6e953d479f5ddf2dfdb6a244441010e373ac0fb88971"
-
-[[package]]
 name = "unicase"
 version = "2.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7060,16 +6959,6 @@ checksum = "46a94a329f3c1ca33731094a08af14c21180556c86292842c57c150a7bd87b59"
 dependencies = [
  "nom 8.0.0",
  "nom-language",
- "thiserror 2.0.12",
-]
-
-[[package]]
-name = "yarn-state"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e34b4584b1cd09ec28747a9af20b7a16eb288f1d9f2ffaff56fd0d28b8282a66"
-dependencies = [
- "nom 8.0.0",
  "thiserror 2.0.12",
 ]
 

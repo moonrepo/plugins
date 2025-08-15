@@ -1,4 +1,5 @@
 use crate::config::*;
+use crate::lockfiles::*;
 use crate::package_json::PackageJson;
 use extism_pdk::*;
 use moon_pdk::{
@@ -300,53 +301,15 @@ pub fn install_dependencies(
 #[plugin_fn]
 pub fn parse_lock(Json(input): Json<ParseLockInput>) -> FnResult<Json<ParseLockOutput>> {
     let mut output = ParseLockOutput::default();
-    let lock = chaste::from_root_path(input.path)?;
 
-    let root_package = lock.root_package();
-
-    for package in lock.packages() {
-        let Some(name) = package.name() else {
-            continue;
-        };
-
-        if package == root_package {
-            continue;
-        }
-
-        let mut dep = LockDependency::default();
-
-        if let Some(version) = package.version() {
-            dep.version = Some(VersionSpec::parse(version.to_string())?);
-        }
-
-        if let Some(checksum) = package.checksums() {
-            let hash = checksum.integrity().to_string();
-
-            if hash != "sha256-" && hash != "sha512-" {
-                dep.hash = Some(hash);
-            }
-        }
-
-        output
-            .dependencies
-            .entry(name.to_string())
-            .or_default()
-            .push(dep);
-    }
-
-    for package in lock.workspace_members() {
-        if let Some(name) = package.name() {
-            output.packages.insert(
-                name.to_string(),
-                match package.version() {
-                    Some(version) => VersionSpec::parse(version.to_string())?
-                        .as_version()
-                        .cloned(),
-                    None => None,
-                },
-            );
-        }
-    }
+    match input.path.file_name().and_then(|name| name.to_str()) {
+        Some("bun.lock") => parse_bun_lock(&input.path, &mut output)?,
+        Some("bun.lockb") => parse_bun_lockb(&input.path, &mut output)?,
+        Some("package-lock.json") => parse_package_lock_json(&input.path, &mut output)?,
+        Some("pnpm-lock.yaml") => parse_pnpm_lock_yaml(&input.path, &mut output)?,
+        Some("yarn.lock") => parse_yarn_lock(&input.path, &mut output)?,
+        _ => {}
+    };
 
     Ok(Json(output))
 }
