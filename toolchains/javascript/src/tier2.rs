@@ -1,4 +1,5 @@
 use crate::config::*;
+use crate::infer_tasks::TasksInferrer;
 use crate::lockfiles::*;
 use crate::package_json::PackageJson;
 use extism_pdk::*;
@@ -6,7 +7,7 @@ use moon_common::path::paths_are_equal;
 use moon_config::DependencyScope;
 use moon_pdk::{
     get_host_environment, load_toolchain_config, locate_root, locate_root_many,
-    locate_root_with_check, parse_toolchain_config, parse_toolchain_config_schema,
+    locate_root_with_check, parse_toolchain_config_schema,
 };
 use moon_pdk_api::*;
 use nodejs_package_json::{VersionProtocol, WorkspaceProtocol};
@@ -14,20 +15,12 @@ use starbase_utils::yaml;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-// - [] `extend_project_graph` - javascript
-// - [x] `extend_task_command` - bun/node/npm/pnpm/yarn
-// - [x] `extend_task_script` - bun/node/npm/pnpm/yarn
-// - [x] `hash_task_contents` - javascript
-// - [x] `install_dependencies` - javascript
-// - [x] `locate_dependencies_root` - javascript
-// - [x] `parse_lock` - javascript
-// - [x] `parse_manifest` - javascript
-// - [x] `setup_environment` - node/javascript
-
 #[plugin_fn]
 pub fn extend_project_graph(
     Json(input): Json<ExtendProjectGraphInput>,
 ) -> FnResult<Json<ExtendProjectGraphOutput>> {
+    let config =
+        parse_toolchain_config_schema::<JavaScriptToolchainConfig>(input.toolchain_config)?;
     let mut output = ExtendProjectGraphOutput::default();
 
     // First pass, gather all packages and their manifests
@@ -94,6 +87,10 @@ pub fn extend_project_graph(
         extract_implicit_deps(&manifest.dev_dependencies, DependencyScope::Development)?;
         extract_implicit_deps(&manifest.peer_dependencies, DependencyScope::Peer)?;
         extract_implicit_deps(&manifest.optional_dependencies, DependencyScope::Build)?;
+
+        if config.infer_tasks_from_scripts {
+            project_output.tasks = TasksInferrer::new(&config, manifest).infer()?;
+        }
 
         output.extended_projects.insert(id.into(), project_output);
 
@@ -182,7 +179,8 @@ pub fn extend_task_script(
 pub fn locate_dependencies_root(
     Json(input): Json<LocateDependenciesRootInput>,
 ) -> FnResult<Json<LocateDependenciesRootOutput>> {
-    let config = parse_toolchain_config::<JavaScriptToolchainConfig>(input.toolchain_config)?;
+    let config =
+        parse_toolchain_config_schema::<JavaScriptToolchainConfig>(input.toolchain_config)?;
     let mut output = LocateDependenciesRootOutput::default();
 
     let Some(package_manager) = config.package_manager else {
@@ -273,7 +271,10 @@ pub fn install_dependencies(
         JavaScriptPackageManager::Npm => {
             let mut cmd = ExecCommandInput::new(
                 "npm",
-                if env.ci && input.root.join("package-lock.json").exists() {
+                if env.ci
+                    && (input.root.join("package-lock.json").exists()
+                        || input.root.join("npm-shrinkwrap.json").exists())
+                {
                     ["ci"]
                 } else {
                     ["install"]
@@ -408,7 +409,9 @@ pub fn parse_lock(Json(input): Json<ParseLockInput>) -> FnResult<Json<ParseLockO
     match input.path.file_name().and_then(|name| name.to_str()) {
         Some("bun.lock") => parse_bun_lock(&input.path, &mut output)?,
         Some("bun.lockb") => parse_bun_lockb(&input.path, &mut output)?,
-        Some("package-lock.json") => parse_package_lock_json(&input.path, &mut output)?,
+        Some("package-lock.json" | "npm-shrinkwrap.json") => {
+            parse_package_lock_json(&input.path, &mut output)?
+        }
         Some("pnpm-lock.yaml") => parse_pnpm_lock_yaml(&input.path, &mut output)?,
         Some("yarn.lock") => parse_yarn_lock(&input.path, &mut output)?,
         _ => {}

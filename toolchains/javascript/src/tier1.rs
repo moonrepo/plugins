@@ -139,7 +139,7 @@ pub fn define_toolchain_config() -> FnResult<Json<DefineToolchainConfigOutput>> 
 pub fn sync_project(Json(input): Json<SyncProjectInput>) -> FnResult<Json<SyncOutput>> {
     let config =
         parse_toolchain_config_schema::<JavaScriptToolchainConfig>(input.toolchain_config)?;
-    let mut output = SyncOutput::default();
+    let output = SyncOutput::default();
 
     let project_root = input.context.get_project_root(&input.project);
 

@@ -4,5 +4,10 @@
   "dependencies": {
     "a": "1.2.3",
     "react": "*"
+  },
+  "scripts": {
+    "build": "webpack build --outDir ./build",
+    "build:vite": "vite build --out=./out",
+    "info": "vite --help"
   }
 }

@@ -9,7 +9,6 @@ config_struct!(
     pub struct NpmToolchainConfig {
         /// List of arguments to append to `npm install` commands.
         /// These arguments are inherited by the JavaScript toolchain.
-        #[setting(default = vec!["--no-audit".into(), "--no-fund".into()])]
         pub install_args: Vec<String>,
 
         /// Configured version to download and install.

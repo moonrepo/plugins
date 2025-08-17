@@ -6,5 +6,10 @@
   },
   "devDependencies": {
     "@b/lib": "file:../b"
+  },
+  "scripts": {
+    "dev": "next dev --watch",
+    "start:vite": "vite serve",
+    "astro:serve": "astro start"
   }
 }

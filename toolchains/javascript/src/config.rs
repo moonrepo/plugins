@@ -1,4 +1,4 @@
-use moon_pdk_api::{UnresolvedVersionSpec, Version, VersionReq, config_struct};
+use moon_pdk_api::{UnresolvedVersionSpec, config_struct};
 use schematic::{Config, ConfigEnum};
 use serde::{Deserialize, Serialize};
 
@@ -14,13 +14,23 @@ pub enum JavaScriptPackageManager {
     Yarn,
 }
 
+#[cfg(feature = "wasm")]
 impl JavaScriptPackageManager {
+    pub fn get_runtime_toolchain(&self) -> moon_common::Id {
+        use moon_common::Id;
+
+        match self {
+            JavaScriptPackageManager::Bun => Id::raw("bun"),
+            _ => Id::raw("node"),
+        }
+    }
+
     pub fn is_for_node(&self) -> bool {
         matches!(self, Self::Npm | Self::Pnpm | Self::Yarn)
     }
 }
 
-/// Formats that a `package.json` dependency version can be.
+/// Formats that a local workspace `package.json` dependency version can be.
 #[derive(ConfigEnum, Clone, Copy, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum JavaScriptDependencyVersionFormat {
@@ -36,6 +46,7 @@ pub enum JavaScriptDependencyVersionFormat {
     WorkspaceTilde, // workspace:~
 }
 
+#[cfg(feature = "wasm")]
 impl JavaScriptDependencyVersionFormat {
     pub fn get_default_for(&self, pm: &JavaScriptPackageManager) -> Self {
         match pm {
@@ -78,17 +89,26 @@ config_struct!(
     #[derive(Config)]
     pub struct JavaScriptToolchainConfig {
         /// Automatically dedupes the lockfile when dependencies have changed.
+        /// This will run locally after dependencies have been installed.
         #[setting(default = true)]
         pub dedupe_on_lockfile_change: bool,
 
         /// The dependency version format to use when syncing projects
-        /// as dependencies.
+        /// as workspace dependencies.
         pub dependency_version_format: JavaScriptDependencyVersionFormat,
 
         /// Automatically infer moon tasks from `package.json` scripts.
+        /// Some caveats to be aware of:
+        ///
+        /// - Lifecycle (pre, post) scripts are not inferred.
+        /// - Outputs will be automatically detected (if possible).
+        /// - Script names that contain `:` will be converted to `-`.
+        /// - Script names that contain `dev`, `start`, `serve`, or `preview`
+        ///   will be considered local only.
         pub infer_tasks_from_scripts: bool,
 
-        /// The package manager to use for installing dependencies.
+        /// The package manager to use for installing dependencies,
+        /// running inferred tasks, and much more.
         pub package_manager: Option<JavaScriptPackageManager>,
 
         /// Enforces that only the root `package.json` can be used for dependencies,
@@ -117,8 +137,11 @@ config_struct!(
     }
 );
 
+#[cfg(feature = "wasm")]
 impl SharedPackageManagerConfig {
     pub fn version_satisfies(&self, req: &str) -> bool {
+        use moon_pdk_api::{Version, VersionReq};
+
         let Some(spec) = &self.version else {
             return false;
         };

@@ -1,4 +1,7 @@
-use moon_config::DependencyScope;
+use moon_config::{
+    DependencyScope, OneOrMany, OutputPath, PartialTaskArgs, PartialTaskConfig,
+    PartialTaskOptionsConfig, TaskOptionRunInCI, TaskPreset,
+};
 use moon_pdk_api::*;
 use moon_pdk_test_utils::{create_empty_moon_sandbox, create_moon_sandbox};
 use serde_json::json;
@@ -22,7 +25,7 @@ mod javascript_toolchain_tier2 {
             input.project_sources.insert("b".into(), "b".into());
             input.project_sources.insert("c".into(), "c".into());
 
-            let output = plugin.extend_project_graph(input).await;
+            let mut output = plugin.extend_project_graph(input).await;
 
             assert_eq!(
                 output.extended_projects,
@@ -62,6 +65,8 @@ mod javascript_toolchain_tier2 {
                     ),
                 ])
             );
+
+            output.input_files.sort();
 
             assert_eq!(
                 output.input_files,
@@ -114,6 +119,203 @@ mod javascript_toolchain_tier2 {
 
             assert!(output.extended_projects.is_empty());
             assert!(output.input_files.is_empty());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn doesnt_infer_scripts_when_disbled() {
+            let sandbox = create_moon_sandbox("projects");
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let mut input = ExtendProjectGraphInput::default();
+            input.project_sources.insert("a".into(), "a".into());
+            input.project_sources.insert("b".into(), "b".into());
+            input.project_sources.insert("c".into(), "c".into());
+            input.toolchain_config = json!({
+                "inferTasksFromScripts": false,
+            });
+
+            let output = plugin.extend_project_graph(input).await;
+
+            assert!(output.extended_projects.get("a").unwrap().tasks.is_empty());
+            assert!(output.extended_projects.get("b").unwrap().tasks.is_empty());
+            assert!(output.extended_projects.get("c").unwrap().tasks.is_empty());
+        }
+
+        #[allow(deprecated)]
+        #[tokio::test(flavor = "multi_thread")]
+        async fn infers_scripts_when_enabled() {
+            use starbase_sandbox::pretty_assertions::assert_eq;
+
+            let sandbox = create_moon_sandbox("projects");
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let mut input = ExtendProjectGraphInput::default();
+            input.project_sources.insert("a".into(), "a".into());
+            input.project_sources.insert("b".into(), "b".into());
+            input.project_sources.insert("c".into(), "c".into());
+            input.toolchain_config = json!({
+                "inferTasksFromScripts": true,
+                "packageManager": "npm"
+            });
+
+            let output = plugin.extend_project_graph(input).await;
+
+            assert_eq!(
+                output.extended_projects.get("a").unwrap().tasks,
+                BTreeMap::from_iter([(
+                    "release".into(),
+                    PartialTaskConfig {
+                        description: Some("Inherited from `release` package.json script.".into()),
+                        command: Some(PartialTaskArgs::List(vec![
+                            "npm".into(),
+                            "run".into(),
+                            "release".into(),
+                        ])),
+                        toolchain: Some(OneOrMany::Many(vec![
+                            Id::raw("javascript"),
+                            Id::raw("npm"),
+                            Id::raw("node"),
+                        ])),
+                        ..Default::default()
+                    }
+                )])
+            );
+
+            assert_eq!(
+                output.extended_projects.get("b").unwrap().tasks,
+                BTreeMap::from_iter([
+                    (
+                        "build".into(),
+                        PartialTaskConfig {
+                            description: Some("Inherited from `build` package.json script.".into()),
+                            command: Some(PartialTaskArgs::List(vec![
+                                "npm".into(),
+                                "run".into(),
+                                "build".into(),
+                            ])),
+                            outputs: Some(vec![OutputPath::ProjectFile("build".into())]),
+                            toolchain: Some(OneOrMany::Many(vec![
+                                Id::raw("javascript"),
+                                Id::raw("npm"),
+                                Id::raw("node"),
+                            ])),
+                            ..Default::default()
+                        }
+                    ),
+                    (
+                        "build-vite".into(),
+                        PartialTaskConfig {
+                            description: Some(
+                                "Inherited from `build:vite` package.json script.".into()
+                            ),
+                            command: Some(PartialTaskArgs::List(vec![
+                                "npm".into(),
+                                "run".into(),
+                                "build:vite".into(),
+                            ])),
+                            outputs: Some(vec![OutputPath::ProjectFile("out".into())]),
+                            toolchain: Some(OneOrMany::Many(vec![
+                                Id::raw("javascript"),
+                                Id::raw("npm"),
+                                Id::raw("node"),
+                            ])),
+                            ..Default::default()
+                        }
+                    ),
+                    (
+                        "info".into(),
+                        PartialTaskConfig {
+                            description: Some("Inherited from `info` package.json script.".into()),
+                            command: Some(PartialTaskArgs::List(vec![
+                                "npm".into(),
+                                "run".into(),
+                                "info".into(),
+                            ])),
+                            toolchain: Some(OneOrMany::Many(vec![
+                                Id::raw("javascript"),
+                                Id::raw("npm"),
+                                Id::raw("node"),
+                            ])),
+                            options: Some(PartialTaskOptionsConfig {
+                                run_in_ci: Some(TaskOptionRunInCI::Enabled(false)),
+                                ..Default::default()
+                            }),
+                            ..Default::default()
+                        }
+                    )
+                ])
+            );
+
+            assert_eq!(
+                output.extended_projects.get("c").unwrap().tasks,
+                BTreeMap::from_iter([
+                    (
+                        "astro-serve".into(),
+                        PartialTaskConfig {
+                            description: Some(
+                                "Inherited from `astro:serve` package.json script.".into()
+                            ),
+                            command: Some(PartialTaskArgs::List(vec![
+                                "npm".into(),
+                                "run".into(),
+                                "astro:serve".into(),
+                            ])),
+                            local: Some(true),
+                            preset: Some(TaskPreset::Server),
+                            toolchain: Some(OneOrMany::Many(vec![
+                                Id::raw("javascript"),
+                                Id::raw("npm"),
+                                Id::raw("node"),
+                            ])),
+                            ..Default::default()
+                        }
+                    ),
+                    (
+                        "dev".into(),
+                        PartialTaskConfig {
+                            description: Some("Inherited from `dev` package.json script.".into()),
+                            command: Some(PartialTaskArgs::List(vec![
+                                "npm".into(),
+                                "run".into(),
+                                "dev".into(),
+                            ])),
+                            local: Some(true),
+                            preset: Some(TaskPreset::Watcher),
+                            toolchain: Some(OneOrMany::Many(vec![
+                                Id::raw("javascript"),
+                                Id::raw("npm"),
+                                Id::raw("node"),
+                            ])),
+                            options: Some(PartialTaskOptionsConfig {
+                                run_in_ci: Some(TaskOptionRunInCI::Enabled(false)),
+                                ..Default::default()
+                            }),
+                            ..Default::default()
+                        }
+                    ),
+                    (
+                        "start-vite".into(),
+                        PartialTaskConfig {
+                            description: Some(
+                                "Inherited from `start:vite` package.json script.".into()
+                            ),
+                            command: Some(PartialTaskArgs::List(vec![
+                                "npm".into(),
+                                "run".into(),
+                                "start:vite".into(),
+                            ])),
+                            local: Some(true),
+                            preset: Some(TaskPreset::Server),
+                            toolchain: Some(OneOrMany::Many(vec![
+                                Id::raw("javascript"),
+                                Id::raw("npm"),
+                                Id::raw("node"),
+                            ])),
+                            ..Default::default()
+                        }
+                    ),
+                ])
+            );
         }
     }
 

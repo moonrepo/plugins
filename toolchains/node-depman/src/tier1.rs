@@ -18,7 +18,7 @@ pub fn register_toolchain(
         PackageManager::Npm => RegisterToolchainOutput {
             config_file_globs: vec![".npmrc".into()],
             exe_names: vec!["npm".into(), "npx".into()],
-            lock_file_names: vec!["package-lock.json".into()],
+            lock_file_names: vec!["package-lock.json".into(), "npm-shrinkwrap.json".into()],
             ..Default::default()
         },
         PackageManager::Pnpm => RegisterToolchainOutput {

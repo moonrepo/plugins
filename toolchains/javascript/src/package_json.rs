@@ -5,7 +5,7 @@ use extism_pdk::*;
 #[cfg(feature = "wasm")]
 use moon_pdk::host_log;
 use moon_pdk_api::{AnyResult, json_config};
-use nodejs_package_json::{PackageJson as BasePackageJson, WorkspacesField};
+use nodejs_package_json::PackageJson as BasePackageJson;
 use starbase_utils::json::JsonValue;
 
 #[cfg(feature = "wasm")]
@@ -22,6 +22,7 @@ impl PackageJson {
             return Ok(());
         };
 
+        #[allow(clippy::single_match)]
         match field {
             "packageManager" => {
                 if let Some(pm) = &self.package_manager {
@@ -37,9 +38,12 @@ impl PackageJson {
     }
 }
 
+#[cfg(feature = "wasm")]
 impl PackageJson {
     /// Extract package members if the current manifest is a workspace.
     pub fn extract_members(&self) -> Option<Vec<String>> {
+        use nodejs_package_json::WorkspacesField;
+
         self.workspaces.as_ref().map(|ws| match ws {
             WorkspacesField::Globs(globs) => globs.clone(),
             WorkspacesField::Config { packages, .. } => packages.clone(),

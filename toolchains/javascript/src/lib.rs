@@ -1,4 +1,7 @@
 mod config;
+#[cfg(feature = "wasm")]
+mod infer_tasks;
+#[cfg(feature = "wasm")]
 mod lockfiles;
 mod package_json;
 #[cfg(feature = "wasm")]

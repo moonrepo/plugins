@@ -19,7 +19,10 @@ mod node_depman_toolchain_tier1 {
             assert_eq!(output.name, "npm");
             assert_eq!(output.config_file_globs, [".npmrc"]);
             assert_eq!(output.manifest_file_names, ["package.json"]);
-            assert_eq!(output.lock_file_names, ["package-lock.json"]);
+            assert_eq!(
+                output.lock_file_names,
+                ["package-lock.json", "npm-shrinkwrap.json"]
+            );
             assert_eq!(output.exe_names, ["npm", "npx"]);
             assert_eq!(output.vendor_dir_name.unwrap(), "node_modules");
         }

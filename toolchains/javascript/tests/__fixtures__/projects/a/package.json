@@ -3,5 +3,11 @@
   "version": "1.0.0",
   "dependencies": {
     "react": "*"
+  },
+  "scripts": {
+    "prepublish": "todo",
+    "prerelease": "todo",
+    "postinstall": "todo",
+    "release": "release-please"
   }
 }
