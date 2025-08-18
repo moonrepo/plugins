@@ -16,7 +16,7 @@ mod javascript_toolchain_tier2 {
 
             sandbox
                 .host_funcs
-                .mock_load_toolchain_config(|_| json!({ "version": "1.2.3" }));
+                .mock_load_toolchain_config(|_, _| json!({ "version": "1.2.3" }));
 
             let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -46,7 +46,7 @@ mod javascript_toolchain_tier2 {
 
             sandbox
                 .host_funcs
-                .mock_load_toolchain_config(|_| json!({ "version": "1.2.3" }));
+                .mock_load_toolchain_config(|_, _| json!({ "version": "1.2.3" }));
 
             let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -74,7 +74,9 @@ mod javascript_toolchain_tier2 {
         async fn does_nothing_if_no_pm_version() {
             let mut sandbox = create_moon_sandbox("files");
 
-            sandbox.host_funcs.mock_load_toolchain_config(|_| json!({}));
+            sandbox
+                .host_funcs
+                .mock_load_toolchain_config(|_, _| json!({}));
 
             let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -104,7 +106,7 @@ mod javascript_toolchain_tier2 {
 
             sandbox
                 .host_funcs
-                .mock_load_toolchain_config(|_| json!({ "version": "1" }));
+                .mock_load_toolchain_config(|_, _| json!({ "version": "1" }));
 
             let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -134,7 +136,7 @@ mod javascript_toolchain_tier2 {
 
             sandbox
                 .host_funcs
-                .mock_load_toolchain_config(|_| json!({ "version": "1.2.3" }));
+                .mock_load_toolchain_config(|_, _| json!({ "version": "1.2.3" }));
 
             let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -164,7 +166,7 @@ mod javascript_toolchain_tier2 {
 
             sandbox
                 .host_funcs
-                .mock_load_toolchain_config(|_| json!({ "version": "1.2.3" }));
+                .mock_load_toolchain_config(|_, _| json!({ "version": "1.2.3" }));
 
             let plugin = sandbox.create_toolchain("javascript").await;
 

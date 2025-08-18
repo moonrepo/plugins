@@ -113,7 +113,7 @@ mod javascript_toolchain_tier1 {
 
             sandbox
                 .host_funcs
-                .mock_load_toolchain_config(|_| json!({ "version": "1.2.3" }));
+                .mock_load_toolchain_config(|_, _| json!({ "version": "1.2.3" }));
 
             let plugin = sandbox.create_toolchain("javascript").await;
 

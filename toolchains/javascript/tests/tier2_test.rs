@@ -807,7 +807,7 @@ mod javascript_toolchain_tier2 {
 
                 sandbox
                     .host_funcs
-                    .mock_load_toolchain_config(|_| json!({ "installArgs": ["-a", "b", "--c"]}));
+                    .mock_load_toolchain_config(|_, _| json!({ "installArgs": ["-a", "b", "--c"]}));
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -918,7 +918,7 @@ mod javascript_toolchain_tier2 {
 
                 sandbox
                     .host_funcs
-                    .mock_load_toolchain_config(|_| json!({ "installArgs": ["-a", "b", "--c"]}));
+                    .mock_load_toolchain_config(|_, _| json!({ "installArgs": ["-a", "b", "--c"]}));
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -1074,7 +1074,7 @@ mod javascript_toolchain_tier2 {
 
                 sandbox
                     .host_funcs
-                    .mock_load_toolchain_config(|_| json!({ "installArgs": ["-a", "b", "--c"]}));
+                    .mock_load_toolchain_config(|_, _| json!({ "installArgs": ["-a", "b", "--c"]}));
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -1138,7 +1138,7 @@ mod javascript_toolchain_tier2 {
 
                 sandbox
                     .host_funcs
-                    .mock_load_toolchain_config(|_| json!({ "version": "8" }));
+                    .mock_load_toolchain_config(|_, _| json!({ "version": "8" }));
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -1224,7 +1224,7 @@ mod javascript_toolchain_tier2 {
 
                 sandbox
                     .host_funcs
-                    .mock_load_toolchain_config(|_| json!({ "version": "2" }));
+                    .mock_load_toolchain_config(|_, _| json!({ "version": "2" }));
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -1259,7 +1259,7 @@ mod javascript_toolchain_tier2 {
 
                 sandbox
                     .host_funcs
-                    .mock_load_toolchain_config(|_| json!({ "installArgs": ["-a", "b", "--c"]}));
+                    .mock_load_toolchain_config(|_, _| json!({ "installArgs": ["-a", "b", "--c"]}));
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -1323,7 +1323,7 @@ mod javascript_toolchain_tier2 {
 
                 sandbox
                     .host_funcs
-                    .mock_load_toolchain_config(|_| json!({ "version": "2" }));
+                    .mock_load_toolchain_config(|_, _| json!({ "version": "2" }));
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
