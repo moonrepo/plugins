@@ -226,10 +226,10 @@ pub fn locate_dependencies_root(
     }
 
     // Else may be a stand-alone project
-    if output.root.is_none() {
-        if let Some(root) = locate_root(&input.starting_dir, "package.json") {
-            output.root = root.virtual_path();
-        }
+    if output.root.is_none()
+        && let Some(root) = locate_root(&input.starting_dir, "package.json")
+    {
+        output.root = root.virtual_path();
     }
 
     Ok(Json(output))
