@@ -14,7 +14,6 @@ pub enum JavaScriptPackageManager {
     Yarn,
 }
 
-#[cfg(feature = "wasm")]
 impl JavaScriptPackageManager {
     pub fn get_runtime_toolchain(&self) -> moon_common::Id {
         use moon_common::Id;
@@ -46,15 +45,7 @@ pub enum JavaScriptDependencyVersionFormat {
     WorkspaceTilde, // workspace:~
 }
 
-#[cfg(feature = "wasm")]
 impl JavaScriptDependencyVersionFormat {
-    pub fn get_default_for(&self, pm: &JavaScriptPackageManager) -> Self {
-        match pm {
-            JavaScriptPackageManager::Npm => Self::File,
-            _ => Self::Workspace,
-        }
-    }
-
     pub fn get_prefix(&self) -> String {
         match self {
             Self::File => "file:".into(),
@@ -69,17 +60,26 @@ impl JavaScriptDependencyVersionFormat {
         }
     }
 
-    pub fn is_supported_by(&self, pm: &JavaScriptPackageManager) -> bool {
+    pub fn get_supported_for(&self, pm: &JavaScriptPackageManager) -> Self {
         match pm {
             JavaScriptPackageManager::Bun => {
-                !matches!(self, Self::WorkspaceCaret | Self::WorkspaceTilde)
+                if matches!(self, Self::WorkspaceCaret | Self::WorkspaceTilde) {
+                    Self::Workspace
+                } else {
+                    *self
+                }
             }
-            JavaScriptPackageManager::Npm => !matches!(
-                self,
-                Self::Link | Self::Workspace | Self::WorkspaceCaret | Self::WorkspaceTilde
-            ),
-            JavaScriptPackageManager::Pnpm => true,
-            JavaScriptPackageManager::Yarn => true,
+            JavaScriptPackageManager::Npm => {
+                if matches!(
+                    self,
+                    Self::Link | Self::Workspace | Self::WorkspaceCaret | Self::WorkspaceTilde
+                ) {
+                    Self::File
+                } else {
+                    *self
+                }
+            }
+            _ => *self,
         }
     }
 }
@@ -137,7 +137,6 @@ config_struct!(
     }
 );
 
-#[cfg(feature = "wasm")]
 impl SharedPackageManagerConfig {
     pub fn version_satisfies(&self, req: &str) -> bool {
         use moon_pdk_api::{Version, VersionReq};

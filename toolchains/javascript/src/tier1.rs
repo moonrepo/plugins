@@ -1,15 +1,23 @@
-use crate::config::{JavaScriptPackageManager, JavaScriptToolchainConfig};
+use crate::config::*;
 use crate::package_json::PackageJson;
 use extism_pdk::*;
-use moon_pdk::{parse_toolchain_config_schema, plugin_err};
+use moon_common::path::{is_root_level_source, to_relative_virtual_string};
+use moon_config::DependencyScope;
+use moon_pdk::{
+    HostLogInput, host_log, is_project_toolchain_enabled, map_miette_error,
+    parse_toolchain_config_schema, plugin_err,
+};
 use moon_pdk_api::*;
+use nodejs_package_json::VersionProtocol;
 use schematic::SchemaBuilder;
 use starbase_utils::json::JsonValue;
 use std::str::FromStr;
 use toolchain_common::enable_tracing;
 
-// - [ ] `sync_project`
-// - [ ] `sync_workspace`
+#[host_fn]
+extern "ExtismHost" {
+    fn host_log(input: Json<HostLogInput>);
+}
 
 #[plugin_fn]
 pub fn register_toolchain(
@@ -137,27 +145,137 @@ pub fn define_toolchain_config() -> FnResult<Json<DefineToolchainConfigOutput>> 
 
 #[plugin_fn]
 pub fn sync_project(Json(input): Json<SyncProjectInput>) -> FnResult<Json<SyncOutput>> {
-    let config =
-        parse_toolchain_config_schema::<JavaScriptToolchainConfig>(input.toolchain_config)?;
-    let output = SyncOutput::default();
+    let mut output = SyncOutput::default();
 
-    let project_root = input.context.get_project_root(&input.project);
+    if is_project_toolchain_enabled(&input.project) {
+        output.skipped = true;
+    }
+
+    // Does not apply to root projects
+    if is_root_level_source(&input.project.source) {
+        return Ok(Json(output));
+    }
+
+    let config =
+        parse_toolchain_config_schema::<JavaScriptToolchainConfig>(input.toolchain_config.clone())?;
+    let mut package = PackageJson::load(
+        input
+            .context
+            .get_project_root(&input.project)
+            .join("package.json"),
+    )?;
 
     // Enforce single version policy
-    if config.root_package_dependencies_only && project_root != input.context.workspace_root {
-        let package = PackageJson::load(project_root.join("package.json"))?;
-
-        if package.dependencies.is_some()
+    if config.root_package_dependencies_only
+        && (package.dependencies.is_some()
             || package.dev_dependencies.is_some()
             || package.peer_dependencies.is_some()
-            || package.optional_dependencies.is_some()
+            || package.optional_dependencies.is_some())
+    {
+        return Err(plugin_err!(
+            "Dependencies can only be defined in the root <file>package.json</file>, found dependencies in project <id>{}</id>.\nThis is enforced through the <property>javascript.rootPackageDependenciesOnly</property> toolchain setting.",
+            input.project.id
+        ));
+    }
+
+    // Sync workspace dependencies
+    if config.sync_project_workspace_dependencies
+        && let Some(package_manager) = &config.package_manager
+    {
+        let (op, _) = Operation::track("sync-project-workspace-dependencies", || {
+            sync_project_workspace_dependencies(&input, &config, &mut package, package_manager)
+        })?;
+
+        output.operations.push(op);
+
+        if let Some(file) = package.save()?
+            && let Some(virtual_file) = file.virtual_path()
         {
-            return Err(plugin_err!(
-                "Dependencies can only be defined in the root <file>package.json</file>, found dependencies in project <id>{}</id>.\nThis is enforced through the <property>javascript.rootPackageDependenciesOnly</property> toolchain setting.",
-                input.project.id
-            ));
+            output.changed_files.push(virtual_file);
         }
     }
 
     Ok(Json(output))
+}
+
+fn sync_project_workspace_dependencies(
+    input: &SyncProjectInput,
+    config: &JavaScriptToolchainConfig,
+    package: &mut PackageJson,
+    package_manager: &JavaScriptPackageManager,
+) -> AnyResult<()> {
+    let project_root = input.context.get_project_root(&input.project);
+    let version_format = config
+        .dependency_version_format
+        .get_supported_for(package_manager);
+    let version_prefix = version_format.get_prefix();
+
+    for dep_project in &input.project_dependencies {
+        // Do not sync with the root project
+        if is_root_level_source(&dep_project.source)
+            || dep_project
+                .dependency_scope
+                .as_ref()
+                .is_some_and(|scope| *scope == DependencyScope::Root)
+        {
+            continue;
+        }
+
+        let dep_project_root = input.context.get_project_root(dep_project);
+        let dep_package_path = dep_project_root.join("package.json");
+
+        // Only sync if a package exists
+        if !dep_package_path.exists() {
+            continue;
+        }
+
+        let dep_package = PackageJson::load(dep_package_path)?;
+
+        if let Some(name) = dep_package.name.as_ref()
+            && let Some(version) = dep_package.version.as_ref()
+            && let Some(scope) = dep_project.dependency_scope.as_ref()
+        {
+            let protocol = match version_format {
+                JavaScriptDependencyVersionFormat::File
+                | JavaScriptDependencyVersionFormat::Link => VersionProtocol::try_from(format!(
+                    "{version_prefix}{}",
+                    to_relative_virtual_string(dep_project_root, &project_root)
+                        .map_err(map_miette_error)?
+                ))?,
+                JavaScriptDependencyVersionFormat::Version
+                | JavaScriptDependencyVersionFormat::VersionCaret
+                | JavaScriptDependencyVersionFormat::VersionTilde => {
+                    VersionProtocol::try_from(format!("{version_prefix}{version}"))?
+                }
+                _ => VersionProtocol::from_str(&version_prefix)?,
+            };
+
+            match scope {
+                DependencyScope::Build | DependencyScope::Root => {
+                    // Not used
+                }
+                DependencyScope::Development => {
+                    package.add_dev_dependency(name, protocol, true)?;
+                }
+                DependencyScope::Production => {
+                    package.add_dependency(name, protocol, true)?;
+                }
+                DependencyScope::Peer => {
+                    package.add_peer_dependency(
+                        name,
+                        VersionProtocol::try_from(format!("^{}.0.0", version.major))?,
+                        true,
+                    )?;
+                }
+            };
+
+            host_log!(
+                "Syncing <id>{}</file> as a dependency to {}'s package.json",
+                dep_project.id,
+                input.project.id,
+            );
+        }
+    }
+
+    Ok(())
 }

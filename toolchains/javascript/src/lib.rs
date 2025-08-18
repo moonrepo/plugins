@@ -9,6 +9,8 @@ mod tier1;
 #[cfg(feature = "wasm")]
 mod tier2;
 
+pub use config::*;
+pub use package_json::*;
 #[cfg(feature = "wasm")]
 pub use tier1::*;
 #[cfg(feature = "wasm")]

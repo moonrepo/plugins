@@ -505,7 +505,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_norway",
- "thiserror 2.0.12",
+ "thiserror 2.0.16",
 ]
 
 [[package]]
@@ -517,7 +517,7 @@ dependencies = [
  "nodejs-semver",
  "nom 8.0.0",
  "ssri",
- "thiserror 2.0.12",
+ "thiserror 2.0.16",
 ]
 
 [[package]]
@@ -6962,7 +6962,7 @@ checksum = "46a94a329f3c1ca33731094a08af14c21180556c86292842c57c150a7bd87b59"
 dependencies = [
  "nom 8.0.0",
  "nom-language",
- "thiserror 2.0.12",
+ "thiserror 2.0.16",
 ]
 
 [[package]]

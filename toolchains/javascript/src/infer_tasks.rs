@@ -1,4 +1,5 @@
-use crate::{config::JavaScriptToolchainConfig, package_json::PackageJson};
+use crate::config::JavaScriptToolchainConfig;
+use crate::package_json::PackageJson;
 use moon_common::Id;
 use moon_config::{
     OneOrMany, OutputPath, PartialTaskArgs, PartialTaskConfig, PartialTaskOptionsConfig,

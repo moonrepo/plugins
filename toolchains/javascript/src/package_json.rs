@@ -3,10 +3,12 @@
 #[cfg(feature = "wasm")]
 use extism_pdk::*;
 #[cfg(feature = "wasm")]
-use moon_pdk::host_log;
+use moon_pdk::{HostLogInput, host_log};
 use moon_pdk_api::{AnyResult, json_config};
 use nodejs_package_json::PackageJson as BasePackageJson;
-use starbase_utils::json::JsonValue;
+use nodejs_package_json::VersionProtocol;
+use starbase_utils::json::{JsonValue, serde_json::json};
+use std::collections::BTreeMap;
 
 #[cfg(feature = "wasm")]
 #[host_fn]
@@ -22,14 +24,41 @@ impl PackageJson {
             return Ok(());
         };
 
-        #[allow(clippy::single_match)]
+        #[cfg(feature = "wasm")]
+        {
+            host_log!(
+                "Setting <property>{field}</file> in <path>{}</path>",
+                self.path,
+            );
+        }
+
+        let mut save_deps =
+            |field_name: &str, maybe_deps: Option<&BTreeMap<String, VersionProtocol>>| {
+                if let Some(deps) = maybe_deps {
+                    let current = root.entry(field_name).or_insert_with(|| json!({}));
+
+                    for (name, version) in deps {
+                        current[name] = JsonValue::String(version.to_string());
+                    }
+                }
+            };
+
         match field {
+            "dependencies" => {
+                save_deps("dependencies", self.data.dependencies.as_ref());
+            }
+            "devDependencies" => {
+                save_deps("devDependencies", self.data.dev_dependencies.as_ref());
+            }
             "packageManager" => {
                 if let Some(pm) = &self.package_manager {
                     root.insert("packageManager".into(), JsonValue::String(pm.into()));
                 } else {
                     root.remove("packageManager");
                 }
+            }
+            "peerDependencies" => {
+                save_deps("peerDependencies", self.data.peer_dependencies.as_ref());
             }
             _ => {}
         };
@@ -38,8 +67,85 @@ impl PackageJson {
     }
 }
 
-#[cfg(feature = "wasm")]
 impl PackageJson {
+    /// Add a package and version range to the `dependencies` field.
+    pub fn add_dependency<T: AsRef<str>>(
+        &mut self,
+        name: T,
+        range: VersionProtocol,
+        if_missing: bool,
+    ) -> AnyResult<bool> {
+        let name = name.as_ref();
+
+        if internal_add_dependency(name, range, if_missing, &mut self.data.dependencies) {
+            self.dirty.push("dependencies".into());
+
+            #[cfg(feature = "wasm")]
+            {
+                host_log!(
+                    "Adding <id>{name}</id> as a production dependency to <path>{}</path>",
+                    self.path,
+                );
+            }
+
+            return Ok(true);
+        }
+
+        Ok(false)
+    }
+
+    /// Add a package and version range to the `devDependencies` field.
+    pub fn add_dev_dependency<T: AsRef<str>>(
+        &mut self,
+        name: T,
+        range: VersionProtocol,
+        if_missing: bool,
+    ) -> AnyResult<bool> {
+        let name = name.as_ref();
+
+        if internal_add_dependency(name, range, if_missing, &mut self.data.dev_dependencies) {
+            self.dirty.push("devDependencies".into());
+
+            #[cfg(feature = "wasm")]
+            {
+                host_log!(
+                    "Adding <id>{name}</id> as a development dependency to <path>{}</path>",
+                    self.path,
+                );
+            }
+
+            return Ok(true);
+        }
+
+        Ok(false)
+    }
+
+    /// Add a package and version range to the `peerDependencies` field.
+    pub fn add_peer_dependency<T: AsRef<str>>(
+        &mut self,
+        name: T,
+        range: VersionProtocol,
+        if_missing: bool,
+    ) -> AnyResult<bool> {
+        let name = name.as_ref();
+
+        if internal_add_dependency(name, range, if_missing, &mut self.data.peer_dependencies) {
+            self.dirty.push("peerDependencies".into());
+
+            #[cfg(feature = "wasm")]
+            {
+                host_log!(
+                    "Adding <id>{name}</id> as a peer dependency to <path>{}</path>",
+                    self.path,
+                );
+            }
+
+            return Ok(true);
+        }
+
+        Ok(false)
+    }
+
     /// Extract package members if the current manifest is a workspace.
     pub fn extract_members(&self) -> Option<Vec<String>> {
         use nodejs_package_json::WorkspacesField;
@@ -64,14 +170,6 @@ impl PackageJson {
             return Ok(false);
         }
 
-        #[cfg(feature = "wasm")]
-        {
-            host_log!(
-                "Setting <property>packageManager</file> in <path>{}</path>",
-                self.path,
-            );
-        }
-
         self.dirty.push("packageManager".into());
 
         if value.is_empty() {
@@ -82,4 +180,30 @@ impl PackageJson {
 
         Ok(true)
     }
+}
+
+fn internal_add_dependency(
+    name: &str,
+    range: VersionProtocol,
+    if_missing: bool,
+    dependencies: &mut Option<BTreeMap<String, VersionProtocol>>,
+) -> bool {
+    if name.is_empty() {
+        return false;
+    }
+
+    // Only add if the dependency doesnt already exist
+    if if_missing
+        && dependencies
+            .as_ref()
+            .is_some_and(|map| map.contains_key(name))
+    {
+        return false;
+    }
+
+    dependencies
+        .get_or_insert_default()
+        .insert(name.to_owned(), range.to_owned());
+
+    true
 }
