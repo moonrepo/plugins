@@ -2834,6 +2834,8 @@ dependencies = [
 [[package]]
 name = "moon_feature_flags"
 version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "36c0a3bf730e48e9dedfa18e6b84a3eb72690c3d6a574dfc3564a03dcea4afa2"
 dependencies = [
  "starbase_utils",
 ]
@@ -2841,6 +2843,8 @@ dependencies = [
 [[package]]
 name = "moon_file_group"
 version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de878829902f76cd762bf089c3dd7b0a46b509612cc40337a3edfa7afa8f3a5c"
 dependencies = [
  "common-path",
  "miette 7.6.0",
@@ -2902,6 +2906,8 @@ dependencies = [
 [[package]]
 name = "moon_project"
 version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "33990a66e9bd54d035adc523cc6b350431dc28ca60202feac48391a8ab7abfdb"
 dependencies = [
  "miette 7.6.0",
  "moon_common",
@@ -2915,6 +2921,8 @@ dependencies = [
 [[package]]
 name = "moon_target"
 version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "efe36964c54c3b328c75aa4bd6848d0dfc1daa16db9164386e8e87a2a4f03c14"
 dependencies = [
  "compact_str 0.9.0",
  "miette 7.6.0",
@@ -2929,6 +2937,8 @@ dependencies = [
 [[package]]
 name = "moon_task"
 version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "63cfd9021ebdf1783ceb303614d8b8bc50795596027022f543419e8cd8fbedc1"
 dependencies = [
  "miette 7.6.0",
  "moon_common",
