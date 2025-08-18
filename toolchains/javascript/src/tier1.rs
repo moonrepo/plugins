@@ -147,12 +147,11 @@ pub fn define_toolchain_config() -> FnResult<Json<DefineToolchainConfigOutput>> 
 pub fn sync_project(Json(input): Json<SyncProjectInput>) -> FnResult<Json<SyncOutput>> {
     let mut output = SyncOutput::default();
 
-    if is_project_toolchain_enabled(&input.project) {
-        output.skipped = true;
-    }
-
     // Does not apply to root projects
-    if is_root_level_source(&input.project.source) {
+    if !is_project_toolchain_enabled(&input.project) || is_root_level_source(&input.project.source)
+    {
+        output.skipped = true;
+
         return Ok(Json(output));
     }
 
@@ -212,7 +211,8 @@ fn sync_project_workspace_dependencies(
 
     for dep_project in &input.project_dependencies {
         // Do not sync with the root project
-        if is_root_level_source(&dep_project.source)
+        if !is_project_toolchain_enabled(dep_project)
+            || is_root_level_source(&dep_project.source)
             || dep_project
                 .dependency_scope
                 .as_ref()
