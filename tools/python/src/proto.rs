@@ -201,10 +201,11 @@ pub fn locate_executables(
     // file name can be different than the one resolved, resulting in invalid
     // symlinks. To work around this, we can use `pythonX` instead, if `python`
     // itself doesn't exist (which is true for some versions).
-    if !env.os.is_windows() && !input.install_dir.join(&exe_path).exists() {
-        if let Some(version) = input.context.version.as_version() {
-            exe_path = format!("{exe_path}{}", version.major);
-        }
+    if !env.os.is_windows()
+        && !input.install_dir.join(&exe_path).exists()
+        && let Some(version) = input.context.version.as_version()
+    {
+        exe_path = format!("{exe_path}{}", version.major);
     }
 
     Ok(Json(LocateExecutablesOutput {

@@ -51,11 +51,9 @@ impl GoWork {
             }
 
             // use <path>
-            if !in_use_block {
-                if let Some(path) = line.strip_prefix("use ") {
-                    work.add_module(path);
-                    continue;
-                }
+            if !in_use_block && let Some(path) = line.strip_prefix("use ") {
+                work.add_module(path);
+                continue;
             }
 
             // replace <path>

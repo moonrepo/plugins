@@ -109,16 +109,15 @@ impl CargoToml {
             }
         }
 
-        if let Some(package) = &mut self.package {
-            if package.rust_version.is_none()
+        if let Some(package) = &mut self.package
+            && (package.rust_version.is_none()
                 || package.rust_version.as_ref().is_some_and(|rv| match rv {
                     Inheritable::Set(inner) => version != inner,
                     Inheritable::Inherited => false,
-                })
-            {
-                package.set_rust_version(Some(version.into()));
-                dirty = Some("package.rust-version");
-            }
+                }))
+        {
+            package.set_rust_version(Some(version.into()));
+            dirty = Some("package.rust-version");
         }
 
         if let Some(field) = dirty {

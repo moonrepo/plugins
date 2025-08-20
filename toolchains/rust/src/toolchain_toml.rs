@@ -22,15 +22,15 @@ impl ToolchainToml {
             return Ok(());
         };
 
-        if field == "toolchain.channel" {
-            if let Some(channel) = &self.toolchain.channel {
-                let toolchain = root
-                    .entry("toolchain")
-                    .or_insert_with(|| TomlValue::Table(TomlTable::new()));
+        if field == "toolchain.channel"
+            && let Some(channel) = &self.toolchain.channel
+        {
+            let toolchain = root
+                .entry("toolchain")
+                .or_insert_with(|| TomlValue::Table(TomlTable::new()));
 
-                if let Some(inner) = toolchain.as_table_mut() {
-                    inner.insert("channel".into(), TomlValue::String(channel.to_owned()));
-                }
+            if let Some(inner) = toolchain.as_table_mut() {
+                inner.insert("channel".into(), TomlValue::String(channel.to_owned()));
             }
         };
 

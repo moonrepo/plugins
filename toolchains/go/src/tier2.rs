@@ -63,14 +63,14 @@ fn gather_shared_paths(
     globals_dir: Option<&VirtualPath>,
     paths: &mut Vec<PathBuf>,
 ) -> AnyResult<()> {
-    if let Some(globals_dir) = globals_dir {
-        if let Some(value) = globals_dir.real_path() {
-            paths.push(value);
+    if let Some(globals_dir) = globals_dir
+        && let Some(value) = globals_dir.real_path()
+    {
+        paths.push(value);
 
-            // Avoid the host env overhead if we already
-            // have a valid globals directory!
-            return Ok(());
-        }
+        // Avoid the host env overhead if we already
+        // have a valid globals directory!
+        return Ok(());
     }
 
     if let Some(dir) = var::get::<String>("bin_dir")? {
@@ -130,30 +130,30 @@ pub fn locate_dependencies_root(
     let mut output = LocateDependenciesRootOutput::default();
 
     // Find `go.work` first
-    if config.workspaces {
-        if let Some(root) = locate_root(&input.starting_dir, "go.work") {
-            let go_work = GoWork::parse(fs::read_file(root.join("go.work"))?)?;
+    if config.workspaces
+        && let Some(root) = locate_root(&input.starting_dir, "go.work")
+    {
+        let go_work = GoWork::parse(fs::read_file(root.join("go.work"))?)?;
 
-            if !go_work.modules.is_empty() {
-                output.members = Some(go_work.modules);
-            }
-
-            output.root = root.virtual_path();
+        if !go_work.modules.is_empty() {
+            output.members = Some(go_work.modules);
         }
+
+        output.root = root.virtual_path();
     }
 
     // Then `go.sum` second
-    if output.root.is_none() {
-        if let Some(root) = locate_root(&input.starting_dir, "go.sum") {
-            output.root = root.virtual_path();
-        }
+    if output.root.is_none()
+        && let Some(root) = locate_root(&input.starting_dir, "go.sum")
+    {
+        output.root = root.virtual_path();
     }
 
     // Otherwise assume `go.mod`
-    if output.root.is_none() {
-        if let Some(root) = locate_root(&input.starting_dir, "go.mod") {
-            output.root = root.virtual_path();
-        }
+    if output.root.is_none()
+        && let Some(root) = locate_root(&input.starting_dir, "go.mod")
+    {
+        output.root = root.virtual_path();
     }
 
     Ok(Json(output))
