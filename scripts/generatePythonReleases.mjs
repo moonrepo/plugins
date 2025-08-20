@@ -192,6 +192,8 @@ const FILTER_WORDS = [
 ];
 
 releases.forEach((release) => {
+  const releaseName = release.tag_name || release.name;
+
   // Remove debug, install only, and unwanted builds
   const assets = release.assets.filter((asset) =>
     FILTER_WORDS.every((word) => !asset.name.includes(word))
@@ -201,7 +203,7 @@ releases.forEach((release) => {
   OPT_LEVELS.forEach((optLevel) => {
     processAssets(
       assets.filter((asset) => asset.name.includes(optLevel)),
-      release.name,
+      releaseName,
       optLevel
     );
   });
