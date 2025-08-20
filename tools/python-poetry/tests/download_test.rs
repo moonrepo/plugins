@@ -17,7 +17,7 @@ mod python_poetry_tool {
         assert_eq!(
             plugin
                 .locate_executables(LocateExecutablesInput {
-                    context: ToolContext {
+                    context: PluginContext {
                         version: VersionSpec::parse("1.2.0").unwrap(),
                         ..Default::default()
                     },
@@ -44,7 +44,7 @@ mod python_poetry_tool {
         assert_eq!(
             plugin
                 .locate_executables(LocateExecutablesInput {
-                    context: ToolContext {
+                    context: PluginContext {
                         version: VersionSpec::parse("1.2.0").unwrap(),
                         ..Default::default()
                     },

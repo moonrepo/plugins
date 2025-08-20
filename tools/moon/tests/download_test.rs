@@ -23,7 +23,7 @@ mod moon_tool {
         assert_eq!(
             plugin
                 .download_prebuilt(DownloadPrebuiltInput {
-                    context: ToolContext {
+                    context: PluginContext {
                         version: VersionSpec::parse("1.41.0").unwrap(),
                         ..Default::default()
                     },
@@ -51,7 +51,7 @@ mod moon_tool {
         assert_eq!(
             plugin
                 .download_prebuilt(DownloadPrebuiltInput {
-                    context: ToolContext {
+                    context: PluginContext {
                         version: VersionSpec::parse("1.2.0").unwrap(),
                         ..Default::default()
                     },
@@ -79,7 +79,7 @@ mod moon_tool {
         assert_eq!(
             plugin
                 .download_prebuilt(DownloadPrebuiltInput {
-                    context: ToolContext {
+                    context: PluginContext {
                         version: VersionSpec::parse("1.2.0").unwrap(),
                         ..Default::default()
                     },
@@ -107,7 +107,7 @@ mod moon_tool {
         assert_eq!(
             plugin
                 .download_prebuilt(DownloadPrebuiltInput {
-                    context: ToolContext {
+                    context: PluginContext {
                         version: VersionSpec::parse("1.2.0").unwrap(),
                         ..Default::default()
                     },
@@ -136,7 +136,7 @@ mod moon_tool {
         assert_eq!(
             plugin
                 .download_prebuilt(DownloadPrebuiltInput {
-                    context: ToolContext {
+                    context: PluginContext {
                         version: VersionSpec::parse("1.2.0").unwrap(),
                         ..Default::default()
                     },
@@ -164,7 +164,7 @@ mod moon_tool {
         assert_eq!(
             plugin
                 .download_prebuilt(DownloadPrebuiltInput {
-                    context: ToolContext {
+                    context: PluginContext {
                         version: VersionSpec::parse("1.2.0").unwrap(),
                         ..Default::default()
                     },
@@ -192,7 +192,7 @@ mod moon_tool {
         assert_eq!(
             plugin
                 .locate_executables(LocateExecutablesInput {
-                    context: ToolContext {
+                    context: PluginContext {
                         version: VersionSpec::parse("1.2.0").unwrap(),
                         ..Default::default()
                     },
@@ -219,7 +219,7 @@ mod moon_tool {
         assert_eq!(
             plugin
                 .locate_executables(LocateExecutablesInput {
-                    context: ToolContext {
+                    context: PluginContext {
                         version: VersionSpec::parse("1.2.0").unwrap(),
                         ..Default::default()
                     },

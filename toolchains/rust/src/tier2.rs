@@ -267,25 +267,26 @@ pub fn parse_manifest(
                         if cfg.features.is_empty() {
                             ManifestDependency::Inherited(true)
                         } else {
-                            ManifestDependency::Config {
+                            ManifestDependency::Config(ManifestDependencyConfig {
                                 inherited: true,
                                 features: cfg.features.clone(),
-                                version: None,
-                            }
+                                ..Default::default()
+                            })
                         }
                     }
                     Dependency::Detailed(cfg) => {
                         if cfg.features.is_empty() && cfg.version.is_none() {
                             ManifestDependency::Inherited(cfg.inherited)
                         } else {
-                            ManifestDependency::Config {
+                            ManifestDependency::Config(ManifestDependencyConfig {
                                 inherited: cfg.inherited,
                                 features: cfg.features.clone(),
                                 version: match &cfg.version {
                                     Some(version) => Some(UnresolvedVersionSpec::parse(version)?),
                                     None => None,
                                 },
-                            }
+                                ..Default::default()
+                            })
                         }
                     }
                 },
