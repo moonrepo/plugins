@@ -106,7 +106,7 @@ pub fn build_instructions(
         instructions: vec![
             BuildInstruction::RunCommand(Box::new({
                 CommandInstruction {
-                    bin: if env.os.is_windows() {
+                    exe: if env.os.is_windows() {
                         "./all.bat"
                     } else {
                         "./all.bash"

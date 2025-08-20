@@ -3,7 +3,7 @@
 #[cfg(feature = "wasm")]
 use extism_pdk::*;
 #[cfg(feature = "wasm")]
-use moon_pdk::host_log;
+use moon_pdk::{HostLogInput, host_log};
 use moon_pdk_api::{AnyResult, toml_config};
 pub use rust_tool::{ToolchainSection, ToolchainToml as BaseToolchainToml};
 use starbase_utils::toml::{TomlTable, TomlValue};

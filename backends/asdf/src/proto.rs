@@ -53,7 +53,7 @@ fn backend_root() -> AnyResult<PathBuf> {
 
 fn create_script_from_context(
     virtual_script_path: &Path,
-    context: &ToolContext,
+    context: &PluginContext,
 ) -> AnyResult<ExecCommandInput> {
     create_script(
         virtual_script_path,
@@ -65,7 +65,7 @@ fn create_script_from_context(
 
 fn create_script_from_unresolved_context(
     virtual_script_path: &Path,
-    context: &ToolUnresolvedContext,
+    context: &PluginUnresolvedContext,
 ) -> AnyResult<ExecCommandInput> {
     create_script(virtual_script_path, context.version.as_ref(), None, None)
 }

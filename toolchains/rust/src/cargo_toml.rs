@@ -4,7 +4,7 @@ pub use cargo_toml::{Inheritable, Manifest as BaseCargoToml};
 #[cfg(feature = "wasm")]
 use extism_pdk::*;
 #[cfg(feature = "wasm")]
-use moon_pdk::host_log;
+use moon_pdk::{HostLogInput, host_log};
 use moon_pdk_api::{AnyResult, toml_config};
 use serde::{Deserialize, Serialize};
 pub use starbase_utils::toml::{self, TomlTable, TomlValue};
