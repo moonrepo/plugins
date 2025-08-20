@@ -172,6 +172,10 @@ pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<Regi
         } else {
             PluginType::Language
         },
+        lock_options: ToolLockOptions {
+            no_record: true,
+            ..Default::default()
+        },
         minimum_proto_version: Some(Version::new(0, 46, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         config_schema: Some(schematic::SchemaBuilder::generate::<AsdfPluginConfig>()),
@@ -258,11 +262,12 @@ pub fn parse_version_file(
             let mut parsed_line = String::new();
 
             // Strip comments
-            for char in line.chars() {
-                if char == '#' {
+            for ch in line.chars() {
+                if ch == '#' {
                     break;
                 }
-                parsed_line.push(char);
+
+                parsed_line.push(ch);
             }
 
             let (tool, version) = parsed_line.split_once(' ').unwrap_or((&parsed_line, ""));
