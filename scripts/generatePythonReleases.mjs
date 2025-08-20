@@ -151,10 +151,7 @@ function extractTripleInfo(assetName, releaseName) {
 
 function processAssets(assets, releaseName, optLevel) {
   assets.forEach((asset) => {
-    const { version, triple, sha256 } = extractTripleInfo(
-      asset.name,
-      releaseName
-    );
+    const { version, triple } = extractTripleInfo(asset.name, releaseName);
 
     if (!data[version]) {
       data[version] = {};
@@ -167,16 +164,23 @@ function processAssets(assets, releaseName, optLevel) {
       };
     }
 
-    if (sha256) {
-      if (
-        typeof data[version][triple].download === "string" &&
-        data[version][triple].download.includes(optLevel) &&
-        !data[version][triple].checksum
+    if (!data[version][triple].download) {
+      data[version][triple].download = asset.browser_download_url;
+    }
+
+    if (!data[version][triple].checksum && asset.name.includes(optLevel)) {
+      const releaseId = parseInt(releaseName);
+
+      if (releaseId >= 20250708) {
+        data[version][
+          triple
+        ].checksum = `https://github.com/astral-sh/python-build-standalone/releases/download/${releaseName}/SHA256SUMS`;
+      } else if (
+        asset.name.endsWith(".sha256") &&
+        data[version][triple].download
       ) {
         data[version][triple].checksum = asset.browser_download_url;
       }
-    } else if (!data[version][triple].download) {
-      data[version][triple].download = asset.browser_download_url;
     }
   });
 }
