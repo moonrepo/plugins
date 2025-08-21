@@ -530,19 +530,21 @@ mod rust_toolchain_tier2 {
                     ),
                     (
                         "b".into(),
-                        ManifestDependency::Config {
+                        ManifestDependency::Config(ManifestDependencyConfig {
                             inherited: false,
                             features: vec![],
-                            version: Some(UnresolvedVersionSpec::parse("4.5.6").unwrap())
-                        }
+                            version: Some(UnresolvedVersionSpec::parse("4.5.6").unwrap()),
+                            ..Default::default()
+                        })
                     ),
                     (
                         "c".into(),
-                        ManifestDependency::Config {
+                        ManifestDependency::Config(ManifestDependencyConfig {
                             inherited: false,
                             features: vec!["on".into()],
-                            version: Some(UnresolvedVersionSpec::parse("7.8.9").unwrap())
-                        }
+                            version: Some(UnresolvedVersionSpec::parse("7.8.9").unwrap()),
+                            ..Default::default()
+                        })
                     )
                 ])
             );
@@ -573,11 +575,12 @@ mod rust_toolchain_tier2 {
                     ),
                     (
                         "e".into(),
-                        ManifestDependency::Config {
+                        ManifestDependency::Config(ManifestDependencyConfig {
                             inherited: false,
                             features: vec!["on".into()],
-                            version: Some(UnresolvedVersionSpec::parse("7.8.9").unwrap())
-                        }
+                            version: Some(UnresolvedVersionSpec::parse("7.8.9").unwrap()),
+                            ..Default::default()
+                        })
                     )
                 ])
             );
@@ -587,11 +590,12 @@ mod rust_toolchain_tier2 {
                 BTreeMap::from_iter([
                     (
                         "b".into(),
-                        ManifestDependency::Config {
+                        ManifestDependency::Config(ManifestDependencyConfig {
                             inherited: false,
                             features: vec![],
-                            version: Some(UnresolvedVersionSpec::parse("4.5.6").unwrap())
-                        }
+                            version: Some(UnresolvedVersionSpec::parse("4.5.6").unwrap()),
+                            ..Default::default()
+                        })
                     ),
                     ("f".into(), ManifestDependency::Inherited(false))
                 ])
@@ -603,11 +607,12 @@ mod rust_toolchain_tier2 {
                     ("c".into(), ManifestDependency::Inherited(true)),
                     (
                         "d".into(),
-                        ManifestDependency::Config {
+                        ManifestDependency::Config(ManifestDependencyConfig {
                             inherited: true,
                             features: vec!["off".into()],
-                            version: None
-                        }
+                            version: None,
+                            ..Default::default()
+                        })
                     )
                 ])
             );

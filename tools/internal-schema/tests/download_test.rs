@@ -28,7 +28,7 @@ mod schema_tool {
 
         assert_eq!(
         plugin.download_prebuilt(DownloadPrebuiltInput {
-            context: ToolContext {
+            context: PluginContext {
                 version: VersionSpec::parse("20.0.0").unwrap(),
                 ..Default::default()
             },
@@ -59,7 +59,7 @@ mod schema_tool {
 
         assert_eq!(
         plugin.download_prebuilt(DownloadPrebuiltInput {
-            context: ToolContext {
+            context: PluginContext {
                 version: VersionSpec::parse("20.0.0").unwrap(),
                 ..Default::default()
             },
@@ -90,7 +90,7 @@ mod schema_tool {
 
         assert_eq!(
         plugin.download_prebuilt(DownloadPrebuiltInput {
-            context: ToolContext {
+            context: PluginContext {
                 version: VersionSpec::parse("20.0.0").unwrap(),
                 ..Default::default()
             },
@@ -121,7 +121,7 @@ mod schema_tool {
 
         assert_eq!(
         plugin.download_prebuilt(DownloadPrebuiltInput {
-            context: ToolContext {
+            context: PluginContext {
                 version: VersionSpec::parse("20.0.0").unwrap(),
                 ..Default::default()
             },
@@ -152,7 +152,7 @@ mod schema_tool {
 
         assert_eq!(
         plugin.download_prebuilt(DownloadPrebuiltInput {
-            context: ToolContext {
+            context: PluginContext {
                 version: VersionSpec::parse("20.0.0").unwrap(),
                 ..Default::default()
             },
@@ -183,7 +183,7 @@ mod schema_tool {
 
         assert_eq!(
         plugin.download_prebuilt(DownloadPrebuiltInput {
-            context: ToolContext {
+            context: PluginContext {
                 version: VersionSpec::parse("20.0.0").unwrap(),
                 ..Default::default()
             },
@@ -215,7 +215,7 @@ mod schema_tool {
         assert_eq!(
             plugin
                 .locate_executables(LocateExecutablesInput {
-                    context: ToolContext {
+                    context: PluginContext {
                         version: VersionSpec::parse("20.0.0").unwrap(),
                         ..Default::default()
                     },
@@ -246,7 +246,7 @@ mod schema_tool {
         assert_eq!(
             plugin
                 .locate_executables(LocateExecutablesInput {
-                    context: ToolContext {
+                    context: PluginContext {
                         version: VersionSpec::parse("20.0.0").unwrap(),
                         ..Default::default()
                     },
@@ -277,7 +277,7 @@ mod schema_tool {
         assert_eq!(
             plugin
                 .locate_executables(LocateExecutablesInput {
-                    context: ToolContext {
+                    context: PluginContext {
                         version: VersionSpec::parse("20.0.0").unwrap(),
                         ..Default::default()
                     },
@@ -310,7 +310,7 @@ mod schema_tool {
 
             let result = plugin
                 .locate_executables(LocateExecutablesInput {
-                    context: ToolContext {
+                    context: PluginContext {
                         version: VersionSpec::parse("20.0.0").unwrap(),
                         ..Default::default()
                     },
@@ -344,7 +344,7 @@ mod schema_tool {
             assert_eq!(
                 plugin
                     .locate_executables(LocateExecutablesInput {
-                        context: ToolContext {
+                        context: PluginContext {
                             version: VersionSpec::parse("20.0.0").unwrap(),
                             ..Default::default()
                         },
@@ -375,7 +375,7 @@ mod schema_tool {
             assert_eq!(
                 plugin
                     .locate_executables(LocateExecutablesInput {
-                        context: ToolContext {
+                        context: PluginContext {
                             version: VersionSpec::parse("20.0.0").unwrap(),
                             ..Default::default()
                         },
@@ -409,7 +409,7 @@ mod schema_tool {
 
             let result = plugin
                 .locate_executables(LocateExecutablesInput {
-                    context: ToolContext {
+                    context: PluginContext {
                         version: VersionSpec::parse("20.0.0").unwrap(),
                         ..Default::default()
                     },
@@ -457,7 +457,7 @@ mod schema_tool {
 
             let result = plugin
                 .locate_executables(LocateExecutablesInput {
-                    context: ToolContext {
+                    context: PluginContext {
                         version: VersionSpec::parse("20.0.0").unwrap(),
                         ..Default::default()
                     },

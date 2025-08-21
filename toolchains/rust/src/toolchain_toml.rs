@@ -3,7 +3,7 @@
 #[cfg(feature = "wasm")]
 use extism_pdk::*;
 #[cfg(feature = "wasm")]
-use moon_pdk::host_log;
+use moon_pdk::{HostLogInput, host_log};
 use moon_pdk_api::{AnyResult, toml_config};
 pub use rust_tool::{ToolchainSection, ToolchainToml as BaseToolchainToml};
 use starbase_utils::toml::{TomlTable, TomlValue};
@@ -22,15 +22,15 @@ impl ToolchainToml {
             return Ok(());
         };
 
-        if field == "toolchain.channel" {
-            if let Some(channel) = &self.toolchain.channel {
-                let toolchain = root
-                    .entry("toolchain")
-                    .or_insert_with(|| TomlValue::Table(TomlTable::new()));
+        if field == "toolchain.channel"
+            && let Some(channel) = &self.toolchain.channel
+        {
+            let toolchain = root
+                .entry("toolchain")
+                .or_insert_with(|| TomlValue::Table(TomlTable::new()));
 
-                if let Some(inner) = toolchain.as_table_mut() {
-                    inner.insert("channel".into(), TomlValue::String(channel.to_owned()));
-                }
+            if let Some(inner) = toolchain.as_table_mut() {
+                inner.insert("channel".into(), TomlValue::String(channel.to_owned()));
             }
         };
 

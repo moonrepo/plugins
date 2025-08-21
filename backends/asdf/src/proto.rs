@@ -53,7 +53,7 @@ fn backend_root() -> AnyResult<PathBuf> {
 
 fn create_script_from_context(
     virtual_script_path: &Path,
-    context: &ToolContext,
+    context: &PluginContext,
 ) -> AnyResult<ExecCommandInput> {
     create_script(
         virtual_script_path,
@@ -65,7 +65,7 @@ fn create_script_from_context(
 
 fn create_script_from_unresolved_context(
     virtual_script_path: &Path,
-    context: &ToolUnresolvedContext,
+    context: &PluginUnresolvedContext,
 ) -> AnyResult<ExecCommandInput> {
     create_script(virtual_script_path, context.version.as_ref(), None, None)
 }
@@ -87,15 +87,14 @@ fn create_script(
     let mut shell = "bash".to_owned();
 
     // Extract the shell to use from the shebang
-    if let Ok(script_contents) = fs::read_file(virtual_script_path) {
-        if let Some(line) = script_contents.lines().next() {
-            if line.starts_with("#!") {
-                let mut parts = line.trim().split(' ');
+    if let Ok(script_contents) = fs::read_file(virtual_script_path)
+        && let Some(line) = script_contents.lines().next()
+        && line.starts_with("#!")
+    {
+        let mut parts = line.trim().split(' ');
 
-                if let Some(last) = parts.next_back() {
-                    shell = last.to_owned();
-                }
-            }
+        if let Some(last) = parts.next_back() {
+            shell = last.to_owned();
         }
     }
 
@@ -172,6 +171,10 @@ pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<Regi
             PluginType::VersionManager
         } else {
             PluginType::Language
+        },
+        lock_options: ToolLockOptions {
+            no_record: true,
+            ..Default::default()
         },
         minimum_proto_version: Some(Version::new(0, 46, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
@@ -259,11 +262,12 @@ pub fn parse_version_file(
             let mut parsed_line = String::new();
 
             // Strip comments
-            for char in line.chars() {
-                if char == '#' {
+            for ch in line.chars() {
+                if ch == '#' {
                     break;
                 }
-                parsed_line.push(char);
+
+                parsed_line.push(ch);
             }
 
             let (tool, version) = parsed_line.split_once(' ').unwrap_or((&parsed_line, ""));
@@ -475,24 +479,24 @@ pub fn resolve_version(
 ) -> FnResult<Json<ResolveVersionOutput>> {
     let mut output = ResolveVersionOutput::default();
 
-    if let UnresolvedVersionSpec::Alias(alias) = input.initial {
-        if alias == "stable" {
-            let config = get_tool_config::<AsdfPluginConfig>()?;
-            let script_path = config.get_script_path("latest-stable")?;
+    if let UnresolvedVersionSpec::Alias(alias) = input.initial
+        && alias == "stable"
+    {
+        let config = get_tool_config::<AsdfPluginConfig>()?;
+        let script_path = config.get_script_path("latest-stable")?;
 
-            // https://asdf-vm.com/plugins/create.html#bin-latest-stable
-            if script_path.exists() {
-                let data = exec_script(create_script_from_unresolved_context(
-                    &script_path,
-                    &input.context,
-                )?)?;
+        // https://asdf-vm.com/plugins/create.html#bin-latest-stable
+        if script_path.exists() {
+            let data = exec_script(create_script_from_unresolved_context(
+                &script_path,
+                &input.context,
+            )?)?;
 
-                if !data.is_empty() {
-                    output.candidate = UnresolvedVersionSpec::parse(data.trim()).ok();
-                }
-            } else {
-                output.candidate = Some(UnresolvedVersionSpec::Alias("latest".into()));
+            if !data.is_empty() {
+                output.candidate = UnresolvedVersionSpec::parse(data.trim()).ok();
             }
+        } else {
+            output.candidate = Some(UnresolvedVersionSpec::Alias("latest".into()));
         }
     }
 
@@ -535,10 +539,10 @@ pub fn pre_run(Json(input): Json<RunHook>) -> FnResult<Json<RunHookResult>> {
 
         if let Some((key, value)) = line.split_once('=') {
             if after_source {
-                if let Some(existing_value) = existing_env.get(key) {
-                    if value == *existing_value {
-                        continue;
-                    }
+                if let Some(existing_value) = existing_env.get(key)
+                    && value == *existing_value
+                {
+                    continue;
                 }
 
                 output

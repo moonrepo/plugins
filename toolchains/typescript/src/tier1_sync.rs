@@ -94,41 +94,41 @@ pub fn sync_project_options(
             }
 
             // Add compiler option paths
-            if config.sync_project_references_to_paths {
-                if let Some(package_name) = &project_ref.package_name {
-                    let mut compiler_paths = CompilerOptionsPathsMap::default();
-                    let has_src_dir = project_ref.path.join("src").exists();
+            if config.sync_project_references_to_paths
+                && let Some(package_name) = &project_ref.package_name
+            {
+                let mut compiler_paths = CompilerOptionsPathsMap::default();
+                let has_src_dir = project_ref.path.join("src").exists();
 
-                    for index in if has_src_dir {
-                        vec!["src/index.ts", "src/index.tsx", "index.ts", "index.tsx"]
-                    } else {
-                        vec!["index.ts", "index.tsx"]
-                    } {
-                        let index_path = project_ref.path.join(index);
+                for index in if has_src_dir {
+                    vec!["src/index.ts", "src/index.tsx", "index.ts", "index.tsx"]
+                } else {
+                    vec!["index.ts", "index.tsx"]
+                } {
+                    let index_path = project_ref.path.join(index);
 
-                        if index_path.exists() {
-                            compiler_paths.insert(
-                                package_name.to_owned(),
-                                vec![CompilerPath::from(tsconfig.to_relative_path(index_path)?)],
-                            );
+                    if index_path.exists() {
+                        compiler_paths.insert(
+                            package_name.to_owned(),
+                            vec![CompilerPath::from(tsconfig.to_relative_path(index_path)?)],
+                        );
 
-                            break;
-                        }
+                        break;
                     }
-
-                    compiler_paths.insert(
-                        format!("{package_name}/*"),
-                        vec![CompilerPath::from(
-                            tsconfig.to_relative_path(project_ref.path.join(if has_src_dir {
-                                "src/*"
-                            } else {
-                                "*"
-                            }))?,
-                        )],
-                    );
-
-                    tsconfig.update_compiler_option_paths(compiler_paths);
                 }
+
+                compiler_paths.insert(
+                    format!("{package_name}/*"),
+                    vec![CompilerPath::from(
+                        tsconfig.to_relative_path(project_ref.path.join(if has_src_dir {
+                            "src/*"
+                        } else {
+                            "*"
+                        }))?,
+                    )],
+                );
+
+                tsconfig.update_compiler_option_paths(compiler_paths);
             }
         }
     }
@@ -205,10 +205,10 @@ pub fn sync_project_references(
 
     if config.sync_project_references {
         // Auto-create a `tsconfig.json` if configured and applicable
-        if config.create_missing_config {
-            if let Some(file) = create_missing_tsconfig(context)? {
-                changed_files.push(file);
-            }
+        if config.create_missing_config
+            && let Some(file) = create_missing_tsconfig(context)?
+        {
+            changed_files.push(file);
         }
 
         // Sync project reference to the root `tsconfig.json`

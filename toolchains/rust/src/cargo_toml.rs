@@ -4,7 +4,7 @@ pub use cargo_toml::{Inheritable, Manifest as BaseCargoToml};
 #[cfg(feature = "wasm")]
 use extism_pdk::*;
 #[cfg(feature = "wasm")]
-use moon_pdk::host_log;
+use moon_pdk::{HostLogInput, host_log};
 use moon_pdk_api::{AnyResult, toml_config};
 use serde::{Deserialize, Serialize};
 pub use starbase_utils::toml::{self, TomlTable, TomlValue};
@@ -109,16 +109,15 @@ impl CargoToml {
             }
         }
 
-        if let Some(package) = &mut self.package {
-            if package.rust_version.is_none()
+        if let Some(package) = &mut self.package
+            && (package.rust_version.is_none()
                 || package.rust_version.as_ref().is_some_and(|rv| match rv {
                     Inheritable::Set(inner) => version != inner,
                     Inheritable::Inherited => false,
-                })
-            {
-                package.set_rust_version(Some(version.into()));
-                dirty = Some("package.rust-version");
-            }
+                }))
+        {
+            package.set_rust_version(Some(version.into()));
+            dirty = Some("package.rust-version");
         }
 
         if let Some(field) = dirty {

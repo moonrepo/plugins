@@ -74,14 +74,14 @@ fn gather_shared_paths(
     globals_dir: Option<&VirtualPath>,
     paths: &mut Vec<PathBuf>,
 ) -> AnyResult<()> {
-    if let Some(globals_dir) = globals_dir {
-        if let Some(value) = globals_dir.real_path() {
-            paths.push(value);
+    if let Some(globals_dir) = globals_dir
+        && let Some(value) = globals_dir.real_path()
+    {
+        paths.push(value);
 
-            // Avoid the host env overhead if we already
-            // have a valid globals directory!
-            return Ok(());
-        }
+        // Avoid the host env overhead if we already
+        // have a valid globals directory!
+        return Ok(());
     }
 
     if let Some(dir) = var::get::<String>("bin_dir")? {
@@ -121,17 +121,16 @@ pub fn extend_task_command(
         command != "rls" &&
         // rustc, rustdoc, etc
         !command.starts_with("rust")
+        && let Some(globals_dir) = &input.globals_dir
     {
-        if let Some(globals_dir) = &input.globals_dir {
-            let cargo_bin_name = command.strip_prefix("cargo-").unwrap_or(command);
-            let cargo_bin_path =
-                globals_dir.join(env.os.get_exe_name(format!("cargo-{cargo_bin_name}")));
+        let cargo_bin_name = command.strip_prefix("cargo-").unwrap_or(command);
+        let cargo_bin_path =
+            globals_dir.join(env.os.get_exe_name(format!("cargo-{cargo_bin_name}")));
 
-            // Is a cargo executable, shift over arguments
-            if cargo_bin_path.exists() {
-                output.command = Some("cargo".into());
-                output.args = Some(Extend::Prepend(vec![cargo_bin_name.into()]));
-            }
+        // Is a cargo executable, shift over arguments
+        if cargo_bin_path.exists() {
+            output.command = Some("cargo".into());
+            output.args = Some(Extend::Prepend(vec![cargo_bin_name.into()]));
         }
     }
 
@@ -267,25 +266,26 @@ pub fn parse_manifest(
                         if cfg.features.is_empty() {
                             ManifestDependency::Inherited(true)
                         } else {
-                            ManifestDependency::Config {
+                            ManifestDependency::Config(ManifestDependencyConfig {
                                 inherited: true,
                                 features: cfg.features.clone(),
-                                version: None,
-                            }
+                                ..Default::default()
+                            })
                         }
                     }
                     Dependency::Detailed(cfg) => {
                         if cfg.features.is_empty() && cfg.version.is_none() {
                             ManifestDependency::Inherited(cfg.inherited)
                         } else {
-                            ManifestDependency::Config {
+                            ManifestDependency::Config(ManifestDependencyConfig {
                                 inherited: cfg.inherited,
                                 features: cfg.features.clone(),
                                 version: match &cfg.version {
                                     Some(version) => Some(UnresolvedVersionSpec::parse(version)?),
                                     None => None,
                                 },
-                            }
+                                ..Default::default()
+                            })
                         }
                     }
                 },

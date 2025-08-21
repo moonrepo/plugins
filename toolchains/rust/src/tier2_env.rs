@@ -136,14 +136,14 @@ fn sync_package_msrv(
     let mut changed_files = vec![];
     let manifest_path = root.join("Cargo.toml");
 
-    if let Some(version) = &config.version {
-        if manifest_path.exists() {
-            let mut manifest = CargoToml::load(manifest_path)?;
-            manifest.set_msrv(version.to_string())?;
+    if let Some(version) = &config.version
+        && manifest_path.exists()
+    {
+        let mut manifest = CargoToml::load(manifest_path)?;
+        manifest.set_msrv(version.to_string())?;
 
-            if let Some(file) = manifest.save()? {
-                changed_files.push(file);
-            }
+        if let Some(file) = manifest.save()? {
+            changed_files.push(file);
         }
     }
 
@@ -180,10 +180,10 @@ fn sync_toolchain_toml(
         let mut contents = ToolchainToml::load(toolchain_path)?;
         contents.set_channel(version.to_string())?;
 
-        if let Some(file) = contents.save()? {
-            if !changed_files.contains(&file) {
-                changed_files.push(file);
-            }
+        if let Some(file) = contents.save()?
+            && !changed_files.contains(&file)
+        {
+            changed_files.push(file);
         }
     }
 

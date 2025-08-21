@@ -19,7 +19,7 @@ mod rust_tool {
             metadata.default_version,
             Some(UnresolvedVersionSpec::parse("stable").unwrap())
         );
-        assert!(metadata.inventory.override_dir.is_some());
-        assert!(metadata.inventory.version_suffix.is_some());
+        assert!(metadata.inventory_options.override_dir.is_some());
+        assert!(metadata.inventory_options.version_suffix.is_some());
     }
 }

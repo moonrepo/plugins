@@ -48,21 +48,18 @@ pub fn parse_version_file(
     }
 
     if input.file == "uv.toml" {
-        if let Ok(uv_toml) = toml::from_str::<Value>(&input.content) {
-            if let Some(Value::String(constraint)) = uv_toml.get("required-version") {
-                version = Some(parse_pep(constraint)?);
-            }
+        if let Ok(uv_toml) = toml::from_str::<Value>(&input.content)
+            && let Some(Value::String(constraint)) = uv_toml.get("required-version")
+        {
+            version = Some(parse_pep(constraint)?);
         }
-    } else if input.file == "pyproject.toml" {
-        if let Ok(project_toml) = toml::from_str::<Value>(&input.content) {
-            if let Some(tool_field) = project_toml.get("tool") {
-                if let Some(uv_field) = tool_field.get("uv") {
-                    if let Some(Value::String(constraint)) = uv_field.get("required-version") {
-                        version = Some(parse_pep(constraint)?);
-                    }
-                }
-            }
-        }
+    } else if input.file == "pyproject.toml"
+        && let Ok(project_toml) = toml::from_str::<Value>(&input.content)
+        && let Some(tool_field) = project_toml.get("tool")
+        && let Some(uv_field) = tool_field.get("uv")
+        && let Some(Value::String(constraint)) = uv_field.get("required-version")
+    {
+        version = Some(parse_pep(constraint)?);
     }
 
     Ok(Json(ParseVersionFileOutput { version }))

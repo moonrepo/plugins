@@ -33,6 +33,10 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
         } else {
             None
         },
+        lock_options: ToolLockOptions {
+            ignore_os_arch: true,
+            ..Default::default()
+        },
         minimum_proto_version: Some(Version::new(0, 46, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         requires: vec!["node".into()],
@@ -54,28 +58,26 @@ pub fn parse_version_file(
 ) -> FnResult<Json<ParseVersionFileOutput>> {
     let mut version = None;
 
-    if input.file == "package.json" {
-        if let Ok(package_json) = json::from_str::<PackageJson>(&input.content) {
-            let manager_name = PackageManager::detect()?.to_string();
+    if input.file == "package.json"
+        && let Ok(package_json) = json::from_str::<PackageJson>(&input.content)
+    {
+        let manager_name = PackageManager::detect()?.to_string();
 
-            if let Some(constraint) = extract_package_manager_version(&package_json, &manager_name)
-            {
-                version = Some(UnresolvedVersionSpec::parse(constraint)?);
-            }
+        if let Some(constraint) = extract_package_manager_version(&package_json, &manager_name) {
+            version = Some(UnresolvedVersionSpec::parse(constraint)?);
+        }
 
-            if version.is_none() {
-                if let Some(constraint) =
-                    extract_volta_version(&package_json, &input.path, &manager_name)?
-                {
-                    version = Some(UnresolvedVersionSpec::parse(constraint)?);
-                }
-            }
+        if version.is_none()
+            && let Some(constraint) =
+                extract_volta_version(&package_json, &input.path, &manager_name)?
+        {
+            version = Some(UnresolvedVersionSpec::parse(constraint)?);
+        }
 
-            if version.is_none() {
-                if let Some(constraint) = extract_engine_version(&package_json, &manager_name) {
-                    version = Some(UnresolvedVersionSpec::parse(constraint)?);
-                }
-            }
+        if version.is_none()
+            && let Some(constraint) = extract_engine_version(&package_json, &manager_name)
+        {
+            version = Some(UnresolvedVersionSpec::parse(constraint)?);
         }
     }
 
@@ -210,13 +212,13 @@ pub fn resolve_version(
 }
 
 fn get_archive_prefix(manager: &PackageManager, spec: &VersionSpec) -> String {
-    if manager.is_yarn_classic(spec.to_unresolved_spec()) {
-        if let Some(version) = spec.as_version() {
-            // Prefix changed to "package" in v1.22.20
-            // https://github.com/yarnpkg/yarn/releases/tag/v1.22.20
-            if version.minor <= 22 && version.patch <= 19 {
-                return format!("yarn-v{version}");
-            }
+    if manager.is_yarn_classic(spec.to_unresolved_spec())
+        && let Some(version) = spec.as_version()
+    {
+        // Prefix changed to "package" in v1.22.20
+        // https://github.com/yarnpkg/yarn/releases/tag/v1.22.20
+        if version.minor <= 22 && version.patch <= 19 {
+            return format!("yarn-v{version}");
         }
     }
 

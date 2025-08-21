@@ -79,20 +79,20 @@ impl NxMigrator {
                 .default_branch = Some(default_branch);
         }
 
-        if let Some(named_inputs) = nx_json.named_inputs {
-            if !named_inputs.is_empty() {
-                let file_groups = self
-                    .inner
-                    .load_tasks_platform_config()?
-                    .file_groups
-                    .get_or_insert(FxHashMap::default());
+        if let Some(named_inputs) = nx_json.named_inputs
+            && !named_inputs.is_empty()
+        {
+            let file_groups = self
+                .inner
+                .load_tasks_platform_config()?
+                .file_groups
+                .get_or_insert(FxHashMap::default());
 
-                for (name, raw_inputs) in named_inputs {
-                    let group = migrate_inputs(&raw_inputs, true)?;
+            for (name, raw_inputs) in named_inputs {
+                let group = migrate_inputs(&raw_inputs, true)?;
 
-                    if !group.is_empty() {
-                        file_groups.insert(create_id(name)?, group);
-                    }
+                if !group.is_empty() {
+                    file_groups.insert(create_id(name)?, group);
                 }
             }
         }
@@ -152,26 +152,26 @@ impl NxMigrator {
             config.id = Some(create_id(name)?);
         }
 
-        if let Some(implicit_dependencies) = project_json.implicit_dependencies {
-            if !implicit_dependencies.is_empty() {
-                let depends_on = config.depends_on.get_or_insert(vec![]);
+        if let Some(implicit_dependencies) = project_json.implicit_dependencies
+            && !implicit_dependencies.is_empty()
+        {
+            let depends_on = config.depends_on.get_or_insert(vec![]);
 
-                for dep in implicit_dependencies {
-                    depends_on.push(PartialProjectDependsOn::String(create_id(dep)?));
-                }
+            for dep in implicit_dependencies {
+                depends_on.push(PartialProjectDependsOn::String(create_id(dep)?));
             }
         }
 
-        if let Some(named_inputs) = project_json.named_inputs {
-            if !named_inputs.is_empty() {
-                let file_groups = config.file_groups.get_or_insert(FxHashMap::default());
+        if let Some(named_inputs) = project_json.named_inputs
+            && !named_inputs.is_empty()
+        {
+            let file_groups = config.file_groups.get_or_insert(FxHashMap::default());
 
-                for (name, raw_inputs) in named_inputs {
-                    let group = migrate_inputs(&raw_inputs, true)?;
+            for (name, raw_inputs) in named_inputs {
+                let group = migrate_inputs(&raw_inputs, true)?;
 
-                    if !group.is_empty() {
-                        file_groups.insert(create_id(name)?, group);
-                    }
+                if !group.is_empty() {
+                    file_groups.insert(create_id(name)?, group);
                 }
             }
         }
@@ -475,12 +475,12 @@ fn migrate_run_script_task(
 ) -> AnyResult<PartialTaskConfig> {
     let mut config = PartialTaskConfig::default();
 
-    if let Some(options) = &nx_target.options {
-        if let Some(JsonValue::String(script)) = options.get("script") {
-            config.command = Some(PartialTaskArgs::String(format!(
-                "{package_manager} run {script}"
-            )));
-        }
+    if let Some(options) = &nx_target.options
+        && let Some(JsonValue::String(script)) = options.get("script")
+    {
+        config.command = Some(PartialTaskArgs::String(format!(
+            "{package_manager} run {script}"
+        )));
     }
 
     Ok(config)

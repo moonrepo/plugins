@@ -4,7 +4,7 @@
 use extism_pdk::*;
 use moon_common::path::to_relative_virtual_string;
 #[cfg(feature = "wasm")]
-use moon_pdk::host_log;
+use moon_pdk::{HostLogInput, host_log};
 use moon_pdk_api::{AnyResult, VirtualPath, anyhow, json_config};
 use starbase_utils::json::{self, JsonValue};
 use typescript_tsconfig_json::{

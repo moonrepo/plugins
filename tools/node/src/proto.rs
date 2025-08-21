@@ -55,10 +55,10 @@ pub fn parse_version_file(
                 version = Some(UnresolvedVersionSpec::parse(constraint)?);
             }
 
-            if version.is_none() {
-                if let Some(constraint) = extract_engine_version(&package_json, "node") {
-                    version = Some(UnresolvedVersionSpec::parse(constraint)?);
-                }
+            if version.is_none()
+                && let Some(constraint) = extract_engine_version(&package_json, "node")
+            {
+                version = Some(UnresolvedVersionSpec::parse(constraint)?);
             }
         }
     } else if let Some(constraint) = extract_version_from_text(&input.content) {
