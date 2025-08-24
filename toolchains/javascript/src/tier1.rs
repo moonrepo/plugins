@@ -32,6 +32,7 @@ pub fn register_toolchain(
                 .into(),
         ),
         plugin_version: env!("CARGO_PKG_VERSION").into(),
+        // For project detection
         config_file_globs: vec![
             "*.config.{js,cjs,mjs,ts,tsx,cts,mts}".into(),
             // bun
@@ -56,6 +57,24 @@ pub fn register_toolchain(
             "pnpm-lock.yaml".into(),
             // yarn
             "yarn.lock".into(),
+        ],
+        // For task detection
+        exe_names: vec![
+            // bun
+            "bun".into(),
+            "bunx".into(),
+            // node
+            "node".into(),
+            "nodejs".into(),
+            // npm
+            "npm".into(),
+            "npx".into(),
+            // pnpm
+            "pnpm".into(),
+            "pnpx".into(),
+            // yarn
+            "yarn".into(),
+            "yarnpkg".into()
         ],
         vendor_dir_name: Some("node_modules".into()),
         ..RegisterToolchainOutput::default()

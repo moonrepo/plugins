@@ -7,6 +7,15 @@ use moon_pdk_api::*;
 use node_depman_tool::PackageManager;
 
 #[plugin_fn]
+pub fn define_requirements(
+    Json(_): Json<DefineRequirementsInput>,
+) -> FnResult<Json<DefineRequirementsOutput>> {
+    Ok(Json(DefineRequirementsOutput {
+        requires: vec!["unstable_node".into()],
+    }))
+}
+
+#[plugin_fn]
 pub fn setup_environment(
     Json(input): Json<SetupEnvironmentInput>,
 ) -> FnResult<Json<SetupEnvironmentOutput>> {
