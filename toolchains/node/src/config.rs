@@ -1,44 +1,43 @@
+use moon_config::UnresolvedVersionSpec;
 use moon_pdk_api::config_struct;
-use schematic::Schematic;
+use schematic::{Config, ConfigEnum};
+use serde::{Deserialize, Serialize};
+
+/// The available version managers for Node.js.
+#[derive(ConfigEnum, Clone, Copy, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum NodeVersionManager {
+    Nodenv,
+    Nvm,
+}
+
+/// The type of profiling operation to use.
+#[derive(ConfigEnum, Clone, Copy, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum NodeProfileType {
+    Cpu,
+    Heap,
+}
 
 config_struct!(
     /// Configures and enables the Node.js toolchain.
     /// Docs: https://moonrepo.dev/docs/config/toolchain#node
-    #[derive(Default, Schematic)]
-    pub struct NodeConfig {
-        /// When `version` is defined, syncs the version as a constraint to
-        /// `package.json` engines.
-        #[schema(default = true)]
-        pub add_engines_constraint: bool,
+    #[derive(Config)]
+    pub struct NodeToolchainConfig {
+        /// List of arguments to pass to all `node` executions, when configured as a
+        /// task `command`. Arguments will be appended after the `node` executable,
+        /// but before other arguments.
+        pub execute_args: Vec<String>,
 
-        /// Arguments to automatically pass to all tasks that execute the
-        /// `node` binary.
-        pub bin_exec_args: Vec<String>,
+        /// Enable the v8 profiler for all `node` executions, when configured as a
+        /// task `command`. Note: This should only be temporarily enabled for debugging
+        /// purposes, and not always enabled!
+        pub profile_execution: Option<NodeProfileType>,
 
-        /// Automatically dedupes the lockfile when dependencies have changed.
-        #[schema(default = true)]
-        pub dedupe_on_lockfile_change: bool,
+        /// When `version` is defined, syncs the version to the chosen config.
+        pub sync_version_manager_config: Option<NodeVersionManager>,
 
-        /// Automatically infer moon tasks from `package.json` scripts.
-        pub infer_tasks_from_scripts: bool,
-
-        /// The relative root of the packages workspace. Defaults to moon's
-        /// workspace root, but should be defined when nested.
-        #[schema(default = ".", skip)]
-        pub packages_root: String,
-
-        /// Assumes only the root `package.json` is used for dependencies.
-        /// Can be used to support the "one version policy" pattern.
-        pub root_package_only: bool,
-
-        /// Automatically syncs the configured package manager version
-        /// to the root `packageManager` field in `package.json`.
-        #[schema(default = true)]
-        pub sync_package_manager_field: bool,
-
-        /// Automatically syncs moon project-to-project relationships as
-        /// dependencies for each `package.json` in the workspace.
-        #[schema(default = true)]
-        pub sync_project_workspace_dependencies: bool,
+        /// Configured version to download and install.
+        pub version: Option<UnresolvedVersionSpec>,
     }
 );

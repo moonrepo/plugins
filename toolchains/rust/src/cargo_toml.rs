@@ -27,6 +27,14 @@ impl CargoToml {
             return Ok(());
         };
 
+        #[cfg(feature = "wasm")]
+        {
+            host_log!(
+                "Setting <property>{field}</file> in <path>{}</path>",
+                self.path,
+            );
+        }
+
         match field {
             "workspace.package.rust-version" => {
                 if let Some(version) = self
@@ -121,14 +129,6 @@ impl CargoToml {
         }
 
         if let Some(field) = dirty {
-            #[cfg(feature = "wasm")]
-            {
-                host_log!(
-                    "Setting <property>{field}</file> in <path>{}</path>",
-                    self.path,
-                );
-            }
-
             self.dirty.push(field.into());
 
             return Ok(true);

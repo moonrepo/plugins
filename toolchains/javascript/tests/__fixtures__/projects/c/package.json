@@ -1,0 +1,15 @@
+{
+  "name": "@org/c",
+  "version": "1.0.0",
+  "dependencies": {
+    "a": "workspace:*"
+  },
+  "devDependencies": {
+    "@b/lib": "file:../b"
+  },
+  "scripts": {
+    "dev": "next dev --watch",
+    "start:vite": "vite serve",
+    "astro:serve": "astro start"
+  }
+}

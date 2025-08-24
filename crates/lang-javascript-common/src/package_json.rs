@@ -16,9 +16,9 @@ pub fn extract_version_from_text(content: &str) -> Option<&str> {
     None
 }
 
-pub fn extract_engine_version<'a>(package_json: &'a PackageJson, key: &str) -> Option<&'a String> {
+pub fn extract_engine_version(package_json: &PackageJson, key: &str) -> Option<String> {
     if let Some(engines) = &package_json.engines {
-        return engines.get(key);
+        return engines.get(key).map(|engine| engine.to_string());
     }
 
     None

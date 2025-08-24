@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Updated manifest parsing to extract `path` and `git` values.
+
+#### 🐞 Fixes
+
+- Fixed invalid versions when creatin the Docker image name.
+
 ## 0.2.2
 
 #### 🐞 Fixes

@@ -1,0 +1,17 @@
+---
+source: toolchains/javascript/tests/tier1_sync_test.rs
+expression: "std::fs::read_to_string(sandbox.path().join(\"base/package.json\")).unwrap()"
+---
+{
+  "name": "base",
+  "version": "0.0.0",
+  "dependencies": {
+    "a": "~1.2.3"
+  },
+  "devDependencies": {
+    "b": "~4.5.6"
+  },
+  "peerDependencies": {
+    "c": "^7.0.0"
+  }
+}
