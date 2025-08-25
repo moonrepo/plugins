@@ -1,0 +1,8 @@
+unstable_javascript: {}
+
+unstable_node:
+  version: "24.0.0"
+  executeArgs: ["--preserve-symlinks"]
+
+unstable_npm:
+  version: "11.0.0"

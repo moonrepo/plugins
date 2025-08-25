@@ -27,7 +27,11 @@ pub fn register_toolchain(
             ".tsbuildinfo".into(),
             "*.tsbuildinfo".into(),
         ],
-        exe_names: vec!["tsc".into(), "tsserver".into()],
+        // This intercepts other toolchains from being inherited,
+        // like node and javascript, which are far more important!
+        // Once plugins are stabilized, we can require javascript
+        // and avoid some of this headache.
+        // exe_names: vec!["tsc".into(), "tsserver".into()],
         ..Default::default()
     }))
 }

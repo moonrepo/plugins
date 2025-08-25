@@ -289,7 +289,7 @@ fn sync_project_workspace_dependencies(
             };
 
             host_log!(
-                "Syncing <id>{}</file> as a dependency to {}'s package.json",
+                "Syncing <id>{}</file> as a dependency to <id>{}</id>'s <file>package.json</file>",
                 dep_project.id,
                 input.project.id,
             );

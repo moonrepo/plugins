@@ -464,7 +464,7 @@ pub fn parse_manifest(
                     repo,
                 } => ManifestDependency::url(format!(
                     "https://github.com/{owner}/{repo}.git#{}",
-                    reference.as_deref().unwrap_or("latest")
+                    reference.as_deref().unwrap_or("master")
                 )),
                 VersionProtocol::Range(version_reqs) => {
                     ManifestDependency::Version(UnresolvedVersionSpec::parse(
@@ -484,9 +484,12 @@ pub fn parse_manifest(
                 }
                 VersionProtocol::Workspace(ws) => match ws {
                     WorkspaceProtocol::File(path) => ManifestDependency::path(path.to_owned()),
-                    _ => ManifestDependency::Version(UnresolvedVersionSpec::parse(
-                        version.to_string(),
-                    )?),
+                    WorkspaceProtocol::Version(version) => ManifestDependency::Version(
+                        UnresolvedVersionSpec::parse(version.to_string())?,
+                    ),
+                    _ => {
+                        continue;
+                    }
                 },
             };
 
@@ -517,7 +520,8 @@ pub fn parse_manifest(
     }
 
     output.publishable = manifest.version.is_some()
-        && (manifest.main.is_some() || manifest.module.is_some() || manifest.exports.is_some());
+        && (manifest.main.is_some() || manifest.module.is_some() || manifest.exports.is_some())
+        && manifest.workspaces.is_none();
 
     Ok(Json(output))
 }
