@@ -1,3 +1,4 @@
+use moon_common::path::standardize_separators;
 use moon_pdk_api::*;
 use moon_pdk_test_utils::create_empty_moon_sandbox;
 use serde_json::json;
@@ -200,7 +201,7 @@ mod node_toolchain_tier2 {
                     "--cpu-prof-name".into(),
                     "snapshot.cpuprofile".into(),
                     "--cpu-prof-dir".into(),
-                    sandbox.path().join(".moon").to_string_lossy().to_string()
+                    standardize_separators(sandbox.path().join(".moon").to_string_lossy())
                 ])
             );
         }
@@ -227,7 +228,7 @@ mod node_toolchain_tier2 {
                     "--heap-prof-name".into(),
                     "snapshot.heapprofile".into(),
                     "--heap-prof-dir".into(),
-                    sandbox.path().join(".moon").to_string_lossy().to_string()
+                    standardize_separators(sandbox.path().join(".moon").to_string_lossy())
                 ])
             );
         }
@@ -275,7 +276,7 @@ mod node_toolchain_tier2 {
                     "--heap-prof-name".into(),
                     "snapshot.heapprofile".into(),
                     "--heap-prof-dir".into(),
-                    sandbox.path().join(".moon").to_string_lossy().to_string()
+                    standardize_separators(sandbox.path().join(".moon").to_string_lossy())
                 ])
             );
         }

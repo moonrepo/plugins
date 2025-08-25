@@ -77,7 +77,6 @@ pub fn register_toolchain(
             "yarnpkg".into()
         ],
         vendor_dir_name: Some("node_modules".into()),
-        ..RegisterToolchainOutput::default()
     }))
 }
 

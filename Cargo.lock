@@ -3056,6 +3056,7 @@ name = "node_toolchain"
 version = "0.0.1"
 dependencies = [
  "extism-pdk",
+ "moon_common",
  "moon_config",
  "moon_pdk",
  "moon_pdk_api",
