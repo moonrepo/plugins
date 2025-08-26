@@ -36,6 +36,14 @@ impl TsConfigJson {
             return Ok(());
         };
 
+        #[cfg(feature = "wasm")]
+        {
+            host_log!(
+                "Setting <property>{field}</file> in <path>{}</path>",
+                self.path,
+            );
+        }
+
         match field {
             "compilerOptions" => {
                 if let Some(options) = &self.compiler_options {

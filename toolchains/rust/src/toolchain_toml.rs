@@ -22,6 +22,14 @@ impl ToolchainToml {
             return Ok(());
         };
 
+        #[cfg(feature = "wasm")]
+        {
+            host_log!(
+                "Setting <property>{field}</file> in <path>{}</path>",
+                self.path,
+            );
+        }
+
         if field == "toolchain.channel"
             && let Some(channel) = &self.toolchain.channel
         {
@@ -32,7 +40,7 @@ impl ToolchainToml {
             if let Some(inner) = toolchain.as_table_mut() {
                 inner.insert("channel".into(), TomlValue::String(channel.to_owned()));
             }
-        };
+        }
 
         Ok(())
     }
@@ -50,14 +58,6 @@ impl ToolchainToml {
                 .is_some_and(|ch| ch == channel)
         {
             return Ok(false);
-        }
-
-        #[cfg(feature = "wasm")]
-        {
-            host_log!(
-                "Setting <property>toolchain.channel</file> in <path>{}</path>",
-                self.path,
-            );
         }
 
         self.toolchain.channel = Some(channel.into());

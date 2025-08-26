@@ -1,0 +1,43 @@
+[package]
+name = "javascript_toolchain"
+version = "0.0.1"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[package.metadata.release]
+pre-release-replacements = [
+    { file = "./CHANGELOG.md", search = "Unreleased", replace = "{{version}}" },
+]
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+toolchain_common = { path = "../../crates/toolchain-common" }
+lang_javascript_common = { path = "../../crates/lang-javascript-common" }
+extism-pdk = { workspace = true }
+moon_common = { workspace = true }
+moon_config = { workspace = true }
+moon_pdk = { workspace = true, features = ["schematic"] }
+moon_pdk_api = { workspace = true }
+nodejs_package_json = { workspace = true, features = ["serialize"] }
+schematic = { workspace = true, features = ["config"] }
+serde = { workspace = true }
+shell-words = { workspace = true }
+starbase_utils = { workspace = true, features = ["json", "yaml"] }
+
+# Lockfiles
+chaste-pnpm = "0.5.0"
+package-lock-json-parser = "0.4.0"
+yarn-lock-parser = "0.11.0"
+
+[dev-dependencies]
+moon_pdk_test_utils = { workspace = true }
+serde_json = { workspace = true }
+starbase_sandbox = { workspace = true }
+tokio = { workspace = true }
+
+[features]
+default = ["wasm"]
+wasm = []

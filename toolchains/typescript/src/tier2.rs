@@ -55,8 +55,10 @@ fn hash_compiler_options(compiler_options: &CompilerOptions) -> JsonValue {
     JsonValue::Object(options)
 }
 
+// Temporarily disabled as it incurs a ton of file lookups,
+// but for not much gain. Do we need this?
 #[plugin_fn]
-pub fn hash_task_contents(
+pub fn hash_task_contents_disabled(
     Json(input): Json<HashTaskContentsInput>,
 ) -> FnResult<Json<HashTaskContentsOutput>> {
     let config = parse_toolchain_config::<TypeScriptToolchainConfig>(input.toolchain_config)?;

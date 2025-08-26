@@ -8,4 +8,6 @@ mod proto;
 
 pub use config::*;
 #[cfg(feature = "wasm")]
+pub use package_manager::*;
+#[cfg(feature = "wasm")]
 pub use proto::*;

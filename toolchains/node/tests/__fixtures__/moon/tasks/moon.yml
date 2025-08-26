@@ -1,0 +1,70 @@
+language: javascript
+
+tasks:
+  standard:
+    command: node ./standard.js
+  cjs:
+    command: node ./cjsFile.cjs
+  mjs:
+    command: node ./mjsFile.mjs
+  execArgs:
+    command: node ./execArgs.js
+  execBinSelf:
+    command: node ./execBin.js
+
+  # Pipeline cases
+  exitCodeNonZero:
+    command: node ./exitCodeNonZero.js
+  exitCodeZero:
+    command: node ./exitCodeZero.js
+  processExitNonZero:
+    command: node ./processExitNonZero.js
+  processExitZero:
+    command: node ./processExitZero.js
+  throwError:
+    command: node ./throwError.js
+  unhandledPromise:
+    command: node ./unhandledPromise.js
+  topLevelAwait:
+    command: node ./topLevelAwait.mjs
+  passthroughArgs:
+    command: node ./args.js
+  envVars:
+    command: node ./envVars.js
+    env:
+      MOON_FOO: abc
+      MOON_BAR: "123"
+      MOON_BAZ: "true"
+  envVarsMoon:
+    command: node ./envVarsMoon.js
+  runFromProject:
+    command: node ./cwd.js
+  runFromWorkspace:
+    command: node ./base/cwd.js
+    options:
+      runFromWorkspaceRoot: true
+  retryCount:
+    command: node ./processExitNonZero.js
+    options:
+      retryCount: 3
+  affectedFiles:
+    command: node ./affectedFiles.js
+    options:
+      affectedFiles: true
+      affectedPassInputs: true
+  affectedFilesArgs:
+    command: node ./affectedFiles.js
+    options:
+      affectedFiles: "args"
+  affectedFilesEnvVar:
+    command: node ./affectedFiles.js
+    options:
+      affectedFiles: "env"
+  ctrlc:
+    command: node ./ctrlc.js
+  ctrlcInteractive:
+    command: node ./ctrlc.js
+    options:
+      interactive: true
+  viaScript:
+    script: 'echo "node toolchain" && node --version'

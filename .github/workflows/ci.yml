@@ -81,7 +81,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [depot-ubuntu-latest, depot-macos-latest, depot-windows-latest]
         job: ${{ fromJson(needs.plan.outputs.jobs-array) }}
       fail-fast: false
     steps:
