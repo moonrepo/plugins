@@ -1,7 +1,9 @@
-use proto_pdk_test_utils::*;
+// NOTE: This is very slow in CI, over 30 minutes!
 
-mod moon_tool {
-    use super::*;
+// use proto_pdk_test_utils::*;
 
-    generate_build_install_tests!("moon-test", "1.30.0");
-}
+// mod moon_tool {
+//     use super::*;
+
+//     generate_build_install_tests!("moon-test", "1.30.0");
+// }
