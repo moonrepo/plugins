@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Temporarily disabled `hash_task_contents` and exe detection.
+
 ## 0.2.1
 
 #### ⚙️ Internal
