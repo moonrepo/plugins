@@ -1,25 +1,18 @@
 // @ts-check
 import fs from "node:fs";
 
-const OPT_LEVELS = [
-  "pgo+lto",
-  "pgo",
-  "lto",
-  "lto+static",
-  "noopt",
-  "noopt+static",
-];
+const OPT_LEVELS = ["pgo+lto", "pgo", "lto", "lto+static", "noopt", "noopt+static"];
 const GH_TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
 
 const response = await fetch(
-  "https://api.github.com/repos/astral-sh/python-build-standalone/releases?per_page=5",
+  "https://api.github.com/repos/astral-sh/python-build-standalone/releases?per_page=15",
   {
     // @ts-expect-error
     headers: {
       Accept: "application/vnd.github+json",
       Authorization: GH_TOKEN ? `Bearer ${GH_TOKEN}` : undefined,
     },
-  }
+  },
 );
 
 // Load the existing dataset so we can reduce the amount of API calls required
@@ -44,6 +37,9 @@ function mapTriple(triple) {
 
     case "aarch64-unknown-linux-gnu":
       return "aarch64-unknown-linux-gnu";
+
+    case "aarch64-unknown-linux-musl":
+      return "aarch64-unknown-linux-musl";
 
     case "i686-pc-windows-msvc":
     case "i686-pc-windows-msvc-shared":
@@ -172,13 +168,9 @@ function processAssets(assets, releaseName, optLevel) {
       const releaseId = parseInt(releaseName);
 
       if (releaseId >= 20250708) {
-        data[version][
-          triple
-        ].checksum = `https://github.com/astral-sh/python-build-standalone/releases/download/${releaseName}/SHA256SUMS`;
-      } else if (
-        asset.name.endsWith(".sha256") &&
-        data[version][triple].download
-      ) {
+        data[version][triple].checksum =
+          `https://github.com/astral-sh/python-build-standalone/releases/download/${releaseName}/SHA256SUMS`;
+      } else if (asset.name.endsWith(".sha256") && data[version][triple].download) {
         data[version][triple].checksum = asset.browser_download_url;
       }
     }
@@ -200,7 +192,7 @@ releases.forEach((release) => {
 
   // Remove debug, install only, and unwanted builds
   const assets = release.assets.filter((asset) =>
-    FILTER_WORDS.every((word) => !asset.name.includes(word))
+    FILTER_WORDS.every((word) => !asset.name.includes(word)),
   );
 
   // Process assets in order of most wanted to least wanted
@@ -208,7 +200,7 @@ releases.forEach((release) => {
     processAssets(
       assets.filter((asset) => asset.name.includes(optLevel)),
       releaseName,
-      optLevel
+      optLevel,
     );
   });
 });
