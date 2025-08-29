@@ -274,13 +274,11 @@ pub fn setup_environment(
                 }
             };
 
-            let version = name
-                .split_once('@')
-                .map(|inner| inner.1)
-                .unwrap_or("latest");
+            let (module, version) = name.split_once('@').unwrap_or((name, "latest"));
+            let base_module = get_base_module(module);
 
             bins_by_version
-                .entry(version)
+                .entry(format!("{base_module}@{version}"))
                 .or_insert_with(Vec::new)
                 .push(name);
         }
@@ -313,4 +311,22 @@ pub fn hash_task_contents(
     Ok(Json(HashTaskContentsOutput {
         contents: vec![json::Value::Object(map)],
     }))
+}
+
+fn get_base_module(module: &str) -> String {
+    let mut parts = module.split('/');
+    let mut base = String::new();
+
+    // github.com
+    base.push_str(parts.next().unwrap_or_default());
+    base.push('/');
+
+    // moonrepo
+    base.push_str(parts.next().unwrap_or_default());
+    base.push('/');
+
+    // plugins
+    base.push_str(parts.next().unwrap_or_default());
+
+    base
 }

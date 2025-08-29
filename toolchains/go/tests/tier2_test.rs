@@ -670,19 +670,21 @@ mod go_toolchain_tier2 {
 
             assert_eq!(
                 output.commands,
-                [ExecCommand::new(
-                    ExecCommandInput::new(
-                        "go",
-                        [
-                            "install",
-                            "-v",
-                            "golang.org/x/tools/gopls",
-                            "github.com/revel/cmd/revel"
-                        ],
+                [
+                    ExecCommand::new(
+                        ExecCommandInput::new(
+                            "go",
+                            ["install", "-v", "github.com/revel/cmd/revel"],
+                        )
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                     )
-                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                )
-                .cache("go-bins-latest")]
+                    .cache("go-bins-github.com/revel/cmd@latest"),
+                    ExecCommand::new(
+                        ExecCommandInput::new("go", ["install", "-v", "golang.org/x/tools/gopls"],)
+                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
+                    .cache("go-bins-golang.org/x/tools@latest")
+                ]
             );
         }
 
@@ -712,19 +714,19 @@ mod go_toolchain_tier2 {
                     ExecCommand::new(
                         ExecCommandInput::new(
                             "go",
-                            ["install", "-v", "golang.org/x/tools/gopls@1"],
-                        )
-                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
-                    .cache("go-bins-1"),
-                    ExecCommand::new(
-                        ExecCommandInput::new(
-                            "go",
                             ["install", "-v", "github.com/revel/cmd/revel@2"],
                         )
                         .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                     )
-                    .cache("go-bins-2")
+                    .cache("go-bins-github.com/revel/cmd@2"),
+                    ExecCommand::new(
+                        ExecCommandInput::new(
+                            "go",
+                            ["install", "-v", "golang.org/x/tools/gopls@1"],
+                        )
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
+                    .cache("go-bins-golang.org/x/tools@1"),
                 ]
             );
         }

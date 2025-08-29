@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed `bins` failing to install multiple in parallel.
+
 ## 0.1.3
 
 #### 🐞 Fixes
