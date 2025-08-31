@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- When `includeSharedTypes` and `syncProjectReferences` are both enabled, and the shared types folder contains a `tsconfig.json`, it will also be synced as a project reference.
+
 ## 0.2.2
 
 #### 🚀 Updates

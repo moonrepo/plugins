@@ -16,6 +16,11 @@ config_struct!(
         pub include_project_reference_sources: bool,
 
         /// Appends shared types to `include` in `tsconfig.json`, for each project.
+        /// If the shared types are a project and `syncProjectReferences` is enabled,
+        /// they will also be synced as a project reference.
+        ///
+        /// Shared types must exist in a "types" folder, relative from the configured
+        /// `root`.
         pub include_shared_types: bool,
 
         /// Name of the `tsconfig.json` file within each project.
