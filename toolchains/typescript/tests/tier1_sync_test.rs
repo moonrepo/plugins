@@ -482,6 +482,57 @@ mod typescript_toolchain_tier1 {
                 "/workspace/no-refs/tsconfig.json"
             ));
         }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn can_sync_as_project_ref() {
+            let sandbox = create_moon_sandbox("refs");
+            sandbox.create_file("types/index.d.ts", "");
+            sandbox.create_file("types/tsconfig.json", "{}");
+
+            let plugin = sandbox.create_toolchain("typescript").await;
+
+            let output = plugin
+                .sync_project(SyncProjectInput {
+                    project: create_project("no-refs"),
+                    toolchain_config: json!({
+                        "includeSharedTypes": true,
+                        "syncProjectReferences": true
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(has_changed_file(
+                &output,
+                "/workspace/no-refs/tsconfig.json"
+            ));
+            assert_snapshot!(fs::read_file(sandbox.path().join("no-refs/tsconfig.json")).unwrap());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn doesnt_sync_as_project_ref_if_no_config() {
+            let sandbox = create_moon_sandbox("refs");
+            sandbox.create_file("types/index.d.ts", "");
+
+            let plugin = sandbox.create_toolchain("typescript").await;
+
+            let output = plugin
+                .sync_project(SyncProjectInput {
+                    project: create_project("no-refs"),
+                    toolchain_config: json!({
+                        "includeSharedTypes": true,
+                        "syncProjectReferences": true
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(has_changed_file(
+                &output,
+                "/workspace/no-refs/tsconfig.json"
+            ));
+            assert_snapshot!(fs::read_file(sandbox.path().join("no-refs/tsconfig.json")).unwrap());
+        }
     }
 
     mod include_project_reference_sources {

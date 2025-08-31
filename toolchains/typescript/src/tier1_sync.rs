@@ -79,8 +79,18 @@ pub fn sync_project_options(
     let mut tsconfig = TsConfigJson::load(context.project_config.clone())?;
 
     // Add shared types to `include`
-    if config.include_shared_types && types_root.join("types").exists() {
-        tsconfig.add_include(&types_root.join("types/**/*"))?;
+    let shared_types_root = types_root.join("types");
+
+    if config.include_shared_types && shared_types_root.exists() {
+        tsconfig.add_include(&shared_types_root.join("**/*"))?;
+
+        // And also include as a project reference
+        if shared_types_root
+            .join(&config.project_config_file_name)
+            .exists()
+        {
+            tsconfig.add_project_ref(&shared_types_root, &config.project_config_file_name)?;
+        }
     }
 
     // Sync project dependencies as project `references`
