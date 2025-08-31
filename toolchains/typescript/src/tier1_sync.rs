@@ -85,9 +85,10 @@ pub fn sync_project_options(
         tsconfig.add_include(&shared_types_root.join("**/*"))?;
 
         // And also include as a project reference
-        if shared_types_root
-            .join(&config.project_config_file_name)
-            .exists()
+        if config.sync_project_references
+            && shared_types_root
+                .join(&config.project_config_file_name)
+                .exists()
         {
             tsconfig.add_project_ref(&shared_types_root, &config.project_config_file_name)?;
         }
