@@ -37,6 +37,9 @@ pub fn register_toolchain(
             "*.config.{js,cjs,mjs,ts,tsx,cts,mts}".into(),
             // bun
             "bunfig.toml".into(),
+            // deno
+            "deno.json".into(),
+            "deno.jsonc".into(),
             // npm
             ".npmrc".into(),
             // pnpm
@@ -50,6 +53,8 @@ pub fn register_toolchain(
             // bun
             "bun.lock".into(),
             "bun.lockb".into(),
+            // deno
+            "deno.lock".into(),
             // npm
             "package-lock.json".into(),
             "npm-shrinkwrap.json".into(),
@@ -63,6 +68,8 @@ pub fn register_toolchain(
             // bun
             "bun".into(),
             "bunx".into(),
+            // deno
+            "deno".into(),
             // node
             "node".into(),
             "nodejs".into(),
@@ -103,6 +110,7 @@ pub fn initialize_toolchain(
                 default_index: 1,
                 options: vec![
                     JsonValue::String("bun".into()),
+                    JsonValue::String("deno".into()),
                     JsonValue::String("npm".into()),
                     JsonValue::String("pnpm".into()),
                     JsonValue::String("yarn".into()),
@@ -143,6 +151,8 @@ fn detect_package_manager(root: &VirtualPath) -> AnyResult<Option<JavaScriptPack
 
     if root.join("bun.lock").exists() || root.join("bun.lockb").exists() {
         return Ok(Some(JavaScriptPackageManager::Bun));
+    } else if root.join("deno.lock").exists() {
+        return Ok(Some(JavaScriptPackageManager::Deno));
     } else if root.join("package-lock.json").exists() || root.join("npm-shrinkwrap.json").exists() {
         return Ok(Some(JavaScriptPackageManager::Npm));
     } else if root.join("pnpm-lock.yaml").exists() || root.join("pnpm-workspace.yaml").exists() {

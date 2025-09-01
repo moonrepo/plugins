@@ -60,6 +60,23 @@ mod javascript_toolchain_tier1 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn detects_deno_via_lockfile() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("deno.lock", "");
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .initialize_toolchain(InitializeToolchainInput::default())
+                .await;
+
+            assert_eq!(
+                output.default_settings.get("packageManager").unwrap(),
+                &JsonValue::String("deno".into())
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn detects_npm_via_lockfile() {
             let sandbox = create_empty_moon_sandbox();
             sandbox.create_file("package-lock.json", "");
