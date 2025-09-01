@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Removed the tool directory from `exes_dirs`.
+
 ## 0.16.2
 
 #### 🚀 Updates

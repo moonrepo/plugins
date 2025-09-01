@@ -366,7 +366,6 @@ pub fn locate_executables(
 
     Ok(Json(LocateExecutablesOutput {
         exes,
-        exes_dirs: vec![".".into()],
         globals_lookup_dirs,
         ..LocateExecutablesOutput::default()
     }))
