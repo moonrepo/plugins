@@ -2365,7 +2365,7 @@ dependencies = [
 
 [[package]]
 name = "javascript_toolchain"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "chaste-pnpm",
  "extism-pdk",
