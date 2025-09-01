@@ -5,7 +5,7 @@ const OPT_LEVELS = ["pgo+lto", "pgo", "lto", "lto+static", "noopt", "noopt+stati
 const GH_TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
 
 const response = await fetch(
-  "https://api.github.com/repos/astral-sh/python-build-standalone/releases?per_page=15",
+  "https://api.github.com/repos/astral-sh/python-build-standalone/releases?per_page=10",
   {
     // @ts-expect-error
     headers: {
@@ -145,6 +145,10 @@ function extractTripleInfo(assetName, releaseName) {
   };
 }
 
+function createDownloadUrl(releaseName, fileName) {
+  return `https://github.com/astral-sh/python-build-standalone/releases/download/${releaseName}/${fileName}`;
+}
+
 function processAssets(assets, releaseName, optLevel) {
   assets.forEach((asset) => {
     const { version, triple } = extractTripleInfo(asset.name, releaseName);
@@ -161,17 +165,17 @@ function processAssets(assets, releaseName, optLevel) {
     }
 
     if (!data[version][triple].download) {
-      data[version][triple].download = asset.browser_download_url;
+      data[version][triple].download = createDownloadUrl(releaseName, asset.name);
     }
 
     if (!data[version][triple].checksum && asset.name.includes(optLevel)) {
       const releaseId = parseInt(releaseName);
 
-      if (releaseId >= 20250708) {
-        data[version][triple].checksum =
-          `https://github.com/astral-sh/python-build-standalone/releases/download/${releaseName}/SHA256SUMS`;
-      } else if (asset.name.endsWith(".sha256") && data[version][triple].download) {
-        data[version][triple].checksum = asset.browser_download_url;
+      if (
+        releaseId >= 20250708 ||
+        (asset.name.endsWith(".sha256") && data[version][triple].download)
+      ) {
+        data[version][triple].checksum = createDownloadUrl(releaseName, asset.name);
       }
     }
   });
