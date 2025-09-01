@@ -105,14 +105,8 @@ pub fn extend_project_graph(
 fn gather_shared_paths(
     context: &MoonContext,
     project: &ProjectFragment,
-    globals_dir: Option<&VirtualPath>,
     paths: &mut Vec<PathBuf>,
 ) -> AnyResult<()> {
-    // Global packages
-    if let Some(globals_dir) = globals_dir.and_then(|dir| dir.real_path()) {
-        paths.push(globals_dir);
-    }
-
     // Local packages upwards to the root
     let mut current_dir = context.get_project_root(project);
 
@@ -149,12 +143,7 @@ pub fn extend_task_command(
 ) -> FnResult<Json<ExtendTaskCommandOutput>> {
     let mut output = ExtendTaskCommandOutput::default();
 
-    gather_shared_paths(
-        &input.context,
-        &input.project,
-        input.globals_dir.as_ref(),
-        &mut output.paths,
-    )?;
+    gather_shared_paths(&input.context, &input.project, &mut output.paths)?;
 
     Ok(Json(output))
 }
@@ -165,12 +154,7 @@ pub fn extend_task_script(
 ) -> FnResult<Json<ExtendTaskScriptOutput>> {
     let mut output = ExtendTaskScriptOutput::default();
 
-    gather_shared_paths(
-        &input.context,
-        &input.project,
-        input.globals_dir.as_ref(),
-        &mut output.paths,
-    )?;
+    gather_shared_paths(&input.context, &input.project, &mut output.paths)?;
 
     Ok(Json(output))
 }

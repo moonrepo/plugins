@@ -40,29 +40,3 @@ pub fn setup_environment(
 
     Ok(Json(output))
 }
-
-#[plugin_fn]
-pub fn extend_task_command(
-    Json(input): Json<ExtendTaskCommandInput>,
-) -> FnResult<Json<ExtendTaskCommandOutput>> {
-    let mut output = ExtendTaskCommandOutput::default();
-
-    if let Some(globals_dir) = input.globals_dir.and_then(|dir| dir.real_path()) {
-        output.paths.push(globals_dir);
-    }
-
-    Ok(Json(output))
-}
-
-#[plugin_fn]
-pub fn extend_task_script(
-    Json(input): Json<ExtendTaskScriptInput>,
-) -> FnResult<Json<ExtendTaskScriptOutput>> {
-    let mut output = ExtendTaskScriptOutput::default();
-
-    if let Some(globals_dir) = input.globals_dir.and_then(|dir| dir.real_path()) {
-        output.paths.push(globals_dir);
-    }
-
-    Ok(Json(output))
-}

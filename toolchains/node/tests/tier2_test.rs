@@ -121,26 +121,6 @@ mod node_toolchain_tier2 {
         use super::*;
 
         #[tokio::test(flavor = "multi_thread")]
-        async fn inherits_globals_dir() {
-            let sandbox = create_empty_moon_sandbox();
-            let plugin = sandbox.create_toolchain("node").await;
-
-            let output = plugin
-                .extend_task_command(ExtendTaskCommandInput {
-                    command: "unknown".into(),
-                    globals_dir: Some(VirtualPath::Real(sandbox.path().join(".node-global"))),
-                    ..Default::default()
-                })
-                .await;
-
-            assert!(output.command.is_none());
-            assert!(output.args.is_none());
-            assert!(output.env.is_empty());
-            assert!(output.env_remove.is_empty());
-            assert_eq!(output.paths, [sandbox.path().join(".node-global")]);
-        }
-
-        #[tokio::test(flavor = "multi_thread")]
         async fn prepends_exec_args_when_node() {
             let sandbox = create_empty_moon_sandbox();
             let plugin = sandbox.create_toolchain("node").await;
@@ -279,28 +259,6 @@ mod node_toolchain_tier2 {
                     standardize_separators(sandbox.path().join(".moon").to_string_lossy())
                 ])
             );
-        }
-    }
-
-    mod extend_task_script {
-        use super::*;
-
-        #[tokio::test(flavor = "multi_thread")]
-        async fn inherits_globals_dir() {
-            let sandbox = create_empty_moon_sandbox();
-            let plugin = sandbox.create_toolchain("node").await;
-
-            let output = plugin
-                .extend_task_script(ExtendTaskScriptInput {
-                    script: "unknown".into(),
-                    globals_dir: Some(VirtualPath::Real(sandbox.path().join(".node/global"))),
-                    ..Default::default()
-                })
-                .await;
-
-            assert!(output.env.is_empty());
-            assert!(output.env_remove.is_empty());
-            assert_eq!(output.paths, [sandbox.path().join(".node/global")]);
         }
     }
 }

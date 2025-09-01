@@ -77,10 +77,8 @@ fn gather_shared_paths(
     paths: &mut Vec<PathBuf>,
 ) -> AnyResult<()> {
     if let Some(globals_dir) = globals_dir
-        && let Some(value) = globals_dir.real_path()
+        && globals_dir.real_path().is_some()
     {
-        paths.push(value);
-
         // Avoid the host env overhead if we already
         // have a valid globals directory!
         return Ok(());
