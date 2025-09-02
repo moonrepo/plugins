@@ -183,12 +183,24 @@ fn extract_workspace_members(
     package_manager: JavaScriptPackageManager,
     root: &VirtualPath,
 ) -> AnyResult<Option<Vec<String>>> {
+    let cache_key = format!("workspace-members:{root}");
+    let mut members = None;
+
+    // Reduce the amount of file system operations for every package
+    // within the workspace by caching the found members for this directory
+    if let Some(cache) = var::get::<String>(&cache_key)? {
+        let members: Vec<String> = json::from_str(&cache)?;
+
+        return Ok(Some(members));
+    }
+
+    // Package manager specific files
     match package_manager {
         JavaScriptPackageManager::Deno => {
             let config_file = root.join("deno.json");
             let configc_file = root.join("deno.jsonc");
 
-            let config: DenoWorkspaceJson = if config_file.exists() {
+            let config: DenoJson = if config_file.exists() {
                 jsonc::read_file(config_file)?
             } else if configc_file.exists() {
                 jsonc::read_file(configc_file)?
@@ -196,9 +208,7 @@ fn extract_workspace_members(
                 Default::default()
             };
 
-            if config.workspace.is_some() {
-                return Ok(config.workspace);
-            }
+            members = config.workspace.map(|ws| ws.get_members().to_vec());
         }
         JavaScriptPackageManager::Pnpm => {
             let workspace_file = root.join("pnpm-workspace.yaml");
@@ -206,21 +216,23 @@ fn extract_workspace_members(
             if workspace_file.exists() {
                 let workspace: PnpmWorkspace = yaml::read_file(workspace_file)?;
 
-                if workspace.packages.is_some() {
-                    return Ok(workspace.packages);
-                }
+                members = workspace.packages;
             }
         }
         _ => {}
     };
 
-    let package_file = root.join("package.json");
-
-    if package_file.exists() {
-        return Ok(PackageJson::load(root.join("package.json"))?.extract_members());
+    // Otherwise `package.json` itself
+    if members.is_none() {
+        members = PackageJson::load(root.join("package.json"))?.extract_members();
     }
 
-    Ok(None)
+    // Cache the result!
+    if let Some(members) = &members {
+        var::set(cache_key, json::to_string(members)?)?;
+    }
+
+    Ok(members)
 }
 
 #[plugin_fn]
