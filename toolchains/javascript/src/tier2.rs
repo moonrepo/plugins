@@ -435,7 +435,7 @@ pub fn parse_manifest(
      -> AnyResult<()> {
         for (name, version) in in_deps {
             let dep = match version {
-                VersionProtocol::Catalog(_) => {
+                VersionProtocol::Alias(_) | VersionProtocol::Catalog(_) => {
                     continue;
                 }
                 VersionProtocol::File(path)
@@ -462,6 +462,9 @@ pub fn parse_manifest(
                 VersionProtocol::Requirement(version_req) => ManifestDependency::Version(
                     UnresolvedVersionSpec::parse(version_req.to_string())?,
                 ),
+                VersionProtocol::Tag(tag) => {
+                    ManifestDependency::Version(UnresolvedVersionSpec::parse(tag)?)
+                }
                 VersionProtocol::Url(url) => ManifestDependency::url(url.to_owned()),
                 VersionProtocol::Version(version) => {
                     ManifestDependency::Version(UnresolvedVersionSpec::parse(version.to_string())?)
