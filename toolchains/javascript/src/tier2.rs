@@ -6,8 +6,8 @@ use extism_pdk::*;
 use moon_common::path::paths_are_equal;
 use moon_config::DependencyScope;
 use moon_pdk::{
-    get_host_environment, load_toolchain_config, locate_root_many, locate_root_many_with_check,
-    parse_toolchain_config_schema,
+    get_host_environment, load_project_toolchain_config, load_toolchain_config, locate_root_many,
+    locate_root_many_with_check, parse_toolchain_config_schema,
 };
 use moon_pdk_api::*;
 use nodejs_package_json::{VersionProtocol, WorkspaceProtocol};
@@ -310,9 +310,12 @@ pub fn install_dependencies(
     };
 
     let env = get_host_environment()?;
-    let package_manager_config =
-        load_toolchain_config::<SharedPackageManagerConfig>(package_manager.to_string())?;
     let mut inherit_install_args = true;
+
+    let package_manager_config: SharedPackageManagerConfig = match &input.project {
+        Some(project) => load_project_toolchain_config(&project.id, package_manager.to_string())?,
+        None => load_toolchain_config(package_manager.to_string())?,
+    };
 
     // Install
     let mut command = match package_manager {
@@ -331,7 +334,7 @@ pub fn install_dependencies(
             cmd
         }
         JavaScriptPackageManager::Deno => {
-            let cmd = ExecCommandInput::new("deno", ["install"]);
+            ExecCommandInput::new("deno", ["install"])
 
             // if input.production {
             //     cmd.args.push("--production".into());
@@ -341,8 +344,6 @@ pub fn install_dependencies(
             //     cmd.args.push("--filter".into());
             //     cmd.args.push(package_name);
             // }
-
-            cmd
         }
         JavaScriptPackageManager::Npm => {
             let mut cmd = ExecCommandInput::new(
@@ -485,6 +486,7 @@ pub fn parse_lock(Json(input): Json<ParseLockInput>) -> FnResult<Json<ParseLockO
     match input.path.file_name().and_then(|name| name.to_str()) {
         Some("bun.lock") => parse_bun_lock(&input.path, &mut output)?,
         Some("bun.lockb") => parse_bun_lockb(&input.path, &mut output)?,
+        Some("deno.lock") => parse_deno_lock(&input.path, &mut output)?,
         Some("package-lock.json" | "npm-shrinkwrap.json") => {
             parse_package_lock_json(&input.path, &mut output)?
         }
@@ -599,8 +601,13 @@ pub fn setup_environment(
         && let Some(package_manager) = config.package_manager
         && package_manager.is_for_node()
     {
-        let package_manager_config =
-            load_toolchain_config::<SharedPackageManagerConfig>(package_manager.to_string())?;
+        let package_manager_config: SharedPackageManagerConfig = match &input.project {
+            Some(project) => {
+                load_project_toolchain_config(&project.id, package_manager.to_string())?
+            }
+            None => load_toolchain_config(package_manager.to_string())?,
+        };
+
         let package_path = input.root.join("package.json");
 
         if package_path.exists()

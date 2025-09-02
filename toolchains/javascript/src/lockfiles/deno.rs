@@ -1,4 +1,60 @@
+use super::parse_version_spec;
+use deno_lockfile::LockfileContent;
+use moon_pdk::{AnyResult, VirtualPath};
+use moon_pdk_api::{LockDependency, ParseLockOutput};
 use serde::Deserialize;
+use starbase_utils::json::{self, JsonValue};
+
+// Reference: https://github.com/denoland/fresh/blob/main/deno.lock
+pub fn parse_deno_lock(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyResult<()> {
+    let lockfile_content: JsonValue = json::read_file(path)?;
+    let lockfile = LockfileContent::from_json(lockfile_content)?;
+
+    for (key, value) in lockfile.packages.jsr {
+        output
+            .dependencies
+            .entry(format!("jsr:{}", key.name))
+            .or_default()
+            .push(LockDependency {
+                hash: Some(value.integrity),
+                // Version is fully qualified
+                version: parse_version_spec(key.version.to_string())?,
+                ..Default::default()
+            });
+    }
+
+    for (key, value) in lockfile.packages.npm {
+        let (name, version) = parse_name_and_version(&key);
+
+        output
+            .dependencies
+            .entry(format!("npm:{name}"))
+            .or_default()
+            .push(LockDependency {
+                hash: value.integrity,
+                // Version is fully qualified
+                version: parse_version_spec(version)?,
+                ..Default::default()
+            });
+    }
+
+    Ok(())
+}
+
+fn parse_name_and_version(value: &str) -> (&str, &str) {
+    // Remove parents: @babel/preset-react@7.27.1_@babel+core@7.28.3
+    let value = value.split('_').next().unwrap();
+
+    // Split on @ but preserve scope: @babel/preset-react@7.27.1
+    if let Some(index) = value.rfind('@')
+        && index != 0
+    {
+        return (&value[0..index], &value[index + 1..]);
+    }
+
+    // No version? Provide a fake value
+    (value, "0.0.0")
+}
 
 #[derive(Default, Deserialize)]
 #[serde(default)]

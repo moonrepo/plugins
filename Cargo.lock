@@ -405,6 +405,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "capacity_builder"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f2d24a6dcf0cd402a21b65d35340f3a49ff3475dc5fdac91d22d2733e6641c6"
+dependencies = [
+ "capacity_builder_macros",
+ "ecow",
+ "hipstr",
+ "itoa",
+]
+
+[[package]]
+name = "capacity_builder_macros"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3b4a6cae9efc04cc6cbb8faf338d2c497c165c83e74509cf4dbedea948bbf6e5"
+dependencies = [
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "cargo-lock"
 version = "10.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1018,6 +1040,57 @@ dependencies = [
 ]
 
 [[package]]
+name = "deno_error"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dde60bd153886964234c5012d3d9caf788287f28d81fb24a884436904101ef10"
+dependencies = [
+ "deno_error_macro",
+ "libc",
+]
+
+[[package]]
+name = "deno_error_macro"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "409f265785bd946d3006756955aaf40b0e4deb25752eae6a990afe54a31cfd83"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "deno_lockfile"
+version = "0.31.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5afb20b44a44842178f41fa3b713c2b1516062590b5cca2ad792f2d6786bc74f"
+dependencies = [
+ "async-trait",
+ "deno_semver",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.16",
+]
+
+[[package]]
+name = "deno_semver"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2625b7107cc3f61a462886d5fa77c23e063c1fd15b90e3d5ee2646e9f6178d55"
+dependencies = [
+ "capacity_builder",
+ "deno_error",
+ "ecow",
+ "hipstr",
+ "monch",
+ "once_cell",
+ "serde",
+ "thiserror 2.0.16",
+ "url",
+]
+
+[[package]]
 name = "deno_tool"
 version = "0.15.6"
 dependencies = [
@@ -1256,6 +1329,15 @@ name = "ec4rs"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3b31a881d38439026e3d5dd938ab20328d36e23caca8fd5981c42e4b677f5842"
+
+[[package]]
+name = "ecow"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "78e4f79b296fbaab6ce2e22d52cb4c7f010fe0ebe7a32e34fa25885fd797bd02"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "either"
@@ -1854,6 +1936,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
+name = "hipstr"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "97971ffc85d4c98de12e2608e992a43f5294ebb625fdb045b27c731b64c4c6d6"
+dependencies = [
+ "serde",
+ "serde_bytes",
+ "sptr",
+]
+
+[[package]]
 name = "hmac"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2376,6 +2469,7 @@ dependencies = [
 name = "javascript_toolchain"
 version = "0.1.3"
 dependencies = [
+ "deno_lockfile",
  "extism-pdk",
  "lang_javascript_common",
  "moon_common",
@@ -2813,6 +2907,12 @@ dependencies = [
  "wasi 0.11.1+wasi-snapshot-preview1",
  "windows-sys 0.59.0",
 ]
+
+[[package]]
+name = "monch"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b52c1b33ff98142aecea13138bd399b68aa7ab5d9546c300988c345004001eea"
 
 [[package]]
 name = "moon_common"
@@ -4571,6 +4671,15 @@ checksum = "0dca6411025b24b60bfa7ec1fe1f8e710ac09782dca409ee8237ba74b51295fd"
 dependencies = [
  "serde_core",
  "serde_derive",
+]
+
+[[package]]
+name = "serde_bytes"
+version = "0.11.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8437fd221bde2d4ca316d61b90e337e9e702b3820b87d63caa9ba6c02bd06d96"
+dependencies = [
+ "serde",
 ]
 
 [[package]]
