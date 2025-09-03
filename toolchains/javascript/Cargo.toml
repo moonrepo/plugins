@@ -21,7 +21,10 @@ moon_common = { workspace = true }
 moon_config = { workspace = true }
 moon_pdk = { workspace = true, features = ["schematic"] }
 moon_pdk_api = { workspace = true }
-nodejs_package_json = { workspace = true, features = ["serialize"] }
+nodejs_package_json = { workspace = true, features = [
+    "protocols",
+    "serialize",
+] }
 schematic = { workspace = true, features = ["config"] }
 serde = { workspace = true }
 shell-words = { workspace = true }

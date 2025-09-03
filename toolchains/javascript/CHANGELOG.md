@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed `package.json` dependency version parsing issues.
+
 ## 0.1.1
 
 #### 🚀 Updates
