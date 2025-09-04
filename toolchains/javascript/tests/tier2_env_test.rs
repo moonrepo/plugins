@@ -161,6 +161,36 @@ mod javascript_toolchain_tier2 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn does_nothing_if_deno() {
+            let mut sandbox = create_moon_sandbox("files");
+
+            sandbox
+                .host_funcs
+                .mock_load_toolchain_config(|_, _| json!({ "version": "1.2.3" }));
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "syncPackageManagerField": true,
+                        "packageManager": "deno"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.operations.is_empty());
+            assert!(output.changed_files.is_empty());
+            assert!(
+                !fs::read_to_string(sandbox.path().join("package.json"))
+                    .unwrap()
+                    .contains("packageManager")
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn sets_field() {
             let mut sandbox = create_moon_sandbox("files");
 
