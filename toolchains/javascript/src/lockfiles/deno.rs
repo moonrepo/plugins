@@ -4,6 +4,7 @@ use moon_pdk::{AnyResult, VirtualPath};
 use moon_pdk_api::{LockDependency, ParseLockOutput};
 use serde::Deserialize;
 use starbase_utils::json::{self, JsonValue};
+use std::collections::BTreeMap;
 
 // Reference: https://github.com/denoland/fresh/blob/main/deno.lock
 pub fn parse_deno_lock(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyResult<()> {
@@ -59,8 +60,24 @@ fn parse_name_and_version(value: &str) -> (&str, &str) {
 #[derive(Default, Deserialize)]
 #[serde(default)]
 pub struct DenoJson {
+    pub tasks: BTreeMap<String, DenoJsonTask>,
     #[serde(alias = "workspaces")]
     pub workspace: Option<DenoJsonWorkspace>,
+}
+
+impl DenoJson {
+    pub fn load_from(root: &VirtualPath) -> AnyResult<Self> {
+        let config_file = root.join("deno.json");
+        let configc_file = root.join("deno.jsonc");
+
+        Ok(if config_file.exists() {
+            json::read_file(config_file)?
+        } else if configc_file.exists() {
+            json::read_file(configc_file)?
+        } else {
+            Default::default()
+        })
+    }
 }
 
 #[derive(Deserialize)]
@@ -75,6 +92,34 @@ impl DenoJsonWorkspace {
         match self {
             Self::Members(members) => members,
             Self::Config { members } => members,
+        }
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+pub enum DenoJsonTask {
+    Command(String),
+    Config {
+        #[serde(default)]
+        command: String,
+        #[serde(default)]
+        dependencies: Vec<String>,
+    },
+}
+
+impl DenoJsonTask {
+    pub fn get_command(&self) -> &String {
+        match self {
+            Self::Command(command) => command,
+            Self::Config { command, .. } => command,
+        }
+    }
+
+    pub fn get_dependencies(&self) -> &[String] {
+        match self {
+            Self::Command(_) => &[],
+            Self::Config { dependencies, .. } => dependencies,
         }
     }
 }

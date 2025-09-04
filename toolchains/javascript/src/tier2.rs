@@ -11,11 +11,10 @@ use moon_pdk::{
 };
 use moon_pdk_api::*;
 use nodejs_package_json::{VersionProtocol, WorkspaceProtocol};
-use starbase_utils::{json as jsonc, yaml};
+use starbase_utils::yaml;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-// TODO deno
 #[plugin_fn]
 pub fn extend_project_graph(
     Json(input): Json<ExtendProjectGraphInput>,
@@ -89,8 +88,21 @@ pub fn extend_project_graph(
         extract_implicit_deps(&manifest.peer_dependencies, DependencyScope::Peer)?;
         extract_implicit_deps(&manifest.optional_dependencies, DependencyScope::Build)?;
 
-        if config.infer_tasks_from_scripts {
-            project_output.tasks = TasksInferrer::new(&config, manifest).infer()?;
+        if config.infer_tasks_from_scripts
+            && let Some(package_manager) = config.package_manager
+        {
+            if package_manager == JavaScriptPackageManager::Deno {
+                let deno_manifest = DenoJson::load_from(project_root)?;
+
+                project_output.tasks.extend(
+                    TasksInferrer::new(&config).infer_from_deno_tasks(&deno_manifest.tasks)?,
+                );
+            } else if let Some(scripts) = &manifest.scripts {
+                project_output.tasks.extend(
+                    TasksInferrer::new(&config)
+                        .infer_from_package_scripts(BTreeMap::from_iter(scripts))?,
+                );
+            }
         }
 
         output.extended_projects.insert(id.into(), project_output);
@@ -197,18 +209,9 @@ fn extract_workspace_members(
     // Package manager specific files
     match package_manager {
         JavaScriptPackageManager::Deno => {
-            let config_file = root.join("deno.json");
-            let configc_file = root.join("deno.jsonc");
-
-            let config: DenoJson = if config_file.exists() {
-                jsonc::read_file(config_file)?
-            } else if configc_file.exists() {
-                jsonc::read_file(configc_file)?
-            } else {
-                Default::default()
-            };
-
-            members = config.workspace.map(|ws| ws.get_members().to_vec());
+            members = DenoJson::load_from(root)?
+                .workspace
+                .map(|ws| ws.get_members().to_vec());
         }
         JavaScriptPackageManager::Pnpm => {
             let workspace_file = root.join("pnpm-workspace.yaml");
