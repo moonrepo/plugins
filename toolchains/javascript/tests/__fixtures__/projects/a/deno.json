@@ -1,0 +1,9 @@
+{
+  "tasks": {
+    "build": "deno run -RN build.ts",
+    "start": {
+      "command": "deno run -RN server.ts",
+      "dependencies": ["build"]
+    }
+  }
+}

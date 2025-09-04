@@ -1,9 +1,10 @@
 use moon_config::{
     DependencyScope, OneOrMany, OutputPath, PartialTaskArgs, PartialTaskConfig,
-    PartialTaskOptionsConfig, TaskOptionRunInCI, TaskPreset,
+    PartialTaskOptionsConfig, TaskOptionRunInCI, TaskPreset, PartialTaskDependency,
 };
 use moon_pdk_api::*;
 use moon_pdk_test_utils::{create_empty_moon_sandbox, create_moon_sandbox};
+use moon_target::Target;
 use serde_json::json;
 use starbase_utils::fs;
 use std::collections::BTreeMap;
@@ -143,9 +144,7 @@ mod javascript_toolchain_tier2 {
 
         #[allow(deprecated)]
         #[tokio::test(flavor = "multi_thread")]
-        async fn infers_scripts_when_enabled() {
-            use starbase_sandbox::pretty_assertions::assert_eq;
-
+        async fn infers_package_scripts_when_enabled() {
             let sandbox = create_moon_sandbox("projects");
             let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -314,6 +313,69 @@ mod javascript_toolchain_tier2 {
                             ..Default::default()
                         }
                     ),
+                ])
+            );
+        }
+
+        #[allow(deprecated)]
+        #[tokio::test(flavor = "multi_thread")]
+        async fn infers_deno_tasks_when_enabled() {
+            use starbase_sandbox::pretty_assertions::assert_eq;
+
+            let sandbox = create_moon_sandbox("projects");
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let mut input = ExtendProjectGraphInput::default();
+            input.project_sources.insert("a".into(), "a".into());
+            input.project_sources.insert("b".into(), "b".into());
+            input.project_sources.insert("c".into(), "c".into());
+            input.toolchain_config = json!({
+                "inferTasksFromScripts": true,
+                "packageManager": "deno"
+            });
+
+            let output = plugin.extend_project_graph(input).await;
+
+            assert_eq!(
+                output.extended_projects.get("a").unwrap().tasks,
+                BTreeMap::from_iter([
+                    (
+                        "build".into(),
+                        PartialTaskConfig {
+                            description: Some("Inherited from `build` deno.json task.".into()),
+                            command: Some(PartialTaskArgs::List(vec![
+                                "deno".into(),
+                                "task".into(),
+                                "build".into(),
+                            ])),
+                            toolchain: Some(OneOrMany::Many(vec![
+                                Id::raw("javascript"),
+                                Id::raw("deno"),
+                            ])),
+                            ..Default::default()
+                        }
+                    ),
+                    (
+                        "start".into(),
+                        PartialTaskConfig {
+                            description: Some("Inherited from `start` deno.json task.".into()),
+                            command: Some(PartialTaskArgs::List(vec![
+                                "deno".into(),
+                                "task".into(),
+                                "start".into(),
+                            ])),
+                            deps: Some(vec![PartialTaskDependency::Target(
+                                Target::parse("~:build").unwrap()
+                            )]),
+                            local: Some(true),
+                            preset: Some(TaskPreset::Server),
+                            toolchain: Some(OneOrMany::Many(vec![
+                                Id::raw("javascript"),
+                                Id::raw("deno"),
+                            ])),
+                            ..Default::default()
+                        }
+                    )
                 ])
             );
         }
