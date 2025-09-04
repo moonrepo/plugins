@@ -1,9 +1,11 @@
 mod bun;
+mod deno;
 mod npm;
 mod pnpm;
 mod yarn;
 
 pub use bun::*;
+pub use deno::*;
 pub use npm::*;
 pub use pnpm::*;
 pub use yarn::*;
