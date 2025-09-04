@@ -1,0 +1,32 @@
+{
+  "version": "5",
+  "specifiers": {
+    "jsr:@astral/astral@~0.5.3": "0.5.3",
+    "jsr:@zip-js/zip-js@^2.7.52": "2.7.73",
+    "npm:@babel/core@^7.28.0": "7.28.3",
+    "npm:@babel/preset-react@^7.27.1": "7.27.1_@babel+core@7.28.3"
+  },
+  "jsr": {
+    "@astral/astral@0.5.3": {
+      "integrity": "d6a4628313d8be99aac0f51005c1dc090fa3b4c6b5c8335c26a52d4842aa1276",
+      "dependencies": [
+        "jsr:@zip-js/zip-js"
+      ]
+    },
+    "@zip-js/zip-js@2.7.73": {
+      "integrity": "14c123f0e534377a6f47c5ba5293bb6c0f3e72e78c6a687108011605420a4867"
+    }
+  },
+  "npm": {
+    "@babel/core@7.28.3": {
+      "integrity": "sha512-yDBHV9kQNcr2/sUr9jghVyz9C3Y5G2zUM2H2lo+9mKv4sFgbA8s8Z9t8D1jiTkGoO/NoIfKMyKWr4s6CN23ZwQ==",
+      "dependencies": []
+    },
+    "@babel/preset-react@7.27.1_@babel+core@7.28.3": {
+      "integrity": "sha512-oJHWh2gLhU9dW9HHr42q0cI0/iHHXTLGe39qvpAZZzagHy0MzYLCnCVV0symeRvzmjHyVU7mw2K06E6u/JwbhA==",
+      "dependencies": [
+        "@babel/core"
+      ]
+    }
+  }
+}
