@@ -93,12 +93,6 @@ impl<'a> TasksInferrer<'a> {
                     "task".to_string(),
                     name.to_string(),
                 ]));
-
-                // toolchains
-                config.toolchain = Some(OneOrMany::Many(vec![
-                    Id::raw("javascript"),
-                    package_manager.get_runtime_toolchain(),
-                ]));
             }
             _ => {
                 config.description = Some(format!("Inherited from `{name}` package.json script."));
