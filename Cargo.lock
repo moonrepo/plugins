@@ -2477,6 +2477,7 @@ dependencies = [
  "moon_pdk",
  "moon_pdk_api",
  "moon_pdk_test_utils",
+ "moon_target",
  "nodejs_package_json",
  "package-lock-json-parser",
  "rustc-hash",
