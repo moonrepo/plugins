@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added a globals lookup directory for `~/.proto/tools/node/<version>/bin`. However, the node version may not always be available.
+
+#### 🐞 Fixes
+
+- Fixed some `package.json` parsing issues.
+
 ## 0.16.3
 
 #### 🚀 Updates

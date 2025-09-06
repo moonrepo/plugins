@@ -272,7 +272,10 @@ pub fn locate_executables(
     // These are the directories that contain the executable binaries,
     // NOT where the packages/node modules are stored. Some package managers
     // have separate folders for the 2 processes, and then create symlinks.
-    let mut globals_lookup_dirs = vec!["$PREFIX/bin".into()];
+    let mut globals_lookup_dirs = vec![
+        "$PREFIX/bin".into(),
+        "$PROTO_HOME/tools/node/$PROTO_NODE_VERSION/bin".into(),
+    ];
 
     // We don't link binaries for package managers for the following reasons:
     // 1 - We can't link JS files because they aren't executable.
