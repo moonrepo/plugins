@@ -3709,9 +3709,9 @@ dependencies = [
 
 [[package]]
 name = "proto_core"
-version = "0.52.4"
+version = "0.52.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f412031e0912d6e63bf1e1034de971aa6e824d1329336228b5d7eff487f7a815"
+checksum = "98c4d1f7b1ececdaa59ed2214e9dde3073f9b6e443dd541c1f8993591019ee75"
 dependencies = [
  "convert_case",
  "docker_credential",
@@ -3727,7 +3727,7 @@ dependencies = [
  "regex",
  "reqwest",
  "rustc-hash",
- "scc 2.4.0",
+ "scc 3.0.2",
  "schematic",
  "semver",
  "serde",
@@ -4459,9 +4459,9 @@ checksum = "28d3b2b1366ec20994f1fd18c3c594f05c5dd4bc44d8bb0c1c632c8d6829481f"
 
 [[package]]
 name = "saa"
-version = "3.2.0"
+version = "3.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6ebc3b573bc74e72bd0083e9dee28bfe65fed1622a14192573884cec5d437a8d"
+checksum = "293e425dca7c7889a87de14ff29a4112f18a155119295671cd7fb8c70015a1c5"
 
 [[package]]
 name = "same-file"
@@ -5904,9 +5904,9 @@ dependencies = [
 
 [[package]]
 name = "warpgate"
-version = "0.27.2"
+version = "0.27.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a3bc484f7f12edba700e6d54a85946790404a414b047a78bb29d39a5c4e539c"
+checksum = "ebcf50db471e36b6c58590c27303f00a411453ca7d6813feee8fdc82f8b9fccb"
 dependencies = [
  "async-trait",
  "compact_str 0.9.0",
@@ -5920,7 +5920,7 @@ dependencies = [
  "reqwest",
  "reqwest-middleware",
  "reqwest-netrc",
- "scc 2.4.0",
+ "scc 3.0.2",
  "schematic",
  "serde",
  "serde_json",
@@ -7148,18 +7148,18 @@ dependencies = [
 
 [[package]]
 name = "zerocopy"
-version = "0.8.26"
+version = "0.8.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1039dd0d3c310cf05de012d8a39ff557cb0d23087fd44cad61df08fc31907a2f"
+checksum = "0894878a5fa3edfd6da3f88c4805f4c8558e2b996227a3d864f47fe11e38282c"
 dependencies = [
  "zerocopy-derive",
 ]
 
 [[package]]
 name = "zerocopy-derive"
-version = "0.8.26"
+version = "0.8.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ecf5b4cc5364572d7f4c329661bcc82724222973f2cab6f050a4e5c22f75181"
+checksum = "88d2b8d9c68ad2b9e4340d7832716a4d21a22a1154777ad56ea55c51a9cf3831"
 dependencies = [
  "proc-macro2",
  "quote",
