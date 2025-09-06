@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed some `package.json` parsing issues.
+
 ## 0.16.3
 
 #### 🚀 Updates
