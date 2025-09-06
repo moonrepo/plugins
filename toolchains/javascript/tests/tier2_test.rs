@@ -1,6 +1,6 @@
 use moon_config::{
     DependencyScope, OneOrMany, OutputPath, PartialTaskArgs, PartialTaskConfig,
-    PartialTaskOptionsConfig, TaskOptionRunInCI, TaskPreset, PartialTaskDependency,
+    PartialTaskDependency, PartialTaskOptionsConfig, TaskOptionRunInCI, TaskPreset,
 };
 use moon_pdk_api::*;
 use moon_pdk_test_utils::{create_empty_moon_sandbox, create_moon_sandbox};
