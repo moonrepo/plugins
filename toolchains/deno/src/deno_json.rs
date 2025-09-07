@@ -18,7 +18,7 @@ extern "ExtismHost" {
 json_config!(DenoJson, BaseDenoJson);
 
 impl DenoJson {
-    #[allow(dead_code)]
+    #[allow(dead_code, unused_variables)]
     fn save_field(&self, field: &str, config: &mut JsonValue) -> AnyResult<()> {
         let Some(_root) = config.as_object_mut() else {
             return Ok(());
