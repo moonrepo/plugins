@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "kebab-case")]
 pub enum JavaScriptPackageManager {
     Bun,
-    // Deno,
+    Deno,
     #[default]
     Npm,
     Pnpm,
@@ -20,6 +20,7 @@ impl JavaScriptPackageManager {
 
         match self {
             JavaScriptPackageManager::Bun => Id::raw("bun"),
+            JavaScriptPackageManager::Deno => Id::raw("deno"),
             _ => Id::raw("node"),
         }
     }
@@ -97,8 +98,8 @@ config_struct!(
         /// as workspace dependencies.
         pub dependency_version_format: JavaScriptDependencyVersionFormat,
 
-        /// Automatically infer moon tasks from `package.json` scripts.
-        /// Some caveats to be aware of:
+        /// Automatically infer moon tasks from `package.json` scripts or
+        /// `deno.json` tasks. Some caveats to be aware of:
         ///
         /// - Lifecycle (pre, post) scripts are not inferred.
         /// - Outputs will be automatically detected (if possible).

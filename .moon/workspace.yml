@@ -27,6 +27,7 @@ projects:
   schema-tool: tools/internal-schema
   # Toolchains
   bun-toolchain: toolchains/bun
+  deno-toolchain: toolchains/deno
   go-toolchain: toolchains/go
   javascript-toolchain: toolchains/javascript
   node-toolchain: toolchains/node
