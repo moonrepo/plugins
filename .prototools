@@ -2,9 +2,13 @@ moon = "2.2.0"
 bun = "1.2.20"
 node = "24.0.0"
 go = "1.26.0"
+"npm:typescript" = "6.0.0"
 
 [settings]
 unstable-lockfile = true
+
+[plugins.backends]
+npm = "file:///Users/miles/.cargo/shared-target/wasm32-wasip1/release/npm_backend.wasm"
 
 # [plugins]
 # bun-test = "file://./target/wasm32-wasip1/release/bun_tool.wasm"
