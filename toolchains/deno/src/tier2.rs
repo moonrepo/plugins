@@ -1,6 +1,7 @@
 // Note: Most tier 2 is implemented in the JavaScript toolchain!
 
 use crate::config::DenoToolchainConfig;
+use crate::deno_json::DenoJson;
 use extism_pdk::*;
 use moon_config::BinEntry;
 use moon_pdk::{
@@ -74,15 +75,49 @@ pub fn extend_task_script(
     Ok(Json(output))
 }
 
-// #[plugin_fn]
-// pub fn parse_manifest(
-//     Json(input): Json<ParseManifestInput>,
-// ) -> FnResult<Json<ParseManifestOutput>> {
-//     let mut output = ParseManifestOutput::default();
-//     let manifest = DenoJson::load(input.path)?;
+#[plugin_fn]
+pub fn parse_manifest(
+    Json(input): Json<ParseManifestInput>,
+) -> FnResult<Json<ParseManifestOutput>> {
+    let mut output = ParseManifestOutput::default();
+    let manifest = DenoJson::load(input.path)?;
 
-//     Ok(Json(output))
-// }
+    // https://docs.deno.com/runtime/fundamentals/configuration/#dependencies
+    // https://docs.deno.com/runtime/fundamentals/modules/
+    for (name, specifier) in &manifest.imports {
+        if name == "." || name == "./" || name == "/" {
+            continue;
+        }
+
+        let mut config = ManifestDependencyConfig::default();
+
+        if specifier.starts_with("http") {
+            config.url = Some(specifier.to_owned());
+        } else if specifier.starts_with(".") || specifier.starts_with("/") {
+            config.path = Some(specifier.into());
+        } else if specifier.starts_with("npm:") || specifier.starts_with("jsr:") {
+            if let Some(index) = specifier.rfind('@') {
+                config.version = Some(UnresolvedVersionSpec::parse(&specifier[index + 1..])?);
+            }
+
+            // TODO track specifier
+        }
+
+        output
+            .dependencies
+            .insert(name.to_owned(), ManifestDependency::Config(config));
+    }
+
+    if let Some(version) = &manifest.version {
+        output.version = Some(Version::parse(version)?);
+    }
+
+    // https://docs.deno.com/runtime/reference/cli/publish/#package-requirements
+    output.publishable =
+        manifest.name.is_some() && manifest.version.is_some() && manifest.exports.is_some();
+
+    Ok(Json(output))
+}
 
 #[plugin_fn]
 pub fn setup_environment(

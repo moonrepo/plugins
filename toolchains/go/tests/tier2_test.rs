@@ -696,8 +696,6 @@ mod go_toolchain_tier2 {
         #[tokio::test(flavor = "multi_thread")]
         async fn skips_local_bins_when_ci() {
             let sandbox = create_empty_moon_sandbox();
-            sandbox.enable_logging();
-
             let plugin = sandbox
                 .create_toolchain_with_config("go", |config| {
                     config.host_environment(HostEnvironment {

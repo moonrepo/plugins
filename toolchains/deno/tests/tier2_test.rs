@@ -1,6 +1,7 @@
 use moon_pdk_api::*;
-use moon_pdk_test_utils::create_empty_moon_sandbox;
+use moon_pdk_test_utils::{create_empty_moon_sandbox, create_moon_sandbox};
 use serde_json::json;
+use std::collections::BTreeMap;
 use std::env;
 
 mod deno_toolchain_tier2 {
@@ -112,6 +113,78 @@ mod deno_toolchain_tier2 {
                 output.paths,
                 [sandbox.path().join(".home").join(".deno").join("bin")]
             );
+        }
+    }
+
+    mod parse_manifest {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn parses_package() {
+            let sandbox = create_moon_sandbox("files");
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            let output = plugin
+                .parse_manifest(ParseManifestInput {
+                    path: VirtualPath::Real(sandbox.path().join("deno.json")),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.version.is_none());
+            assert!(output.dev_dependencies.is_empty());
+            assert!(output.build_dependencies.is_empty());
+            assert!(output.peer_dependencies.is_empty());
+            assert!(!output.publishable);
+
+            assert_eq!(
+                output.dependencies,
+                BTreeMap::from_iter([
+                    (
+                        "a".into(),
+                        ManifestDependency::Config(ManifestDependencyConfig {
+                            version: Some(UnresolvedVersionSpec::parse("^1.2.3").unwrap()),
+                            ..Default::default()
+                        })
+                    ),
+                    (
+                        "b".into(),
+                        ManifestDependency::Config(ManifestDependencyConfig {
+                            version: Some(UnresolvedVersionSpec::parse("~4.5.6").unwrap()),
+                            ..Default::default()
+                        })
+                    ),
+                    (
+                        "c".into(),
+                        ManifestDependency::Config(ManifestDependencyConfig {
+                            url: Some("https://deno.land/x/c/mod.ts".into()),
+                            ..Default::default()
+                        })
+                    ),
+                    (
+                        "d".into(),
+                        ManifestDependency::Config(ManifestDependencyConfig {
+                            path: Some("./some/long/path/d.ts".into()),
+                            ..Default::default()
+                        })
+                    )
+                ])
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn can_mark_as_publishable() {
+            let sandbox = create_moon_sandbox("files");
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            let output = plugin
+                .parse_manifest(ParseManifestInput {
+                    path: VirtualPath::Real(sandbox.path().join("deno-publish.json")),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.publishable);
         }
     }
 
@@ -275,8 +348,6 @@ mod deno_toolchain_tier2 {
         #[tokio::test(flavor = "multi_thread")]
         async fn skips_local_bins_when_ci() {
             let sandbox = create_empty_moon_sandbox();
-            sandbox.enable_logging();
-
             let plugin = sandbox
                 .create_toolchain_with_config("deno", |config| {
                     config.host_environment(HostEnvironment {
