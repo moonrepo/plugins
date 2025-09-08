@@ -1,0 +1,11 @@
+{
+  "imports": {
+    "a": "jsr:@scope/package@^1.2.3",
+    "b": "npm:package@~4.5.6",
+    "c": "https://deno.land/x/c/mod.ts",
+    "d": "./some/long/path/d.ts",
+    "/": "./",
+    "./": "./",
+    ".": "./"
+  }
+}

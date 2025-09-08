@@ -40,7 +40,10 @@ impl DenoJson {
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(default)]
 pub struct BaseDenoJson {
-    pub exports: DenoJsonExports,
+    pub name: Option<String>,
+    pub version: Option<String>,
+
+    pub exports: Option<DenoJsonExports>,
     pub imports: BTreeMap<String, String>,
     pub import_map: Option<String>,
     pub links: Vec<String>,
