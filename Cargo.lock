@@ -291,12 +291,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bytecount"
-version = "0.6.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "175812e0be2bccb6abe50bb8d566126198344f707e304f45c648fd8f2cc0365e"
-
-[[package]]
 name = "bytemuck"
 version = "1.23.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -494,32 +488,6 @@ name = "cfg_aliases"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
-
-[[package]]
-name = "chaste-pnpm"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eda85a570cc7fddcb1aedf2d2e2b9fdfb73615f3a65ec60afc971396ca4540f6"
-dependencies = [
- "chaste-types",
- "nom 8.0.0",
- "serde",
- "serde_json",
- "serde_norway",
- "thiserror 2.0.16",
-]
-
-[[package]]
-name = "chaste-types"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ab20ebb4fcd8a070e67bd4f92fa1ba23db66e992b7a5a1fd8cc859b20318426"
-dependencies = [
- "nodejs-semver",
- "nom 8.0.0",
- "ssri",
- "thiserror 2.0.16",
-]
 
 [[package]]
 name = "chrono"
@@ -1817,7 +1785,7 @@ version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d9775b61c150e570369a38e9bdcd2efa0ad76e977e98303d8cd4e77eedcc091"
 dependencies = [
- "winnow 0.7.13",
+ "winnow",
 ]
 
 [[package]]
@@ -2389,7 +2357,6 @@ dependencies = [
 name = "javascript_toolchain"
 version = "0.1.2"
 dependencies = [
- "chaste-pnpm",
  "extism-pdk",
  "lang_javascript_common",
  "moon_common",
@@ -2399,6 +2366,7 @@ dependencies = [
  "moon_pdk_test_utils",
  "nodejs_package_json",
  "package-lock-json-parser",
+ "rustc-hash",
  "schematic",
  "serde",
  "serde_json",
@@ -3101,18 +3069,6 @@ dependencies = [
  "starbase_utils",
  "tokio",
  "toolchain_common",
-]
-
-[[package]]
-name = "nodejs-semver"
-version = "4.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54a541e66989ad860689e1994447f22ab670d604068ed11376894ada03890c11"
-dependencies = [
- "bytecount",
- "miette 7.6.0",
- "thiserror 1.0.69",
- "winnow 0.6.26",
 ]
 
 [[package]]
@@ -4546,19 +4502,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde_norway"
-version = "0.9.42"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e408f29489b5fd500fab51ff1484fc859bb655f32c671f307dcd733b72e8168c"
-dependencies = [
- "indexmap",
- "itoa",
- "ryu",
- "serde",
- "unsafe-libyaml-norway",
-]
-
-[[package]]
 name = "serde_path_to_error"
 version = "0.1.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5318,7 +5261,7 @@ dependencies = [
  "toml_datetime 0.7.0",
  "toml_parser",
  "toml_writer",
- "winnow 0.7.13",
+ "winnow",
 ]
 
 [[package]]
@@ -5350,7 +5293,7 @@ dependencies = [
  "serde_spanned 0.6.9",
  "toml_datetime 0.6.11",
  "toml_write",
- "winnow 0.7.13",
+ "winnow",
 ]
 
 [[package]]
@@ -5363,7 +5306,7 @@ dependencies = [
  "toml_datetime 0.7.0",
  "toml_parser",
  "toml_writer",
- "winnow 0.7.13",
+ "winnow",
 ]
 
 [[package]]
@@ -5372,7 +5315,7 @@ version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b551886f449aa90d4fe2bdaa9f4a2577ad2dde302c61ecf262d80b116db95c10"
 dependencies = [
- "winnow 0.7.13",
+ "winnow",
 ]
 
 [[package]]
@@ -5627,12 +5570,6 @@ dependencies = [
  "starbase_utils",
  "tokio",
 ]
-
-[[package]]
-name = "unsafe-libyaml-norway"
-version = "0.2.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b39abd59bf32521c7f2301b52d05a6a2c975b6003521cbd0c6dc1582f0a22104"
 
 [[package]]
 name = "untrusted"
@@ -6889,15 +6826,6 @@ name = "windows_x86_64_msvc"
 version = "0.53.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "271414315aff87387382ec3d271b52d7ae78726f5d44ac98b4f4030c91880486"
-
-[[package]]
-name = "winnow"
-version = "0.6.26"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e90edd2ac1aa278a5c4599b1d89cf03074b610800f866d4026dc199d7929a28"
-dependencies = [
- "memchr",
-]
 
 [[package]]
 name = "winnow"
