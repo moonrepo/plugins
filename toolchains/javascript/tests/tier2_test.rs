@@ -1605,8 +1605,8 @@ mod javascript_toolchain_tier2 {
                 })
                 .await;
 
-            assert_eq!(output.packages, expected_packages());
-            assert_eq!(output.dependencies, expected_dependencies());
+            assert!(output.packages.is_empty());
+            assert_eq!(output.dependencies, expected_base_dependencies());
         }
 
         #[tokio::test(flavor = "multi_thread")]

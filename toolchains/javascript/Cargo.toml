@@ -25,13 +25,14 @@ nodejs_package_json = { workspace = true, features = [
     "protocols",
     "serialize",
 ] }
+rustc-hash = { workspace = true }
 schematic = { workspace = true, features = ["config"] }
 serde = { workspace = true }
 shell-words = { workspace = true }
 starbase_utils = { workspace = true, features = ["json", "yaml"] }
 
 # Lockfiles
-chaste-pnpm = "0.5.0"
+# chaste-pnpm = "0.5.0"
 package-lock-json-parser = "0.4.0"
 yarn-lock-parser = "0.11.0"
 
