@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed `pnpm-lock.yaml` parsing issues.
+
 ## 0.1.2
 
 #### 🐞 Fixes
