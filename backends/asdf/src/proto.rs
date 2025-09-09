@@ -178,7 +178,7 @@ pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<Regi
         },
         minimum_proto_version: Some(Version::new(0, 46, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
-        config_schema: Some(schematic::SchemaBuilder::generate::<AsdfPluginConfig>()),
+        // config_schema: Some(schematic::SchemaBuilder::generate::<AsdfPluginConfig>()),
         unstable: Switch::Toggle(true),
         ..RegisterToolOutput::default()
     }))

@@ -2,14 +2,14 @@ use backend_common::enable_tracing;
 use extism_pdk::*;
 use proto_pdk::*;
 use rustc_hash::FxHashMap;
+use schematic::schema::IndexMap;
 use serde::Deserialize;
+use starbase_utils::fs;
+use std::path::PathBuf;
 
 #[host_fn]
 extern "ExtismHost" {
     fn exec_command(input: Json<ExecCommandInput>) -> Json<ExecCommandOutput>;
-    // fn from_virtual_path(path: String) -> String;
-    // fn to_virtual_path(path: String) -> String;
-    // fn host_log(input: Json<HostLogInput>);
 }
 
 #[plugin_fn]
@@ -26,6 +26,10 @@ pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<Regi
             PluginType::DependencyManager
         } else {
             PluginType::CommandLine
+        },
+        inventory_options: ToolInventoryOptions {
+            scoped_backend_dir: true,
+            ..Default::default()
         },
         lock_options: ToolLockOptions {
             no_record: true,
@@ -83,21 +87,91 @@ pub fn native_install(
     }))
 }
 
-#[plugin_fn]
-pub fn native_uninstall(
-    Json(input): Json<NativeUninstallInput>,
-) -> FnResult<Json<NativeUninstallOutput>> {
-    Ok(Json(NativeUninstallOutput {
-        uninstalled: true,
-        ..Default::default()
-    }))
+#[derive(Default, Deserialize)]
+#[serde(default)]
+struct PackageJson {
+    bin: Option<PackageJsonBin>,
+    name: String,
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum PackageJsonBin {
+    #[allow(dead_code)]
+    Single(String),
+    Multiple(IndexMap<String, String>),
 }
 
 #[plugin_fn]
 pub fn locate_executables(
     Json(input): Json<LocateExecutablesInput>,
 ) -> FnResult<Json<LocateExecutablesOutput>> {
-    let mut output = LocateExecutablesOutput::default();
+    let id = get_plugin_id()?;
+    let mut output = LocateExecutablesOutput {
+        exes_dirs: vec!["bin".into()],
+        ..Default::default()
+    };
+    let mut has_primary = false;
+
+    // Extract bins from the package
+    let package_path = input
+        .install_dir
+        .join(format!("lib/node_modules/{id}/package.json"));
+
+    if package_path.exists() {
+        let package: PackageJson = starbase_utils::json::read_file(package_path)?;
+
+        if let Some(bins) = package.bin {
+            match bins {
+                PackageJsonBin::Single(_) => {
+                    has_primary = true;
+                    output.exes.insert(
+                        id.clone(),
+                        ExecutableConfig::new_primary(format!("bin/{id}")),
+                    );
+                }
+                PackageJsonBin::Multiple(map) => {
+                    for (index, name) in map.into_keys().enumerate() {
+                        has_primary = true;
+                        output.exes.insert(
+                            name.clone(),
+                            ExecutableConfig {
+                                // Assume the first entry is the main one!
+                                primary: index == 0,
+                                exe_path: Some(PathBuf::from(format!("bin/{name}"))),
+                                ..Default::default()
+                            },
+                        );
+                    }
+                }
+            };
+        }
+    }
+
+    // If no bins extracted, scan the directory instead
+    if output.exes.is_empty() {
+        for entry in fs::read_dir(input.install_dir.join("bin"))? {
+            let file = entry.path();
+            let name = fs::file_name(&file);
+
+            if name == id {
+                has_primary = true;
+            }
+
+            output.exes.insert(
+                name.clone(),
+                ExecutableConfig {
+                    primary: name == id,
+                    exe_path: Some(PathBuf::from(format!("bin/{name}"))),
+                    ..Default::default()
+                },
+            );
+        }
+    }
+
+    if !has_primary && let Some(exe) = output.exes.values_mut().next() {
+        exe.primary = true;
+    }
 
     Ok(Json(output))
 }
