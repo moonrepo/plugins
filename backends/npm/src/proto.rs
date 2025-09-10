@@ -3,7 +3,7 @@ use backend_common::enable_tracing;
 use extism_pdk::*;
 use proto_pdk::*;
 use rustc_hash::FxHashMap;
-use schematic::schema::IndexMap;
+use schematic::{SchemaBuilder, schema::IndexMap};
 use serde::Deserialize;
 use starbase_utils::fs;
 use std::path::PathBuf;
@@ -20,16 +20,8 @@ pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<Regi
     let config = get_backend_config::<NpmBackendConfig>()?;
 
     Ok(Json(RegisterToolOutput {
-        name: if input.id == "npm" {
-            input.id.to_string()
-        } else {
-            format!("npm:{}", input.id)
-        },
-        type_of: if input.id == "npm" {
-            PluginType::DependencyManager
-        } else {
-            PluginType::CommandLine
-        },
+        name: format!("npm:{}", input.id),
+        type_of: PluginType::CommandLine,
         inventory_options: ToolInventoryOptions {
             scoped_backend_dir: true,
             ..Default::default()
@@ -56,6 +48,13 @@ pub fn register_backend(
     Ok(Json(RegisterBackendOutput {
         backend_id: get_plugin_id()?,
         ..Default::default()
+    }))
+}
+
+#[plugin_fn]
+pub fn define_backend_config() -> FnResult<Json<DefineBackendConfigOutput>> {
+    Ok(Json(DefineBackendConfigOutput {
+        schema: SchemaBuilder::build_root::<NpmBackendConfig>(),
     }))
 }
 

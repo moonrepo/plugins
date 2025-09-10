@@ -1,6 +1,7 @@
-#[cfg(not(windows))]
-mod asdf_backend {
-    use proto_pdk_test_utils::*;
+use proto_pdk_test_utils::*;
 
-    generate_native_install_tests!("asdf:zig", "0.13.0");
+mod npm_backend {
+    use super::*;
+
+    generate_native_install_tests!("npm:typescript", "5.9.2");
 }

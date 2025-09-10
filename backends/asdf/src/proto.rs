@@ -3,6 +3,7 @@ use backend_common::enable_tracing;
 use extism_pdk::*;
 use proto_pdk::*;
 use rustc_hash::FxHashMap;
+use schematic::SchemaBuilder;
 use starbase_utils::fs;
 use std::path::{Path, PathBuf};
 
@@ -178,9 +179,15 @@ pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<Regi
         },
         minimum_proto_version: Some(Version::new(0, 46, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
-        // config_schema: Some(schematic::SchemaBuilder::generate::<AsdfPluginConfig>()),
         unstable: Switch::Toggle(true),
         ..RegisterToolOutput::default()
+    }))
+}
+
+#[plugin_fn]
+pub fn define_tool_config() -> FnResult<Json<DefineToolConfigOutput>> {
+    Ok(Json(DefineToolConfigOutput {
+        schema: SchemaBuilder::build_root::<AsdfToolConfig>(),
     }))
 }
 
