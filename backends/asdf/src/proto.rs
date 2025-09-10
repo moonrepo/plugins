@@ -206,7 +206,7 @@ pub fn register_backend(
     let config = get_tool_config::<AsdfToolConfig>()?;
 
     Ok(Json(RegisterBackendOutput {
-        backend_id: config.get_backend_id()?,
+        backend_id: config.get_backend_id()?.into(),
         exes: vec![
             "bin/download".into(),
             "bin/exec-env".into(),

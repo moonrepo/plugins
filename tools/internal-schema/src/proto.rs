@@ -392,7 +392,7 @@ pub fn locate_executables(
                 // Name from config
                 .or(config.exe_path.as_ref())
                 // Name from plugin ID
-                .map_or_else(|| PathBuf::from(&id), |path| path.to_owned()),
+                .map_or_else(|| PathBuf::from(id.as_str()), |path| path.to_owned()),
         );
 
         config.exe_path = Some(
