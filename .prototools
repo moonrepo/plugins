@@ -1,7 +1,6 @@
 moon = "1.40.0"
 bun = "1.2.20"
 node = "24.0.0"
-"npm:typescript" = "6.0.0"
 
 [settings]
 unstable-lockfile = true

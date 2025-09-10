@@ -1,3 +1,4 @@
+use crate::config::NpmBackendConfig;
 use backend_common::enable_tracing;
 use extism_pdk::*;
 use proto_pdk::*;
@@ -16,9 +17,11 @@ extern "ExtismHost" {
 pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {
     enable_tracing();
 
+    let config = get_backend_config::<NpmBackendConfig>()?;
+
     Ok(Json(RegisterToolOutput {
         name: if input.id == "npm" {
-            input.id.clone()
+            input.id.to_string()
         } else {
             format!("npm:{}", input.id)
         },
@@ -35,7 +38,11 @@ pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<Regi
             no_record: true,
             ..Default::default()
         },
-        requires: vec!["node".into(), "npm".into()],
+        requires: if config.bun {
+            vec!["bun".into()]
+        } else {
+            vec!["node".into(), "npm".into()]
+        },
         minimum_proto_version: Some(Version::new(0, 46, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         ..RegisterToolOutput::default()
@@ -56,8 +63,11 @@ pub fn register_backend(
 pub fn native_install(
     Json(input): Json<NativeInstallInput>,
 ) -> FnResult<Json<NativeInstallOutput>> {
+    let config = get_backend_config::<NpmBackendConfig>()?;
     let id = get_plugin_id()?;
+
     let install_dir = input.install_dir.real_path_string().unwrap();
+    let bin_dir = input.install_dir.join("bin").real_path_string().unwrap();
 
     let mut command = ExecCommandInput {
         command: "npm".into(),
@@ -65,13 +75,23 @@ pub fn native_install(
             "install".into(),
             format!("{id}@{}", input.context.version),
             "--global".into(),
-            "--prefix".into(),
-            install_dir.clone(),
         ],
         ..Default::default()
     };
 
-    command.env.insert("PREFIX".into(), install_dir);
+    if config.bun {
+        command.command = "bun".into();
+        command.args.push("--trust".into());
+        command.env.insert("BUN_INSTALL_BIN".into(), bin_dir);
+        command
+            .env
+            .insert("BUN_INSTALL_GLOBAL_DIR".into(), install_dir);
+    } else {
+        command.args.push("--prefix".into());
+        command.args.push(install_dir.clone());
+        command.env.insert("PREFIX".into(), install_dir);
+    }
+
     command.cwd = Some(input.install_dir.clone());
 
     let result = exec(command)?;
@@ -126,7 +146,7 @@ pub fn locate_executables(
                 PackageJsonBin::Single(_) => {
                     has_primary = true;
                     output.exes.insert(
-                        id.clone(),
+                        id.to_string(),
                         ExecutableConfig::new_primary(format!("bin/{id}")),
                     );
                 }
@@ -154,14 +174,14 @@ pub fn locate_executables(
             let file = entry.path();
             let name = fs::file_name(&file);
 
-            if name == id {
+            if id == name {
                 has_primary = true;
             }
 
             output.exes.insert(
                 name.clone(),
                 ExecutableConfig {
-                    primary: name == id,
+                    primary: id == name,
                     exe_path: Some(PathBuf::from(format!("bin/{name}"))),
                     ..Default::default()
                 },
