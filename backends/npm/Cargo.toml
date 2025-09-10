@@ -18,7 +18,7 @@ proto_pdk = { workspace = true }
 rustc-hash = { workspace = true }
 schematic = { workspace = true }
 serde = { workspace = true }
-starbase_utils = { workspace = true }
+starbase_utils = { workspace = true, features = ["json"] }
 
 [dev-dependencies]
 proto_pdk_test_utils = { workspace = true }
