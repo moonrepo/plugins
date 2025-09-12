@@ -31,6 +31,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
         inventory_options: ToolInventoryOptions {
             override_dir: Some(get_toolchain_dir(&env)?),
             version_suffix: Some(format!("-{}", get_target_triple(&env, NAME)?)),
+            ..Default::default()
         },
         lock_options: ToolLockOptions {
             no_record: true,

@@ -6,6 +6,7 @@ projects:
   root: .
   # Backends
   asdf-backend: backends/asdf
+  npm-backend: backends/npm
   # Extensions
   download-extension: extensions/download
   migrate-nx-extension: extensions/migrate-nx

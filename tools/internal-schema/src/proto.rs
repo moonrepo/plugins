@@ -391,7 +391,7 @@ pub fn locate_executables(
                 // Name from config
                 .or(config.exe_path.as_ref())
                 // Name from plugin ID
-                .map_or_else(|| PathBuf::from(&id), |path| path.to_owned()),
+                .map_or_else(|| PathBuf::from(id.as_str()), |path| path.to_owned()),
         );
 
         config.exe_path = Some(
@@ -455,7 +455,7 @@ pub fn locate_executables(
 
         prepare_primary_exe(&mut primary);
 
-        exes.insert(id, primary.clone());
+        exes.insert(id.to_string(), primary.clone());
     }
 
     #[allow(deprecated)]
