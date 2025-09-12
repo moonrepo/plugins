@@ -3,10 +3,8 @@ use backend_common::enable_tracing;
 use extism_pdk::*;
 use proto_pdk::*;
 use rustc_hash::FxHashMap;
-use schematic::{SchemaBuilder, schema::IndexMap};
-use serde::Deserialize;
+use schematic::SchemaBuilder;
 use starbase_utils::fs;
-use std::path::PathBuf;
 
 #[host_fn]
 extern "ExtismHost" {
@@ -35,8 +33,9 @@ pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<Regi
         } else {
             vec!["node".into(), "npm".into()]
         },
-        minimum_proto_version: Some(Version::new(0, 46, 0)),
+        minimum_proto_version: Some(Version::new(0, 53, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
+        unstable: Switch::Toggle(true),
         ..RegisterToolOutput::default()
     }))
 }
@@ -65,9 +64,6 @@ pub fn native_install(
     let config = get_backend_config::<NpmBackendConfig>()?;
     let id = get_plugin_id()?;
 
-    let install_dir = input.install_dir.real_path_string().unwrap();
-    let bin_dir = input.install_dir.join("bin").real_path_string().unwrap();
-
     let mut command = ExecCommandInput {
         command: "npm".into(),
         args: vec![
@@ -81,11 +77,20 @@ pub fn native_install(
     if config.bun {
         command.command = "bun".into();
         command.args.push("--trust".into());
-        command.env.insert("BUN_INSTALL_BIN".into(), bin_dir);
-        command
-            .env
-            .insert("BUN_INSTALL_GLOBAL_DIR".into(), install_dir);
+        command.args.push("--no-save".into());
+
+        // These dirs match the node/npm structure
+        command.env.insert(
+            "BUN_INSTALL_BIN".into(),
+            input.install_dir.join("bin").real_path_string().unwrap(),
+        );
+        command.env.insert(
+            "BUN_INSTALL_GLOBAL_DIR".into(),
+            input.install_dir.join("lib").real_path_string().unwrap(),
+        );
     } else {
+        let install_dir = input.install_dir.real_path_string().unwrap();
+
         command.args.push("--prefix".into());
         command.args.push(install_dir.clone());
         command.env.insert("PREFIX".into(), install_dir);
@@ -93,7 +98,7 @@ pub fn native_install(
 
     command.cwd = Some(input.install_dir.clone());
 
-    let result = exec(command)?;
+    let result = exec(prepare_command(command))?;
 
     Ok(Json(NativeInstallOutput {
         installed: result.exit_code == 0,
@@ -106,116 +111,79 @@ pub fn native_install(
     }))
 }
 
-#[derive(Default, Deserialize)]
-#[serde(default)]
-struct PackageJson {
-    bin: Option<PackageJsonBin>,
-    name: String,
-}
-
-#[derive(Deserialize)]
-#[serde(untagged)]
-enum PackageJsonBin {
-    #[allow(dead_code)]
-    Single(String),
-    Multiple(IndexMap<String, String>),
-}
-
 #[plugin_fn]
 pub fn locate_executables(
     Json(input): Json<LocateExecutablesInput>,
 ) -> FnResult<Json<LocateExecutablesOutput>> {
-    let id = get_plugin_id()?;
     let mut output = LocateExecutablesOutput {
         exes_dirs: vec!["bin".into()],
         ..Default::default()
     };
-    let mut has_primary = false;
+    let mut count = 0;
 
-    // Extract bins from the package
-    let package_path = input
-        .install_dir
-        .join(format!("lib/node_modules/{id}/package.json"));
+    for entry in fs::read_dir(input.install_dir.join("bin"))? {
+        let name = fs::file_name(entry.path());
 
-    if package_path.exists() {
-        let package: PackageJson = starbase_utils::json::read_file(package_path)?;
-
-        if let Some(bins) = package.bin {
-            match bins {
-                PackageJsonBin::Single(_) => {
-                    has_primary = true;
-                    output.exes.insert(
-                        id.to_string(),
-                        ExecutableConfig::new_primary(format!("bin/{id}")),
-                    );
-                }
-                PackageJsonBin::Multiple(map) => {
-                    for (index, name) in map.into_keys().enumerate() {
-                        has_primary = true;
-                        output.exes.insert(
-                            name.clone(),
-                            ExecutableConfig {
-                                // Assume the first entry is the main one!
-                                primary: index == 0,
-                                exe_path: Some(PathBuf::from(format!("bin/{name}"))),
-                                ..Default::default()
-                            },
-                        );
-                    }
-                }
-            };
-        }
+        count += 1;
+        output
+            .exes
+            .insert(name.clone(), ExecutableConfig::new(format!("bin/{name}")));
     }
 
-    // If no bins extracted, scan the directory instead
-    if output.exes.is_empty() {
-        for entry in fs::read_dir(input.install_dir.join("bin"))? {
-            let file = entry.path();
-            let name = fs::file_name(&file);
-
-            if id == name {
-                has_primary = true;
-            }
-
-            output.exes.insert(
-                name.clone(),
-                ExecutableConfig {
-                    primary: id == name,
-                    exe_path: Some(PathBuf::from(format!("bin/{name}"))),
-                    ..Default::default()
-                },
-            );
-        }
-    }
-
-    if !has_primary && let Some(exe) = output.exes.values_mut().next() {
+    if count == 1
+        && let Some(exe) = output.exes.values_mut().next()
+    {
         exe.primary = true;
     }
 
     Ok(Json(output))
 }
 
-#[derive(Default, Deserialize)]
-#[serde(default)]
-struct NpmViewInfo {
-    #[serde(alias = "dist-tags")]
-    dist_tags: FxHashMap<String, String>,
-    versions: Vec<String>,
-}
-
 #[plugin_fn]
-pub fn load_versions(Json(_input): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
+pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
     let mut output = LoadVersionsOutput::default();
+    let config = get_backend_config::<NpmBackendConfig>()?;
     let id = get_plugin_id()?;
 
-    let result = exec_captured("npm", ["view", &id, "--json"])?;
-    let info: NpmViewInfo = json::from_str(&result.stdout)?;
+    // Create a base command
+    let mut command = prepare_command(if config.bun {
+        ExecCommandInput::pipe("bun", ["info", &id, "--json"])
+    } else {
+        ExecCommandInput::pipe("npm", ["view", &id, "--json"])
+    });
 
-    for version in info.versions {
+    // Bun requires a `package.json` in the directory or it fails...
+    if config.bun {
+        let package_path = input.context.temp_dir.join("package.json");
+
+        if !package_path.exists() {
+            fs::write_file(package_path, "{}")?;
+        }
+
+        command.cwd = Some(input.context.temp_dir);
+    }
+
+    // Fetch versions
+    let result = exec({
+        let mut cmd = command.clone();
+        cmd.args.push("versions".into());
+        cmd
+    })?;
+    let versions: Vec<String> = json::from_str(&result.stdout)?;
+
+    for version in versions {
         output.versions.push(VersionSpec::parse(version.trim())?);
     }
 
-    for (alias, version) in info.dist_tags {
+    // Fetch tags
+    let result = exec({
+        let mut cmd = command.clone();
+        cmd.args.push("dist-tags".into());
+        cmd
+    })?;
+    let tags: FxHashMap<String, String> = json::from_str(&result.stdout)?;
+
+    for (alias, version) in tags {
         let version = UnresolvedVersionSpec::parse(&version)?;
 
         if alias == "latest" {
@@ -226,4 +194,12 @@ pub fn load_versions(Json(_input): Json<LoadVersionsInput>) -> FnResult<Json<Loa
     }
 
     Ok(Json(output))
+}
+
+fn prepare_command(mut command: ExecCommandInput) -> ExecCommandInput {
+    command.env.insert("PROTO_NODE_VERSION?".into(), "*".into());
+    command.env.insert("PROTO_NPM_VERSION?".into(), "*".into());
+    command.env.insert("PROTO_BUN_VERSION?".into(), "*".into());
+    command.stream = false;
+    command
 }

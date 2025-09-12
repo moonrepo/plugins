@@ -1,3 +1,4 @@
+use extism_pdk::json::json;
 use proto_pdk_test_utils::*;
 
 mod npm_backend {
@@ -31,5 +32,37 @@ mod npm_backend {
             .await;
 
         assert_eq!(metadata.backend_id, "typescript");
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn requires_node_npm() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("typescript").await;
+
+        let metadata = plugin
+            .register_tool(RegisterToolInput {
+                id: "typescript".into(),
+            })
+            .await;
+
+        assert_eq!(metadata.requires, ["node", "npm"]);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn requires_bun() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("typescript", |cfg| {
+                cfg.backend_config(json!({ "bun": true }));
+            })
+            .await;
+
+        let metadata = plugin
+            .register_tool(RegisterToolInput {
+                id: "typescript".into(),
+            })
+            .await;
+
+        assert_eq!(metadata.requires, ["bun"]);
     }
 }
