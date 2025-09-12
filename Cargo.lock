@@ -423,6 +423,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "cargo_backend"
+version = "0.0.1"
+dependencies = [
+ "backend_common",
+ "extism-pdk",
+ "proto_pdk",
+ "proto_pdk_test_utils 0.40.1",
+ "rustc-hash",
+ "schematic",
+ "serde",
+ "starbase_sandbox",
+ "starbase_utils",
+ "tokio",
+]
+
+[[package]]
 name = "cargo_toml"
 version = "0.22.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
