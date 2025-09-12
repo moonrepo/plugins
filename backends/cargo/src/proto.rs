@@ -1,6 +1,8 @@
+use crate::config::{CargoBackendConfig, CargoToolConfig};
 use backend_common::enable_tracing;
 use extism_pdk::*;
 use proto_pdk::*;
+use schematic::SchemaBuilder;
 use serde::Deserialize;
 use starbase_utils::fs;
 
@@ -33,12 +35,26 @@ pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<Regi
 }
 
 #[plugin_fn]
+pub fn define_tool_config() -> FnResult<Json<DefineToolConfigOutput>> {
+    Ok(Json(DefineToolConfigOutput {
+        schema: SchemaBuilder::build_root::<CargoToolConfig>(),
+    }))
+}
+
+#[plugin_fn]
 pub fn register_backend(
     Json(_input): Json<RegisterBackendInput>,
 ) -> FnResult<Json<RegisterBackendOutput>> {
     Ok(Json(RegisterBackendOutput {
         backend_id: get_plugin_id()?,
         ..Default::default()
+    }))
+}
+
+#[plugin_fn]
+pub fn define_backend_config() -> FnResult<Json<DefineBackendConfigOutput>> {
+    Ok(Json(DefineBackendConfigOutput {
+        schema: SchemaBuilder::build_root::<CargoBackendConfig>(),
     }))
 }
 
@@ -61,13 +77,18 @@ pub fn native_install(
 ) -> FnResult<Json<NativeInstallOutput>> {
     let id = get_plugin_id()?;
     let env = get_host_environment()?;
+    let backend_config = get_backend_config::<CargoBackendConfig>()?;
+    let tool_config = get_backend_config::<CargoToolConfig>()?;
 
     // Detect `cargo-binstall`
     let cargo_home_dir = get_cargo_home(&env)?;
     let binstall_path = cargo_home_dir
         .join("bin")
         .join(env.os.get_exe_name("cargo-binstall"));
-    let use_binstall = binstall_path.exists() && binstall_path.is_file();
+    let use_binstall = tool_config.features.is_empty()
+        && !tool_config.no_default_features
+        && binstall_path.exists()
+        && binstall_path.is_file();
 
     // Create the command
     let mut command =
@@ -78,8 +99,18 @@ pub fn native_install(
     // What to install
     command.args.push(format!("{id}@{}", input.context.version));
 
-    if use_binstall {
-        command.args.push("--no-confirm".into());
+    if let Some(git) = &tool_config.git_url {
+        command.args.push("--git".into());
+        command.args.push(git.into());
+    }
+
+    if let Some(registry) = tool_config
+        .registry
+        .as_ref()
+        .or(backend_config.registry.as_ref())
+    {
+        command.args.push("--registry".into());
+        command.args.push(registry.into());
     }
 
     // Where to install
@@ -91,6 +122,19 @@ pub fn native_install(
     // Other options
     if input.force {
         command.args.push("--force".into());
+    }
+
+    if use_binstall {
+        command.args.push("--no-confirm".into());
+        command.args.push("--disable-telemetry".into());
+    } else {
+        if !tool_config.features.is_empty() {
+            command.args.push(tool_config.features.join(","));
+        }
+
+        if tool_config.no_default_features {
+            command.args.push("--no-default-features".into());
+        }
     }
 
     let result = exec(command)?;
@@ -121,7 +165,7 @@ pub fn locate_executables(
         let name = fs::file_name(entry.path());
 
         let mut config = ExecutableConfig::new(format!("bin/{name}"));
-        config.primary = id == name;
+        config.primary = name.starts_with(id.as_str());
 
         count += 1;
         output.exes.insert(name.clone(), config);

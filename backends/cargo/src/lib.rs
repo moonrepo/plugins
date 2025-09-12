@@ -1,3 +1,5 @@
+mod config;
+
 #[cfg(feature = "wasm")]
 mod proto;
 
