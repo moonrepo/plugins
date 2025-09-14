@@ -6,10 +6,6 @@ npm = "10.0.0"
 [settings]
 unstable-lockfile = true
 
-[plugins.backends]
-cargo = "file:///Users/miles/.cargo/shared-target/wasm32-wasip1/release/cargo_backend.wasm"
-# npm = "file://./target/wasm32-wasip1/release/npm_backend.wasm"
-
 # [plugins.tools]
 # bun-test = "file://./target/wasm32-wasip1/release/bun_tool.wasm"
 # deno-test = "file://./target/wasm32-wasip1/release/deno_tool.wasm"
