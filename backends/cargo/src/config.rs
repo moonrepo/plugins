@@ -8,7 +8,7 @@ pub struct CargoBackendConfig {
     /// Do not use `cargo-binstall` even when available.
     pub no_binstall: bool,
 
-    /// Custom crate registry to resolve from.
+    /// Custom crate registry to resolve packages from.
     pub registry: Option<String>,
 }
 
