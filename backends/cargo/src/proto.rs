@@ -85,7 +85,9 @@ pub fn native_install(
     let binstall_path = cargo_home_dir
         .join("bin")
         .join(env.os.get_exe_name("cargo-binstall"));
-    let use_binstall = tool_config.features.is_empty()
+
+    let use_binstall = tool_config.bin.is_none()
+        && tool_config.features.is_empty()
         && !tool_config.no_default_features
         && binstall_path.exists()
         && binstall_path.is_file();
@@ -128,6 +130,11 @@ pub fn native_install(
         command.args.push("--no-confirm".into());
         command.args.push("--disable-telemetry".into());
     } else {
+        if let Some(bin) = &tool_config.bin {
+            command.args.push("--bin".into());
+            command.args.push(bin.into());
+        }
+
         if !tool_config.features.is_empty() {
             command.args.push(tool_config.features.join(","));
         }
