@@ -1,37 +1,52 @@
-use extism_pdk::json::json;
+use npm_backend::NpmBackendConfig;
 use proto_pdk_test_utils::*;
 
-mod npm_backend {
+mod npm_backend_versions {
     use super::*;
 
-    generate_resolve_versions_tests!("npm:typescript", {
-        "5.7" => "5.7.3",
-        "5.9.2" => "5.9.2",
-    });
+    mod with_node {
+        use super::*;
 
-    #[tokio::test(flavor = "multi_thread")]
-    async fn loads_versions_via_npm() {
-        let sandbox = create_empty_proto_sandbox();
-        let plugin = sandbox.create_plugin("npm:typescript").await;
+        generate_resolve_versions_tests!("npm:typescript", {
+            "5.7" => "5.7.3",
+            "5.9.2" => "5.9.2",
+        });
 
-        let output = plugin.load_versions(LoadVersionsInput::default()).await;
+        #[tokio::test(flavor = "multi_thread")]
+        async fn loads_versions() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox.create_plugin("npm:typescript").await;
 
-        assert!(!output.versions.is_empty());
-        assert!(!output.aliases.is_empty());
+            let output = plugin.load_versions(LoadVersionsInput::default()).await;
+
+            assert!(!output.versions.is_empty());
+            assert!(!output.aliases.is_empty());
+        }
     }
 
-    #[tokio::test(flavor = "multi_thread")]
-    async fn loads_versions_via_bun() {
-        let sandbox = create_empty_proto_sandbox();
-        let plugin = sandbox
-            .create_plugin_with_config("npm:typescript", |cfg| {
-                cfg.backend_config(json!({ "bun": true }));
-            })
-            .await;
+    mod with_bun {
+        use super::*;
 
-        let output = plugin.load_versions(LoadVersionsInput::default()).await;
+        generate_resolve_versions_tests!("npm:typescript", {
+            "5.7" => "5.7.3",
+            "5.9.2" => "5.9.2",
+        }, None, |cfg| {
+            cfg.backend_config(NpmBackendConfig { bun: true });
+        });
 
-        assert!(!output.versions.is_empty());
-        assert!(!output.aliases.is_empty());
+        #[tokio::test(flavor = "multi_thread")]
+        async fn loads_versions() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("npm:typescript", |cfg| {
+                    cfg.backend_config(NpmBackendConfig { bun: true });
+                })
+                .await;
+
+            let output = plugin.load_versions(LoadVersionsInput::default()).await;
+
+            assert!(!output.versions.is_empty());
+            assert!(!output.aliases.is_empty());
+        }
     }
 }

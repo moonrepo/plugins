@@ -2,6 +2,8 @@
 
 use extism_pdk::*;
 use proto_pdk::*;
+use schematic::Schematic;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 #[host_fn]
@@ -13,17 +15,19 @@ const ASDF_PLUGINS_URL: &str =
     "https://raw.githubusercontent.com/asdf-vm/asdf-plugins/refs/heads/master/plugins";
 
 /// https://asdf-vm.com/manage/plugins.html
-#[derive(Debug, Default, schematic::Schematic, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, Default, Deserialize, Schematic, Serialize)]
 #[serde(default, deny_unknown_fields, rename_all = "kebab-case")]
 pub struct AsdfToolConfig {
-    pub asdf_shortname: Option<String>,
-    pub asdf_repository: Option<String>,
     pub exes: Option<Vec<String>>,
+    #[serde(alias = "asdf-shortname")]
+    pub shortname: Option<String>,
+    #[serde(alias = "asdf-repository")]
+    pub repository: Option<String>,
 }
 
 impl AsdfToolConfig {
     pub fn get_shortname(&self) -> AnyResult<Id> {
-        match &self.asdf_shortname {
+        match &self.shortname {
             Some(name) => Ok(name.into()),
             None => get_plugin_id(),
         }
@@ -46,7 +50,7 @@ impl AsdfToolConfig {
     }
 
     pub fn get_repo_url(&self) -> AnyResult<String> {
-        if let Some(repo_url) = &self.asdf_repository {
+        if let Some(repo_url) = &self.repository {
             return Ok(repo_url.into());
         }
 

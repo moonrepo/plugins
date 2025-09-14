@@ -1,7 +1,7 @@
-use extism_pdk::json::json;
+use npm_backend::NpmBackendConfig;
 use proto_pdk_test_utils::*;
 
-mod npm_backend {
+mod npm_backend_metadata {
     use super::*;
 
     #[tokio::test(flavor = "multi_thread")]
@@ -53,7 +53,7 @@ mod npm_backend {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("typescript", |cfg| {
-                cfg.backend_config(json!({ "bun": true }));
+                cfg.backend_config(NpmBackendConfig { bun: true });
             })
             .await;
 

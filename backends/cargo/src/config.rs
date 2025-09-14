@@ -10,6 +10,7 @@ pub struct CargoBackendConfig {
 #[derive(Debug, Default, Deserialize, Serialize, Schematic)]
 #[serde(default, deny_unknown_fields, rename_all = "kebab-case")]
 pub struct CargoToolConfig {
+    pub bin: Option<String>,
     pub features: Vec<String>,
     pub git_url: Option<String>,
     pub no_default_features: bool,
