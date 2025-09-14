@@ -115,24 +115,36 @@ pub fn native_install(
 pub fn locate_executables(
     Json(input): Json<LocateExecutablesInput>,
 ) -> FnResult<Json<LocateExecutablesOutput>> {
+    let id = get_plugin_id()?;
+    let package_name = match id.rfind('/') {
+        Some(index) => &id[index + 1..],
+        None => &id,
+    };
+
     let mut output = LocateExecutablesOutput {
         exes_dirs: vec!["bin".into()],
         ..Default::default()
     };
-    let mut count = 0;
+    let mut has_primary = false;
 
     for entry in fs::read_dir(input.install_dir.join("bin"))? {
         let name = fs::file_name(entry.path());
+        let mut config = ExecutableConfig::new(format!("bin/{name}"));
 
-        count += 1;
-        output
-            .exes
-            .insert(name.clone(), ExecutableConfig::new(format!("bin/{name}")));
+        // Without extension
+        if entry
+            .path()
+            .file_stem()
+            .is_some_and(|inner| inner == package_name)
+        {
+            config.primary = true;
+            has_primary = true;
+        }
+
+        output.exes.insert(name, config);
     }
 
-    if count == 1
-        && let Some(exe) = output.exes.values_mut().next()
-    {
+    if !has_primary && let Some(exe) = output.exes.values_mut().next() {
         exe.primary = true;
     }
 
