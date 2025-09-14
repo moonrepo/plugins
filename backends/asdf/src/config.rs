@@ -14,17 +14,23 @@ extern "ExtismHost" {
 const ASDF_PLUGINS_URL: &str =
     "https://raw.githubusercontent.com/asdf-vm/asdf-plugins/refs/heads/master/plugins";
 
-/// https://asdf-vm.com/manage/plugins.html
+/// Configuration for the `asdf` backend plugin.
 #[derive(Debug, Default, Deserialize, Schematic, Serialize)]
 #[serde(default, deny_unknown_fields, rename_all = "kebab-case")]
 pub struct AsdfToolConfig {
+    /// List of binary names to explicit use when locating executables.
     pub exes: Option<Vec<String>>,
+
+    /// Plugin shortname to use for repository resolution.
     #[serde(alias = "asdf-shortname")]
     pub shortname: Option<String>,
+
+    /// Custom Git repository to resolve from.
     #[serde(alias = "asdf-repository")]
     pub repository: Option<String>,
 }
 
+// https://asdf-vm.com/manage/plugins.html
 impl AsdfToolConfig {
     pub fn get_shortname(&self) -> AnyResult<Id> {
         match &self.shortname {

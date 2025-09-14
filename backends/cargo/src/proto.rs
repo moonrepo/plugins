@@ -78,15 +78,15 @@ pub fn native_install(
     let id = get_plugin_id()?;
     let env = get_host_environment()?;
     let backend_config = get_backend_config::<CargoBackendConfig>()?;
-    let tool_config = get_backend_config::<CargoToolConfig>()?;
+    let tool_config = get_tool_config::<CargoToolConfig>()?;
 
     // Detect `cargo-binstall`
-    let cargo_home_dir = get_cargo_home(&env)?;
-    let binstall_path = cargo_home_dir
+    let binstall_path = get_cargo_home(&env)?
         .join("bin")
         .join(env.os.get_exe_name("cargo-binstall"));
 
-    let use_binstall = tool_config.bin.is_none()
+    let use_binstall = !backend_config.no_binstall
+        && tool_config.bin.is_none()
         && tool_config.features.is_empty()
         && !tool_config.no_default_features
         && binstall_path.exists()
@@ -166,21 +166,34 @@ pub fn locate_executables(
         exes_dirs: vec!["bin".into()],
         ..Default::default()
     };
-    let mut count = 0;
+    let mut has_primary = false;
 
     for entry in fs::read_dir(input.install_dir.join("bin"))? {
         let name = fs::file_name(entry.path());
-
         let mut config = ExecutableConfig::new(format!("bin/{name}"));
-        config.primary = name.starts_with(id.as_str());
 
-        count += 1;
-        output.exes.insert(name.clone(), config);
+        // Without extension
+        if entry
+            .path()
+            .file_stem()
+            .is_some_and(|inner| inner == id.as_str())
+        {
+            config.primary = true;
+            has_primary = true;
+        }
+
+        output.exes.insert(name, config);
     }
 
-    if count == 1
-        && let Some(exe) = output.exes.values_mut().next()
+    if !has_primary
+        && let Some(suffix) = id.strip_prefix("cargo-")
+        && let Some(exe) = output.exes.get_mut(suffix)
     {
+        exe.primary = true;
+        has_primary = true;
+    }
+
+    if !has_primary && let Some(exe) = output.exes.values_mut().next() {
         exe.primary = true;
     }
 
