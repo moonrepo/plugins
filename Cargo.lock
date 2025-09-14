@@ -433,7 +433,7 @@ dependencies = [
  "backend_common",
  "extism-pdk",
  "proto_pdk",
- "proto_pdk_test_utils 0.40.1",
+ "proto_pdk_test_utils",
  "rustc-hash",
  "schematic",
  "serde",

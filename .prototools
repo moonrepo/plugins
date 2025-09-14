@@ -3,6 +3,7 @@ bun = "1.2.20"
 node = "24.0.0"
 go = "1.26.0"
 "npm:typescript" = "6.0.0"
+npm = "10.0.0"
 
 [settings]
 unstable-lockfile = true
