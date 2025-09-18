@@ -511,8 +511,10 @@ pub fn resolve_version(
 }
 
 #[plugin_fn]
-pub fn pre_run(Json(input): Json<RunHook>) -> FnResult<Json<RunHookResult>> {
-    let mut output = RunHookResult::default();
+pub fn activate_environment(
+    Json(input): Json<ActivateEnvironmentInput>,
+) -> FnResult<Json<ActivateEnvironmentOutput>> {
+    let mut output = ActivateEnvironmentOutput::default();
     let config = get_tool_config::<AsdfToolConfig>()?;
     let script_path = config.get_script_path("exec-env")?;
 
@@ -552,10 +554,7 @@ pub fn pre_run(Json(input): Json<RunHook>) -> FnResult<Json<RunHookResult>> {
                     continue;
                 }
 
-                output
-                    .env
-                    .get_or_insert_default()
-                    .insert(key.to_owned(), value.to_owned());
+                output.env.insert(key.to_owned(), value.to_owned());
             } else {
                 existing_env.insert(key, value);
             }
