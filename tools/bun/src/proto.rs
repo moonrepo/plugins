@@ -1,4 +1,4 @@
-use crate::config::BunPluginConfig;
+use crate::config::BunToolConfig;
 use extism_pdk::*;
 use lang_javascript_common::{
     extract_engine_version, extract_package_manager_version, extract_version_from_text,
@@ -24,11 +24,17 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
     Ok(Json(RegisterToolOutput {
         name: NAME.into(),
         type_of: PluginType::Language,
-        config_schema: Some(SchemaBuilder::build_root::<BunPluginConfig>()),
         minimum_proto_version: Some(Version::new(0, 46, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         self_upgrade_commands: vec!["upgrade".into()],
         ..RegisterToolOutput::default()
+    }))
+}
+
+#[plugin_fn]
+pub fn define_tool_config() -> FnResult<Json<DefineToolConfigOutput>> {
+    Ok(Json(DefineToolConfigOutput {
+        schema: SchemaBuilder::build_root::<BunToolConfig>(),
     }))
 }
 
@@ -140,7 +146,7 @@ pub fn download_prebuilt(
     };
 
     let filename = format!("{prefix}.zip");
-    let mut host = get_tool_config::<BunPluginConfig>()?.dist_url;
+    let mut host = get_tool_config::<BunToolConfig>()?.dist_url;
 
     // canary - bun-v1.2.3
     if version.is_canary() {

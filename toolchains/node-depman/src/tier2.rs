@@ -27,7 +27,7 @@ pub fn setup_environment(
         let config = parse_toolchain_config_schema::<YarnToolchainConfig>(input.toolchain_config)?;
 
         if let Some(version) = &config.version
-            && manager.is_yarn_berry(version)
+        // && manager.is_yarn_berry(version)
         {
             for plugin in config.plugins {
                 output.commands.push(ExecCommand::new(

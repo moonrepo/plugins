@@ -2,6 +2,8 @@
 
 use extism_pdk::*;
 use proto_pdk::*;
+use schematic::Schematic;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 #[host_fn]
@@ -12,24 +14,32 @@ extern "ExtismHost" {
 const ASDF_PLUGINS_URL: &str =
     "https://raw.githubusercontent.com/asdf-vm/asdf-plugins/refs/heads/master/plugins";
 
-/// https://asdf-vm.com/manage/plugins.html
-#[derive(Debug, Default, schematic::Schematic, serde::Deserialize, serde::Serialize)]
+/// Configuration for the `asdf` backend plugin.
+#[derive(Debug, Default, Deserialize, Schematic, Serialize)]
 #[serde(default, deny_unknown_fields, rename_all = "kebab-case")]
-pub struct AsdfPluginConfig {
-    pub asdf_shortname: Option<String>,
-    pub asdf_repository: Option<String>,
+pub struct AsdfToolConfig {
+    /// List of binary names to explicit use when locating executables.
     pub exes: Option<Vec<String>>,
+
+    /// Plugin shortname to use for repository resolution.
+    #[serde(alias = "asdf-shortname")]
+    pub shortname: Option<String>,
+
+    /// Custom Git repository to resolve from.
+    #[serde(alias = "asdf-repository")]
+    pub repository: Option<String>,
 }
 
-impl AsdfPluginConfig {
-    pub fn get_shortname(&self) -> AnyResult<String> {
-        match &self.asdf_shortname {
+// https://asdf-vm.com/manage/plugins.html
+impl AsdfToolConfig {
+    pub fn get_shortname(&self) -> AnyResult<Id> {
+        match &self.shortname {
             Some(name) => Ok(name.into()),
             None => get_plugin_id(),
         }
     }
 
-    pub fn get_backend_id(&self) -> AnyResult<String> {
+    pub fn get_backend_id(&self) -> AnyResult<Id> {
         self.get_shortname()
     }
 
@@ -46,7 +56,7 @@ impl AsdfPluginConfig {
     }
 
     pub fn get_repo_url(&self) -> AnyResult<String> {
-        if let Some(repo_url) = &self.asdf_repository {
+        if let Some(repo_url) = &self.repository {
             return Ok(repo_url.into());
         }
 

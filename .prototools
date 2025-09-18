@@ -1,11 +1,12 @@
 moon = "1.40.0"
 bun = "1.2.20"
 node = "24.0.0"
+npm = "10.0.0"
 
 [settings]
 unstable-lockfile = true
 
-# [plugins]
+# [plugins.tools]
 # bun-test = "file://./target/wasm32-wasip1/release/bun_tool.wasm"
 # deno-test = "file://./target/wasm32-wasip1/release/deno_tool.wasm"
 # go-test = "file://./target/wasm32-wasip1/release/go_tool.wasm"

@@ -1,4 +1,4 @@
-use crate::config::GoPluginConfig;
+use crate::config::GoToolConfig;
 use crate::version::{from_go_version, to_go_version};
 use extism_pdk::*;
 use proto_pdk::*;
@@ -20,10 +20,16 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
     Ok(Json(RegisterToolOutput {
         name: NAME.into(),
         type_of: PluginType::Language,
-        config_schema: Some(SchemaBuilder::build_root::<GoPluginConfig>()),
         minimum_proto_version: Some(Version::new(0, 46, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         ..RegisterToolOutput::default()
+    }))
+}
+
+#[plugin_fn]
+pub fn define_tool_config() -> FnResult<Json<DefineToolConfigOutput>> {
+    Ok(Json(DefineToolConfigOutput {
+        schema: SchemaBuilder::build_root::<GoToolConfig>(),
     }))
 }
 
@@ -175,7 +181,7 @@ pub fn download_prebuilt(
         format!("{prefix}.tar.gz")
     };
 
-    let host = get_tool_config::<GoPluginConfig>()?.dist_url;
+    let host = get_tool_config::<GoToolConfig>()?.dist_url;
 
     Ok(Json(DownloadPrebuiltOutput {
         archive_prefix: Some("go".into()),
@@ -222,7 +228,7 @@ pub fn locate_executables(
 pub fn sync_shell_profile(
     Json(input): Json<SyncShellProfileInput>,
 ) -> FnResult<Json<SyncShellProfileOutput>> {
-    let config = get_tool_config::<GoPluginConfig>()?;
+    let config = get_tool_config::<GoToolConfig>()?;
 
     Ok(Json(SyncShellProfileOutput {
         check_var: "GOBIN".into(),
