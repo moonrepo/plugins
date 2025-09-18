@@ -421,7 +421,6 @@ pub fn pre_run(Json(input): Json<RunHook>) -> FnResult<Json<RunHookResult>> {
             if (has_global || has_location) && args.iter().all(|arg| arg != "--prefix") {
                 result
                     .env
-                    .get_or_insert(HashMap::default())
                     // Unix will create a /bin directory when installing into the root,
                     // while Windows installs directly into the /bin directory.
                     .insert(
@@ -450,11 +449,10 @@ pub fn pre_run(Json(input): Json<RunHook>) -> FnResult<Json<RunHookResult>> {
             {
                 // These arguments aren't ideal, but pnpm doesn't support
                 // environment variables from what I've seen...
-                let new_args = result.args.get_or_insert(vec![]);
-                new_args.push("--global-dir".into());
-                new_args.push(globals_root_dir);
-                new_args.push("--global-bin-dir".into());
-                new_args.push(globals_bin_dir);
+                result.args.push("--global-dir".into());
+                result.args.push(globals_root_dir);
+                result.args.push("--global-bin-dir".into());
+                result.args.push(globals_bin_dir);
             }
         }
 
@@ -463,7 +461,6 @@ pub fn pre_run(Json(input): Json<RunHook>) -> FnResult<Json<RunHookResult>> {
             if args[0] == "global" && args.iter().all(|arg| arg != "--prefix") {
                 result
                     .env
-                    .get_or_insert(HashMap::default())
                     // Both Unix and Windows will create a /bin directory,
                     // when installing into the root.
                     .insert("PREFIX".into(), globals_root_dir);
