@@ -455,7 +455,7 @@ pub fn locate_executables(
 
         prepare_primary_exe(&mut primary);
 
-        exes.insert(id, primary.clone());
+        exes.insert(id.to_string(), primary.clone());
     }
 
     #[allow(deprecated)]

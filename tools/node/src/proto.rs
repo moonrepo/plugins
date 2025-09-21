@@ -1,4 +1,4 @@
-use crate::config::NodePluginConfig;
+use crate::config::NodeToolConfig;
 use extism_pdk::*;
 use lang_javascript_common::{
     NodeDistLTS, NodeDistVersion, extract_engine_version, extract_version_from_text,
@@ -24,10 +24,16 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
     Ok(Json(RegisterToolOutput {
         name: NAME.into(),
         type_of: PluginType::Language,
-        config_schema: Some(SchemaBuilder::build_root::<NodePluginConfig>()),
         minimum_proto_version: Some(Version::new(0, 46, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         ..RegisterToolOutput::default()
+    }))
+}
+
+#[plugin_fn]
+pub fn define_tool_config(_: ()) -> FnResult<Json<DefineToolConfigOutput>> {
+    Ok(Json(DefineToolConfigOutput {
+        schema: SchemaBuilder::build_root::<NodeToolConfig>(),
     }))
 }
 
@@ -220,7 +226,7 @@ pub fn download_prebuilt(
     )?;
 
     let mut version = input.context.version;
-    let mut host = get_tool_config::<NodePluginConfig>()?.dist_url;
+    let mut host = get_tool_config::<NodeToolConfig>()?.dist_url;
 
     let mut arch: String = match env.arch {
         HostArch::Arm => "armv7l".into(),
@@ -329,7 +335,7 @@ pub fn locate_executables(
 
 #[plugin_fn]
 pub fn post_install(Json(input): Json<InstallHook>) -> FnResult<()> {
-    let config = get_tool_config::<NodePluginConfig>()?;
+    let config = get_tool_config::<NodeToolConfig>()?;
 
     if !config.bundled_npm
         || input

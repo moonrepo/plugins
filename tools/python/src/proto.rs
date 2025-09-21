@@ -117,7 +117,7 @@ pub fn build_instructions(
         requirements: vec![BuildRequirement::XcodeCommandLineTools],
         instructions: vec![
             BuildInstruction::InstallBuilder(Box::new(BuilderInstruction {
-                id: "python-build".into(),
+                id: Id::new("python-build")?,
                 exe: "plugins/python-build/bin/python-build".into(),
                 git: GitSource {
                     url: "https://github.com/pyenv/pyenv.git".into(),

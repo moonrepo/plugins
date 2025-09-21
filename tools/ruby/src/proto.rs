@@ -101,7 +101,7 @@ pub fn build_instructions(
         requirements: vec![BuildRequirement::XcodeCommandLineTools],
         instructions: vec![
             BuildInstruction::InstallBuilder(Box::new(BuilderInstruction {
-                id: "ruby-build".into(),
+                id: Id::new("ruby-build")?,
                 exe: "bin/ruby-build".into(),
                 git: GitSource {
                     url: "https://github.com/rbenv/ruby-build.git".into(),
