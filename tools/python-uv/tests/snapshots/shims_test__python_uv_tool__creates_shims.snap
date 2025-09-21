@@ -3,7 +3,10 @@ source: tools/python-uv/tests/shims_test.rs
 expression: "std :: fs ::\nread_to_string(sandbox.path().join(\".proto/shims/registry.json\")).unwrap()"
 ---
 {
-  "uv": {},
+  "uv": {
+    "alt_bin": true,
+    "parent": "uv-test"
+  },
   "uvx": {
     "alt_bin": true,
     "parent": "uv-test"

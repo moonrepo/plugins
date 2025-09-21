@@ -4,11 +4,14 @@ expression: "std :: fs ::\nread_to_string(sandbox.path().join(\".proto/shims/reg
 ---
 {
   "pip": {
-    "parent": "python-test",
     "before_args": [
       "-m",
       "pip"
-    ]
+    ],
+    "parent": "python-test"
   },
-  "python": {}
+  "python": {
+    "alt_bin": true,
+    "parent": "python-test"
+  }
 }

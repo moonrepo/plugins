@@ -3,7 +3,10 @@ source: tools/go/tests/shims_test.rs
 expression: "std :: fs ::\nread_to_string(sandbox.path().join(\".proto/shims/registry.json\")).unwrap()"
 ---
 {
-  "go": {},
+  "go": {
+    "alt_bin": true,
+    "parent": "go-test"
+  },
   "gofmt": {
     "alt_bin": true,
     "parent": "go-test"

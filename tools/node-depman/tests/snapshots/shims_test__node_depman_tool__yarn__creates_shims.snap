@@ -3,7 +3,10 @@ source: tools/node-depman/tests/shims_test.rs
 expression: "std :: fs ::\nread_to_string(sandbox.path().join(\".proto/shims/registry.json\")).unwrap()"
 ---
 {
-  "yarn": {},
+  "yarn": {
+    "alt_bin": true,
+    "parent": "yarn-test"
+  },
   "yarnpkg": {
     "alt_bin": true,
     "parent": "yarn-test"

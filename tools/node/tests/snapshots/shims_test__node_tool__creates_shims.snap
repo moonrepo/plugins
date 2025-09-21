@@ -3,5 +3,8 @@ source: tools/node/tests/shims_test.rs
 expression: "std :: fs ::\nread_to_string(sandbox.path().join(\".proto/shims/registry.json\")).unwrap()"
 ---
 {
-  "node": {}
+  "node": {
+    "alt_bin": true,
+    "parent": "node-test"
+  }
 }

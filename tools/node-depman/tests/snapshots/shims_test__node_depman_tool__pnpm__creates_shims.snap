@@ -3,11 +3,14 @@ source: tools/node-depman/tests/shims_test.rs
 expression: "std :: fs ::\nread_to_string(sandbox.path().join(\".proto/shims/registry.json\")).unwrap()"
 ---
 {
-  "pnpm": {},
+  "pnpm": {
+    "alt_bin": true,
+    "parent": "pnpm-test"
+  },
   "pnpx": {
-    "parent": "pnpm-test",
     "before_args": [
       "dlx"
-    ]
+    ],
+    "parent": "pnpm-test"
   }
 }
