@@ -24,7 +24,10 @@ mod asdf_backend {
         let plugin = sandbox.create_plugin("zig").await;
 
         let metadata = plugin
-            .register_backend(RegisterBackendInput::default())
+            .register_backend(RegisterBackendInput {
+                id: Id::raw("zig"),
+                ..Default::default()
+            })
             .await;
 
         assert_eq!(metadata.backend_id, "zig");
