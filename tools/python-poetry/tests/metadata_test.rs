@@ -8,7 +8,11 @@ mod python_poetry_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox.create_plugin("poetry-test").await;
 
-        let metadata = plugin.register_tool(RegisterToolInput::default()).await;
+        let metadata = plugin
+            .register_tool(RegisterToolInput {
+                id: Id::raw("poetry"),
+            })
+            .await;
 
         assert_eq!(metadata.name, "Poetry");
         assert_eq!(metadata.self_upgrade_commands, vec!["self update"]);

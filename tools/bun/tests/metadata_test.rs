@@ -8,7 +8,9 @@ mod bun_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox.create_plugin("bun-test").await;
 
-        let metadata = plugin.register_tool(RegisterToolInput::default()).await;
+        let metadata = plugin
+            .register_tool(RegisterToolInput { id: Id::raw("bun") })
+            .await;
 
         assert_eq!(metadata.name, "Bun");
         assert_eq!(metadata.self_upgrade_commands, vec!["upgrade"]);

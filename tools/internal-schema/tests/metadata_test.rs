@@ -11,7 +11,11 @@ mod schema_tool {
             .create_schema_plugin("schema-test", locate_fixture("schemas").join("base.toml"))
             .await;
 
-        let metadata = plugin.register_tool(RegisterToolInput::default()).await;
+        let metadata = plugin
+            .register_tool(RegisterToolInput {
+                id: Id::raw("moon-test"),
+            })
+            .await;
 
         assert_eq!(metadata.name, "moon-test");
         assert_eq!(
