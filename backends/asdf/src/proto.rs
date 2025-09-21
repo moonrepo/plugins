@@ -1,4 +1,4 @@
-use crate::config::AsdfPluginConfig;
+use crate::config::AsdfToolConfig;
 use backend_common::enable_tracing;
 use extism_pdk::*;
 use proto_pdk::*;
@@ -187,7 +187,7 @@ pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<Regi
 #[plugin_fn]
 pub fn define_tool_config(_: ()) -> FnResult<Json<DefineToolConfigOutput>> {
     Ok(Json(DefineToolConfigOutput {
-        schema: SchemaBuilder::build_root::<AsdfPluginConfig>(),
+        schema: SchemaBuilder::build_root::<AsdfToolConfig>(),
     }))
 }
 
@@ -203,7 +203,7 @@ pub fn register_backend(
         .into());
     }
 
-    let config = get_tool_config::<AsdfPluginConfig>()?;
+    let config = get_tool_config::<AsdfToolConfig>()?;
 
     Ok(Json(RegisterBackendOutput {
         backend_id: config.get_backend_id()?,
@@ -235,7 +235,7 @@ pub fn detect_version_files(
         return Ok(Json(output));
     }
 
-    let config = get_tool_config::<AsdfPluginConfig>()?;
+    let config = get_tool_config::<AsdfToolConfig>()?;
     let script_path = config.get_script_path("list-legacy-filenames")?;
 
     output.files = vec![".tool-versions".into()];
@@ -260,7 +260,7 @@ pub fn parse_version_file(
     Json(input): Json<ParseVersionFileInput>,
 ) -> FnResult<Json<ParseVersionFileOutput>> {
     let mut output = ParseVersionFileOutput::default();
-    let config = get_tool_config::<AsdfPluginConfig>()?;
+    let config = get_tool_config::<AsdfToolConfig>()?;
 
     if input.file == ".tool-versions" {
         let id = get_plugin_id()?;
@@ -317,7 +317,7 @@ pub fn native_install(
         }));
     }
 
-    let config = get_tool_config::<AsdfPluginConfig>()?;
+    let config = get_tool_config::<AsdfToolConfig>()?;
 
     // In older versions of asdf there may not be a 'download' script,
     // instead both download and install were done in the 'install' script.
@@ -349,7 +349,7 @@ pub fn native_install(
 pub fn native_uninstall(
     Json(input): Json<NativeUninstallInput>,
 ) -> FnResult<Json<NativeUninstallOutput>> {
-    let config = get_tool_config::<AsdfPluginConfig>()?;
+    let config = get_tool_config::<AsdfToolConfig>()?;
     let script_path = config.get_script_path("uninstall")?;
 
     // https://asdf-vm.com/plugins/create.html#bin-uninstall
@@ -373,7 +373,7 @@ pub fn locate_executables(
         return Ok(Json(output));
     }
 
-    let config = get_tool_config::<AsdfPluginConfig>()?;
+    let config = get_tool_config::<AsdfToolConfig>()?;
     let script_path = config.get_script_path("list-bin-paths")?;
 
     // https://asdf-vm.com/plugins/create.html#bin-list-bin-paths
@@ -461,7 +461,7 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
         return Ok(Json(output));
     }
 
-    let config = get_tool_config::<AsdfPluginConfig>()?;
+    let config = get_tool_config::<AsdfToolConfig>()?;
     let script_path = config.get_script_path("list-all")?;
 
     // https://asdf-vm.com/plugins/create.html#bin-list-all
@@ -489,7 +489,7 @@ pub fn resolve_version(
     if let UnresolvedVersionSpec::Alias(alias) = input.initial
         && alias == "stable"
     {
-        let config = get_tool_config::<AsdfPluginConfig>()?;
+        let config = get_tool_config::<AsdfToolConfig>()?;
         let script_path = config.get_script_path("latest-stable")?;
 
         // https://asdf-vm.com/plugins/create.html#bin-latest-stable
@@ -513,7 +513,7 @@ pub fn resolve_version(
 #[plugin_fn]
 pub fn pre_run(Json(input): Json<RunHook>) -> FnResult<Json<RunHookResult>> {
     let mut output = RunHookResult::default();
-    let config = get_tool_config::<AsdfPluginConfig>()?;
+    let config = get_tool_config::<AsdfToolConfig>()?;
     let script_path = config.get_script_path("exec-env")?;
 
     // https://asdf-vm.com/plugins/create.html#bin-exec-env
