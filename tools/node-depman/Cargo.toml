@@ -1,6 +1,6 @@
 [package]
 name = "node_depman_tool"
-version = "0.16.4"
+version = "0.16.5"
 edition = "2024"
 license = "MIT"
 publish = false
