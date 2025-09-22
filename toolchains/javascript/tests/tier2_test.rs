@@ -1,3 +1,4 @@
+use moon_common::Id;
 use moon_config::{
     DependencyScope, OneOrMany, OutputPath, PartialTaskArgs, PartialTaskConfig,
     PartialTaskDependency, PartialTaskOptionsConfig, TaskOptionRunInCI, TaskPreset,
@@ -22,9 +23,9 @@ mod javascript_toolchain_tier2 {
             let plugin = sandbox.create_toolchain("javascript").await;
 
             let mut input = ExtendProjectGraphInput::default();
-            input.project_sources.insert("a".into(), "a".into());
-            input.project_sources.insert("b".into(), "b".into());
-            input.project_sources.insert("c".into(), "c".into());
+            input.project_sources.insert(Id::raw("a"), "a".into());
+            input.project_sources.insert(Id::raw("b"), "b".into());
+            input.project_sources.insert(Id::raw("c"), "c".into());
 
             let mut output = plugin.extend_project_graph(input).await;
 
@@ -32,31 +33,31 @@ mod javascript_toolchain_tier2 {
                 output.extended_projects,
                 BTreeMap::from_iter([
                     (
-                        "a".into(),
+                        Id::raw("a"),
                         ExtendProjectOutput {
                             alias: Some("a".into()),
                             ..Default::default()
                         }
                     ),
                     (
-                        "b".into(),
+                        Id::raw("b"),
                         ExtendProjectOutput {
                             alias: Some("@b/lib".into()),
                             ..Default::default()
                         }
                     ),
                     (
-                        "c".into(),
+                        Id::raw("c"),
                         ExtendProjectOutput {
                             alias: Some("@org/c".into()),
                             dependencies: vec![
                                 ProjectDependency {
-                                    id: "a".into(),
+                                    id: Id::raw("a"),
                                     scope: DependencyScope::Production,
                                     via: Some("package a".into()),
                                 },
                                 ProjectDependency {
-                                    id: "b".into(),
+                                    id: Id::raw("b"),
                                     scope: DependencyScope::Development,
                                     via: Some("package @b/lib".into()),
                                 }
@@ -85,14 +86,14 @@ mod javascript_toolchain_tier2 {
             let plugin = sandbox.create_toolchain("javascript").await;
 
             let mut input = ExtendProjectGraphInput::default();
-            input.project_sources.insert("a".into(), "a".into());
+            input.project_sources.insert(Id::raw("a"), "a".into());
 
             let output = plugin.extend_project_graph(input).await;
 
             assert_eq!(
                 output.extended_projects,
                 BTreeMap::from_iter([(
-                    "a".into(),
+                    Id::raw("a"),
                     ExtendProjectOutput {
                         alias: Some("a".into()),
                         ..Default::default()
@@ -114,7 +115,7 @@ mod javascript_toolchain_tier2 {
             let mut input = ExtendProjectGraphInput::default();
             input
                 .project_sources
-                .insert("no-manifest".into(), "no-manifest".into());
+                .insert(Id::raw("no-manifest"), "no-manifest".into());
 
             let output = plugin.extend_project_graph(input).await;
 
@@ -128,9 +129,9 @@ mod javascript_toolchain_tier2 {
             let plugin = sandbox.create_toolchain("javascript").await;
 
             let mut input = ExtendProjectGraphInput::default();
-            input.project_sources.insert("a".into(), "a".into());
-            input.project_sources.insert("b".into(), "b".into());
-            input.project_sources.insert("c".into(), "c".into());
+            input.project_sources.insert(Id::raw("a"), "a".into());
+            input.project_sources.insert(Id::raw("b"), "b".into());
+            input.project_sources.insert(Id::raw("c"), "c".into());
             input.toolchain_config = json!({
                 "inferTasksFromScripts": false,
             });
@@ -149,9 +150,9 @@ mod javascript_toolchain_tier2 {
             let plugin = sandbox.create_toolchain("javascript").await;
 
             let mut input = ExtendProjectGraphInput::default();
-            input.project_sources.insert("a".into(), "a".into());
-            input.project_sources.insert("b".into(), "b".into());
-            input.project_sources.insert("c".into(), "c".into());
+            input.project_sources.insert(Id::raw("a"), "a".into());
+            input.project_sources.insert(Id::raw("b"), "b".into());
+            input.project_sources.insert(Id::raw("c"), "c".into());
             input.toolchain_config = json!({
                 "inferTasksFromScripts": true,
                 "packageManager": "npm"
@@ -162,7 +163,7 @@ mod javascript_toolchain_tier2 {
             assert_eq!(
                 output.extended_projects.get("a").unwrap().tasks,
                 BTreeMap::from_iter([(
-                    "release".into(),
+                    Id::raw("release"),
                     PartialTaskConfig {
                         description: Some("Inherited from `release` package.json script.".into()),
                         command: Some(PartialTaskArgs::List(vec![
@@ -184,7 +185,7 @@ mod javascript_toolchain_tier2 {
                 output.extended_projects.get("b").unwrap().tasks,
                 BTreeMap::from_iter([
                     (
-                        "build".into(),
+                        Id::raw("build"),
                         PartialTaskConfig {
                             description: Some("Inherited from `build` package.json script.".into()),
                             command: Some(PartialTaskArgs::List(vec![
@@ -202,7 +203,7 @@ mod javascript_toolchain_tier2 {
                         }
                     ),
                     (
-                        "build-vite".into(),
+                        Id::raw("build-vite"),
                         PartialTaskConfig {
                             description: Some(
                                 "Inherited from `build:vite` package.json script.".into()
@@ -222,7 +223,7 @@ mod javascript_toolchain_tier2 {
                         }
                     ),
                     (
-                        "info".into(),
+                        Id::raw("info"),
                         PartialTaskConfig {
                             description: Some("Inherited from `info` package.json script.".into()),
                             command: Some(PartialTaskArgs::List(vec![
@@ -249,7 +250,7 @@ mod javascript_toolchain_tier2 {
                 output.extended_projects.get("c").unwrap().tasks,
                 BTreeMap::from_iter([
                     (
-                        "astro-serve".into(),
+                        Id::raw("astro-serve"),
                         PartialTaskConfig {
                             description: Some(
                                 "Inherited from `astro:serve` package.json script.".into()
@@ -270,7 +271,7 @@ mod javascript_toolchain_tier2 {
                         }
                     ),
                     (
-                        "dev".into(),
+                        Id::raw("dev"),
                         PartialTaskConfig {
                             description: Some("Inherited from `dev` package.json script.".into()),
                             command: Some(PartialTaskArgs::List(vec![
@@ -293,7 +294,7 @@ mod javascript_toolchain_tier2 {
                         }
                     ),
                     (
-                        "start-vite".into(),
+                        Id::raw("start-vite"),
                         PartialTaskConfig {
                             description: Some(
                                 "Inherited from `start:vite` package.json script.".into()
@@ -326,9 +327,9 @@ mod javascript_toolchain_tier2 {
             let plugin = sandbox.create_toolchain("javascript").await;
 
             let mut input = ExtendProjectGraphInput::default();
-            input.project_sources.insert("a".into(), "a".into());
-            input.project_sources.insert("b".into(), "b".into());
-            input.project_sources.insert("c".into(), "c".into());
+            input.project_sources.insert(Id::raw("a"), "a".into());
+            input.project_sources.insert(Id::raw("b"), "b".into());
+            input.project_sources.insert(Id::raw("c"), "c".into());
             input.toolchain_config = json!({
                 "inferTasksFromScripts": true,
                 "packageManager": "deno"
@@ -340,7 +341,7 @@ mod javascript_toolchain_tier2 {
                 output.extended_projects.get("a").unwrap().tasks,
                 BTreeMap::from_iter([
                     (
-                        "build".into(),
+                        Id::raw("build"),
                         PartialTaskConfig {
                             description: Some("Inherited from `build` deno.json task.".into()),
                             command: Some(PartialTaskArgs::List(vec![
@@ -356,7 +357,7 @@ mod javascript_toolchain_tier2 {
                         }
                     ),
                     (
-                        "start".into(),
+                        Id::raw("start"),
                         PartialTaskConfig {
                             description: Some("Inherited from `start` deno.json task.".into()),
                             command: Some(PartialTaskArgs::List(vec![

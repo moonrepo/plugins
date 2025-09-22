@@ -1,3 +1,4 @@
+use moon_common::Id;
 use moon_config::DependencyScope;
 use moon_pdk_api::*;
 use moon_pdk_test_utils::{create_empty_moon_sandbox, create_moon_sandbox};
@@ -18,9 +19,9 @@ mod go_toolchain_tier2 {
             let plugin = sandbox.create_toolchain("go").await;
 
             let mut input = ExtendProjectGraphInput::default();
-            input.project_sources.insert("a".into(), "a".into());
-            input.project_sources.insert("b".into(), "b".into());
-            input.project_sources.insert("c".into(), "c".into());
+            input.project_sources.insert(Id::raw("a"), "a".into());
+            input.project_sources.insert(Id::raw("b"), "b".into());
+            input.project_sources.insert(Id::raw("c"), "c".into());
 
             let output = plugin.extend_project_graph(input).await;
 
@@ -28,31 +29,31 @@ mod go_toolchain_tier2 {
                 output.extended_projects,
                 BTreeMap::from_iter([
                     (
-                        "a".into(),
+                        Id::raw("a"),
                         ExtendProjectOutput {
                             alias: Some("example.com/org/a".into()),
                             ..Default::default()
                         }
                     ),
                     (
-                        "b".into(),
+                        Id::raw("b"),
                         ExtendProjectOutput {
                             alias: Some("example.com/org/b".into()),
                             ..Default::default()
                         }
                     ),
                     (
-                        "c".into(),
+                        Id::raw("c"),
                         ExtendProjectOutput {
                             alias: Some("example.com/org/c".into()),
                             dependencies: vec![
                                 ProjectDependency {
-                                    id: "example.com/org/a".into(),
+                                    id: Id::raw("example.com/org/a"),
                                     scope: DependencyScope::Production,
                                     via: Some("module example.com/org/a".into()),
                                 },
                                 ProjectDependency {
-                                    id: "example.com/org/b".into(),
+                                    id: Id::raw("example.com/org/b"),
                                     scope: DependencyScope::Production,
                                     via: Some("module example.com/org/b".into()),
                                 }
@@ -79,14 +80,14 @@ mod go_toolchain_tier2 {
             let plugin = sandbox.create_toolchain("go").await;
 
             let mut input = ExtendProjectGraphInput::default();
-            input.project_sources.insert("a".into(), "a".into());
+            input.project_sources.insert(Id::raw("a"), "a".into());
 
             let output = plugin.extend_project_graph(input).await;
 
             assert_eq!(
                 output.extended_projects,
                 BTreeMap::from_iter([(
-                    "a".into(),
+                    Id::raw("a"),
                     ExtendProjectOutput {
                         alias: Some("example.com/org/a".into()),
                         ..Default::default()
@@ -105,7 +106,7 @@ mod go_toolchain_tier2 {
             let mut input = ExtendProjectGraphInput::default();
             input
                 .project_sources
-                .insert("no-mod".into(), "no-mod".into());
+                .insert(Id::raw("no-mod"), "no-mod".into());
 
             let output = plugin.extend_project_graph(input).await;
 

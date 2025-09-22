@@ -11,7 +11,7 @@ use std::collections::{BTreeMap, HashSet};
 
 pub struct TasksInferrer<'a> {
     config: &'a JavaScriptToolchainConfig,
-    tasks: BTreeMap<String, PartialTaskConfig>,
+    tasks: BTreeMap<Id, PartialTaskConfig>,
     life_cycles: HashSet<String>,
 }
 
@@ -30,7 +30,7 @@ impl<'a> TasksInferrer<'a> {
     pub fn infer_from_deno_tasks(
         mut self,
         tasks: &BTreeMap<String, DenoJsonTask>,
-    ) -> AnyResult<BTreeMap<String, PartialTaskConfig>> {
+    ) -> AnyResult<BTreeMap<Id, PartialTaskConfig>> {
         for (name, deno_task) in tasks {
             let command = deno_task.get_command();
             let deps = deno_task.get_dependencies();
@@ -60,7 +60,7 @@ impl<'a> TasksInferrer<'a> {
     pub fn infer_from_package_scripts(
         mut self,
         scripts: BTreeMap<&String, &String>,
-    ) -> AnyResult<BTreeMap<String, PartialTaskConfig>> {
+    ) -> AnyResult<BTreeMap<Id, PartialTaskConfig>> {
         for (name, script) in scripts {
             if self.is_valid(name, script) {
                 self.tasks
@@ -71,8 +71,8 @@ impl<'a> TasksInferrer<'a> {
         Ok(self.tasks)
     }
 
-    fn create_task_id(&self, name: &str) -> AnyResult<String> {
-        Ok(Id::clean(name)?.as_str().trim_matches('-').to_string())
+    fn create_task_id(&self, name: &str) -> AnyResult<Id> {
+        Ok(Id::clean(name)?)
     }
 
     fn create_task(&self, name: &str, script: &str) -> AnyResult<PartialTaskConfig> {

@@ -29,6 +29,7 @@ serde = { workspace = true }
 starbase_utils = { workspace = true, features = ["editor-config", "toml"] }
 
 [dev-dependencies]
+moon_common = { workspace = true }
 moon_pdk_test_utils = { workspace = true }
 serde_json = { workspace = true }
 starbase_sandbox = { workspace = true }

@@ -2,12 +2,11 @@ use crate::nx_json::*;
 use crate::nx_project_json::*;
 use extension_common::migrator::*;
 use moon_common::Id;
-use moon_config::GlobInput;
-use moon_config::GlobPath;
 use moon_config::{
-    FilePath, Input, LayerType, OneOrMany, OutputPath, PartialProjectDependsOn,
-    PartialProjectMetadataConfig, PartialTaskArgs, PartialTaskConfig, PartialTaskDependency,
-    PartialTaskOptionsConfig, PartialVcsConfig, PartialWorkspaceProjects, TaskOptionEnvFile,
+    FilePath, GlobInput, GlobPath, Input, LayerType, OneOrMany, OutputPath,
+    PartialProjectDependsOn, PartialProjectMetadataConfig, PartialTaskArgs, PartialTaskConfig,
+    PartialTaskDependency, PartialTaskOptionsConfig, PartialVcsConfig, PartialWorkspaceProjects,
+    TaskOptionCache, TaskOptionEnvFile,
 };
 use moon_pdk::{AnyResult, map_miette_error};
 use moon_pdk_api::MoonContext;
@@ -632,7 +631,7 @@ fn migrate_task(
         config
             .options
             .get_or_insert(PartialTaskOptionsConfig::default())
-            .cache = nx_target.cache;
+            .cache = nx_target.cache.map(TaskOptionCache::Enabled);
     }
 
     Ok(config)

@@ -1,3 +1,4 @@
+use moon_common::Id;
 use moon_config::DependencyScope;
 use moon_pdk_api::*;
 use moon_pdk_test_utils::{create_empty_moon_sandbox, create_moon_sandbox};
@@ -17,9 +18,9 @@ mod rust_toolchain_tier2 {
             let plugin = sandbox.create_toolchain("rust").await;
 
             let mut input = ExtendProjectGraphInput::default();
-            input.project_sources.insert("a".into(), "a".into());
-            input.project_sources.insert("b".into(), "b".into());
-            input.project_sources.insert("c".into(), "c".into());
+            input.project_sources.insert(Id::raw("a"), "a".into());
+            input.project_sources.insert(Id::raw("b"), "b".into());
+            input.project_sources.insert(Id::raw("c"), "c".into());
 
             let output = plugin.extend_project_graph(input).await;
 
@@ -27,31 +28,31 @@ mod rust_toolchain_tier2 {
                 output.extended_projects,
                 BTreeMap::from_iter([
                     (
-                        "a".into(),
+                        Id::raw("a"),
                         ExtendProjectOutput {
                             alias: Some("a".into()),
                             ..Default::default()
                         }
                     ),
                     (
-                        "b".into(),
+                        Id::raw("b"),
                         ExtendProjectOutput {
                             alias: Some("b".into()),
                             ..Default::default()
                         }
                     ),
                     (
-                        "c".into(),
+                        Id::raw("c"),
                         ExtendProjectOutput {
                             alias: Some("c".into()),
                             dependencies: vec![
                                 ProjectDependency {
-                                    id: "a".into(),
+                                    id: Id::raw("a"),
                                     scope: DependencyScope::Production,
                                     via: Some("crate a".into()),
                                 },
                                 ProjectDependency {
-                                    id: "b".into(),
+                                    id: Id::raw("b"),
                                     scope: DependencyScope::Development,
                                     via: Some("crate b".into()),
                                 }
@@ -78,19 +79,19 @@ mod rust_toolchain_tier2 {
             let plugin = sandbox.create_toolchain("rust").await;
 
             let mut input = ExtendProjectGraphInput::default();
-            input.project_sources.insert("a".into(), "a".into());
+            input.project_sources.insert(Id::raw("a"), "a".into());
 
             let output = plugin.extend_project_graph(input).await;
 
             assert_eq!(
                 output.extended_projects,
                 BTreeMap::from_iter([(
-                    "a".into(),
+                    Id::raw("a"),
                     ExtendProjectOutput {
                         alias: Some("a".into()),
                         ..Default::default()
                     }
-                ),])
+                )])
             );
 
             assert_eq!(
@@ -107,7 +108,7 @@ mod rust_toolchain_tier2 {
             let mut input = ExtendProjectGraphInput::default();
             input
                 .project_sources
-                .insert("no-manifest".into(), "no-manifest".into());
+                .insert(Id::raw("no-manifest"), "no-manifest".into());
 
             let output = plugin.extend_project_graph(input).await;
 

@@ -69,7 +69,7 @@ pub fn extend_project_graph(
 
                     if is_local {
                         project_output.dependencies.push(ProjectDependency {
-                            id: dep_id.into(),
+                            id: dep_id.to_owned(),
                             scope,
                             via: Some(format!("package {dep_name}")),
                         });
@@ -105,7 +105,9 @@ pub fn extend_project_graph(
             }
         }
 
-        output.extended_projects.insert(id.into(), project_output);
+        output
+            .extended_projects
+            .insert(id.to_owned(), project_output);
 
         if let Some(file) = manifest.path.virtual_path() {
             output.input_files.push(file);
