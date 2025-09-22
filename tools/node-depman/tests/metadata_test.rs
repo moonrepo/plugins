@@ -1,7 +1,7 @@
 use proto_pdk_test_utils::*;
 
 fn create_metadata(id: &str) -> RegisterToolInput {
-    RegisterToolInput { id: id.into() }
+    RegisterToolInput { id: Id::raw(id) }
 }
 
 mod node_depman_tool {

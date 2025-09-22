@@ -1,8 +1,9 @@
-use crate::config::AsdfPluginConfig;
+use crate::config::AsdfToolConfig;
 use backend_common::enable_tracing;
 use extism_pdk::*;
 use proto_pdk::*;
 use rustc_hash::FxHashMap;
+use schematic::SchemaBuilder;
 use starbase_utils::fs;
 use std::path::{Path, PathBuf};
 
@@ -163,7 +164,7 @@ pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<Regi
 
     Ok(Json(RegisterToolOutput {
         name: if input.id == "asdf" {
-            input.id.clone()
+            input.id.to_string()
         } else {
             format!("asdf:{}", input.id)
         },
@@ -178,9 +179,15 @@ pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<Regi
         },
         minimum_proto_version: Some(Version::new(0, 46, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
-        config_schema: Some(schematic::SchemaBuilder::generate::<AsdfPluginConfig>()),
         unstable: Switch::Toggle(true),
         ..RegisterToolOutput::default()
+    }))
+}
+
+#[plugin_fn]
+pub fn define_tool_config(_: ()) -> FnResult<Json<DefineToolConfigOutput>> {
+    Ok(Json(DefineToolConfigOutput {
+        schema: SchemaBuilder::build_root::<AsdfToolConfig>(),
     }))
 }
 
@@ -190,13 +197,13 @@ pub fn register_backend(
 ) -> FnResult<Json<RegisterBackendOutput>> {
     if get_host_environment()?.os.is_windows() {
         return Err(PluginError::UnsupportedOS {
-            tool: input.id,
+            tool: input.id.to_string(),
             os: "windows".into(),
         }
         .into());
     }
 
-    let config = get_tool_config::<AsdfPluginConfig>()?;
+    let config = get_tool_config::<AsdfToolConfig>()?;
 
     Ok(Json(RegisterBackendOutput {
         backend_id: config.get_backend_id()?,
@@ -228,7 +235,7 @@ pub fn detect_version_files(
         return Ok(Json(output));
     }
 
-    let config = get_tool_config::<AsdfPluginConfig>()?;
+    let config = get_tool_config::<AsdfToolConfig>()?;
     let script_path = config.get_script_path("list-legacy-filenames")?;
 
     output.files = vec![".tool-versions".into()];
@@ -253,7 +260,7 @@ pub fn parse_version_file(
     Json(input): Json<ParseVersionFileInput>,
 ) -> FnResult<Json<ParseVersionFileOutput>> {
     let mut output = ParseVersionFileOutput::default();
-    let config = get_tool_config::<AsdfPluginConfig>()?;
+    let config = get_tool_config::<AsdfToolConfig>()?;
 
     if input.file == ".tool-versions" {
         let id = get_plugin_id()?;
@@ -272,7 +279,7 @@ pub fn parse_version_file(
 
             let (tool, version) = parsed_line.split_once(' ').unwrap_or((&parsed_line, ""));
 
-            if tool == id && !version.is_empty() {
+            if id == tool && !version.is_empty() {
                 output.version = Some(UnresolvedVersionSpec::parse(version)?);
                 break;
             }
@@ -310,7 +317,7 @@ pub fn native_install(
         }));
     }
 
-    let config = get_tool_config::<AsdfPluginConfig>()?;
+    let config = get_tool_config::<AsdfToolConfig>()?;
 
     // In older versions of asdf there may not be a 'download' script,
     // instead both download and install were done in the 'install' script.
@@ -342,7 +349,7 @@ pub fn native_install(
 pub fn native_uninstall(
     Json(input): Json<NativeUninstallInput>,
 ) -> FnResult<Json<NativeUninstallOutput>> {
-    let config = get_tool_config::<AsdfPluginConfig>()?;
+    let config = get_tool_config::<AsdfToolConfig>()?;
     let script_path = config.get_script_path("uninstall")?;
 
     // https://asdf-vm.com/plugins/create.html#bin-uninstall
@@ -366,7 +373,7 @@ pub fn locate_executables(
         return Ok(Json(output));
     }
 
-    let config = get_tool_config::<AsdfPluginConfig>()?;
+    let config = get_tool_config::<AsdfToolConfig>()?;
     let script_path = config.get_script_path("list-bin-paths")?;
 
     // https://asdf-vm.com/plugins/create.html#bin-list-bin-paths
@@ -387,7 +394,7 @@ pub fn locate_executables(
             output.exes.insert(
                 exe.clone(),
                 ExecutableConfig {
-                    primary: exe == id,
+                    primary: id == exe,
                     exe_path: Some(format!("bin/{exe}").into()),
                     ..Default::default()
                 },
@@ -424,7 +431,7 @@ pub fn locate_executables(
             output.exes.insert(
                 name.clone(),
                 ExecutableConfig {
-                    primary: name == id,
+                    primary: id == name,
                     exe_path: match file.strip_prefix(&input.install_dir) {
                         Ok(suffix) => Some(suffix.to_owned()),
                         Err(_) => Some(dir.join(name)),
@@ -438,7 +445,7 @@ pub fn locate_executables(
     // Return at least something!
     if output.exes.is_empty() {
         output.exes.insert(
-            id.clone(),
+            id.to_string(),
             ExecutableConfig::new_primary(format!("bin/{id}")),
         );
     }
@@ -454,7 +461,7 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
         return Ok(Json(output));
     }
 
-    let config = get_tool_config::<AsdfPluginConfig>()?;
+    let config = get_tool_config::<AsdfToolConfig>()?;
     let script_path = config.get_script_path("list-all")?;
 
     // https://asdf-vm.com/plugins/create.html#bin-list-all
@@ -482,7 +489,7 @@ pub fn resolve_version(
     if let UnresolvedVersionSpec::Alias(alias) = input.initial
         && alias == "stable"
     {
-        let config = get_tool_config::<AsdfPluginConfig>()?;
+        let config = get_tool_config::<AsdfToolConfig>()?;
         let script_path = config.get_script_path("latest-stable")?;
 
         // https://asdf-vm.com/plugins/create.html#bin-latest-stable
@@ -506,7 +513,7 @@ pub fn resolve_version(
 #[plugin_fn]
 pub fn pre_run(Json(input): Json<RunHook>) -> FnResult<Json<RunHookResult>> {
     let mut output = RunHookResult::default();
-    let config = get_tool_config::<AsdfPluginConfig>()?;
+    let config = get_tool_config::<AsdfToolConfig>()?;
     let script_path = config.get_script_path("exec-env")?;
 
     // https://asdf-vm.com/plugins/create.html#bin-exec-env

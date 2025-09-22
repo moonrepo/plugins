@@ -8,7 +8,9 @@ mod go_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox.create_plugin("go-test").await;
 
-        let metadata = plugin.register_tool(RegisterToolInput::default()).await;
+        let metadata = plugin
+            .register_tool(RegisterToolInput { id: Id::raw("go") })
+            .await;
 
         assert_eq!(metadata.name, "Go");
         assert_eq!(

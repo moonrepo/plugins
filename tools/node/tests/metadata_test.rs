@@ -8,7 +8,11 @@ mod node_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox.create_plugin("node-test").await;
 
-        let metadata = plugin.register_tool(RegisterToolInput::default()).await;
+        let metadata = plugin
+            .register_tool(RegisterToolInput {
+                id: Id::raw("node"),
+            })
+            .await;
 
         assert_eq!(metadata.name, "Node.js");
         assert_eq!(

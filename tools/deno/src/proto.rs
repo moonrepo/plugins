@@ -1,4 +1,4 @@
-use crate::config::DenoPluginConfig;
+use crate::config::DenoToolConfig;
 use extism_pdk::*;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
@@ -19,11 +19,17 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
     Ok(Json(RegisterToolOutput {
         name: NAME.into(),
         type_of: PluginType::Language,
-        config_schema: Some(SchemaBuilder::build_root::<DenoPluginConfig>()),
         minimum_proto_version: Some(Version::new(0, 46, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         self_upgrade_commands: vec!["upgrade".into()],
         ..RegisterToolOutput::default()
+    }))
+}
+
+#[plugin_fn]
+pub fn define_tool_config(_: ()) -> FnResult<Json<DefineToolConfigOutput>> {
+    Ok(Json(DefineToolConfigOutput {
+        schema: SchemaBuilder::build_root::<DenoToolConfig>(),
     }))
 }
 
@@ -157,7 +163,7 @@ pub fn download_prebuilt(
         ],
     )?;
 
-    let config = get_tool_config::<DenoPluginConfig>()?;
+    let config = get_tool_config::<DenoToolConfig>()?;
     let version = &input.context.version;
 
     let arch = match env.arch {

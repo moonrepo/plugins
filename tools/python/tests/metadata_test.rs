@@ -8,7 +8,11 @@ mod python_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox.create_plugin("python-test").await;
 
-        let metadata = plugin.register_tool(RegisterToolInput::default()).await;
+        let metadata = plugin
+            .register_tool(RegisterToolInput {
+                id: Id::raw("python"),
+            })
+            .await;
 
         assert_eq!(metadata.name, "Python");
         assert_eq!(

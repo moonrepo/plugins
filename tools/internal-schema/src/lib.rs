@@ -4,3 +4,4 @@ mod schema;
 
 #[cfg(feature = "wasm")]
 pub use proto::*;
+pub use schema::*;

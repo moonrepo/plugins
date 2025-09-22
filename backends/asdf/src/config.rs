@@ -15,21 +15,21 @@ const ASDF_PLUGINS_URL: &str =
 /// https://asdf-vm.com/manage/plugins.html
 #[derive(Debug, Default, schematic::Schematic, serde::Deserialize, serde::Serialize)]
 #[serde(default, deny_unknown_fields, rename_all = "kebab-case")]
-pub struct AsdfPluginConfig {
+pub struct AsdfToolConfig {
     pub asdf_shortname: Option<String>,
     pub asdf_repository: Option<String>,
     pub exes: Option<Vec<String>>,
 }
 
-impl AsdfPluginConfig {
-    pub fn get_shortname(&self) -> AnyResult<String> {
+impl AsdfToolConfig {
+    pub fn get_shortname(&self) -> AnyResult<Id> {
         match &self.asdf_shortname {
-            Some(name) => Ok(name.into()),
+            Some(name) => Ok(Id::new(name)?),
             None => get_plugin_id(),
         }
     }
 
-    pub fn get_backend_id(&self) -> AnyResult<String> {
+    pub fn get_backend_id(&self) -> AnyResult<Id> {
         self.get_shortname()
     }
 

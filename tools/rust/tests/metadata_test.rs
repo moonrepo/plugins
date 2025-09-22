@@ -10,7 +10,7 @@ mod rust_tool {
 
         let metadata = plugin
             .register_tool(RegisterToolInput {
-                id: "rust-test".into(),
+                id: Id::raw("rust"),
             })
             .await;
 

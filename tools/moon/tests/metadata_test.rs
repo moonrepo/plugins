@@ -8,7 +8,11 @@ mod moon_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox.create_plugin("moon-test").await;
 
-        let metadata = plugin.register_tool(RegisterToolInput::default()).await;
+        let metadata = plugin
+            .register_tool(RegisterToolInput {
+                id: Id::raw("moon"),
+            })
+            .await;
 
         assert_eq!(metadata.name, "moon");
         assert_eq!(metadata.self_upgrade_commands, vec!["upgrade"]);

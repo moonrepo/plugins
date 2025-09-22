@@ -7,7 +7,10 @@ expression: "std :: fs ::\nread_to_string(sandbox.path().join(\".proto/shims/reg
     "alt_bin": true,
     "parent": "npm-test"
   },
-  "npm": {},
+  "npm": {
+    "alt_bin": true,
+    "parent": "npm-test"
+  },
   "npx": {
     "alt_bin": true,
     "parent": "npm-test"

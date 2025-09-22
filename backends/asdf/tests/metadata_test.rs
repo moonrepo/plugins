@@ -8,7 +8,7 @@ mod asdf_backend {
         let plugin = sandbox.create_plugin("zig").await;
 
         let metadata = plugin
-            .register_tool(RegisterToolInput { id: "zig".into() })
+            .register_tool(RegisterToolInput { id: Id::raw("zig") })
             .await;
 
         assert_eq!(metadata.name, "asdf:zig");
@@ -24,7 +24,10 @@ mod asdf_backend {
         let plugin = sandbox.create_plugin("zig").await;
 
         let metadata = plugin
-            .register_backend(RegisterBackendInput::default())
+            .register_backend(RegisterBackendInput {
+                id: Id::raw("zig"),
+                ..Default::default()
+            })
             .await;
 
         assert_eq!(metadata.backend_id, "zig");

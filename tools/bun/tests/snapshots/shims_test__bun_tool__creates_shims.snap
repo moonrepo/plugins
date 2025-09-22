@@ -3,11 +3,14 @@ source: tools/bun/tests/shims_test.rs
 expression: "std :: fs ::\nread_to_string(sandbox.path().join(\".proto/shims/registry.json\")).unwrap()"
 ---
 {
-  "bun": {},
+  "bun": {
+    "alt_bin": true,
+    "parent": "bun-test"
+  },
   "bunx": {
-    "parent": "bun-test",
     "before_args": [
       "x"
-    ]
+    ],
+    "parent": "bun-test"
   }
 }

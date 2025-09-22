@@ -3,5 +3,8 @@ source: tools/deno/tests/shims_test.rs
 expression: "std :: fs ::\nread_to_string(sandbox.path().join(\".proto/shims/registry.json\")).unwrap()"
 ---
 {
-  "deno": {}
+  "deno": {
+    "alt_bin": true,
+    "parent": "deno-test"
+  }
 }
