@@ -1754,7 +1754,7 @@ dependencies = [
 
 [[package]]
 name = "go_toolchain"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "extism-pdk",
  "go_tool",
