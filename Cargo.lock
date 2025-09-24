@@ -1774,9 +1774,9 @@ dependencies = [
 
 [[package]]
 name = "gomod-parser2"
-version = "0.4.1"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d9775b61c150e570369a38e9bdcd2efa0ad76e977e98303d8cd4e77eedcc091"
+checksum = "4bc233fbc11d750f71a45d4721fc73b545a60bb1ef1452d692c542de657d39c6"
 dependencies = [
  "winnow",
 ]

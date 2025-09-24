@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed `go.mod` parsing failures when `tool` is a list.
+
 ## 0.1.5
 
 #### 🚀 Updates
