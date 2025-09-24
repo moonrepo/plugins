@@ -394,6 +394,7 @@ mod javascript_toolchain_tier2 {
                 .extend_task_command(ExtendTaskCommandInput {
                     command: "unknown".into(),
                     project: ProjectFragment {
+                        id: Id::raw("project"),
                         source: "some/nested/path".into(),
                         ..Default::default()
                     },
@@ -425,6 +426,7 @@ mod javascript_toolchain_tier2 {
                 .extend_task_script(ExtendTaskScriptInput {
                     script: "unknown".into(),
                     project: ProjectFragment {
+                        id: Id::raw("project"),
                         source: "some/nested/path".into(),
                         ..Default::default()
                     },
