@@ -1,4 +1,4 @@
-use super::{parse_version, parse_version_spec};
+use super::parse_version_spec;
 use moon_pdk::{AnyResult, VirtualPath};
 use moon_pdk_api::{LockDependency, ParseLockOutput};
 use package_lock_json_parser::{PackageLockJson, V1Dependency, parse};
@@ -48,14 +48,6 @@ fn parse_v2_up(lock: PackageLockJson, output: &mut ParseLockOutput) -> AnyResult
         }
 
         let name = name.strip_prefix("workspaces/").unwrap_or(&name);
-
-        // Not sure if this is correct, but no other way to
-        // detect a workspace package!
-        if package.resolved.is_none() && package.integrity.is_none() {
-            output
-                .packages
-                .insert(name.to_string(), parse_version(&package.version)?);
-        }
 
         output
             .dependencies

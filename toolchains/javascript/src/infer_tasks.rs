@@ -1,28 +1,24 @@
-use crate::config::JavaScriptToolchainConfig;
-use crate::package_json::PackageJson;
+use crate::config::{JavaScriptPackageManager, JavaScriptToolchainConfig};
+use crate::lockfiles::DenoJsonTask;
 use moon_common::Id;
 use moon_config::{
-    OneOrMany, OutputPath, PartialTaskArgs, PartialTaskConfig, PartialTaskOptionsConfig,
-    TaskOptionRunInCI, TaskPreset,
+    OneOrMany, OutputPath, PartialTaskArgs, PartialTaskConfig, PartialTaskDependency,
+    PartialTaskOptionsConfig, TaskOptionRunInCI, TaskPreset,
 };
-use moon_pdk::AnyResult;
+use moon_pdk::{AnyResult, map_miette_error};
+use moon_target::Target;
 use std::collections::{BTreeMap, HashSet};
 
 pub struct TasksInferrer<'a> {
     config: &'a JavaScriptToolchainConfig,
-    package: &'a PackageJson,
-    tasks: BTreeMap<String, PartialTaskConfig>,
+    tasks: BTreeMap<Id, PartialTaskConfig>,
     life_cycles: HashSet<String>,
 }
 
 impl<'a> TasksInferrer<'a> {
-    pub fn new(
-        config: &'a JavaScriptToolchainConfig,
-        package: &'a PackageJson,
-    ) -> TasksInferrer<'a> {
+    pub fn new(config: &'a JavaScriptToolchainConfig) -> TasksInferrer<'a> {
         Self {
             config,
-            package,
             tasks: BTreeMap::default(),
             life_cycles: "preprepare|prepare|postprepare|prepublish|prepublishOnly|publish|postpublish|prepack|pack|postpack|preinstall|install|postinstall|preversion|version|postversion|dependencies"
                 .split('|')
@@ -31,47 +27,84 @@ impl<'a> TasksInferrer<'a> {
         }
     }
 
-    pub fn infer(mut self) -> AnyResult<BTreeMap<String, PartialTaskConfig>> {
-        if let Some(scripts) = &self.package.scripts {
-            for (name, script) in scripts {
-                if self.life_cycles.contains(name)
-                    || name.starts_with("pre")
-                    || name.starts_with("post")
-                {
-                    continue;
+    pub fn infer_from_deno_tasks(
+        mut self,
+        tasks: &BTreeMap<String, DenoJsonTask>,
+    ) -> AnyResult<BTreeMap<Id, PartialTaskConfig>> {
+        for (name, deno_task) in tasks {
+            let command = deno_task.get_command();
+            let deps = deno_task.get_dependencies();
+
+            if self.is_valid(name, command) {
+                let mut task = self.create_task(name, command)?;
+
+                if !deps.is_empty() {
+                    for dep_name in deps {
+                        let dep_id = self.create_task_id(dep_name)?;
+
+                        task.deps
+                            .get_or_insert_default()
+                            .push(PartialTaskDependency::Target(
+                                Target::parse(&format!("~:{dep_id}")).map_err(map_miette_error)?,
+                            ));
+                    }
                 }
 
-                self.tasks.insert(
-                    self.create_task_id(name)?,
-                    self.create_task_from_script(name, script)?,
-                );
+                self.tasks.insert(self.create_task_id(name)?, task);
             }
         }
 
         Ok(self.tasks)
     }
 
-    fn create_task_id(&self, name: &str) -> AnyResult<String> {
-        Ok(Id::clean(name)?.as_str().trim_matches('-').to_string())
+    pub fn infer_from_package_scripts(
+        mut self,
+        scripts: BTreeMap<&String, &String>,
+    ) -> AnyResult<BTreeMap<Id, PartialTaskConfig>> {
+        for (name, script) in scripts {
+            if self.is_valid(name, script) {
+                self.tasks
+                    .insert(self.create_task_id(name)?, self.create_task(name, script)?);
+            }
+        }
+
+        Ok(self.tasks)
     }
 
-    fn create_task_from_script(&self, name: &str, script: &str) -> AnyResult<PartialTaskConfig> {
+    fn create_task_id(&self, name: &str) -> AnyResult<Id> {
+        Ok(Id::clean(name)?)
+    }
+
+    fn create_task(&self, name: &str, script: &str) -> AnyResult<PartialTaskConfig> {
         let package_manager = self.config.package_manager.unwrap_or_default();
         let script_args = shell_words::split(script)?;
 
-        let mut config = PartialTaskConfig {
-            description: Some(format!("Inherited from `{name}` package.json script.")),
-            ..Default::default()
-        };
+        let mut config = PartialTaskConfig::default();
         let mut options = PartialTaskOptionsConfig::default();
         let mut modify_options = false;
 
-        // command + args
-        config.command = Some(PartialTaskArgs::List(vec![
-            package_manager.to_string(),
-            "run".to_string(),
-            name.to_string(),
-        ]));
+        match package_manager {
+            JavaScriptPackageManager::Deno => {
+                config.description = Some(format!("Inherited from `{name}` deno.json task."));
+
+                // command + args
+                config.command = Some(PartialTaskArgs::List(vec![
+                    "deno".to_string(),
+                    "task".to_string(),
+                    name.to_string(),
+                ]));
+            }
+            _ => {
+                config.description = Some(format!("Inherited from `{name}` package.json script."));
+
+                // command + args
+                config.command = Some(PartialTaskArgs::List(vec![
+                    package_manager.to_string(),
+                    "run".to_string(),
+                    name.to_string(),
+                ]));
+            }
+        };
 
         // outputs
         for (index, arg) in script_args.iter().enumerate() {
@@ -104,11 +137,21 @@ impl<'a> TasksInferrer<'a> {
         }
 
         // toolchains
-        config.toolchain = Some(OneOrMany::Many(vec![
-            Id::raw("javascript"),
-            Id::raw(package_manager.to_string()),
-            package_manager.get_runtime_toolchain(),
-        ]));
+        if matches!(
+            package_manager,
+            JavaScriptPackageManager::Bun | JavaScriptPackageManager::Deno
+        ) {
+            config.toolchain = Some(OneOrMany::Many(vec![
+                Id::raw("javascript"),
+                package_manager.get_runtime_toolchain(),
+            ]));
+        } else {
+            config.toolchain = Some(OneOrMany::Many(vec![
+                Id::raw("javascript"),
+                Id::raw(package_manager.to_string()),
+                package_manager.get_runtime_toolchain(),
+            ]));
+        }
 
         // options
         if self.has_help_or_version_option(script) || self.has_watch_option(script) {
@@ -149,6 +192,18 @@ impl<'a> TasksInferrer<'a> {
 
     fn has_watch_option(&self, script: &str) -> bool {
         script.contains("--watch") || script.contains("-w")
+    }
+
+    fn is_valid(&self, name: &str, script: &str) -> bool {
+        if self.life_cycles.contains(name)
+            || name.starts_with("pre")
+            || name.starts_with("post")
+            || script.is_empty()
+        {
+            return false;
+        }
+
+        true
     }
 
     fn is_dev_script_name(&self, name: &str) -> bool {

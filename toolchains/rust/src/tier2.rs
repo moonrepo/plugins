@@ -43,7 +43,7 @@ pub fn extend_project_graph(
                     // and the package name exists in our gathered map
                     if dep.detail().is_some_and(|det| det.path.is_some()) {
                         project_output.dependencies.push(ProjectDependency {
-                            id: dep_id.into(),
+                            id: dep_id.to_owned(),
                             scope,
                             via: Some(format!("crate {dep_name}")),
                         });
@@ -60,7 +60,9 @@ pub fn extend_project_graph(
             extract_implicit_deps(&manifest.dev_dependencies, DependencyScope::Development)?;
             extract_implicit_deps(&manifest.build_dependencies, DependencyScope::Build)?;
 
-            output.extended_projects.insert(id.into(), project_output);
+            output
+                .extended_projects
+                .insert(id.to_owned(), project_output);
 
             if let Some(file) = manifest.path.virtual_path() {
                 output.input_files.push(file);
@@ -290,6 +292,7 @@ pub fn parse_manifest(
                                     Some(version) => Some(UnresolvedVersionSpec::parse(version)?),
                                     None => None,
                                 },
+                                ..Default::default()
                             })
                         }
                     }

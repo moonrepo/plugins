@@ -21,6 +21,7 @@ moon_common = { workspace = true }
 moon_config = { workspace = true }
 moon_pdk = { workspace = true, features = ["schematic"] }
 moon_pdk_api = { workspace = true }
+moon_target = { workspace = true }
 nodejs_package_json = { workspace = true, features = [
     "protocols",
     "serialize",
@@ -33,6 +34,7 @@ starbase_utils = { workspace = true, features = ["json", "yaml"] }
 
 # Lockfiles
 # chaste-pnpm = "0.5.0"
+deno_lockfile = "0.31.2"
 package-lock-json-parser = "0.4.0"
 yarn-lock-parser = "0.11.0"
 

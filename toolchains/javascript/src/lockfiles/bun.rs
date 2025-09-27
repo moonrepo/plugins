@@ -1,5 +1,5 @@
+use super::parse_version_spec;
 use super::yarn::parse_yarn_lock_content;
-use super::{parse_version, parse_version_spec};
 use moon_pdk::{AnyResult, ExecCommandInput, VirtualPath, exec};
 use moon_pdk_api::{LockDependency, ParseLockOutput};
 use serde::Deserialize;
@@ -57,35 +57,20 @@ pub fn parse_bun_lock(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyRe
     let content = fs::read_file(path)?;
     let lock: BunLock = json::parse(&content)?; // JSON5
 
-    for (name, package) in lock.workspaces {
-        // Root package
-        if name.is_empty() {
-            continue;
-        }
-
-        output.packages.insert(
-            name,
-            match package.version {
-                Some(version) => parse_version(version)?,
-                None => None,
-            },
-        );
-    }
-
     for package in lock.packages.into_values() {
         let (name, version, integrity) = match &package {
             BunLockPackage::Workspace(values) => {
                 if let Some((name, suffix)) = values[0].rsplit_once('@')
                     && let Some(ref_name) = suffix.strip_prefix("workspace:")
-                    && let Some(ref_version) = output.packages.get(ref_name)
+                    && let Some(ref_package) = lock.workspaces.get(ref_name)
                 {
                     output
                         .dependencies
                         .entry(name.to_string())
                         .or_default()
                         .push(LockDependency {
-                            version: match ref_version {
-                                Some(version) => parse_version_spec(version.to_string())?,
+                            version: match &ref_package.version {
+                                Some(version) => parse_version_spec(version)?,
                                 None => None,
                             },
                             ..Default::default()

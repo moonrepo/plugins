@@ -3,8 +3,8 @@ use extension_common::migrator::*;
 use moon_common::Id;
 use moon_config::{
     FilePath, Input, OutputPath, PartialTaskArgs, PartialTaskConfig, PartialTaskDependency,
-    PartialTaskOptionsConfig, PartialWorkspaceProjects, TaskOptionEnvFile, TaskOutputStyle,
-    TaskPreset,
+    PartialTaskOptionsConfig, PartialWorkspaceProjects, TaskOptionCache, TaskOptionEnvFile,
+    TaskOutputStyle, TaskPreset,
 };
 use moon_pdk::*;
 use moon_pdk_api::MoonContext;
@@ -300,7 +300,7 @@ impl TurboMigrator {
             config
                 .options
                 .get_or_insert(PartialTaskOptionsConfig::default())
-                .cache = turbo_task.cache;
+                .cache = turbo_task.cache.map(TaskOptionCache::Enabled);
         }
 
         if let Some(dot_env) = &turbo_task.dot_env {

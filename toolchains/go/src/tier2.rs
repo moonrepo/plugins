@@ -45,14 +45,16 @@ pub fn extend_project_graph(
         for dep in &manifest.require {
             if packages.contains_key(&dep.module.module_path) {
                 project_output.dependencies.push(ProjectDependency {
-                    id: dep.module.module_path.clone(),
+                    id: Id::raw(dep.module.module_path.clone()),
                     scope: DependencyScope::Production,
                     via: Some(format!("module {}", dep.module.module_path)),
                 });
             }
         }
 
-        output.extended_projects.insert(id.into(), project_output);
+        output
+            .extended_projects
+            .insert(id.to_owned(), project_output);
     }
 
     Ok(Json(output))

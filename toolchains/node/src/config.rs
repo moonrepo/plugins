@@ -1,23 +1,24 @@
 use moon_config::UnresolvedVersionSpec;
 use moon_pdk_api::config_struct;
-use schematic::{Config, ConfigEnum};
-use serde::{Deserialize, Serialize};
+use schematic::{Config, ConfigEnum, derive_enum};
 
-/// The available version managers for Node.js.
-#[derive(ConfigEnum, Clone, Copy, Debug, Eq, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum NodeVersionManager {
-    Nodenv,
-    Nvm,
-}
+derive_enum!(
+    /// The available version managers for Node.js.
+    #[derive(ConfigEnum, Copy)]
+    pub enum NodeVersionManager {
+        Nodenv,
+        Nvm,
+    }
+);
 
-/// The type of profiling operation to use.
-#[derive(ConfigEnum, Clone, Copy, Debug, Eq, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum NodeProfileType {
-    Cpu,
-    Heap,
-}
+derive_enum!(
+    /// The type of profiling operation to use.
+    #[derive(ConfigEnum, Copy)]
+    pub enum NodeProfileType {
+        Cpu,
+        Heap,
+    }
+);
 
 config_struct!(
     /// Configures and enables the Node.js toolchain.

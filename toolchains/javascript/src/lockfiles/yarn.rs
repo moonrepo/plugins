@@ -1,4 +1,4 @@
-use super::{parse_version, parse_version_spec};
+use super::parse_version_spec;
 use moon_pdk::{AnyResult, VirtualPath};
 use moon_pdk_api::{LockDependency, ParseLockOutput};
 use starbase_utils::fs;
@@ -11,18 +11,16 @@ pub(crate) fn parse_yarn_lock_content<T: AsRef<str>>(
     let lock = parse_str(content.as_ref())?;
 
     for entry in lock.entries {
+        if
         // Root package
-        if entry.name.contains("root-workspace") {
+        entry.name.contains("root-workspace") ||
+            // Workspace package
+            entry.resolved.contains("workspace:")
+        {
             continue;
         }
 
         if entry.integrity.is_empty() {
-            if entry.resolved.contains("workspace:") {
-                output
-                    .packages
-                    .insert(entry.name.to_string(), parse_version(entry.version)?);
-            }
-
             output
                 .dependencies
                 .entry(entry.name.to_string())
