@@ -314,16 +314,10 @@ fn migrate_inputs(raw_inputs: &[NxInput], for_file_groups: bool) -> AnyResult<Ve
                     let path = replace_tokens(source, true);
 
                     if path.contains('?') {
-                        let glob = GlobInput {
+                        inputs.push(Input::Glob(GlobInput {
                             glob: GlobPath(path.into()),
                             ..Default::default()
-                        };
-
-                        inputs.push(if glob.is_workspace_relative() {
-                            Input::WorkspaceGlob(glob)
-                        } else {
-                            Input::ProjectGlob(glob)
-                        });
+                        }));
                     } else {
                         inputs.push(Input::parse(path)?);
                     }

@@ -476,7 +476,6 @@ mod go_toolchain_tier2 {
                 })
                 .await;
 
-            assert!(output.packages.is_empty());
             assert_eq!(
                 output.dependencies,
                 BTreeMap::from_iter([
@@ -520,7 +519,6 @@ mod go_toolchain_tier2 {
                 })
                 .await;
 
-            assert!(output.packages.is_empty());
             assert_eq!(
                 output.dependencies,
                 BTreeMap::from_iter([

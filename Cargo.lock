@@ -4573,9 +4573,9 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.226"
+version = "1.0.227"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0dca6411025b24b60bfa7ec1fe1f8e710ac09782dca409ee8237ba74b51295fd"
+checksum = "80ece43fc6fbed4eb5392ab50c07334d3e577cbf40997ee896fe7af40bba4245"
 dependencies = [
  "serde_core",
  "serde_derive",
@@ -4592,18 +4592,18 @@ dependencies = [
 
 [[package]]
 name = "serde_core"
-version = "1.0.226"
+version = "1.0.227"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba2ba63999edb9dac981fb34b3e5c0d111a69b0924e253ed29d83f7c99e966a4"
+checksum = "7a576275b607a2c86ea29e410193df32bc680303c82f31e275bbfcafe8b33be5"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.226"
+version = "1.0.227"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8db53ae22f34573731bafa1db20f04027b2d25e02d8205921b569171699cdb33"
+checksum = "51e694923b8824cf0e9b382adf0f60d4e05f348f357b38833a3fa5ed7c2ede04"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4928,9 +4928,9 @@ dependencies = [
 
 [[package]]
 name = "starbase_id"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f6253f638f8eef738ee1edd63570444ebec71cd50286b0271ca8c8593bd7f29"
+checksum = "b524c77e06ce0407cf6bd2c89b7c9d101e21404db405deb40af71bd3e34a018a"
 dependencies = [
  "compact_str 0.9.0",
  "miette 7.6.0",
@@ -4982,9 +4982,9 @@ dependencies = [
 
 [[package]]
 name = "starbase_utils"
-version = "0.11.19"
+version = "0.11.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c3138017c8bc9a262b792f1c264106305a580e6d9252d702ca41c4898973e87"
+checksum = "1e6a13a15f9fb697b959ddb010af5599b0d8389d61ea1ebe72d46a46decfcd6b"
 dependencies = [
  "async-trait",
  "dirs 6.0.0",
@@ -4994,7 +4994,7 @@ dependencies = [
  "miette 7.6.0",
  "regex",
  "reqwest",
- "scc 3.0.7",
+ "scc 2.4.0",
  "serde",
  "serde_json",
  "serde_yml",

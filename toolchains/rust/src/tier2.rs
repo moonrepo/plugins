@@ -292,6 +292,7 @@ pub fn parse_manifest(
                                     Some(version) => Some(UnresolvedVersionSpec::parse(version)?),
                                     None => None,
                                 },
+                                ..Default::default()
                             })
                         }
                     }

@@ -96,11 +96,14 @@ pub fn parse_manifest(
         } else if specifier.starts_with(".") || specifier.starts_with("/") {
             config.path = Some(specifier.into());
         } else if specifier.starts_with("npm:") || specifier.starts_with("jsr:") {
-            if let Some(index) = specifier.rfind('@') {
+            if let Some(index) = specifier.rfind('@')
+                && index != 4
+            {
                 config.version = Some(UnresolvedVersionSpec::parse(&specifier[index + 1..])?);
+                config.reference = Some(specifier[0..index].into());
+            } else {
+                config.reference = Some(specifier.into());
             }
-
-            // TODO track specifier
         }
 
         output

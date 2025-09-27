@@ -1673,17 +1673,7 @@ mod javascript_toolchain_tier2 {
             )
             .unwrap();
 
-            sandbox.debug_files();
-
             sandbox
-        }
-
-        fn expected_packages() -> BTreeMap<String, Option<Version>> {
-            BTreeMap::from_iter([
-                ("a".into(), Some(Version::new(1, 0, 0))),
-                ("b".into(), Some(Version::new(2, 0, 0))),
-                ("c".into(), Some(Version::new(3, 0, 0))),
-            ])
         }
 
         fn expected_base_dependencies() -> BTreeMap<String, Vec<LockDependency>> {
@@ -1797,7 +1787,6 @@ mod javascript_toolchain_tier2 {
                 })
                 .await;
 
-            assert_eq!(output.packages, expected_packages());
             assert_eq!(output.dependencies, expected_dependencies());
         }
 
@@ -1842,7 +1831,6 @@ mod javascript_toolchain_tier2 {
                 })
                 .await;
 
-            assert!(output.packages.is_empty());
             assert_eq!(
                 output.dependencies,
                 BTreeMap::from_iter([
@@ -1906,7 +1894,6 @@ mod javascript_toolchain_tier2 {
                 })
                 .await;
 
-            assert_eq!(output.packages, expected_packages());
             assert_eq!(output.dependencies, expected_dependencies());
         }
 
@@ -1922,7 +1909,6 @@ mod javascript_toolchain_tier2 {
                 })
                 .await;
 
-            assert!(output.packages.is_empty());
             assert_eq!(output.dependencies, expected_base_dependencies());
         }
 
@@ -1937,17 +1923,6 @@ mod javascript_toolchain_tier2 {
                     ..Default::default()
                 })
                 .await;
-
-            // Workspace packages in the lockfile have their version
-            // set to `0.0.0-use.local` instead of the actual version
-            assert_eq!(
-                output.packages,
-                BTreeMap::from_iter([
-                    ("a".into(), Version::parse("0.0.0-use.local").ok()),
-                    ("b".into(), Version::parse("0.0.0-use.local").ok()),
-                    ("c".into(), Version::parse("0.0.0-use.local").ok()),
-                ])
-            );
 
             // Yarn has different integrities than other package managers...
             assert_eq!(
@@ -2056,7 +2031,6 @@ mod javascript_toolchain_tier2 {
                 })
                 .await;
 
-            assert!(output.packages.is_empty());
             assert_eq!(output.dependencies, expected_base_dependencies());
         }
     }
