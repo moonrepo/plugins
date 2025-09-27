@@ -25,20 +25,20 @@ toml = { version = "0.9.7", default-features = false, features = [
 ] }
 
 # moon
-# moon_common = { version = "0.1.4" }
-# moon_config = { version = "0.1.9" }
-# moon_pdk = { version = "0.3.2" }
-# moon_pdk_api = { version = "0.3.3" }
-# moon_pdk_test_utils = { version = "0.3.3" }
-# moon_project = { version = "0.1.4" }
-# moon_target = { version = "0.1.3" }
-moon_common = { path = "../../moon/crates/common" }
-moon_config = { path = "../../moon/crates/config" }
-moon_pdk = { path = "../../moon/crates/pdk" }
-moon_pdk_api = { path = "../../moon/crates/pdk-api" }
-moon_pdk_test_utils = { path = "../../moon/crates/pdk-test-utils" }
-moon_project = { path = "../../moon/crates/project" }
-moon_target = { path = "../../moon/crates/target" }
+moon_common = { version = "0.2.0" }
+moon_config = { version = "0.2.0" }
+moon_pdk = { version = "0.4.0" }
+moon_pdk_api = { version = "0.4.0" }
+moon_pdk_test_utils = { version = "0.4.0" }
+moon_project = { version = "0.2.0" }
+moon_target = { version = "0.2.0" }
+# moon_common = { path = "../../moon/crates/common" }
+# moon_config = { path = "../../moon/crates/config" }
+# moon_pdk = { path = "../../moon/crates/pdk" }
+# moon_pdk_api = { path = "../../moon/crates/pdk-api" }
+# moon_pdk_test_utils = { path = "../../moon/crates/pdk-test-utils" }
+# moon_project = { path = "../../moon/crates/project" }
+# moon_target = { path = "../../moon/crates/target" }
 
 # proto
 proto_pdk = { version = "0.32.1" }

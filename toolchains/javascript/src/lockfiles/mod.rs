@@ -22,7 +22,3 @@ pub(super) fn parse_version_spec<T: AsRef<str>>(version: T) -> AnyResult<Option<
         Ok(Some(VersionSpec::parse(version)?))
     }
 }
-
-// pub(super) fn parse_version<T: AsRef<str>>(version: T) -> AnyResult<Option<Version>> {
-//     Ok(parse_version_spec(version)?.and_then(|spec| spec.as_version().cloned()))
-// }

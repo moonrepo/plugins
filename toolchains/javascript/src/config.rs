@@ -1,23 +1,22 @@
-use moon_pdk_api::{UnresolvedVersionSpec, config_struct};
-use schematic::{Config, ConfigEnum};
-use serde::{Deserialize, Serialize};
+use moon_common::Id;
+use moon_pdk_api::{UnresolvedVersionSpec, Version, VersionReq, config_struct};
+use schematic::{Config, ConfigEnum, derive_enum};
 
-/// The available package managers for JavaScript.
-#[derive(ConfigEnum, Clone, Copy, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum JavaScriptPackageManager {
-    Bun,
-    Deno,
-    #[default]
-    Npm,
-    Pnpm,
-    Yarn,
-}
+derive_enum!(
+    /// The available package managers for JavaScript.
+    #[derive(ConfigEnum, Copy, Default)]
+    pub enum JavaScriptPackageManager {
+        Bun,
+        Deno,
+        #[default]
+        Npm,
+        Pnpm,
+        Yarn,
+    }
+);
 
 impl JavaScriptPackageManager {
-    pub fn get_runtime_toolchain(&self) -> moon_common::Id {
-        use moon_common::Id;
-
+    pub fn get_runtime_toolchain(&self) -> Id {
         match self {
             JavaScriptPackageManager::Bun => Id::raw("bun"),
             JavaScriptPackageManager::Deno => Id::raw("deno"),
@@ -30,21 +29,22 @@ impl JavaScriptPackageManager {
     }
 }
 
-/// Formats that a local workspace `package.json` dependency version can be.
-#[derive(ConfigEnum, Clone, Copy, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum JavaScriptDependencyVersionFormat {
-    File,         // file:..
-    Link,         // link:..
-    Star,         // *
-    Version,      // 0.0.0
-    VersionCaret, // ^0.0.0
-    VersionTilde, // ~0.0.0
-    #[default]
-    Workspace, // workspace:*
-    WorkspaceCaret, // workspace:^
-    WorkspaceTilde, // workspace:~
-}
+derive_enum!(
+    /// Formats that a local workspace `package.json` dependency version can be.
+    #[derive(ConfigEnum, Copy, Default)]
+    pub enum JavaScriptDependencyVersionFormat {
+        File,         // file:..
+        Link,         // link:..
+        Star,         // *
+        Version,      // 0.0.0
+        VersionCaret, // ^0.0.0
+        VersionTilde, // ~0.0.0
+        #[default]
+        Workspace, // workspace:*
+        WorkspaceCaret, // workspace:^
+        WorkspaceTilde, // workspace:~
+    }
+);
 
 impl JavaScriptDependencyVersionFormat {
     pub fn get_prefix(&self) -> String {
@@ -140,8 +140,6 @@ config_struct!(
 
 impl SharedPackageManagerConfig {
     pub fn version_satisfies(&self, req: &str) -> bool {
-        use moon_pdk_api::{Version, VersionReq};
-
         let Some(spec) = &self.version else {
             return false;
         };
