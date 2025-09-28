@@ -1,9 +1,11 @@
+use moon_common::Id;
 use moon_config::{
     DependencyScope, OneOrMany, OutputPath, PartialTaskArgs, PartialTaskConfig,
-    PartialTaskOptionsConfig, TaskOptionRunInCI, TaskPreset,
+    PartialTaskDependency, PartialTaskOptionsConfig, TaskOptionRunInCI, TaskPreset,
 };
 use moon_pdk_api::*;
 use moon_pdk_test_utils::{create_empty_moon_sandbox, create_moon_sandbox};
+use moon_target::Target;
 use serde_json::json;
 use starbase_utils::fs;
 use std::collections::BTreeMap;
@@ -21,9 +23,9 @@ mod javascript_toolchain_tier2 {
             let plugin = sandbox.create_toolchain("javascript").await;
 
             let mut input = ExtendProjectGraphInput::default();
-            input.project_sources.insert("a".into(), "a".into());
-            input.project_sources.insert("b".into(), "b".into());
-            input.project_sources.insert("c".into(), "c".into());
+            input.project_sources.insert(Id::raw("a"), "a".into());
+            input.project_sources.insert(Id::raw("b"), "b".into());
+            input.project_sources.insert(Id::raw("c"), "c".into());
 
             let mut output = plugin.extend_project_graph(input).await;
 
@@ -31,31 +33,31 @@ mod javascript_toolchain_tier2 {
                 output.extended_projects,
                 BTreeMap::from_iter([
                     (
-                        "a".into(),
+                        Id::raw("a"),
                         ExtendProjectOutput {
                             alias: Some("a".into()),
                             ..Default::default()
                         }
                     ),
                     (
-                        "b".into(),
+                        Id::raw("b"),
                         ExtendProjectOutput {
                             alias: Some("@b/lib".into()),
                             ..Default::default()
                         }
                     ),
                     (
-                        "c".into(),
+                        Id::raw("c"),
                         ExtendProjectOutput {
                             alias: Some("@org/c".into()),
                             dependencies: vec![
                                 ProjectDependency {
-                                    id: "a".into(),
+                                    id: Id::raw("a"),
                                     scope: DependencyScope::Production,
                                     via: Some("package a".into()),
                                 },
                                 ProjectDependency {
-                                    id: "b".into(),
+                                    id: Id::raw("b"),
                                     scope: DependencyScope::Development,
                                     via: Some("package @b/lib".into()),
                                 }
@@ -84,14 +86,14 @@ mod javascript_toolchain_tier2 {
             let plugin = sandbox.create_toolchain("javascript").await;
 
             let mut input = ExtendProjectGraphInput::default();
-            input.project_sources.insert("a".into(), "a".into());
+            input.project_sources.insert(Id::raw("a"), "a".into());
 
             let output = plugin.extend_project_graph(input).await;
 
             assert_eq!(
                 output.extended_projects,
                 BTreeMap::from_iter([(
-                    "a".into(),
+                    Id::raw("a"),
                     ExtendProjectOutput {
                         alias: Some("a".into()),
                         ..Default::default()
@@ -113,7 +115,7 @@ mod javascript_toolchain_tier2 {
             let mut input = ExtendProjectGraphInput::default();
             input
                 .project_sources
-                .insert("no-manifest".into(), "no-manifest".into());
+                .insert(Id::raw("no-manifest"), "no-manifest".into());
 
             let output = plugin.extend_project_graph(input).await;
 
@@ -127,9 +129,9 @@ mod javascript_toolchain_tier2 {
             let plugin = sandbox.create_toolchain("javascript").await;
 
             let mut input = ExtendProjectGraphInput::default();
-            input.project_sources.insert("a".into(), "a".into());
-            input.project_sources.insert("b".into(), "b".into());
-            input.project_sources.insert("c".into(), "c".into());
+            input.project_sources.insert(Id::raw("a"), "a".into());
+            input.project_sources.insert(Id::raw("b"), "b".into());
+            input.project_sources.insert(Id::raw("c"), "c".into());
             input.toolchain_config = json!({
                 "inferTasksFromScripts": false,
             });
@@ -143,16 +145,14 @@ mod javascript_toolchain_tier2 {
 
         #[allow(deprecated)]
         #[tokio::test(flavor = "multi_thread")]
-        async fn infers_scripts_when_enabled() {
-            use starbase_sandbox::pretty_assertions::assert_eq;
-
+        async fn infers_package_scripts_when_enabled() {
             let sandbox = create_moon_sandbox("projects");
             let plugin = sandbox.create_toolchain("javascript").await;
 
             let mut input = ExtendProjectGraphInput::default();
-            input.project_sources.insert("a".into(), "a".into());
-            input.project_sources.insert("b".into(), "b".into());
-            input.project_sources.insert("c".into(), "c".into());
+            input.project_sources.insert(Id::raw("a"), "a".into());
+            input.project_sources.insert(Id::raw("b"), "b".into());
+            input.project_sources.insert(Id::raw("c"), "c".into());
             input.toolchain_config = json!({
                 "inferTasksFromScripts": true,
                 "packageManager": "npm"
@@ -163,7 +163,7 @@ mod javascript_toolchain_tier2 {
             assert_eq!(
                 output.extended_projects.get("a").unwrap().tasks,
                 BTreeMap::from_iter([(
-                    "release".into(),
+                    Id::raw("release"),
                     PartialTaskConfig {
                         description: Some("Inherited from `release` package.json script.".into()),
                         command: Some(PartialTaskArgs::List(vec![
@@ -185,7 +185,7 @@ mod javascript_toolchain_tier2 {
                 output.extended_projects.get("b").unwrap().tasks,
                 BTreeMap::from_iter([
                     (
-                        "build".into(),
+                        Id::raw("build"),
                         PartialTaskConfig {
                             description: Some("Inherited from `build` package.json script.".into()),
                             command: Some(PartialTaskArgs::List(vec![
@@ -203,7 +203,7 @@ mod javascript_toolchain_tier2 {
                         }
                     ),
                     (
-                        "build-vite".into(),
+                        Id::raw("build-vite"),
                         PartialTaskConfig {
                             description: Some(
                                 "Inherited from `build:vite` package.json script.".into()
@@ -223,7 +223,7 @@ mod javascript_toolchain_tier2 {
                         }
                     ),
                     (
-                        "info".into(),
+                        Id::raw("info"),
                         PartialTaskConfig {
                             description: Some("Inherited from `info` package.json script.".into()),
                             command: Some(PartialTaskArgs::List(vec![
@@ -250,7 +250,7 @@ mod javascript_toolchain_tier2 {
                 output.extended_projects.get("c").unwrap().tasks,
                 BTreeMap::from_iter([
                     (
-                        "astro-serve".into(),
+                        Id::raw("astro-serve"),
                         PartialTaskConfig {
                             description: Some(
                                 "Inherited from `astro:serve` package.json script.".into()
@@ -271,7 +271,7 @@ mod javascript_toolchain_tier2 {
                         }
                     ),
                     (
-                        "dev".into(),
+                        Id::raw("dev"),
                         PartialTaskConfig {
                             description: Some("Inherited from `dev` package.json script.".into()),
                             command: Some(PartialTaskArgs::List(vec![
@@ -294,7 +294,7 @@ mod javascript_toolchain_tier2 {
                         }
                     ),
                     (
-                        "start-vite".into(),
+                        Id::raw("start-vite"),
                         PartialTaskConfig {
                             description: Some(
                                 "Inherited from `start:vite` package.json script.".into()
@@ -317,6 +317,69 @@ mod javascript_toolchain_tier2 {
                 ])
             );
         }
+
+        #[allow(deprecated)]
+        #[tokio::test(flavor = "multi_thread")]
+        async fn infers_deno_tasks_when_enabled() {
+            use starbase_sandbox::pretty_assertions::assert_eq;
+
+            let sandbox = create_moon_sandbox("projects");
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let mut input = ExtendProjectGraphInput::default();
+            input.project_sources.insert(Id::raw("a"), "a".into());
+            input.project_sources.insert(Id::raw("b"), "b".into());
+            input.project_sources.insert(Id::raw("c"), "c".into());
+            input.toolchain_config = json!({
+                "inferTasksFromScripts": true,
+                "packageManager": "deno"
+            });
+
+            let output = plugin.extend_project_graph(input).await;
+
+            assert_eq!(
+                output.extended_projects.get("a").unwrap().tasks,
+                BTreeMap::from_iter([
+                    (
+                        Id::raw("build"),
+                        PartialTaskConfig {
+                            description: Some("Inherited from `build` deno.json task.".into()),
+                            command: Some(PartialTaskArgs::List(vec![
+                                "deno".into(),
+                                "task".into(),
+                                "build".into(),
+                            ])),
+                            toolchain: Some(OneOrMany::Many(vec![
+                                Id::raw("javascript"),
+                                Id::raw("deno"),
+                            ])),
+                            ..Default::default()
+                        }
+                    ),
+                    (
+                        Id::raw("start"),
+                        PartialTaskConfig {
+                            description: Some("Inherited from `start` deno.json task.".into()),
+                            command: Some(PartialTaskArgs::List(vec![
+                                "deno".into(),
+                                "task".into(),
+                                "start".into(),
+                            ])),
+                            deps: Some(vec![PartialTaskDependency::Target(
+                                Target::parse("~:build").unwrap()
+                            )]),
+                            local: Some(true),
+                            preset: Some(TaskPreset::Server),
+                            toolchain: Some(OneOrMany::Many(vec![
+                                Id::raw("javascript"),
+                                Id::raw("deno"),
+                            ])),
+                            ..Default::default()
+                        }
+                    )
+                ])
+            );
+        }
     }
 
     mod extend_task_command {
@@ -331,6 +394,7 @@ mod javascript_toolchain_tier2 {
                 .extend_task_command(ExtendTaskCommandInput {
                     command: "unknown".into(),
                     project: ProjectFragment {
+                        id: Id::raw("project"),
                         source: "some/nested/path".into(),
                         ..Default::default()
                     },
@@ -362,6 +426,7 @@ mod javascript_toolchain_tier2 {
                 .extend_task_script(ExtendTaskScriptInput {
                     script: "unknown".into(),
                     project: ProjectFragment {
+                        id: Id::raw("project"),
                         source: "some/nested/path".into(),
                         ..Default::default()
                     },
@@ -453,6 +518,27 @@ mod javascript_toolchain_tier2 {
                     starting_dir: VirtualPath::Real(sandbox.path().join("package/nested")),
                     toolchain_config: json!({
                         "packageManager": "bun"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.members.is_none());
+            assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/package"));
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn finds_package_with_deno_lock() {
+            let sandbox = create_moon_sandbox("locate");
+            sandbox.create_file("package/deno.lock", "");
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .locate_dependencies_root(LocateDependenciesRootInput {
+                    starting_dir: VirtualPath::Real(sandbox.path().join("package/nested")),
+                    toolchain_config: json!({
+                        "packageManager": "deno"
                     }),
                     ..Default::default()
                 })
@@ -560,6 +646,83 @@ mod javascript_toolchain_tier2 {
                     ),
                     toolchain_config: json!({
                         "packageManager": "bun"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.members.unwrap(), ["packages/*"]);
+            assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/workspace"));
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn finds_workspace_with_deno_json() {
+            let sandbox = create_moon_sandbox("locate");
+            sandbox.create_file("workspace/deno.json", r#"{ "workspace": ["packages/*"] }"#);
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .locate_dependencies_root(LocateDependenciesRootInput {
+                    starting_dir: VirtualPath::Real(
+                        sandbox.path().join("workspace/packages/a/nested"),
+                    ),
+                    toolchain_config: json!({
+                        "packageManager": "deno"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.members.unwrap(), ["packages/*"]);
+            assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/workspace"));
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn finds_workspace_with_deno_jsonc() {
+            let sandbox = create_moon_sandbox("locate");
+            sandbox.create_file(
+                "workspace/deno.jsonc",
+                r#"{
+    "workspace": {
+        # Test nested object!
+        "members": ["packages/*"],
+    },
+}"#,
+            );
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .locate_dependencies_root(LocateDependenciesRootInput {
+                    starting_dir: VirtualPath::Real(
+                        sandbox.path().join("workspace/packages/a/nested"),
+                    ),
+                    toolchain_config: json!({
+                        "packageManager": "deno"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.members.unwrap(), ["packages/*"]);
+            assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/workspace"));
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn finds_workspace_with_deno_lock() {
+            let sandbox = create_moon_sandbox("locate");
+            sandbox.create_file("workspace/deno.lock", "");
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .locate_dependencies_root(LocateDependenciesRootInput {
+                    starting_dir: VirtualPath::Real(
+                        sandbox.path().join("workspace/packages/a/nested"),
+                    ),
+                    toolchain_config: json!({
+                        "packageManager": "deno"
                     }),
                     ..Default::default()
                 })
@@ -776,6 +939,96 @@ mod javascript_toolchain_tier2 {
                     output.install_command.unwrap(),
                     ExecCommand::new(
                         ExecCommandInput::new("bun", ["install", "-a", "b", "--c"])
+                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
+                );
+                assert!(output.dedupe_command.is_none());
+            }
+        }
+
+        mod deno {
+            use super::*;
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn default_commands() {
+                let sandbox = create_empty_moon_sandbox();
+                let plugin = sandbox.create_toolchain("javascript").await;
+
+                let output = plugin
+                    .install_dependencies(InstallDependenciesInput {
+                        root: VirtualPath::Real(sandbox.path().into()),
+                        toolchain_config: json!({
+                            "packageManager": "deno",
+                            "dedupeOnLockfileChange": true
+                        }),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert_eq!(
+                    output.install_command.unwrap(),
+                    ExecCommand::new(
+                        ExecCommandInput::new("deno", ["install"])
+                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
+                );
+                assert!(output.dedupe_command.is_none());
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn focused_commands() {
+                let sandbox = create_empty_moon_sandbox();
+                let plugin = sandbox.create_toolchain("javascript").await;
+
+                let output = plugin
+                    .install_dependencies(InstallDependenciesInput {
+                        root: VirtualPath::Real(sandbox.path().into()),
+                        toolchain_config: json!({
+                            "packageManager": "deno",
+                            "dedupeOnLockfileChange": true
+                        }),
+                        packages: vec!["foo".into(), "@scope/bar".into()],
+                        production: true,
+                        ..Default::default()
+                    })
+                    .await;
+
+                // Does not support focusing!
+                assert_eq!(
+                    output.install_command.unwrap(),
+                    ExecCommand::new(
+                        ExecCommandInput::new("deno", ["install",])
+                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
+                );
+                assert!(output.dedupe_command.is_none());
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn inherits_args_from_deno_toolchain() {
+                let mut sandbox = create_empty_moon_sandbox();
+
+                sandbox
+                    .host_funcs
+                    .mock_load_toolchain_config(|_, _| json!({ "installArgs": ["-a", "b", "--c"]}));
+
+                let plugin = sandbox.create_toolchain("javascript").await;
+
+                let output = plugin
+                    .install_dependencies(InstallDependenciesInput {
+                        root: VirtualPath::Real(sandbox.path().into()),
+                        toolchain_config: json!({
+                            "packageManager": "deno",
+                            "dedupeOnLockfileChange": true
+                        }),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert_eq!(
+                    output.install_command.unwrap(),
+                    ExecCommand::new(
+                        ExecCommandInput::new("deno", ["install", "-a", "b", "--c"])
                             .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                     )
                 );
@@ -1420,17 +1673,7 @@ mod javascript_toolchain_tier2 {
             )
             .unwrap();
 
-            sandbox.debug_files();
-
             sandbox
-        }
-
-        fn expected_packages() -> BTreeMap<String, Option<Version>> {
-            BTreeMap::from_iter([
-                ("a".into(), Some(Version::new(1, 0, 0))),
-                ("b".into(), Some(Version::new(2, 0, 0))),
-                ("c".into(), Some(Version::new(3, 0, 0))),
-            ])
         }
 
         fn expected_base_dependencies() -> BTreeMap<String, Vec<LockDependency>> {
@@ -1544,7 +1787,6 @@ mod javascript_toolchain_tier2 {
                 })
                 .await;
 
-            assert_eq!(output.packages, expected_packages());
             assert_eq!(output.dependencies, expected_dependencies());
         }
 
@@ -1578,6 +1820,69 @@ mod javascript_toolchain_tier2 {
         // }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn parses_deno() {
+            let sandbox = create_lockfile_sandbox("deno");
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .parse_lock(ParseLockInput {
+                    path: VirtualPath::Real(sandbox.path().join("deno.lock")),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.dependencies,
+                BTreeMap::from_iter([
+                    (
+                        "jsr:@astral/astral".into(),
+                        vec![LockDependency {
+                            hash: Some(
+                                "d6a4628313d8be99aac0f51005c1dc090fa3b4c6b5c8335c26a52d4842aa1276"
+                                    .into()
+                            ),
+                            version: Some(VersionSpec::parse("0.5.3").unwrap()),
+                            ..Default::default()
+                        }]
+                    ),
+                    (
+                        "jsr:@zip-js/zip-js".into(),
+                        vec![LockDependency {
+                            hash: Some(
+                                "14c123f0e534377a6f47c5ba5293bb6c0f3e72e78c6a687108011605420a4867"
+                                    .into()
+                            ),
+                            version: Some(VersionSpec::parse("2.7.73").unwrap()),
+                            ..Default::default()
+                        }]
+                    ),
+                    (
+                        "npm:@babel/core".into(),
+                        vec![LockDependency {
+                            hash: Some(
+                                "sha512-yDBHV9kQNcr2/sUr9jghVyz9C3Y5G2zUM2H2lo+9mKv4sFgbA8s8Z9t8D1jiTkGoO/NoIfKMyKWr4s6CN23ZwQ=="
+                                    .into()
+                            ),
+                            version: Some(VersionSpec::parse("7.28.3").unwrap()),
+                            ..Default::default()
+                        }]
+                    ),
+                    (
+                        "npm:@babel/preset-react".into(),
+                        vec![LockDependency {
+                            hash: Some(
+                                "sha512-oJHWh2gLhU9dW9HHr42q0cI0/iHHXTLGe39qvpAZZzagHy0MzYLCnCVV0symeRvzmjHyVU7mw2K06E6u/JwbhA=="
+                                    .into()
+                            ),
+                            version: Some(VersionSpec::parse("7.27.1").unwrap()),
+                            ..Default::default()
+                        }]
+                    ),
+                ])
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn parses_npm() {
             let sandbox = create_lockfile_sandbox("npm");
             let plugin = sandbox.create_toolchain("javascript").await;
@@ -1589,7 +1894,6 @@ mod javascript_toolchain_tier2 {
                 })
                 .await;
 
-            assert_eq!(output.packages, expected_packages());
             assert_eq!(output.dependencies, expected_dependencies());
         }
 
@@ -1605,7 +1909,6 @@ mod javascript_toolchain_tier2 {
                 })
                 .await;
 
-            assert!(output.packages.is_empty());
             assert_eq!(output.dependencies, expected_base_dependencies());
         }
 
@@ -1621,42 +1924,10 @@ mod javascript_toolchain_tier2 {
                 })
                 .await;
 
-            // Workspace packages in the lockfile have their version
-            // set to `0.0.0-use.local` instead of the actual version
-            assert_eq!(
-                output.packages,
-                BTreeMap::from_iter([
-                    ("a".into(), Version::parse("0.0.0-use.local").ok()),
-                    ("b".into(), Version::parse("0.0.0-use.local").ok()),
-                    ("c".into(), Version::parse("0.0.0-use.local").ok()),
-                ])
-            );
-
             // Yarn has different integrities than other package managers...
             assert_eq!(
                 output.dependencies,
                 BTreeMap::from_iter([
-                    (
-                        "a".into(),
-                        vec![LockDependency {
-                            version: VersionSpec::parse("0.0.0-use.local").ok(),
-                            ..Default::default()
-                        }],
-                    ),
-                    (
-                        "b".into(),
-                        vec![LockDependency {
-                            version: VersionSpec::parse("0.0.0-use.local").ok(),
-                            ..Default::default()
-                        }],
-                    ),
-                    (
-                        "c".into(),
-                        vec![LockDependency {
-                            version: VersionSpec::parse("0.0.0-use.local").ok(),
-                            ..Default::default()
-                        }],
-                    ),
                     (
                         "csstype".into(),
                         vec![LockDependency {
@@ -1739,7 +2010,6 @@ mod javascript_toolchain_tier2 {
                 })
                 .await;
 
-            assert!(output.packages.is_empty());
             assert_eq!(output.dependencies, expected_base_dependencies());
         }
     }

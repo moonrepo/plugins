@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Updated to support moon v1.41.
+
 ## 0.2.4
 
 #### 🚀 Updates

@@ -1,4 +1,4 @@
-use javascript_toolchain::JavaScriptDependencyVersionFormat;
+use javascript_toolchain::config::JavaScriptDependencyVersionFormat;
 use moon_config::DependencyScope;
 use moon_pdk_api::*;
 use moon_pdk_test_utils::create_moon_sandbox;
@@ -20,6 +20,7 @@ mod javascript_toolchain_tier1 {
             let output = plugin
                 .sync_project(SyncProjectInput {
                     project: ProjectFragment {
+                        id: Id::raw("package"),
                         source: "package".into(),
                         toolchains: vec![Id::raw("javascript")],
                         ..Default::default()
@@ -43,6 +44,7 @@ mod javascript_toolchain_tier1 {
             let output = plugin
                 .sync_project(SyncProjectInput {
                     project: ProjectFragment {
+                        id: Id::raw("root"),
                         source: ".".into(),
                         toolchains: vec![Id::raw("javascript")],
                         ..Default::default()
@@ -67,6 +69,7 @@ mod javascript_toolchain_tier1 {
             plugin
                 .sync_project(SyncProjectInput {
                     project: ProjectFragment {
+                        id: Id::raw("package"),
                         source: "package".into(),
                         toolchains: vec![Id::raw("javascript")],
                         ..Default::default()
@@ -89,6 +92,7 @@ mod javascript_toolchain_tier1 {
             let output = plugin
                 .sync_project(SyncProjectInput {
                     project: ProjectFragment {
+                        id: Id::raw("package-clean"),
                         source: "package-clean".into(),
                         toolchains: vec![Id::raw("javascript")],
                         ..Default::default()

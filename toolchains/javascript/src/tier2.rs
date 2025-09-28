@@ -6,8 +6,8 @@ use extism_pdk::*;
 use moon_common::path::paths_are_equal;
 use moon_config::DependencyScope;
 use moon_pdk::{
-    get_host_environment, load_toolchain_config, locate_root, locate_root_many,
-    locate_root_with_check, parse_toolchain_config_schema,
+    get_host_environment, load_project_toolchain_config, load_toolchain_config, locate_root_many,
+    locate_root_many_with_check, parse_toolchain_config_schema,
 };
 use moon_pdk_api::*;
 use nodejs_package_json::{VersionProtocol, WorkspaceProtocol};
@@ -69,7 +69,7 @@ pub fn extend_project_graph(
 
                     if is_local {
                         project_output.dependencies.push(ProjectDependency {
-                            id: dep_id.into(),
+                            id: dep_id.to_owned(),
                             scope,
                             via: Some(format!("package {dep_name}")),
                         });
@@ -88,11 +88,26 @@ pub fn extend_project_graph(
         extract_implicit_deps(&manifest.peer_dependencies, DependencyScope::Peer)?;
         extract_implicit_deps(&manifest.optional_dependencies, DependencyScope::Build)?;
 
-        if config.infer_tasks_from_scripts {
-            project_output.tasks = TasksInferrer::new(&config, manifest).infer()?;
+        if config.infer_tasks_from_scripts
+            && let Some(package_manager) = config.package_manager
+        {
+            if package_manager == JavaScriptPackageManager::Deno {
+                let deno_manifest = DenoJson::load_from(project_root)?;
+
+                project_output.tasks.extend(
+                    TasksInferrer::new(&config).infer_from_deno_tasks(&deno_manifest.tasks)?,
+                );
+            } else if let Some(scripts) = &manifest.scripts {
+                project_output.tasks.extend(
+                    TasksInferrer::new(&config)
+                        .infer_from_package_scripts(BTreeMap::from_iter(scripts))?,
+                );
+            }
         }
 
-        output.extended_projects.insert(id.into(), project_output);
+        output
+            .extended_projects
+            .insert(id.to_owned(), project_output);
 
         if let Some(file) = manifest.path.virtual_path() {
             output.input_files.push(file);
@@ -168,14 +183,61 @@ pub fn define_requirements(
     let mut output = DefineRequirementsOutput::default();
 
     if let Some(package_manager) = config.package_manager {
-        output.requires.push(format!("unstable_{package_manager}"));
-
-        if package_manager != JavaScriptPackageManager::Bun {
+        if package_manager.is_for_node() {
             output.requires.push("unstable_node".into());
         }
+
+        output.requires.push(format!("unstable_{package_manager}"));
     }
 
     Ok(Json(output))
+}
+
+fn extract_workspace_members(
+    package_manager: JavaScriptPackageManager,
+    root: &VirtualPath,
+) -> AnyResult<Option<Vec<String>>> {
+    let cache_key = format!("workspace-members:{root}");
+    let mut members = None;
+
+    // Reduce the amount of file system operations for every package
+    // within the workspace by caching the found members for this directory
+    if let Some(cache) = var::get::<String>(&cache_key)? {
+        let members: Vec<String> = json::from_str(&cache)?;
+
+        return Ok(Some(members));
+    }
+
+    // Package manager specific files
+    match package_manager {
+        JavaScriptPackageManager::Deno => {
+            members = DenoJson::load_from(root)?
+                .workspace
+                .map(|ws| ws.get_members().to_vec());
+        }
+        JavaScriptPackageManager::Pnpm => {
+            let workspace_file = root.join("pnpm-workspace.yaml");
+
+            if workspace_file.exists() {
+                let workspace: PnpmWorkspace = yaml::read_file(workspace_file)?;
+
+                members = workspace.packages;
+            }
+        }
+        _ => {}
+    };
+
+    // Otherwise `package.json` itself
+    if members.is_none() {
+        members = PackageJson::load(root.join("package.json"))?.extract_members();
+    }
+
+    // Cache the result!
+    if let Some(members) = &members {
+        var::set(cache_key, json::to_string(members)?)?;
+    }
+
+    Ok(members)
 }
 
 #[plugin_fn]
@@ -190,37 +252,39 @@ pub fn locate_dependencies_root(
         return Ok(Json(output));
     };
 
-    // Attempt to find a lock file first
+    let manifest_names = match package_manager {
+        JavaScriptPackageManager::Deno => vec!["deno.json", "deno.jsonc", "package.json"],
+        _ => vec!["package.json"],
+    };
+
+    let workspace_manifest_names = match package_manager {
+        JavaScriptPackageManager::Deno => vec!["deno.json", "deno.jsonc", "package.json"],
+        JavaScriptPackageManager::Pnpm => vec!["pnpm-workspace.yaml", "package.json"],
+        _ => vec!["package.json"],
+    };
+
     let lock_names = match package_manager {
         JavaScriptPackageManager::Bun => vec!["bun.lock", "bun.lockb"],
+        JavaScriptPackageManager::Deno => vec!["deno.lock"],
         JavaScriptPackageManager::Npm => vec!["package-lock.json", "npm-shrinkwrap.json"],
-        JavaScriptPackageManager::Pnpm => vec!["pnpm-lock.yaml", "pnpm-workspace.yaml"],
+        JavaScriptPackageManager::Pnpm => vec!["pnpm-lock.yaml"],
         JavaScriptPackageManager::Yarn => vec!["yarn.lock"],
     };
 
+    // First attempt: find lock files
     if let Some(root) = locate_root_many(&input.starting_dir, &lock_names) {
         output.root = root.virtual_path();
-
-        if package_manager == JavaScriptPackageManager::Pnpm
-            && root.join("pnpm-workspace.yaml").exists()
-        {
-            let workspace: PnpmWorkspace = yaml::read_file(root.join("pnpm-workspace.yaml"))?;
-
-            output.members = workspace.packages;
-        } else {
-            output.members = PackageJson::load(root.join("package.json"))?.extract_members();
-        }
+        output.members = extract_workspace_members(package_manager, &root)?;
     }
 
-    // Otherwise find a `package.json` workspace
+    // Second attempt: find workspace-compatible manifest files
     if output.root.is_none() {
-        locate_root_with_check(&input.starting_dir, "package.json", |root| {
-            let manifest = PackageJson::load(root.join("package.json"))?;
+        locate_root_many_with_check(&input.starting_dir, &workspace_manifest_names, |root| {
             let mut found = false;
 
-            if manifest.workspaces.is_some() {
+            if let Some(members) = extract_workspace_members(package_manager, root)? {
                 output.root = root.virtual_path();
-                output.members = manifest.extract_members();
+                output.members = Some(members);
                 found = true;
             }
 
@@ -228,9 +292,9 @@ pub fn locate_dependencies_root(
         })?;
     }
 
-    // Else may be a stand-alone project
+    // Last attempt: find a manifest file (project only)
     if output.root.is_none()
-        && let Some(root) = locate_root(&input.starting_dir, "package.json")
+        && let Some(root) = locate_root_many(&input.starting_dir, &manifest_names)
     {
         output.root = root.virtual_path();
     }
@@ -251,9 +315,12 @@ pub fn install_dependencies(
     };
 
     let env = get_host_environment()?;
-    let package_manager_config =
-        load_toolchain_config::<SharedPackageManagerConfig>(package_manager.to_string())?;
     let mut inherit_install_args = true;
+
+    let package_manager_config: SharedPackageManagerConfig = match &input.project {
+        Some(project) => load_project_toolchain_config(&project.id, package_manager.to_string())?,
+        None => load_toolchain_config(package_manager.to_string())?,
+    };
 
     // Install
     let mut command = match package_manager {
@@ -270,6 +337,18 @@ pub fn install_dependencies(
             }
 
             cmd
+        }
+        JavaScriptPackageManager::Deno => {
+            ExecCommandInput::new("deno", ["install"])
+
+            // if input.production {
+            //     cmd.args.push("--production".into());
+            // }
+
+            // for package_name in input.packages {
+            //     cmd.args.push("--filter".into());
+            //     cmd.args.push(package_name);
+            // }
         }
         JavaScriptPackageManager::Npm => {
             let mut cmd = ExecCommandInput::new(
@@ -346,7 +425,7 @@ pub fn install_dependencies(
     // Dedupe
     if config.dedupe_on_lockfile_change {
         match package_manager {
-            JavaScriptPackageManager::Bun => {
+            JavaScriptPackageManager::Bun | JavaScriptPackageManager::Deno => {
                 // N/A
             }
             JavaScriptPackageManager::Npm => {
@@ -412,6 +491,7 @@ pub fn parse_lock(Json(input): Json<ParseLockInput>) -> FnResult<Json<ParseLockO
     match input.path.file_name().and_then(|name| name.to_str()) {
         Some("bun.lock") => parse_bun_lock(&input.path, &mut output)?,
         Some("bun.lockb") => parse_bun_lockb(&input.path, &mut output)?,
+        Some("deno.lock") => parse_deno_lock(&input.path, &mut output)?,
         Some("package-lock.json" | "npm-shrinkwrap.json") => {
             parse_package_lock_json(&input.path, &mut output)?
         }
@@ -526,8 +606,13 @@ pub fn setup_environment(
         && let Some(package_manager) = config.package_manager
         && package_manager.is_for_node()
     {
-        let package_manager_config =
-            load_toolchain_config::<SharedPackageManagerConfig>(package_manager.to_string())?;
+        let package_manager_config: SharedPackageManagerConfig = match &input.project {
+            Some(project) => {
+                load_project_toolchain_config(&project.id, package_manager.to_string())?
+            }
+            None => load_toolchain_config(package_manager.to_string())?,
+        };
+
         let package_path = input.root.join("package.json");
 
         if package_path.exists()

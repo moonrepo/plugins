@@ -13,7 +13,7 @@ mod node_depman_toolchain_tier1 {
             let plugin = sandbox.create_toolchain("npm").await;
 
             let output = plugin
-                .register_toolchain(RegisterToolchainInput { id: "npm".into() })
+                .register_toolchain(RegisterToolchainInput { id: Id::raw("npm") })
                 .await;
 
             assert_eq!(output.name, "npm");
@@ -33,7 +33,9 @@ mod node_depman_toolchain_tier1 {
             let plugin = sandbox.create_toolchain("pnpm").await;
 
             let output = plugin
-                .register_toolchain(RegisterToolchainInput { id: "pnpm".into() })
+                .register_toolchain(RegisterToolchainInput {
+                    id: Id::raw("pnpm"),
+                })
                 .await;
 
             assert_eq!(output.name, "pnpm");
@@ -53,7 +55,9 @@ mod node_depman_toolchain_tier1 {
             let plugin = sandbox.create_toolchain("yarn").await;
 
             let output = plugin
-                .register_toolchain(RegisterToolchainInput { id: "yarn".into() })
+                .register_toolchain(RegisterToolchainInput {
+                    id: Id::raw("yarn"),
+                })
                 .await;
 
             assert_eq!(output.name, "yarn");

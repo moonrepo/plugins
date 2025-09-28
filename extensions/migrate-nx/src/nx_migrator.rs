@@ -2,12 +2,11 @@ use crate::nx_json::*;
 use crate::nx_project_json::*;
 use extension_common::migrator::*;
 use moon_common::Id;
-use moon_config::GlobInput;
-use moon_config::GlobPath;
 use moon_config::{
-    FilePath, Input, LayerType, OneOrMany, OutputPath, PartialProjectDependsOn,
-    PartialProjectMetadataConfig, PartialTaskArgs, PartialTaskConfig, PartialTaskDependency,
-    PartialTaskOptionsConfig, PartialVcsConfig, PartialWorkspaceProjects, TaskOptionEnvFile,
+    FilePath, GlobInput, GlobPath, Input, LayerType, OneOrMany, OutputPath,
+    PartialProjectDependsOn, PartialProjectMetadataConfig, PartialTaskArgs, PartialTaskConfig,
+    PartialTaskDependency, PartialTaskOptionsConfig, PartialVcsConfig, PartialWorkspaceProjects,
+    TaskOptionCache, TaskOptionEnvFile,
 };
 use moon_pdk::{AnyResult, map_miette_error};
 use moon_pdk_api::MoonContext;
@@ -315,16 +314,10 @@ fn migrate_inputs(raw_inputs: &[NxInput], for_file_groups: bool) -> AnyResult<Ve
                     let path = replace_tokens(source, true);
 
                     if path.contains('?') {
-                        let glob = GlobInput {
+                        inputs.push(Input::Glob(GlobInput {
                             glob: GlobPath(path.into()),
                             ..Default::default()
-                        };
-
-                        inputs.push(if glob.is_workspace_relative() {
-                            Input::WorkspaceGlob(glob)
-                        } else {
-                            Input::ProjectGlob(glob)
-                        });
+                        }));
                     } else {
                         inputs.push(Input::parse(path)?);
                     }
@@ -632,7 +625,7 @@ fn migrate_task(
         config
             .options
             .get_or_insert(PartialTaskOptionsConfig::default())
-            .cache = nx_target.cache;
+            .cache = nx_target.cache.map(TaskOptionCache::Enabled);
     }
 
     Ok(config)
