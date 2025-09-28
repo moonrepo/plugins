@@ -1,5 +1,5 @@
-mod config;
-mod deno_json;
+pub mod config;
+pub mod deno_json;
 #[cfg(feature = "wasm")]
 mod tier1;
 #[cfg(feature = "wasm")]

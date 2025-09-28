@@ -1,4 +1,4 @@
-use javascript_toolchain::PackageJson;
+use javascript_toolchain::package_json::PackageJson;
 use moon_pdk_api::VirtualPath;
 use nodejs_package_json::{PackageJson as PackageJsonInner, VersionProtocol};
 use starbase_sandbox::create_empty_sandbox;

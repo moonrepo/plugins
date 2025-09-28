@@ -181,7 +181,7 @@ mod node_toolchain_tier2 {
                     "--cpu-prof-name".into(),
                     "snapshot.cpuprofile".into(),
                     "--cpu-prof-dir".into(),
-                    standardize_separators(sandbox.path().join(".moon").to_string_lossy())
+                    standardize_separators(sandbox.path().join("project/.moon").to_string_lossy())
                 ])
             );
         }
@@ -208,7 +208,7 @@ mod node_toolchain_tier2 {
                     "--heap-prof-name".into(),
                     "snapshot.heapprofile".into(),
                     "--heap-prof-dir".into(),
-                    standardize_separators(sandbox.path().join(".moon").to_string_lossy())
+                    standardize_separators(sandbox.path().join("project/.moon").to_string_lossy())
                 ])
             );
         }
@@ -256,7 +256,7 @@ mod node_toolchain_tier2 {
                     "--heap-prof-name".into(),
                     "snapshot.heapprofile".into(),
                     "--heap-prof-dir".into(),
-                    standardize_separators(sandbox.path().join(".moon").to_string_lossy())
+                    standardize_separators(sandbox.path().join("project/.moon").to_string_lossy())
                 ])
             );
         }

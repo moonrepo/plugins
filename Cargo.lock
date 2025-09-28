@@ -3035,12 +3035,13 @@ dependencies = [
 
 [[package]]
 name = "moon_pdk_test_utils"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99b6a0ade7786556287e378f83e5e42232beaa5677babd268507000236201c83"
+checksum = "3a0b193788f61a1be050f0696cacbf5d7398c5fb93b287544302cac378370bb2"
 dependencies = [
  "extism",
  "moon_pdk_api",
+ "moon_target",
  "proto_core",
  "proto_pdk_test_utils",
  "serde",

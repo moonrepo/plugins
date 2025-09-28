@@ -1929,27 +1929,6 @@ mod javascript_toolchain_tier2 {
                 output.dependencies,
                 BTreeMap::from_iter([
                     (
-                        "a".into(),
-                        vec![LockDependency {
-                            version: VersionSpec::parse("0.0.0-use.local").ok(),
-                            ..Default::default()
-                        }],
-                    ),
-                    (
-                        "b".into(),
-                        vec![LockDependency {
-                            version: VersionSpec::parse("0.0.0-use.local").ok(),
-                            ..Default::default()
-                        }],
-                    ),
-                    (
-                        "c".into(),
-                        vec![LockDependency {
-                            version: VersionSpec::parse("0.0.0-use.local").ok(),
-                            ..Default::default()
-                        }],
-                    ),
-                    (
                         "csstype".into(),
                         vec![LockDependency {
                             hash: Some(

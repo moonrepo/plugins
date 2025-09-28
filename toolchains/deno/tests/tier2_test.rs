@@ -144,6 +144,7 @@ mod deno_toolchain_tier2 {
                         "a".into(),
                         ManifestDependency::Config(ManifestDependencyConfig {
                             version: Some(UnresolvedVersionSpec::parse("^1.2.3").unwrap()),
+                            reference: Some("jsr:@scope/package".into()),
                             ..Default::default()
                         })
                     ),
@@ -151,6 +152,7 @@ mod deno_toolchain_tier2 {
                         "b".into(),
                         ManifestDependency::Config(ManifestDependencyConfig {
                             version: Some(UnresolvedVersionSpec::parse("~4.5.6").unwrap()),
+                            reference: Some("npm:package".into()),
                             ..Default::default()
                         })
                     ),

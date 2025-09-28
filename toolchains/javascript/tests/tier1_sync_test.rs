@@ -1,4 +1,4 @@
-use javascript_toolchain::JavaScriptDependencyVersionFormat;
+use javascript_toolchain::config::JavaScriptDependencyVersionFormat;
 use moon_config::DependencyScope;
 use moon_pdk_api::*;
 use moon_pdk_test_utils::create_moon_sandbox;
