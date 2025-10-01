@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed an unwanted primary executable being injected with the tool identifier, instead of inheriting the user configured primary.
+
 ## 0.17.6
 
 #### 🚀 Updates
