@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed some version parsing issues that contain ".x" and other variants.
+
 ## 0.2.0
 
 #### 🚀 Updates

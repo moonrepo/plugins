@@ -34,9 +34,9 @@ starbase_utils = { workspace = true, features = ["json", "yaml"] }
 
 # Lockfiles
 # chaste-pnpm = "0.5.0"
-deno_lockfile = "0.31.2"
+deno_lockfile = "0.32.0"
 package-lock-json-parser = "0.4.0"
-yarn-lock-parser = "0.11.0"
+yarn-lock-parser = "0.12.0"
 
 [dev-dependencies]
 moon_pdk_test_utils = { workspace = true }
