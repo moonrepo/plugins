@@ -1071,9 +1071,9 @@ dependencies = [
 
 [[package]]
 name = "deno_lockfile"
-version = "0.31.2"
+version = "0.32.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5afb20b44a44842178f41fa3b713c2b1516062590b5cca2ad792f2d6786bc74f"
+checksum = "79df4fa29c2e423822bfef1ab5e83093b48481824d5ef7a61c1de1c32c7c302a"
 dependencies = [
  "async-trait",
  "deno_semver",
@@ -3210,9 +3210,9 @@ dependencies = [
 
 [[package]]
 name = "nodejs_package_json"
-version = "0.4.1"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6922a0f0a653370d0811386199a5d4eef2f463479d6a91c96d6e782fd7924cc9"
+checksum = "56007e59b65934faee8fe44747b02a1abae038fe4ff8ec227b13a17333797040"
 dependencies = [
  "indexmap",
  "regex",
@@ -5682,9 +5682,9 @@ dependencies = [
 
 [[package]]
 name = "typescript_tsconfig_json"
-version = "0.5.1"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d2f50dae960e572a9349adf4fdd950221cfbdb53e52beb4efb382fccfb910e9"
+checksum = "ee9a1f95186a8d7a9cc4584df4240a4bf307a133fca7c791db8b3c308d80a051"
 dependencies = [
  "clean-path",
  "indexmap",
@@ -7105,9 +7105,9 @@ checksum = "cfe53a6657fd280eaa890a3bc59152892ffa3e30101319d168b781ed6529b049"
 
 [[package]]
 name = "yarn-lock-parser"
-version = "0.11.0"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46a94a329f3c1ca33731094a08af14c21180556c86292842c57c150a7bd87b59"
+checksum = "154dadbfd1b72916d7081717f4a437ccbb1605104eedf586af8683b52d30d42d"
 dependencies = [
  "nom 8.0.0",
  "nom-language",
