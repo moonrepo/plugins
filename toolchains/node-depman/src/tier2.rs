@@ -11,7 +11,7 @@ pub fn define_requirements(
     Json(_): Json<DefineRequirementsInput>,
 ) -> FnResult<Json<DefineRequirementsOutput>> {
     Ok(Json(DefineRequirementsOutput {
-        requires: vec!["unstable_node".into()],
+        requires: vec!["node".into()],
     }))
 }
 
