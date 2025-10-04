@@ -185,10 +185,10 @@ pub fn define_requirements(
 
     if let Some(package_manager) = config.package_manager {
         if package_manager.is_for_node() {
-            output.requires.push("unstable_node".into());
+            output.requires.push("node".into());
         }
 
-        output.requires.push(format!("unstable_{package_manager}"));
+        output.requires.push(format!("{package_manager}"));
     }
 
     Ok(Json(output))
