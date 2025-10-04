@@ -5195,6 +5195,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "system_toolchain"
+version = "0.0.1"
+dependencies = [
+ "extism-pdk",
+ "moon_pdk_api",
+ "toolchain_common",
+]
+
+[[package]]
 name = "taffy"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
