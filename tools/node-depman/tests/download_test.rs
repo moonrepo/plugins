@@ -38,8 +38,6 @@ mod node_depman_tool {
         #[tokio::test(flavor = "multi_thread")]
         async fn locates_default_bin() {
             let sandbox = create_empty_proto_sandbox();
-            sandbox.enable_logging();
-
             let plugin = sandbox
                 .create_plugin_with_config("npm-test", |config| {
                     config.host(HostOS::Linux, HostArch::Arm64);

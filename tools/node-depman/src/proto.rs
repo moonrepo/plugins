@@ -332,7 +332,7 @@ pub fn locate_executables(
             primary = ExecutableConfig::new_primary("shims/yarn");
 
             // yarnpkg
-            secondary.insert("yarnpkg".into(), ExecutableConfig::new("shims/yarnpkg"));
+            secondary.insert("yarnpkg".into(), ExecutableConfig::new("shims/yarn"));
 
             // https://github.com/yarnpkg/yarn/blob/master/src/cli/commands/global.js#L84
             if env.os.is_windows() {
@@ -501,7 +501,6 @@ fn create_internal_shims(
         }
         PackageManager::Yarn => {
             create_internal_shim(env, tool_dir, "yarn", "yarn.js")?;
-            create_internal_shim(env, tool_dir, "yarnpkg", "yarn.js")?;
         }
     };
 

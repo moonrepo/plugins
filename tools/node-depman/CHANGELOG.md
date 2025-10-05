@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added an internal shims feature that resolves issues when npm/pnpm/yarn binaries are ran in isolation (from the install directory).
+  - These files are in the `shims` directory, relative from the install directory, and replace the `bin` directory.
+  - Before this would fail with "Could not determine Node.js install directory" errors because it was unable to determine the correct file paths.
+
 ## 0.16.5
 
 #### 🚀 Updates
