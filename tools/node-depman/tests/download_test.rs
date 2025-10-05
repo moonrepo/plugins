@@ -38,6 +38,8 @@ mod node_depman_tool {
         #[tokio::test(flavor = "multi_thread")]
         async fn locates_default_bin() {
             let sandbox = create_empty_proto_sandbox();
+            sandbox.enable_logging();
+
             let plugin = sandbox
                 .create_plugin_with_config("npm-test", |config| {
                     config.host(HostOS::Linux, HostArch::Arm64);
@@ -51,14 +53,14 @@ mod node_depman_tool {
                             version: VersionSpec::parse("9.0.0").unwrap(),
                             ..Default::default()
                         },
-                        ..Default::default()
+                        install_dir: VirtualPath::Real(sandbox.path().into()),
                     })
                     .await
                     .exes
                     .get("npm")
                     .unwrap()
                     .exe_path,
-                Some("bin/npm-cli.js".into())
+                Some("shims/npm".into())
             );
         }
     }
@@ -111,14 +113,14 @@ mod node_depman_tool {
                             version: VersionSpec::parse("8.0.0").unwrap(),
                             ..Default::default()
                         },
-                        ..Default::default()
+                        install_dir: VirtualPath::Real(sandbox.path().into()),
                     })
                     .await
                     .exes
                     .get("pnpm")
                     .unwrap()
                     .exe_path,
-                Some("bin/pnpm.cjs".into())
+                Some("shims/pnpm".into())
             );
         }
     }
@@ -171,14 +173,14 @@ mod node_depman_tool {
                             version: VersionSpec::parse("1.22.0").unwrap(),
                             ..Default::default()
                         },
-                        ..Default::default()
+                        install_dir: VirtualPath::Real(sandbox.path().into()),
                     })
                     .await
                     .exes
                     .get("yarn")
                     .unwrap()
                     .exe_path,
-                Some("bin/yarn.js".into())
+                Some("shims/yarn".into())
             );
         }
     }
@@ -239,14 +241,14 @@ mod node_depman_tool {
                             version: VersionSpec::parse("3.6.1").unwrap(),
                             ..Default::default()
                         },
-                        ..Default::default()
+                        install_dir: VirtualPath::Real(sandbox.path().into()),
                     })
                     .await
                     .exes
                     .get("yarn")
                     .unwrap()
                     .exe_path,
-                Some("bin/yarn.js".into())
+                Some("shims/yarn".into())
             );
         }
     }

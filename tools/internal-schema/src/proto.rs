@@ -356,6 +356,7 @@ fn create_executable_config(schema: ExecutableSchema) -> ExecutableConfig {
         shim_before_args: schema.shim_before_args.map(StringOrVec::Vec),
         shim_after_args: schema.shim_after_args.map(StringOrVec::Vec),
         shim_env_vars: schema.shim_env_vars.map(HashMap::from_iter),
+        update_perms: false,
     }
 }
 
