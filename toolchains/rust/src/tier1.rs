@@ -1,6 +1,7 @@
 use crate::cargo_metadata::{CargoMetadata, PackageTargetCrateType, PackageTargetKind};
 use crate::config::RustToolchainConfig;
 use extism_pdk::*;
+use moon_config::LanguageType;
 use moon_pdk::{exec, get_host_environment, parse_toolchain_config};
 use moon_pdk_api::*;
 use schematic::SchemaBuilder;
@@ -17,6 +18,7 @@ pub fn register_toolchain(
     Ok(Json(RegisterToolchainOutput {
         name: "Rust".into(),
         plugin_version: env!("CARGO_PKG_VERSION").into(),
+        language: Some(LanguageType::Rust),
         config_file_globs: vec![
             ".cargo/*.toml".into(),
             "rust-toolchain".into(),

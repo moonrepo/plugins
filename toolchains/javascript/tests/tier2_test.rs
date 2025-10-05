@@ -1,7 +1,7 @@
 use moon_common::Id;
 use moon_config::{
-    DependencyScope, OneOrMany, OutputPath, PartialTaskArgs, PartialTaskConfig,
-    PartialTaskDependency, PartialTaskOptionsConfig, TaskOptionRunInCI, TaskPreset,
+    DependencyScope, OneOrMany, Output, PartialTaskArgs, PartialTaskConfig, PartialTaskDependency,
+    PartialTaskOptionsConfig, TaskOptionRunInCI, TaskPreset,
 };
 use moon_pdk_api::*;
 use moon_pdk_test_utils::{create_empty_moon_sandbox, create_moon_sandbox};
@@ -193,7 +193,7 @@ mod javascript_toolchain_tier2 {
                                 "run".into(),
                                 "build".into(),
                             ])),
-                            outputs: Some(vec![OutputPath::ProjectFile("build".into())]),
+                            outputs: Some(vec![Output::parse("build").unwrap()]),
                             toolchain: Some(OneOrMany::Many(vec![
                                 Id::raw("javascript"),
                                 Id::raw("npm"),
@@ -213,7 +213,7 @@ mod javascript_toolchain_tier2 {
                                 "run".into(),
                                 "build:vite".into(),
                             ])),
-                            outputs: Some(vec![OutputPath::ProjectFile("out".into())]),
+                            outputs: Some(vec![Output::parse("out").unwrap()]),
                             toolchain: Some(OneOrMany::Many(vec![
                                 Id::raw("javascript"),
                                 Id::raw("npm"),
