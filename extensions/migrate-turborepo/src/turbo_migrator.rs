@@ -2,7 +2,7 @@ use crate::turbo_json::*;
 use extension_common::migrator::*;
 use moon_common::Id;
 use moon_config::{
-    FilePath, Input, OutputPath, PartialTaskArgs, PartialTaskConfig, PartialTaskDependency,
+    FilePath, Input, Output, PartialTaskArgs, PartialTaskConfig, PartialTaskDependency,
     PartialTaskOptionsConfig, PartialWorkspaceProjects, TaskOptionCache, TaskOptionEnvFile,
     TaskOutputStyle, TaskPreset,
 };
@@ -284,9 +284,9 @@ impl TurboMigrator {
 
             for output in raw_outputs {
                 if output.ends_with("/**") {
-                    outputs.push(OutputPath::ProjectGlob(format!("{output}/*")));
+                    outputs.push(Output::parse(format!("{output}/*"))?);
                 } else {
-                    outputs.push(OutputPath::from_str(output)?);
+                    outputs.push(Output::parse(output)?);
                 }
             }
 

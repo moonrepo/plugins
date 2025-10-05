@@ -2,7 +2,7 @@ use crate::config::{JavaScriptPackageManager, JavaScriptToolchainConfig};
 use crate::lockfiles::DenoJsonTask;
 use moon_common::Id;
 use moon_config::{
-    OneOrMany, OutputPath, PartialTaskArgs, PartialTaskConfig, PartialTaskDependency,
+    OneOrMany, Output, PartialTaskArgs, PartialTaskConfig, PartialTaskDependency,
     PartialTaskOptionsConfig, TaskOptionRunInCI, TaskPreset,
 };
 use moon_pdk::{AnyResult, map_miette_error};
@@ -121,7 +121,7 @@ impl<'a> TasksInferrer<'a> {
                 config
                     .outputs
                     .get_or_insert_default()
-                    .push(OutputPath::ProjectFile(output_path));
+                    .push(Output::parse(output_path)?);
             }
         }
 

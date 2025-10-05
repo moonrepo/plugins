@@ -3,10 +3,10 @@ use crate::nx_project_json::*;
 use extension_common::migrator::*;
 use moon_common::Id;
 use moon_config::{
-    FilePath, GlobInput, GlobPath, Input, LayerType, OneOrMany, OutputPath,
-    PartialProjectDependsOn, PartialProjectMetadataConfig, PartialTaskArgs, PartialTaskConfig,
-    PartialTaskDependency, PartialTaskOptionsConfig, PartialVcsConfig, PartialWorkspaceProjects,
-    TaskOptionCache, TaskOptionEnvFile,
+    FilePath, GlobInput, GlobPath, Input, LayerType, OneOrMany, Output, PartialProjectDependsOn,
+    PartialProjectMetadataConfig, PartialTaskArgs, PartialTaskConfig, PartialTaskDependency,
+    PartialTaskOptionsConfig, PartialVcsConfig, PartialWorkspaceProjects, TaskOptionCache,
+    TaskOptionEnvFile,
 };
 use moon_pdk::{AnyResult, map_miette_error};
 use moon_pdk_api::MoonContext;
@@ -613,7 +613,7 @@ fn migrate_task(
         let mut outputs = vec![];
 
         for output in raw_outputs {
-            outputs.push(OutputPath::from_str(&replace_tokens(output, true))?);
+            outputs.push(Output::parse(&replace_tokens(output, true))?);
         }
 
         if !outputs.is_empty() {

@@ -2,6 +2,7 @@ use crate::config::TypeScriptToolchainConfig;
 use crate::context::*;
 use crate::tier1_sync::*;
 use extism_pdk::*;
+use moon_config::LanguageType;
 use moon_pdk::{is_project_toolchain_enabled, parse_toolchain_config};
 use moon_pdk_api::*;
 use schematic::SchemaBuilder;
@@ -20,6 +21,7 @@ pub fn register_toolchain(
                 .into(),
         ),
         plugin_version: env!("CARGO_PKG_VERSION").into(),
+        language: Some(LanguageType::TypeScript),
         config_file_globs: vec![
             "tsconfig.json".into(),
             "tsconfig.*.json".into(),
