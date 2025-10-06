@@ -118,7 +118,7 @@ mod node_depman_tool {
                     .get("pnpm")
                     .unwrap()
                     .exe_path,
-                Some("shims/pnpm".into())
+                Some("shims/pnpm.cmd".into())
             );
         }
     }
