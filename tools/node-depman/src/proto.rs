@@ -12,8 +12,8 @@ use starbase_utils::fs;
 use std::collections::HashMap;
 use tool_common::enable_tracing;
 
-const BASH_SHIM_TEMPLATE: &'static str = include_str!("../templates/bash-shim.sh");
-const CMD_SHIM_TEMPLATE: &'static str = include_str!("../templates/cmd-shim.cmd");
+const BASH_SHIM_TEMPLATE: &str = include_str!("../templates/bash-shim.sh");
+const CMD_SHIM_TEMPLATE: &str = include_str!("../templates/cmd-shim.cmd");
 
 #[host_fn]
 extern "ExtismHost" {
@@ -360,6 +360,12 @@ pub fn locate_executables(
 
         if name != "node-gyp" {
             config.update_perms = true;
+        }
+
+        if env.os.is_windows()
+            && let Some(exe_path) = &mut config.exe_path
+        {
+            exe_path.set_extension("cmd");
         }
     });
 
