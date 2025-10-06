@@ -8,8 +8,12 @@ use lang_javascript_common::{
 use nodejs_package_json::PackageJson;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
+use starbase_utils::fs;
 use std::collections::HashMap;
 use tool_common::enable_tracing;
+
+const BASH_SHIM_TEMPLATE: &str = include_str!("../templates/bash-shim.sh");
+const CMD_SHIM_TEMPLATE: &str = include_str!("../templates/cmd-shim.cmd");
 
 #[host_fn]
 extern "ExtismHost" {
@@ -268,63 +272,48 @@ pub fn download_prebuilt(
 
 #[plugin_fn]
 pub fn locate_executables(
-    Json(_): Json<LocateExecutablesInput>,
+    Json(input): Json<LocateExecutablesInput>,
 ) -> FnResult<Json<LocateExecutablesOutput>> {
     let env = get_host_environment()?;
     let manager = PackageManager::detect()?;
     let mut secondary = HashMap::<String, ExecutableConfig>::default();
-    let mut primary;
+    let primary;
+
+    if !input.install_dir.join("shims").exists() {
+        create_internal_shims(&env, &input.install_dir, &manager)?;
+    }
 
     // These are the directories that contain the executable binaries,
     // NOT where the packages/node modules are stored. Some package managers
     // have separate folders for the 2 processes, and then create symlinks.
     let mut globals_lookup_dirs = vec![
-        "$PREFIX/bin".into(),
+        "$PREFIX/shims".into(),
         "$PROTO_HOME/tools/node/$PROTO_NODE_VERSION/bin".into(),
     ];
 
-    // We don't link binaries for package managers for the following reasons:
-    // 1 - We can't link JS files because they aren't executable.
-    // 2 - We can't link the bash/cmd wrappers, as they expect the files to exist
-    //     relative from the node install directory, which they do not.
     match &manager {
         PackageManager::Npm => {
-            primary = ExecutableConfig::with_parent("bin/npm-cli.js", "node");
-            primary.primary = true;
-            primary.no_bin = true;
+            primary = ExecutableConfig::new_primary("shims/npm");
 
             // npx
-            let mut npx = ExecutableConfig::with_parent("bin/npx-cli.js", "node");
-            npx.no_bin = true;
-
-            secondary.insert("npx".into(), npx);
+            secondary.insert("npx".into(), ExecutableConfig::new("shims/npx"));
 
             // node-gyp
-            let mut node_gyp =
-                ExecutableConfig::with_parent("node_modules/node-gyp/bin/node-gyp.js", "node");
-            node_gyp.no_bin = true;
-
-            secondary.insert("node-gyp".into(), node_gyp);
+            secondary.insert(
+                "node-gyp".into(),
+                ExecutableConfig::with_parent("node_modules/node-gyp/bin/node-gyp.js", "node"),
+            );
 
             // https://docs.npmjs.com/cli/v9/configuring-npm/folders#prefix-configuration
             // https://github.com/npm/cli/blob/latest/lib/npm.js
             // https://github.com/npm/cli/blob/latest/workspaces/config/lib/index.js#L339
-            globals_lookup_dirs.push("$TOOL_DIR/bin".into());
+            globals_lookup_dirs.push("$TOOL_DIR/shims".into());
         }
         PackageManager::Pnpm => {
-            primary = ExecutableConfig::with_parent("bin/pnpm.cjs", "node");
-            primary.primary = true;
-            primary.no_bin = true;
+            primary = ExecutableConfig::new_primary("shims/pnpm");
 
             // pnpx
-            secondary.insert(
-                "pnpx".into(),
-                ExecutableConfig {
-                    no_bin: true,
-                    shim_before_args: Some(StringOrVec::String("dlx".into())),
-                    ..ExecutableConfig::default()
-                },
-            );
+            secondary.insert("pnpx".into(), ExecutableConfig::new("shims/pnpx"));
 
             // https://pnpm.io/npmrc#global-dir
             // https://github.com/pnpm/pnpm/blob/main/config/config/src/index.ts#L350
@@ -340,18 +329,10 @@ pub fn locate_executables(
             }
         }
         PackageManager::Yarn => {
-            primary = ExecutableConfig::with_parent("bin/yarn.js", "node");
-            primary.primary = true;
-            primary.no_bin = true;
+            primary = ExecutableConfig::new_primary("shims/yarn");
 
             // yarnpkg
-            secondary.insert(
-                "yarnpkg".into(),
-                ExecutableConfig {
-                    primary: false,
-                    ..primary.clone()
-                },
-            );
+            secondary.insert("yarnpkg".into(), ExecutableConfig::new("shims/yarn"));
 
             // https://github.com/yarnpkg/yarn/blob/master/src/cli/commands/global.js#L84
             if env.os.is_windows() {
@@ -372,6 +353,21 @@ pub fn locate_executables(
 
     let mut exes = HashMap::from_iter([(manager.to_string(), primary)]);
     exes.extend(secondary);
+
+    // Update the permissions of each executable since they are custom shims
+    exes.iter_mut().for_each(|(name, config)| {
+        config.no_bin = true;
+
+        if name != "node-gyp" {
+            config.update_perms = true;
+        }
+
+        if env.os.is_windows()
+            && let Some(exe_path) = &mut config.exe_path
+        {
+            exe_path.set_extension("cmd");
+        }
+    });
 
     Ok(Json(LocateExecutablesOutput {
         exes,
@@ -472,4 +468,47 @@ pub fn pre_run(Json(input): Json<RunHook>) -> FnResult<Json<RunHookResult>> {
     };
 
     Ok(Json(result))
+}
+
+fn create_internal_shim(
+    env: &HostEnvironment,
+    tool_dir: &VirtualPath,
+    shim_name: &str,
+    bin_file: &str,
+) -> AnyResult<()> {
+    if env.os.is_windows() {
+        fs::write_file(
+            tool_dir.join("shims").join(format!("{shim_name}.cmd")),
+            CMD_SHIM_TEMPLATE.replace("{bin_path}", &format!("..\\bin\\{bin_file}")),
+        )?;
+    } else {
+        fs::write_file(
+            tool_dir.join("shims").join(shim_name),
+            BASH_SHIM_TEMPLATE.replace("{bin_path}", &format!("../bin/{bin_file}")),
+        )?;
+    }
+
+    Ok(())
+}
+
+fn create_internal_shims(
+    env: &HostEnvironment,
+    tool_dir: &VirtualPath,
+    package_manager: &PackageManager,
+) -> AnyResult<()> {
+    match package_manager {
+        PackageManager::Npm => {
+            create_internal_shim(env, tool_dir, "npm", "npm-cli.js")?;
+            create_internal_shim(env, tool_dir, "npx", "npx-cli.js")?;
+        }
+        PackageManager::Pnpm => {
+            create_internal_shim(env, tool_dir, "pnpm", "pnpm.cjs")?;
+            create_internal_shim(env, tool_dir, "pnpx", "pnpx.cjs")?;
+        }
+        PackageManager::Yarn => {
+            create_internal_shim(env, tool_dir, "yarn", "yarn.js")?;
+        }
+    };
+
+    Ok(())
 }

@@ -42,8 +42,8 @@ moon_target = { version = "0.2.0" }
 
 # proto
 proto_pdk = { version = "0.32.1" }
-proto_pdk_api = { version = "0.31.1" }
-proto_pdk_test_utils = { version = "0.41.1" }
+proto_pdk_api = { version = "0.31.2" }
+proto_pdk_test_utils = { version = "0.41.2" }
 # proto_pdk = { path = "../../proto/crates/pdk" }
 # proto_pdk_api = { path = "../../proto/crates/pdk-api" }
 # proto_pdk_test_utils = { path = "../../proto/crates/pdk-test-utils" }
