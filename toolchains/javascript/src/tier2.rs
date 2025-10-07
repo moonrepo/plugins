@@ -34,9 +34,14 @@ pub fn extend_project_graph(
         if package_path.exists() {
             let manifest = PackageJson::load(package_path)?;
 
-            if let Some(name) = &manifest.name {
-                packages.insert(name.to_owned(), (id, project_root, manifest));
-            }
+            // We need to track all packages, even those without a name
+            packages.insert(
+                manifest
+                    .name
+                    .clone()
+                    .unwrap_or_else(|| format!("@moon-js-toolchain/{id}")),
+                (id, project_root, manifest),
+            );
         }
     }
 
