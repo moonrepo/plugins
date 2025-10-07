@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed an issue where implicit dependencies would sometimes not resolve.
+
 ## 0.2.2
 
 #### 🚀 Updates
