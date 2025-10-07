@@ -613,7 +613,7 @@ fn migrate_task(
         let mut outputs = vec![];
 
         for output in raw_outputs {
-            outputs.push(Output::parse(&replace_tokens(output, true))?);
+            outputs.push(Output::parse(replace_tokens(output, true))?);
         }
 
         if !outputs.is_empty() {
