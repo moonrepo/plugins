@@ -56,5 +56,5 @@ typescript_tsconfig_json = { version = "0.5.2", features = ["serialize"] }
 codegen-units = 1
 debug = false
 lto = true
-opt-level = "s"
+opt-level = 2 # speed
 panic = "abort"
