@@ -1,5 +1,5 @@
-use crate::config::CatalogsMap;
 use super::parse_version_spec;
+use crate::config::CatalogsMap;
 use moon_pdk::{AnyResult, VirtualPath};
 use moon_pdk_api::{LockDependency, ParseLockOutput};
 use nodejs_package_json::VersionProtocol;
@@ -111,7 +111,7 @@ impl PnpmWorkspace {
         let mut catalogs = self.catalogs.clone().unwrap_or_default();
 
         if let Some(data) = self.catalog.clone() {
-            catalogs.insert("default".into(), data);
+            catalogs.insert("__default__".into(), data);
         }
 
         if catalogs.is_empty() {

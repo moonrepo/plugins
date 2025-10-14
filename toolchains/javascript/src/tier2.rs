@@ -194,8 +194,12 @@ pub fn define_requirements(
     Ok(Json(output))
 }
 
+fn get_var_key(prefix: &str, root: &VirtualPath) -> String {
+    format!("{prefix}:{}", root.to_string().trim_end_matches('/'))
+}
+
 fn load_catalogs(root: &VirtualPath) -> AnyResult<CatalogsMap> {
-    if let Some(data) = var::get::<String>(format!("workspace-catalogs:{root}"))? {
+    if let Some(data) = var::get::<String>(get_var_key("workspace-catalogs", root))? {
         return Ok(json::from_str(&data)?);
     }
 
@@ -206,8 +210,8 @@ fn extract_workspace_members_and_catalogs(
     package_manager: JavaScriptPackageManager,
     root: &VirtualPath,
 ) -> AnyResult<Option<Vec<String>>> {
-    let members_cache_key = format!("workspace-members:{root}");
-    let catalogs_cache_key = format!("workspace-catalogs:{root}");
+    let members_cache_key = get_var_key("workspace-members", root);
+    let catalogs_cache_key = get_var_key("workspace-catalogs", root);
     let mut members = None;
     let mut catalogs = None;
 
@@ -536,7 +540,7 @@ fn create_manifest_dependency(
         VersionProtocol::Catalog(key) => {
             let catalog = match key {
                 Some(key) => catalogs.get(key),
-                None => catalogs.get("default"),
+                None => catalogs.get("__default__"),
             };
 
             if let Some(catalog) = catalog

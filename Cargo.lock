@@ -3035,9 +3035,9 @@ dependencies = [
 
 [[package]]
 name = "moon_pdk_test_utils"
-version = "0.4.1"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3a0b193788f61a1be050f0696cacbf5d7398c5fb93b287544302cac378370bb2"
+checksum = "1d78b26ff472a3d908fbbabd450fa9a97438c2267a73d8c8a4b9403f8c116e13"
 dependencies = [
  "extism",
  "moon_pdk_api",
@@ -3211,9 +3211,9 @@ dependencies = [
 
 [[package]]
 name = "nodejs_package_json"
-version = "0.4.3"
+version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2537ea50e3f56a72265c7aee9e505ee3c051d18a0658134160c4811c2ad2c76"
+checksum = "4348324b8f1beb94088c4119d6d5fbd92346da4a048194d9652f62171e1dfd38"
 dependencies = [
  "indexmap",
  "regex",
@@ -3692,9 +3692,9 @@ dependencies = [
 
 [[package]]
 name = "proto_core"
-version = "0.53.2"
+version = "0.53.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d54ad44ca2403655916ec636d33e16be3809341adda21e43c9ae0d4115c002b"
+checksum = "7d84df081b3360a64dd67f75674fd3a8b4497d77317b348c220d1749ec0f2f51"
 dependencies = [
  "convert_case",
  "docker_credential",

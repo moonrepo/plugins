@@ -29,7 +29,7 @@ moon_common = { version = "0.2.0" }
 moon_config = { version = "0.2.0" }
 moon_pdk = { version = "0.4.0" }
 moon_pdk_api = { version = "0.4.1" }
-moon_pdk_test_utils = { version = "0.4.1" }
+moon_pdk_test_utils = { version = "0.4.2" }
 moon_project = { version = "0.2.0" }
 moon_target = { version = "0.2.0" }
 # moon_common = { path = "../../moon/crates/common" }
@@ -49,7 +49,7 @@ proto_pdk_test_utils = { version = "0.41.2" }
 # proto_pdk_test_utils = { path = "../../proto/crates/pdk-test-utils" }
 
 # JavaScript
-nodejs_package_json = { version = "0.4.3" }
+nodejs_package_json = { version = "0.4.4" }
 typescript_tsconfig_json = { version = "0.5.2", features = ["serialize"] }
 
 [profile.release]

@@ -6,8 +6,7 @@ use extism_pdk::*;
 #[cfg(feature = "wasm")]
 use moon_pdk::{HostLogInput, host_log};
 use moon_pdk_api::{AnyResult, json_config};
-use nodejs_package_json::PackageJson as BasePackageJson;
-use nodejs_package_json::VersionProtocol;
+use nodejs_package_json::{PackageJson as BasePackageJson, VersionProtocol, WorkspacesField};
 use rustc_hash::FxHashMap;
 use starbase_utils::json::{JsonValue, serde_json::json};
 use std::collections::BTreeMap;
@@ -150,10 +149,40 @@ impl PackageJson {
 
     /// Extract all catalogs for the workspace.
     pub fn extract_catalogs(&self) -> Option<CatalogsMap> {
-        let mut catalogs = FxHashMap::default();
+        let mut catalogs: CatalogsMap = FxHashMap::default();
 
-        if let Some(data) = self.catalog.clone() {
-            catalogs.insert("default".into(), FxHashMap::from_iter(data));
+        let mut add_catalog = |name: &str, map: &BTreeMap<String, VersionProtocol>| {
+            catalogs
+                .entry(name.to_owned())
+                .or_default()
+                .extend(FxHashMap::from_iter(map.to_owned()));
+        };
+
+        // Extract root level first
+        if let Some(map) = &self.catalog {
+            add_catalog("__default__", map);
+        }
+
+        if let Some(data) = &self.catalogs {
+            for (name, map) in data {
+                add_catalog(name, map);
+            }
+        }
+
+        // Then extract workspace level
+        if let Some(WorkspacesField::Config {
+            catalog, catalogs, ..
+        }) = &self.workspaces
+        {
+            if let Some(map) = catalog {
+                add_catalog("__default__", map);
+            }
+
+            if let Some(data) = catalogs {
+                for (name, map) in data {
+                    add_catalog(name, map);
+                }
+            }
         }
 
         if catalogs.is_empty() {
@@ -165,8 +194,6 @@ impl PackageJson {
 
     /// Extract package members if the current manifest is a workspace.
     pub fn extract_members(&self) -> Option<Vec<String>> {
-        use nodejs_package_json::WorkspacesField;
-
         self.workspaces.as_ref().map(|ws| match ws {
             WorkspacesField::Globs(globs) => globs.clone(),
             WorkspacesField::Config { packages, .. } => packages.clone(),
