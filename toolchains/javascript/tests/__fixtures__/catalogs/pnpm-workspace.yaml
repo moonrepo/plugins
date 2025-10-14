@@ -1,0 +1,9 @@
+packages:
+  - "*"
+
+catalog:
+  react: ">=19"
+
+catalogs:
+  legacy:
+    react-legacy: "^18.1.0"

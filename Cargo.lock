@@ -3016,9 +3016,9 @@ dependencies = [
 
 [[package]]
 name = "moon_pdk_api"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ea55a879c17cc53abc1d51761a43e06824275c2fc91ffca3233eadaaf065716"
+checksum = "fbe9d629b4d1a7d3fe357961538723b3698d7a496ff60f935eab75cdb3513f00"
 dependencies = [
  "derive_setters",
  "moon_common",
@@ -3035,9 +3035,9 @@ dependencies = [
 
 [[package]]
 name = "moon_pdk_test_utils"
-version = "0.4.1"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3a0b193788f61a1be050f0696cacbf5d7398c5fb93b287544302cac378370bb2"
+checksum = "1d78b26ff472a3d908fbbabd450fa9a97438c2267a73d8c8a4b9403f8c116e13"
 dependencies = [
  "extism",
  "moon_pdk_api",
@@ -3211,9 +3211,9 @@ dependencies = [
 
 [[package]]
 name = "nodejs_package_json"
-version = "0.4.2"
+version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56007e59b65934faee8fe44747b02a1abae038fe4ff8ec227b13a17333797040"
+checksum = "4348324b8f1beb94088c4119d6d5fbd92346da4a048194d9652f62171e1dfd38"
 dependencies = [
  "indexmap",
  "regex",
@@ -3692,9 +3692,9 @@ dependencies = [
 
 [[package]]
 name = "proto_core"
-version = "0.53.2"
+version = "0.53.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d54ad44ca2403655916ec636d33e16be3809341adda21e43c9ae0d4115c002b"
+checksum = "7d84df081b3360a64dd67f75674fd3a8b4497d77317b348c220d1749ec0f2f51"
 dependencies = [
  "convert_case",
  "docker_credential",
@@ -4501,9 +4501,9 @@ dependencies = [
 
 [[package]]
 name = "schematic"
-version = "0.18.12"
+version = "0.18.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fe968b13534878e9c8b42013520b926430f45d1823fff8feaaef542e7dc49969"
+checksum = "504d465c290b5637569c9608db79964d2c70e0d94b3ead5dea80ff6eb7b2df53"
 dependencies = [
  "garde",
  "indexmap",
@@ -4525,9 +4525,9 @@ dependencies = [
 
 [[package]]
 name = "schematic_macros"
-version = "0.18.11"
+version = "0.18.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8dad8ec65bab250820fa9616523d9216a1d9f37092293d9223f6ccc3e6f9b301"
+checksum = "392fe379d2bd8661ef0a97cd9ce470b0561559460f21d544a9f16ef79e426dc1"
 dependencies = [
  "convert_case",
  "darling 0.21.3",
@@ -4538,9 +4538,9 @@ dependencies = [
 
 [[package]]
 name = "schematic_types"
-version = "0.10.6"
+version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9bedeb0ba9745d6271e7c0dbac7a225a8bd915c23f293acb8ba345e3bf031ed0"
+checksum = "145fc73996eeb44c83cbaf7c360212b398390faaaf8640150b465f2ea40940e6"
 dependencies = [
  "indexmap",
  "regex",

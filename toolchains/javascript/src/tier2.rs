@@ -11,6 +11,7 @@ use moon_pdk::{
 };
 use moon_pdk_api::*;
 use nodejs_package_json::{VersionProtocol, WorkspaceProtocol};
+use rustc_hash::FxHashMap;
 use starbase_utils::yaml;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -193,16 +194,30 @@ pub fn define_requirements(
     Ok(Json(output))
 }
 
-fn extract_workspace_members(
+fn get_var_key(prefix: &str, root: &VirtualPath) -> String {
+    format!("{prefix}:{}", root.to_string().trim_end_matches('/'))
+}
+
+fn load_catalogs(root: &VirtualPath) -> AnyResult<CatalogsMap> {
+    if let Some(data) = var::get::<String>(get_var_key("workspace-catalogs", root))? {
+        return Ok(json::from_str(&data)?);
+    }
+
+    Ok(FxHashMap::default())
+}
+
+fn extract_workspace_members_and_catalogs(
     package_manager: JavaScriptPackageManager,
     root: &VirtualPath,
 ) -> AnyResult<Option<Vec<String>>> {
-    let cache_key = format!("workspace-members:{root}");
+    let members_cache_key = get_var_key("workspace-members", root);
+    let catalogs_cache_key = get_var_key("workspace-catalogs", root);
     let mut members = None;
+    let mut catalogs = None;
 
     // Reduce the amount of file system operations for every package
     // within the workspace by caching the found members for this directory
-    if let Some(cache) = var::get::<String>(&cache_key)? {
+    if let Some(cache) = var::get::<String>(&members_cache_key)? {
         let members: Vec<String> = json::from_str(&cache)?;
 
         return Ok(Some(members));
@@ -221,6 +236,7 @@ fn extract_workspace_members(
             if workspace_file.exists() {
                 let workspace: PnpmWorkspace = yaml::read_file(workspace_file)?;
 
+                catalogs = workspace.extract_catalogs();
                 members = workspace.packages;
             }
         }
@@ -229,12 +245,19 @@ fn extract_workspace_members(
 
     // Otherwise `package.json` itself
     if members.is_none() {
-        members = PackageJson::load(root.join("package.json"))?.extract_members();
+        let package_json = PackageJson::load(root.join("package.json"))?;
+
+        catalogs = package_json.extract_catalogs();
+        members = package_json.extract_members();
     }
 
     // Cache the result!
+    if let Some(catalogs) = &catalogs {
+        var::set(catalogs_cache_key, json::to_string(catalogs)?)?;
+    }
+
     if let Some(members) = &members {
-        var::set(cache_key, json::to_string(members)?)?;
+        var::set(members_cache_key, json::to_string(members)?)?;
     }
 
     Ok(members)
@@ -274,7 +297,7 @@ pub fn locate_dependencies_root(
     // First attempt: find lock files
     if let Some(root) = locate_root_many(&input.starting_dir, &lock_names) {
         output.root = root.virtual_path();
-        output.members = extract_workspace_members(package_manager, &root)?;
+        output.members = extract_workspace_members_and_catalogs(package_manager, &root)?;
     }
 
     // Second attempt: find workspace-compatible manifest files
@@ -282,7 +305,7 @@ pub fn locate_dependencies_root(
         locate_root_many_with_check(&input.starting_dir, &workspace_manifest_names, |root| {
             let mut found = false;
 
-            if let Some(members) = extract_workspace_members(package_manager, root)? {
+            if let Some(members) = extract_workspace_members_and_catalogs(package_manager, root)? {
                 output.root = root.virtual_path();
                 output.members = Some(members);
                 found = true;
@@ -296,6 +319,8 @@ pub fn locate_dependencies_root(
     if output.root.is_none()
         && let Some(root) = locate_root_many(&input.starting_dir, &manifest_names)
     {
+        extract_workspace_members_and_catalogs(package_manager, &root)?;
+
         output.root = root.virtual_path();
     }
 
@@ -503,64 +528,89 @@ pub fn parse_lock(Json(input): Json<ParseLockInput>) -> FnResult<Json<ParseLockO
     Ok(Json(output))
 }
 
+fn create_manifest_dependency(
+    name: &str,
+    version: &VersionProtocol,
+    catalogs: &CatalogsMap,
+) -> AnyResult<Option<ManifestDependency>> {
+    let dep = match version {
+        VersionProtocol::Alias(_) => {
+            return Ok(None);
+        }
+        VersionProtocol::Catalog(key) => {
+            let catalog = match key {
+                Some(key) => catalogs.get(key),
+                None => catalogs.get("__default__"),
+            };
+
+            if let Some(catalog) = catalog
+                && let Some(version) = catalog.get(name)
+            {
+                return create_manifest_dependency(name, version, catalogs);
+            }
+
+            return Ok(None);
+        }
+        VersionProtocol::File(path)
+        | VersionProtocol::Link(path)
+        | VersionProtocol::Portal(path) => ManifestDependency::path(path.to_owned()),
+        VersionProtocol::Git { url, .. } => ManifestDependency::url(url.to_owned()),
+        VersionProtocol::GitHub {
+            reference,
+            owner,
+            repo,
+        } => ManifestDependency::url(format!(
+            "https://github.com/{owner}/{repo}.git#{}",
+            reference.as_deref().unwrap_or("master")
+        )),
+        VersionProtocol::Range(version_reqs) => {
+            ManifestDependency::Version(UnresolvedVersionSpec::parse(
+                version_reqs
+                    .iter()
+                    .map(|req| req.to_string())
+                    .collect::<Vec<_>>()
+                    .join(" || "),
+            )?)
+        }
+        VersionProtocol::Requirement(version_req) => {
+            ManifestDependency::Version(UnresolvedVersionSpec::parse(version_req.to_string())?)
+        }
+        VersionProtocol::Tag(tag) => {
+            ManifestDependency::Version(UnresolvedVersionSpec::parse(tag)?)
+        }
+        VersionProtocol::Url(url) => ManifestDependency::url(url.to_owned()),
+        VersionProtocol::Version(version) => {
+            ManifestDependency::Version(UnresolvedVersionSpec::parse(version.to_string())?)
+        }
+        VersionProtocol::Workspace(ws) => match ws {
+            WorkspaceProtocol::File(path) => ManifestDependency::path(path.to_owned()),
+            WorkspaceProtocol::Version(version) => {
+                ManifestDependency::Version(UnresolvedVersionSpec::parse(version.to_string())?)
+            }
+            _ => {
+                return Ok(None);
+            }
+        },
+    };
+
+    Ok(Some(dep))
+}
+
 #[plugin_fn]
 pub fn parse_manifest(
     Json(input): Json<ParseManifestInput>,
 ) -> FnResult<Json<ParseManifestOutput>> {
     let manifest = PackageJson::load(input.path)?;
+    let catalogs = load_catalogs(&input.root)?;
     let mut output = ParseManifestOutput::default();
 
     let extract_deps = |in_deps: &BTreeMap<String, VersionProtocol>,
                         out_deps: &mut BTreeMap<String, ManifestDependency>|
      -> AnyResult<()> {
         for (name, version) in in_deps {
-            let dep = match version {
-                VersionProtocol::Alias(_) | VersionProtocol::Catalog(_) => {
-                    continue;
-                }
-                VersionProtocol::File(path)
-                | VersionProtocol::Link(path)
-                | VersionProtocol::Portal(path) => ManifestDependency::path(path.to_owned()),
-                VersionProtocol::Git { url, .. } => ManifestDependency::url(url.to_owned()),
-                VersionProtocol::GitHub {
-                    reference,
-                    owner,
-                    repo,
-                } => ManifestDependency::url(format!(
-                    "https://github.com/{owner}/{repo}.git#{}",
-                    reference.as_deref().unwrap_or("master")
-                )),
-                VersionProtocol::Range(version_reqs) => {
-                    ManifestDependency::Version(UnresolvedVersionSpec::parse(
-                        version_reqs
-                            .iter()
-                            .map(|req| req.to_string())
-                            .collect::<Vec<_>>()
-                            .join(" || "),
-                    )?)
-                }
-                VersionProtocol::Requirement(version_req) => ManifestDependency::Version(
-                    UnresolvedVersionSpec::parse(version_req.to_string())?,
-                ),
-                VersionProtocol::Tag(tag) => {
-                    ManifestDependency::Version(UnresolvedVersionSpec::parse(tag)?)
-                }
-                VersionProtocol::Url(url) => ManifestDependency::url(url.to_owned()),
-                VersionProtocol::Version(version) => {
-                    ManifestDependency::Version(UnresolvedVersionSpec::parse(version.to_string())?)
-                }
-                VersionProtocol::Workspace(ws) => match ws {
-                    WorkspaceProtocol::File(path) => ManifestDependency::path(path.to_owned()),
-                    WorkspaceProtocol::Version(version) => ManifestDependency::Version(
-                        UnresolvedVersionSpec::parse(version.to_string())?,
-                    ),
-                    _ => {
-                        continue;
-                    }
-                },
-            };
-
-            out_deps.insert(name.to_owned(), dep);
+            if let Some(dep) = create_manifest_dependency(name, version, &catalogs)? {
+                out_deps.insert(name.to_owned(), dep);
+            }
         }
 
         Ok(())

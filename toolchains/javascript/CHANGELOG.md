@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added support for Bun v1.3 `package.json` catalogs.
+- Updated `parse_manifest` to resolve versions from applicable catalogs.
+
 ## 0.2.1
 
 #### 🐞 Fixes

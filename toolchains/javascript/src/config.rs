@@ -1,5 +1,7 @@
 use moon_common::Id;
 use moon_pdk_api::{UnresolvedVersionSpec, Version, VersionReq, config_struct};
+use nodejs_package_json::VersionProtocol;
+use rustc_hash::FxHashMap;
 use schematic::{Config, ConfigEnum, derive_enum};
 
 derive_enum!(
@@ -165,3 +167,5 @@ impl SharedPackageManagerConfig {
         }
     }
 }
+
+pub type CatalogsMap = FxHashMap<String, FxHashMap<String, VersionProtocol>>;

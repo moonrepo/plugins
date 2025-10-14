@@ -1,6 +1,8 @@
 use super::parse_version_spec;
+use crate::config::CatalogsMap;
 use moon_pdk::{AnyResult, VirtualPath};
 use moon_pdk_api::{LockDependency, ParseLockOutput};
+use nodejs_package_json::VersionProtocol;
 use rustc_hash::FxHashMap;
 use serde::Deserialize;
 use starbase_utils::{fs, yaml};
@@ -98,7 +100,26 @@ fn parse_name_and_version(value: &str) -> (&str, &str) {
 #[derive(Default, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct PnpmWorkspace {
+    pub catalog: Option<FxHashMap<String, VersionProtocol>>,
+    pub catalogs: Option<FxHashMap<String, FxHashMap<String, VersionProtocol>>>,
     pub packages: Option<Vec<String>>,
+}
+
+impl PnpmWorkspace {
+    /// Extract all catalogs for the workspace.
+    pub fn extract_catalogs(&self) -> Option<CatalogsMap> {
+        let mut catalogs = self.catalogs.clone().unwrap_or_default();
+
+        if let Some(data) = self.catalog.clone() {
+            catalogs.insert("__default__".into(), data);
+        }
+
+        if catalogs.is_empty() {
+            return None;
+        }
+
+        Some(catalogs)
+    }
 }
 
 // https://github.com/pnpm/pnpm/blob/main/lockfile/types/src/index.ts

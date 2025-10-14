@@ -1,0 +1,15 @@
+{
+  "workspaces": {
+    "packages": [
+      "*"
+    ],
+    "catalogs": {
+      "legacy": {
+        "react-legacy": "^18.1.0"
+      }
+    }
+  },
+  "catalog": {
+    "react": ">=19"
+  }
+}
