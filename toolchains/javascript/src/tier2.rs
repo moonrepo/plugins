@@ -11,6 +11,7 @@ use moon_pdk::{
 };
 use moon_pdk_api::*;
 use nodejs_package_json::{VersionProtocol, WorkspaceProtocol};
+use rustc_hash::FxHashMap;
 use starbase_utils::yaml;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -191,6 +192,14 @@ pub fn define_requirements(
     }
 
     Ok(Json(output))
+}
+
+fn load_catalogs(root: &VirtualPath) -> AnyResult<CatalogsMap> {
+    if let Some(data) = var::get::<String>(format!("workspace-catalogs:{root}"))? {
+        return Ok(json::from_str(&data)?);
+    }
+
+    Ok(FxHashMap::default())
 }
 
 fn extract_workspace_members_and_catalogs(
@@ -515,64 +524,89 @@ pub fn parse_lock(Json(input): Json<ParseLockInput>) -> FnResult<Json<ParseLockO
     Ok(Json(output))
 }
 
+fn create_manifest_dependency(
+    name: &str,
+    version: &VersionProtocol,
+    catalogs: &CatalogsMap,
+) -> AnyResult<Option<ManifestDependency>> {
+    let dep = match version {
+        VersionProtocol::Alias(_) => {
+            return Ok(None);
+        }
+        VersionProtocol::Catalog(key) => {
+            let catalog = match key {
+                Some(key) => catalogs.get(key),
+                None => catalogs.get("default"),
+            };
+
+            if let Some(catalog) = catalog
+                && let Some(version) = catalog.get(name)
+            {
+                return create_manifest_dependency(name, version, catalogs);
+            }
+
+            return Ok(None);
+        }
+        VersionProtocol::File(path)
+        | VersionProtocol::Link(path)
+        | VersionProtocol::Portal(path) => ManifestDependency::path(path.to_owned()),
+        VersionProtocol::Git { url, .. } => ManifestDependency::url(url.to_owned()),
+        VersionProtocol::GitHub {
+            reference,
+            owner,
+            repo,
+        } => ManifestDependency::url(format!(
+            "https://github.com/{owner}/{repo}.git#{}",
+            reference.as_deref().unwrap_or("master")
+        )),
+        VersionProtocol::Range(version_reqs) => {
+            ManifestDependency::Version(UnresolvedVersionSpec::parse(
+                version_reqs
+                    .iter()
+                    .map(|req| req.to_string())
+                    .collect::<Vec<_>>()
+                    .join(" || "),
+            )?)
+        }
+        VersionProtocol::Requirement(version_req) => {
+            ManifestDependency::Version(UnresolvedVersionSpec::parse(version_req.to_string())?)
+        }
+        VersionProtocol::Tag(tag) => {
+            ManifestDependency::Version(UnresolvedVersionSpec::parse(tag)?)
+        }
+        VersionProtocol::Url(url) => ManifestDependency::url(url.to_owned()),
+        VersionProtocol::Version(version) => {
+            ManifestDependency::Version(UnresolvedVersionSpec::parse(version.to_string())?)
+        }
+        VersionProtocol::Workspace(ws) => match ws {
+            WorkspaceProtocol::File(path) => ManifestDependency::path(path.to_owned()),
+            WorkspaceProtocol::Version(version) => {
+                ManifestDependency::Version(UnresolvedVersionSpec::parse(version.to_string())?)
+            }
+            _ => {
+                return Ok(None);
+            }
+        },
+    };
+
+    Ok(Some(dep))
+}
+
 #[plugin_fn]
 pub fn parse_manifest(
     Json(input): Json<ParseManifestInput>,
 ) -> FnResult<Json<ParseManifestOutput>> {
     let manifest = PackageJson::load(input.path)?;
+    let catalogs = load_catalogs(&input.root)?;
     let mut output = ParseManifestOutput::default();
 
     let extract_deps = |in_deps: &BTreeMap<String, VersionProtocol>,
                         out_deps: &mut BTreeMap<String, ManifestDependency>|
      -> AnyResult<()> {
         for (name, version) in in_deps {
-            let dep = match version {
-                VersionProtocol::Alias(_) | VersionProtocol::Catalog(_) => {
-                    continue;
-                }
-                VersionProtocol::File(path)
-                | VersionProtocol::Link(path)
-                | VersionProtocol::Portal(path) => ManifestDependency::path(path.to_owned()),
-                VersionProtocol::Git { url, .. } => ManifestDependency::url(url.to_owned()),
-                VersionProtocol::GitHub {
-                    reference,
-                    owner,
-                    repo,
-                } => ManifestDependency::url(format!(
-                    "https://github.com/{owner}/{repo}.git#{}",
-                    reference.as_deref().unwrap_or("master")
-                )),
-                VersionProtocol::Range(version_reqs) => {
-                    ManifestDependency::Version(UnresolvedVersionSpec::parse(
-                        version_reqs
-                            .iter()
-                            .map(|req| req.to_string())
-                            .collect::<Vec<_>>()
-                            .join(" || "),
-                    )?)
-                }
-                VersionProtocol::Requirement(version_req) => ManifestDependency::Version(
-                    UnresolvedVersionSpec::parse(version_req.to_string())?,
-                ),
-                VersionProtocol::Tag(tag) => {
-                    ManifestDependency::Version(UnresolvedVersionSpec::parse(tag)?)
-                }
-                VersionProtocol::Url(url) => ManifestDependency::url(url.to_owned()),
-                VersionProtocol::Version(version) => {
-                    ManifestDependency::Version(UnresolvedVersionSpec::parse(version.to_string())?)
-                }
-                VersionProtocol::Workspace(ws) => match ws {
-                    WorkspaceProtocol::File(path) => ManifestDependency::path(path.to_owned()),
-                    WorkspaceProtocol::Version(version) => ManifestDependency::Version(
-                        UnresolvedVersionSpec::parse(version.to_string())?,
-                    ),
-                    _ => {
-                        continue;
-                    }
-                },
-            };
-
-            out_deps.insert(name.to_owned(), dep);
+            if let Some(dep) = create_manifest_dependency(name, version, &catalogs)? {
+                out_deps.insert(name.to_owned(), dep);
+            }
         }
 
         Ok(())

@@ -1,3 +1,4 @@
+use crate::config::CatalogsMap;
 use super::parse_version_spec;
 use moon_pdk::{AnyResult, VirtualPath};
 use moon_pdk_api::{LockDependency, ParseLockOutput};
@@ -106,9 +107,7 @@ pub struct PnpmWorkspace {
 
 impl PnpmWorkspace {
     /// Extract all catalogs for the workspace.
-    pub fn extract_catalogs(
-        &self,
-    ) -> Option<FxHashMap<String, FxHashMap<String, VersionProtocol>>> {
+    pub fn extract_catalogs(&self) -> Option<CatalogsMap> {
         let mut catalogs = self.catalogs.clone().unwrap_or_default();
 
         if let Some(data) = self.catalog.clone() {

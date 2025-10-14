@@ -1,5 +1,6 @@
 // `package.json`
 
+use crate::config::CatalogsMap;
 #[cfg(feature = "wasm")]
 use extism_pdk::*;
 #[cfg(feature = "wasm")]
@@ -148,9 +149,7 @@ impl PackageJson {
     }
 
     /// Extract all catalogs for the workspace.
-    pub fn extract_catalogs(
-        &self,
-    ) -> Option<FxHashMap<String, FxHashMap<String, VersionProtocol>>> {
+    pub fn extract_catalogs(&self) -> Option<CatalogsMap> {
         let mut catalogs = FxHashMap::default();
 
         if let Some(data) = self.catalog.clone() {
