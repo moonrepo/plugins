@@ -193,16 +193,18 @@ pub fn define_requirements(
     Ok(Json(output))
 }
 
-fn extract_workspace_members(
+fn extract_workspace_members_and_catalogs(
     package_manager: JavaScriptPackageManager,
     root: &VirtualPath,
 ) -> AnyResult<Option<Vec<String>>> {
-    let cache_key = format!("workspace-members:{root}");
+    let members_cache_key = format!("workspace-members:{root}");
+    let catalogs_cache_key = format!("workspace-catalogs:{root}");
     let mut members = None;
+    let mut catalogs = None;
 
     // Reduce the amount of file system operations for every package
     // within the workspace by caching the found members for this directory
-    if let Some(cache) = var::get::<String>(&cache_key)? {
+    if let Some(cache) = var::get::<String>(&members_cache_key)? {
         let members: Vec<String> = json::from_str(&cache)?;
 
         return Ok(Some(members));
@@ -221,6 +223,7 @@ fn extract_workspace_members(
             if workspace_file.exists() {
                 let workspace: PnpmWorkspace = yaml::read_file(workspace_file)?;
 
+                catalogs = workspace.extract_catalogs();
                 members = workspace.packages;
             }
         }
@@ -229,12 +232,19 @@ fn extract_workspace_members(
 
     // Otherwise `package.json` itself
     if members.is_none() {
-        members = PackageJson::load(root.join("package.json"))?.extract_members();
+        let package_json = PackageJson::load(root.join("package.json"))?;
+
+        catalogs = package_json.extract_catalogs();
+        members = package_json.extract_members();
     }
 
     // Cache the result!
+    if let Some(catalogs) = &catalogs {
+        var::set(catalogs_cache_key, json::to_string(catalogs)?)?;
+    }
+
     if let Some(members) = &members {
-        var::set(cache_key, json::to_string(members)?)?;
+        var::set(members_cache_key, json::to_string(members)?)?;
     }
 
     Ok(members)
@@ -274,7 +284,7 @@ pub fn locate_dependencies_root(
     // First attempt: find lock files
     if let Some(root) = locate_root_many(&input.starting_dir, &lock_names) {
         output.root = root.virtual_path();
-        output.members = extract_workspace_members(package_manager, &root)?;
+        output.members = extract_workspace_members_and_catalogs(package_manager, &root)?;
     }
 
     // Second attempt: find workspace-compatible manifest files
@@ -282,7 +292,7 @@ pub fn locate_dependencies_root(
         locate_root_many_with_check(&input.starting_dir, &workspace_manifest_names, |root| {
             let mut found = false;
 
-            if let Some(members) = extract_workspace_members(package_manager, root)? {
+            if let Some(members) = extract_workspace_members_and_catalogs(package_manager, root)? {
                 output.root = root.virtual_path();
                 output.members = Some(members);
                 found = true;
@@ -296,6 +306,8 @@ pub fn locate_dependencies_root(
     if output.root.is_none()
         && let Some(root) = locate_root_many(&input.starting_dir, &manifest_names)
     {
+        extract_workspace_members_and_catalogs(package_manager, &root)?;
+
         output.root = root.virtual_path();
     }
 

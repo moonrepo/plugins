@@ -7,6 +7,7 @@ use moon_pdk::{HostLogInput, host_log};
 use moon_pdk_api::{AnyResult, json_config};
 use nodejs_package_json::PackageJson as BasePackageJson;
 use nodejs_package_json::VersionProtocol;
+use rustc_hash::FxHashMap;
 use starbase_utils::json::{JsonValue, serde_json::json};
 use std::collections::BTreeMap;
 
@@ -144,6 +145,23 @@ impl PackageJson {
         }
 
         Ok(false)
+    }
+
+    /// Extract all catalogs for the workspace.
+    pub fn extract_catalogs(
+        &self,
+    ) -> Option<FxHashMap<String, FxHashMap<String, VersionProtocol>>> {
+        let mut catalogs = FxHashMap::default();
+
+        if let Some(data) = self.catalog.clone() {
+            catalogs.insert("default".into(), FxHashMap::from_iter(data));
+        }
+
+        if catalogs.is_empty() {
+            return None;
+        }
+
+        Some(catalogs)
     }
 
     /// Extract package members if the current manifest is a workspace.
