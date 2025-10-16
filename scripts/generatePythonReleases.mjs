@@ -186,7 +186,7 @@ function processAssets(assets, releaseName) {
       item.file = `${releaseName}/${asset.name}`;
 
       // Uses SHA256SUMS in newer releases
-      item.sha = releaseId >= 20220227 && releaseId < 20250708 ? true : undefined;
+      item.sha = releaseId >= 20250708 ? "all" : releaseId >= 20220227 ? "file" : undefined;
     }
 
     return optAssets.length > 0;
