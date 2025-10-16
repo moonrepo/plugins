@@ -3,9 +3,11 @@ import fs from "node:fs";
 
 const OPT_LEVELS = ["install_only", "pgo+lto", "pgo", "lto", "lto+static", "noopt", "noopt+static"];
 const GH_TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+const URL_PREFIX = "https://github.com/astral-sh/python-build-standalone";
 
 // Load the existing dataset so we can reduce the amount of API calls required
 const data = {}; // JSON.parse(fs.readFileSync("tools/python/releases-v2.json", "utf8"));
+const dataOld = {};
 
 // Fetch all the releases
 const releases = [];
@@ -173,20 +175,35 @@ function processAssets(assets, releaseName) {
     for (const asset of optAssets) {
       const { version, triple } = extractTripleInfo(asset.name, releaseName);
 
-      if (!data[version]) {
-        data[version] = {};
-      }
+      if (!data[version]) data[version] = {};
+      if (!dataOld[version]) dataOld[version] = {};
 
-      if (!data[version][triple]) {
-        data[version][triple] = {};
-      }
+      if (!data[version][triple]) data[version][triple] = {};
+      if (!dataOld[version][triple]) dataOld[version][triple] = {};
 
       const item = data[version][triple];
+      const itemOld = dataOld[version][triple];
 
-      item.file = `${releaseName}/${asset.name}`;
+      item.release = releaseName;
+      item.file = asset.name;
+      itemOld.download = `${URL_PREFIX}/releases/download/${releaseName}/${asset.name}`;
 
-      // Uses SHA256SUMS in newer releases
-      item.sha = releaseId >= 20250708 ? "all" : releaseId >= 20220227 ? "file" : undefined;
+      if (releaseId >= 20250708) {
+        item.sha = 1;
+        itemOld.checksum = `${URL_PREFIX}/releases/download/${releaseName}/SHA256SUMS`;
+      } else if (releaseId >= 20220227) {
+        item.sha = 2;
+        itemOld.checksum = `${itemOld.download}.sha256`;
+      } else {
+        item.sha = undefined;
+        itemOld.checksum = undefined;
+      }
+
+      // The v1 dataset doesn't support this level
+      if (optLevel == "install_only") {
+        delete dataOld[version][triple];
+        return false;
+      }
     }
 
     return optAssets.length > 0;
@@ -215,3 +232,4 @@ releases.forEach((release) => {
 });
 
 fs.writeFileSync("tools/python/releases-v2.json", JSON.stringify(data, null, 2));
+fs.writeFileSync("tools/python/releases.json", JSON.stringify(dataOld, null, 2));

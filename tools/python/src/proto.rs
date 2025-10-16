@@ -138,9 +138,10 @@ pub fn build_instructions(
 
 #[derive(Deserialize)]
 struct ReleaseEntry {
+    release: String,
     file: String,
     #[serde(default)]
-    sha: bool,
+    sha: u8,
 }
 
 #[plugin_fn]
@@ -174,23 +175,25 @@ pub fn download_prebuilt(
         ));
     };
 
-    let url = format!(
+    let url_prefix = format!(
         "https://github.com/astral-sh/python-build-standalone/releases/download/{}",
-        release.file
+        release.release
     );
 
     Ok(Json(DownloadPrebuiltOutput {
-        archive_prefix: Some(if url.contains("install_only") {
+        archive_prefix: Some(if release.file.contains("install_only") {
             "python".into()
         } else {
             "python/install".into()
         }),
-        checksum_url: if release.sha {
-            Some(format!("{url}.sha256"))
+        checksum_url: if release.sha == 1 {
+            Some(format!("{url_prefix}/SHA256SUMS"))
+        } else if release.sha == 2 {
+            Some(format!("{url_prefix}/{}.sha256", release.file))
         } else {
             None
         },
-        download_url: url,
+        download_url: format!("{url_prefix}/{}", release.file),
         ..DownloadPrebuiltOutput::default()
     }))
 }
