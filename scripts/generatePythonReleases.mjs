@@ -6,8 +6,8 @@ const GH_TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
 const URL_PREFIX = "https://github.com/astral-sh/python-build-standalone";
 
 // Load the existing dataset so we can reduce the amount of API calls required
-const data = {}; // JSON.parse(fs.readFileSync("tools/python/releases-v2.json", "utf8"));
-const dataOld = {};
+const data = JSON.parse(fs.readFileSync("tools/python/releases-v2.json", "utf8"));
+const dataOld = JSON.parse(fs.readFileSync("tools/python/releases.json", "utf8"));
 
 // Fetch all the releases
 const releases = [];
@@ -44,6 +44,9 @@ while (true) {
   }
 
   page += 1;
+
+  // Uncomment to refresh old data!
+  break;
 }
 
 releases.sort((a, d) => a.id - d.id);
@@ -166,8 +169,6 @@ function extractTripleInfo(assetName, releaseName) {
 function processAssets(assets, releaseName) {
   const releaseId = parseInt(releaseName);
 
-  assets.sort();
-
   // Use the assets with the most wanted opt level first
   OPT_LEVELS.some((optLevel) => {
     const optAssets = assets.filter((asset) => asset.name.includes(optLevel));
@@ -176,38 +177,70 @@ function processAssets(assets, releaseName) {
       const { version, triple } = extractTripleInfo(asset.name, releaseName);
 
       if (!data[version]) data[version] = {};
-      if (!dataOld[version]) dataOld[version] = {};
-
       if (!data[version][triple]) data[version][triple] = {};
-      if (!dataOld[version][triple]) dataOld[version][triple] = {};
 
       const item = data[version][triple];
-      const itemOld = dataOld[version][triple];
-
       item.release = releaseName;
       item.file = asset.name;
-      itemOld.download = `${URL_PREFIX}/releases/download/${releaseName}/${asset.name}`;
 
       if (releaseId >= 20250708) {
         item.sha = 1;
-        itemOld.checksum = `${URL_PREFIX}/releases/download/${releaseName}/SHA256SUMS`;
       } else if (releaseId >= 20220227) {
         item.sha = 2;
-        itemOld.checksum = `${itemOld.download}.sha256`;
       } else {
         item.sha = undefined;
-        itemOld.checksum = undefined;
-      }
-
-      // The v1 dataset doesn't support this level
-      if (optLevel == "install_only") {
-        delete dataOld[version][triple];
-        return false;
       }
     }
 
     return optAssets.length > 0;
   });
+}
+
+function processOldAssets(assets, releaseName) {
+  const releaseId = parseInt(releaseName);
+
+  // Use the assets with the most wanted opt level first
+  OPT_LEVELS.some((optLevel) => {
+    if (optLevel == "install_only") {
+      return false;
+    }
+
+    const optAssets = assets.filter((asset) => asset.name.includes(optLevel));
+
+    for (const asset of optAssets) {
+      const { version, triple } = extractTripleInfo(asset.name, releaseName);
+
+      if (!dataOld[version]) dataOld[version] = {};
+      if (!dataOld[version][triple]) dataOld[version][triple] = {};
+
+      const itemOld = dataOld[version][triple];
+      itemOld.download = `${URL_PREFIX}/releases/download/${releaseName}/${asset.name}`;
+
+      if (releaseId >= 20250708) {
+        itemOld.checksum = `${URL_PREFIX}/releases/download/${releaseName}/SHA256SUMS`;
+      } else if (releaseId >= 20220227) {
+        itemOld.checksum = `${itemOld.download}.sha256`;
+      } else {
+        itemOld.checksum = undefined;
+      }
+    }
+
+    return optAssets.length > 0;
+  });
+}
+
+function sortObjectKeys(data) {
+  const items = Object.entries(data).map(([key, item]) => {
+    if (typeof item == "object" && !!item && !Array.isArray(item)) {
+      return [key, sortObjectKeys(item)];
+    }
+
+    return [key, item];
+  });
+
+  items.sort((a, d) => a[0].localeCompare(d[0]));
+
+  return Object.fromEntries(items);
 }
 
 const FILTER_WORDS = [
@@ -224,12 +257,15 @@ const FILTER_WORDS = [
 releases.forEach((release) => {
   const releaseName = release.tag_name || release.name;
 
-  processAssets(
-    // Remove debug and unwanted builds
-    release.assets.filter((asset) => FILTER_WORDS.every((word) => !asset.name.includes(word))),
-    releaseName,
+  // Remove debug and unwanted builds
+  const assets = release.assets.filter((asset) =>
+    FILTER_WORDS.every((word) => !asset.name.includes(word)),
   );
+  assets.sort();
+
+  processAssets(assets, releaseName);
+  processOldAssets(assets, releaseName);
 });
 
-fs.writeFileSync("tools/python/releases-v2.json", JSON.stringify(data, null, 2));
-fs.writeFileSync("tools/python/releases.json", JSON.stringify(dataOld, null, 2));
+fs.writeFileSync("tools/python/releases-v2.json", JSON.stringify(sortObjectKeys(data), null, 2));
+fs.writeFileSync("tools/python/releases.json", JSON.stringify(sortObjectKeys(dataOld), null, 2));
