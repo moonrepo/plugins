@@ -2,14 +2,13 @@
 
 ## Unreleased
 
-#### 💥 Breaking
-
-- Old versions of proto will no longer receive Python release updates. Will need to update to this minimum proto version.
-
 #### 🚀 Updates
 
 - Pre-builts will now use a much smaller archive when downloading.
-- Greatly reduced the file size of the releases JSON.
+
+#### 🐞 Fixes
+
+- Fixed a UTF-8 unpacking error.
 
 ## 0.14.4
 
