@@ -138,8 +138,9 @@ pub fn build_instructions(
 
 #[derive(Deserialize)]
 struct ReleaseEntry {
-    download: String,
-    checksum: Option<String>,
+    file: String,
+    #[serde(default)]
+    sha: bool,
 }
 
 #[plugin_fn]
@@ -156,7 +157,7 @@ pub fn download_prebuilt(
     }
 
     let releases: BTreeMap<Version, BTreeMap<String, ReleaseEntry>> = fetch_json(
-        "https://raw.githubusercontent.com/moonrepo/plugins/master/tools/python/releases.json",
+        "https://raw.githubusercontent.com/moonrepo/plugins/master/tools/python/releases-v2.json",
     )?;
 
     let Some(release_triples) = version.as_version().and_then(|v| releases.get(v)) else {
@@ -173,10 +174,23 @@ pub fn download_prebuilt(
         ));
     };
 
+    let url = format!(
+        "https://github.com/astral-sh/python-build-standalone/releases/download/{}",
+        release.file
+    );
+
     Ok(Json(DownloadPrebuiltOutput {
-        archive_prefix: Some("python/install".into()),
-        checksum_url: release.checksum.clone(),
-        download_url: release.download.clone(),
+        archive_prefix: Some(if url.contains("install_only") {
+            "python".into()
+        } else {
+            "python/install".into()
+        }),
+        checksum_url: if release.sha {
+            Some(format!("{url}.sha256"))
+        } else {
+            None
+        },
+        download_url: url,
         ..DownloadPrebuiltOutput::default()
     }))
 }

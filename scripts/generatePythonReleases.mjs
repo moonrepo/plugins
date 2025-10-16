@@ -183,10 +183,10 @@ function processAssets(assets, releaseName) {
 
       const item = data[version][triple];
 
-      item.download = `${releaseName}/${asset.name}`;
+      item.file = `${releaseName}/${asset.name}`;
 
       // Uses SHA256SUMS in newer releases
-      item.checksum = releaseId >= 20220227 && releaseId < 20250708 ? true : undefined;
+      item.sha = releaseId >= 20220227 && releaseId < 20250708 ? true : undefined;
     }
 
     return optAssets.length > 0;
