@@ -1,34 +1,50 @@
 // @ts-check
 import fs from "node:fs";
 
-const OPT_LEVELS = ["pgo+lto", "pgo", "lto", "lto+static", "noopt", "noopt+static"];
+const OPT_LEVELS = ["install_only", "pgo+lto", "pgo", "lto", "lto+static", "noopt", "noopt+static"];
 const GH_TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
 
-const response = await fetch(
-  "https://api.github.com/repos/astral-sh/python-build-standalone/releases?per_page=10",
-  {
-    // @ts-expect-error
-    headers: {
-      Accept: "application/vnd.github+json",
-      Authorization: GH_TOKEN ? `Bearer ${GH_TOKEN}` : undefined,
-    },
-  },
-);
-
 // Load the existing dataset so we can reduce the amount of API calls required
-const data = JSON.parse(fs.readFileSync("tools/python/releases.json", "utf8"));
+const data = {}; // JSON.parse(fs.readFileSync("tools/python/releases-v2.json", "utf8"));
 
-// The endpoint sometimes returns HTML, so we can't always parse it as JSON!
+// Fetch all the releases
 const releases = [];
-const text = await response.text();
+let page = 1;
 
-if (text.startsWith("[")) {
-  releases.push(...JSON.parse(text));
-} else {
-  console.log(text);
+while (true) {
+  console.log(`Loading page ${page}`);
 
-  throw new Error("GitHub API returned a non-JSON response!");
+  const response = await fetch(
+    `https://api.github.com/repos/astral-sh/python-build-standalone/releases?per_page=10&page=${page}`,
+    {
+      // @ts-expect-error
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: GH_TOKEN ? `Bearer ${GH_TOKEN}` : undefined,
+      },
+    },
+  );
+
+  const link = response.headers.get("link");
+  const text = await response.text();
+
+  // The endpoint sometimes returns HTML, so we can't always parse it as JSON!
+  if (text.startsWith("[")) {
+    releases.push(...JSON.parse(text));
+  } else {
+    console.log(text);
+
+    throw new Error("GitHub API returned a non-JSON response!");
+  }
+
+  if (link && !link.includes('rel="next"')) {
+    break;
+  }
+
+  page += 1;
 }
+
+releases.sort((a, d) => a.id - d.id);
 
 function mapTriple(triple) {
   switch (triple) {
@@ -145,68 +161,57 @@ function extractTripleInfo(assetName, releaseName) {
   };
 }
 
-function createDownloadUrl(releaseName, fileName) {
-  return `https://github.com/astral-sh/python-build-standalone/releases/download/${releaseName}/${fileName}`;
-}
+function processAssets(assets, releaseName) {
+  const releaseId = parseInt(releaseName);
 
-function processAssets(assets, releaseName, optLevel) {
-  assets.forEach((asset) => {
-    const { version, triple } = extractTripleInfo(asset.name, releaseName);
+  assets.sort();
 
-    if (!data[version]) {
-      data[version] = {};
-    }
+  // Use the assets with the most wanted opt level first
+  OPT_LEVELS.some((optLevel) => {
+    const optAssets = assets.filter((asset) => asset.name.includes(optLevel));
 
-    if (!data[version][triple]) {
-      data[version][triple] = {
-        download: null,
-        checksum: null,
-      };
-    }
+    for (const asset of optAssets) {
+      const { version, triple } = extractTripleInfo(asset.name, releaseName);
 
-    if (!data[version][triple].download) {
-      data[version][triple].download = createDownloadUrl(releaseName, asset.name);
-    }
-
-    if (!data[version][triple].checksum && asset.name.includes(optLevel)) {
-      const releaseId = parseInt(releaseName);
-
-      if (
-        releaseId >= 20250708 ||
-        (asset.name.endsWith(".sha256") && data[version][triple].download)
-      ) {
-        data[version][triple].checksum = createDownloadUrl(releaseName, asset.name);
+      if (!data[version]) {
+        data[version] = {};
       }
+
+      if (!data[version][triple]) {
+        data[version][triple] = {};
+      }
+
+      const item = data[version][triple];
+
+      item.download = `${releaseName}/${asset.name}`;
+
+      // Uses SHA256SUMS in newer releases
+      item.checksum = releaseId >= 20220227 && releaseId < 20250708 ? true : undefined;
     }
+
+    return optAssets.length > 0;
   });
 }
 
 const FILTER_WORDS = [
   "freethreaded",
   "debug",
-  "install_only",
+  "install_only_stripped",
   "msvc-static",
   "_v2-",
   "_v3-",
   "_v4-",
+  ".sha256",
 ];
 
 releases.forEach((release) => {
   const releaseName = release.tag_name || release.name;
 
-  // Remove debug, install only, and unwanted builds
-  const assets = release.assets.filter((asset) =>
-    FILTER_WORDS.every((word) => !asset.name.includes(word)),
+  processAssets(
+    // Remove debug and unwanted builds
+    release.assets.filter((asset) => FILTER_WORDS.every((word) => !asset.name.includes(word))),
+    releaseName,
   );
-
-  // Process assets in order of most wanted to least wanted
-  OPT_LEVELS.forEach((optLevel) => {
-    processAssets(
-      assets.filter((asset) => asset.name.includes(optLevel)),
-      releaseName,
-      optLevel,
-    );
-  });
 });
 
-fs.writeFileSync("tools/python/releases.json", JSON.stringify(data, null, 2));
+fs.writeFileSync("tools/python/releases-v2.json", JSON.stringify(data, null, 2));
