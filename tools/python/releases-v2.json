@@ -4,6 +4,18 @@
       "file": "cpython-3.10.0-aarch64-apple-darwin-install_only-20211017T1616.tar.gz",
       "release": "20211017"
     },
+    "aarch64-unknown-linux-gnu": {
+      "file": "cpython-3.10.0-aarch64-unknown-linux-gnu-lto-20211017T1616.tar.zst",
+      "release": "20211017"
+    },
+    "i686-pc-windows-msvc": {
+      "file": "cpython-3.10.0-i686-pc-windows-msvc-shared-pgo-20211017T1616.tar.zst",
+      "release": "20211017"
+    },
+    "i686-unknown-linux-gnu": {
+      "file": "cpython-3.10.0-i686-unknown-linux-gnu-pgo+lto-20211017T1616.tar.zst",
+      "release": "20211017"
+    },
     "x86_64-apple-darwin": {
       "file": "cpython-3.10.0-x86_64-apple-darwin-install_only-20211017T1616.tar.gz",
       "release": "20211017"
@@ -14,6 +26,10 @@
     },
     "x86_64-unknown-linux-gnu": {
       "file": "cpython-3.10.0-x86_64-unknown-linux-gnu-install_only-20211017T1616.tar.gz",
+      "release": "20211017"
+    },
+    "x86_64-unknown-linux-musl": {
+      "file": "cpython-3.10.0-x86_64-unknown-linux-musl-lto-20211017T1616.tar.zst",
       "release": "20211017"
     }
   },
@@ -4048,6 +4064,10 @@
     }
   },
   "3.8.10": {
+    "i686-pc-windows-msvc": {
+      "file": "cpython-3.8.10-i686-pc-windows-msvc-shared-pgo-20210506T0943.tar.zst",
+      "release": "20210506"
+    },
     "i686-unknown-linux-gnu": {
       "file": "cpython-3.8.10-i686-unknown-linux-gnu-pgo+lto-20210506T0943.tar.zst",
       "release": "20210506"
@@ -4056,9 +4076,43 @@
       "file": "cpython-3.8.10-x86_64-apple-darwin-pgo+lto-20210506T0943.tar.zst",
       "release": "20210506"
     },
+    "x86_64-pc-windows-msvc": {
+      "file": "cpython-3.8.10-x86_64-pc-windows-msvc-shared-pgo-20210506T0943.tar.zst",
+      "release": "20210506"
+    },
     "x86_64-unknown-linux-gnu": {
       "file": "cpython-3.8.10-x86_64-unknown-linux-gnu-pgo+lto-20210506T0943.tar.zst",
       "release": "20210506"
+    },
+    "x86_64-unknown-linux-musl": {
+      "file": "cpython-3.8.10-x86_64-unknown-linux-musl-lto-20210506T0943.tar.zst",
+      "release": "20210506"
+    }
+  },
+  "3.8.11": {
+    "i686-pc-windows-msvc": {
+      "file": "cpython-3.8.11-i686-pc-windows-msvc-shared-pgo-20210724T1424.tar.zst",
+      "release": "20210724"
+    },
+    "i686-unknown-linux-gnu": {
+      "file": "cpython-3.8.11-i686-unknown-linux-gnu-pgo+lto-20210724T1424.tar.zst",
+      "release": "20210724"
+    },
+    "x86_64-apple-darwin": {
+      "file": "cpython-3.8.11-x86_64-apple-darwin-pgo+lto-20210724T1424.tar.zst",
+      "release": "20210724"
+    },
+    "x86_64-pc-windows-msvc": {
+      "file": "cpython-3.8.11-x86_64-pc-windows-msvc-shared-pgo-20210724T1424.tar.zst",
+      "release": "20210724"
+    },
+    "x86_64-unknown-linux-gnu": {
+      "file": "cpython-3.8.11-x86_64-unknown-linux-gnu-pgo+lto-20210724T1424.tar.zst",
+      "release": "20210724"
+    },
+    "x86_64-unknown-linux-musl": {
+      "file": "cpython-3.8.11-x86_64-unknown-linux-musl-lto-20210724T1424.tar.zst",
+      "release": "20210724"
     }
   },
   "3.8.12": {
@@ -4511,8 +4565,8 @@
   },
   "3.8.8": {
     "i686-pc-windows-msvc": {
-      "file": "cpython-3.8.8-i686-pc-windows-msvc-shared-pgo-20210303T0937.tar.zst",
-      "release": "20210303"
+      "file": "cpython-3.8.8-i686-pc-windows-msvc-shared-pgo-20210327T1202.tar.zst",
+      "release": "20210327"
     },
     "i686-unknown-linux-gnu": {
       "file": "cpython-3.8.8-i686-unknown-linux-gnu-pgo+lto-20210327T1202.tar.zst",
@@ -4523,15 +4577,23 @@
       "release": "20210327"
     },
     "x86_64-pc-windows-msvc": {
-      "file": "cpython-3.8.8-x86_64-pc-windows-msvc-shared-pgo-20210303T0937.tar.zst",
-      "release": "20210303"
+      "file": "cpython-3.8.8-x86_64-pc-windows-msvc-shared-pgo-20210327T1202.tar.zst",
+      "release": "20210327"
     },
     "x86_64-unknown-linux-gnu": {
       "file": "cpython-3.8.8-x86_64-unknown-linux-gnu-pgo+lto-20210327T1202.tar.zst",
       "release": "20210327"
+    },
+    "x86_64-unknown-linux-musl": {
+      "file": "cpython-3.8.8-x86_64-unknown-linux-musl-lto-20210327T1202.tar.zst",
+      "release": "20210327"
     }
   },
   "3.8.9": {
+    "i686-pc-windows-msvc": {
+      "file": "cpython-3.8.9-i686-pc-windows-msvc-shared-pgo-20210414T1515.tar.zst",
+      "release": "20210415"
+    },
     "i686-unknown-linux-gnu": {
       "file": "cpython-3.8.9-i686-unknown-linux-gnu-pgo+lto-20210414T1515.tar.zst",
       "release": "20210415"
@@ -4540,8 +4602,16 @@
       "file": "cpython-3.8.9-x86_64-apple-darwin-pgo+lto-20210414T1515.tar.zst",
       "release": "20210415"
     },
+    "x86_64-pc-windows-msvc": {
+      "file": "cpython-3.8.9-x86_64-pc-windows-msvc-shared-pgo-20210414T1515.tar.zst",
+      "release": "20210415"
+    },
     "x86_64-unknown-linux-gnu": {
       "file": "cpython-3.8.9-x86_64-unknown-linux-gnu-pgo+lto-20210414T1515.tar.zst",
+      "release": "20210415"
+    },
+    "x86_64-unknown-linux-musl": {
+      "file": "cpython-3.8.9-x86_64-unknown-linux-musl-lto-20210414T1515.tar.zst",
       "release": "20210415"
     }
   },
@@ -5047,8 +5117,8 @@
       "release": "20210327"
     },
     "i686-pc-windows-msvc": {
-      "file": "cpython-3.9.2-i686-pc-windows-msvc-shared-pgo-20210303T0937.tar.zst",
-      "release": "20210303"
+      "file": "cpython-3.9.2-i686-pc-windows-msvc-shared-pgo-20210327T1202.tar.zst",
+      "release": "20210327"
     },
     "i686-unknown-linux-gnu": {
       "file": "cpython-3.9.2-i686-unknown-linux-gnu-pgo+lto-20210327T1202.tar.zst",
@@ -5059,11 +5129,15 @@
       "release": "20210327"
     },
     "x86_64-pc-windows-msvc": {
-      "file": "cpython-3.9.2-x86_64-pc-windows-msvc-shared-pgo-20210303T0937.tar.zst",
-      "release": "20210303"
+      "file": "cpython-3.9.2-x86_64-pc-windows-msvc-shared-pgo-20210327T1202.tar.zst",
+      "release": "20210327"
     },
     "x86_64-unknown-linux-gnu": {
       "file": "cpython-3.9.2-x86_64-unknown-linux-gnu-pgo+lto-20210327T1202.tar.zst",
+      "release": "20210327"
+    },
+    "x86_64-unknown-linux-musl": {
+      "file": "cpython-3.9.2-x86_64-unknown-linux-musl-lto-20210327T1202.tar.zst",
       "release": "20210327"
     }
   },
@@ -5387,18 +5461,34 @@
       "file": "cpython-3.9.3-aarch64-apple-darwin-pgo+lto-20210413T2055.tar.zst",
       "release": "20210414"
     },
+    "i686-pc-windows-msvc": {
+      "file": "cpython-3.9.3-i686-pc-windows-msvc-shared-pgo-20210413T2055.tar.zst",
+      "release": "20210414"
+    },
     "x86_64-apple-darwin": {
       "file": "cpython-3.9.3-x86_64-apple-darwin-pgo+lto-20210413T2055.tar.zst",
       "release": "20210414"
     },
+    "x86_64-pc-windows-msvc": {
+      "file": "cpython-3.9.3-x86_64-pc-windows-msvc-shared-pgo-20210413T2055.tar.zst",
+      "release": "20210414"
+    },
     "x86_64-unknown-linux-gnu": {
       "file": "cpython-3.9.3-x86_64-unknown-linux-gnu-pgo+lto-20210413T2055.tar.zst",
+      "release": "20210414"
+    },
+    "x86_64-unknown-linux-musl": {
+      "file": "cpython-3.9.3-x86_64-unknown-linux-musl-lto-20210413T2055.tar.zst",
       "release": "20210414"
     }
   },
   "3.9.4": {
     "aarch64-apple-darwin": {
       "file": "cpython-3.9.4-aarch64-apple-darwin-pgo+lto-20210414T1515.tar.zst",
+      "release": "20210415"
+    },
+    "i686-pc-windows-msvc": {
+      "file": "cpython-3.9.4-i686-pc-windows-msvc-shared-pgo-20210414T1515.tar.zst",
       "release": "20210415"
     },
     "i686-unknown-linux-gnu": {
@@ -5409,14 +5499,26 @@
       "file": "cpython-3.9.4-x86_64-apple-darwin-pgo+lto-20210414T1515.tar.zst",
       "release": "20210415"
     },
+    "x86_64-pc-windows-msvc": {
+      "file": "cpython-3.9.4-x86_64-pc-windows-msvc-shared-pgo-20210414T1515.tar.zst",
+      "release": "20210415"
+    },
     "x86_64-unknown-linux-gnu": {
       "file": "cpython-3.9.4-x86_64-unknown-linux-gnu-pgo+lto-20210414T1515.tar.zst",
+      "release": "20210415"
+    },
+    "x86_64-unknown-linux-musl": {
+      "file": "cpython-3.9.4-x86_64-unknown-linux-musl-lto-20210414T1515.tar.zst",
       "release": "20210415"
     }
   },
   "3.9.5": {
     "aarch64-apple-darwin": {
       "file": "cpython-3.9.5-aarch64-apple-darwin-pgo+lto-20210506T0943.tar.zst",
+      "release": "20210506"
+    },
+    "i686-pc-windows-msvc": {
+      "file": "cpython-3.9.5-i686-pc-windows-msvc-shared-pgo-20210506T0943.tar.zst",
       "release": "20210506"
     },
     "i686-unknown-linux-gnu": {
@@ -5427,14 +5529,34 @@
       "file": "cpython-3.9.5-x86_64-apple-darwin-pgo+lto-20210506T0943.tar.zst",
       "release": "20210506"
     },
+    "x86_64-pc-windows-msvc": {
+      "file": "cpython-3.9.5-x86_64-pc-windows-msvc-shared-pgo-20210506T0943.tar.zst",
+      "release": "20210506"
+    },
     "x86_64-unknown-linux-gnu": {
       "file": "cpython-3.9.5-x86_64-unknown-linux-gnu-pgo+lto-20210506T0943.tar.zst",
+      "release": "20210506"
+    },
+    "x86_64-unknown-linux-musl": {
+      "file": "cpython-3.9.5-x86_64-unknown-linux-musl-lto-20210506T0943.tar.zst",
       "release": "20210506"
     }
   },
   "3.9.6": {
     "aarch64-apple-darwin": {
       "file": "cpython-3.9.6-aarch64-apple-darwin-install_only-20210724T1424.tar.gz",
+      "release": "20210724"
+    },
+    "aarch64-unknown-linux-gnu": {
+      "file": "cpython-3.9.6-aarch64-unknown-linux-gnu-lto-20210724T1424.tar.zst",
+      "release": "20210724"
+    },
+    "i686-pc-windows-msvc": {
+      "file": "cpython-3.9.6-i686-pc-windows-msvc-shared-pgo-20210724T1424.tar.zst",
+      "release": "20210724"
+    },
+    "i686-unknown-linux-gnu": {
+      "file": "cpython-3.9.6-i686-unknown-linux-gnu-pgo+lto-20210724T1424.tar.zst",
       "release": "20210724"
     },
     "x86_64-apple-darwin": {
@@ -5448,11 +5570,27 @@
     "x86_64-unknown-linux-gnu": {
       "file": "cpython-3.9.6-x86_64-unknown-linux-gnu-install_only-20210724T1424.tar.gz",
       "release": "20210724"
+    },
+    "x86_64-unknown-linux-musl": {
+      "file": "cpython-3.9.6-x86_64-unknown-linux-musl-lto-20210724T1424.tar.zst",
+      "release": "20210724"
     }
   },
   "3.9.7": {
     "aarch64-apple-darwin": {
       "file": "cpython-3.9.7-aarch64-apple-darwin-install_only-20211017T1616.tar.gz",
+      "release": "20211017"
+    },
+    "aarch64-unknown-linux-gnu": {
+      "file": "cpython-3.9.7-aarch64-unknown-linux-gnu-lto-20211017T1616.tar.zst",
+      "release": "20211017"
+    },
+    "i686-pc-windows-msvc": {
+      "file": "cpython-3.9.7-i686-pc-windows-msvc-shared-pgo-20211017T1616.tar.zst",
+      "release": "20211017"
+    },
+    "i686-unknown-linux-gnu": {
+      "file": "cpython-3.9.7-i686-unknown-linux-gnu-pgo+lto-20211017T1616.tar.zst",
       "release": "20211017"
     },
     "x86_64-apple-darwin": {
@@ -5465,6 +5603,10 @@
     },
     "x86_64-unknown-linux-gnu": {
       "file": "cpython-3.9.7-x86_64-unknown-linux-gnu-install_only-20211017T1616.tar.gz",
+      "release": "20211017"
+    },
+    "x86_64-unknown-linux-musl": {
+      "file": "cpython-3.9.7-x86_64-unknown-linux-musl-lto-20211017T1616.tar.zst",
       "release": "20211017"
     }
   }

@@ -1,7 +1,8 @@
 // @ts-check
 import fs from "node:fs";
 
-const OPT_LEVELS = ["install_only", "pgo+lto", "pgo", "lto", "lto+static", "noopt", "noopt+static"];
+// From least to most optimized
+const OPT_LEVELS = ["lto+static", "lto", "pgo", "pgo+lto", "install_only"];
 const GH_TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
 const URL_PREFIX = "https://github.com/astral-sh/python-build-standalone";
 
@@ -152,6 +153,7 @@ function extractTripleInfo(assetName, releaseName) {
     // Older releases:
     //   cpython-3.7.3-linux64-20190427T2308.tar.zst
     //   cpython-3.7.3-windows-amd64-20190430T0616.tar.zst
+    //   cpython-3.10.0-x86_64-pc-windows-msvc-shared-install_only-20211011T1926.tar.gz
   } else {
     const parts = name.split("-");
     version = parts.shift();
@@ -170,7 +172,7 @@ function processAssets(assets, releaseName) {
   const releaseId = parseInt(releaseName);
 
   // Use the assets with the most wanted opt level first
-  OPT_LEVELS.some((optLevel) => {
+  OPT_LEVELS.forEach((optLevel) => {
     const optAssets = assets.filter((asset) => asset.name.includes(optLevel));
 
     for (const asset of optAssets) {
@@ -191,8 +193,6 @@ function processAssets(assets, releaseName) {
         item.sha = undefined;
       }
     }
-
-    return optAssets.length > 0;
   });
 }
 
@@ -200,9 +200,9 @@ function processOldAssets(assets, releaseName) {
   const releaseId = parseInt(releaseName);
 
   // Use the assets with the most wanted opt level first
-  OPT_LEVELS.some((optLevel) => {
+  OPT_LEVELS.forEach((optLevel) => {
     if (optLevel == "install_only") {
-      return false;
+      return;
     }
 
     const optAssets = assets.filter((asset) => asset.name.includes(optLevel));
@@ -224,8 +224,6 @@ function processOldAssets(assets, releaseName) {
         itemOld.checksum = undefined;
       }
     }
-
-    return optAssets.length > 0;
   });
 }
 
@@ -261,6 +259,7 @@ releases.forEach((release) => {
   const assets = release.assets.filter((asset) =>
     FILTER_WORDS.every((word) => !asset.name.includes(word)),
   );
+
   assets.sort();
 
   processAssets(assets, releaseName);
