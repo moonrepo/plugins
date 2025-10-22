@@ -144,6 +144,10 @@ pub fn locate_executables(
                 "bundle".into(),
                 ExecutableConfig::new(env.os.get_exe_name("bin/bundle")),
             ),
+            (
+                "irb".into(),
+                ExecutableConfig::new(env.os.get_exe_name("bin/irb")),
+            ),
         ]),
         exes_dirs: vec!["bin".into()],
         globals_lookup_dirs: vec![],
