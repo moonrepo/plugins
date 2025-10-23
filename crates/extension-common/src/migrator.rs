@@ -1,7 +1,7 @@
 use moon_common::Id;
 use moon_config::{
     LanguageType, OneOrMany, PartialInheritedTasksConfig, PartialProjectConfig,
-    PartialProjectToolchainConfig, PartialWorkspaceConfig,
+    PartialProjectToolchainsConfig, PartialWorkspaceConfig,
 };
 use moon_pdk::{AnyResult, VirtualPath};
 use rustc_hash::FxHashMap;
@@ -70,11 +70,11 @@ impl Migrator {
                                 LanguageType::JavaScript
                             },
                         ),
-                        toolchain: Some(PartialProjectToolchainConfig {
+                        toolchains: Some(PartialProjectToolchainsConfig {
                             default: Some(OneOrMany::One(self.toolchain.clone())),
-                            ..PartialProjectToolchainConfig::default()
+                            ..Default::default()
                         }),
-                        ..PartialProjectConfig::default()
+                        ..Default::default()
                     },
                 );
             }

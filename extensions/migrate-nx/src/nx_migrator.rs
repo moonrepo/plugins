@@ -410,7 +410,7 @@ fn migrate_noop_task(nx_target: &NxTargetOptions) -> AnyResult<PartialTaskConfig
 // https://nx.dev/nx-api/nx/executors/run-commands
 fn migrate_run_commands_task(nx_target: &NxTargetOptions) -> AnyResult<PartialTaskConfig> {
     let mut config = PartialTaskConfig {
-        toolchain: Some(OneOrMany::One(Id::raw("system"))),
+        toolchains: Some(OneOrMany::One(Id::raw("system"))),
         ..PartialTaskConfig::default()
     };
 
