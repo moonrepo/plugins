@@ -125,10 +125,8 @@ impl<'a> TasksInferrer<'a> {
             }
         }
 
-        // preset + local
-        #[allow(deprecated)]
+        // preset
         if self.is_dev_script_name(name) {
-            config.local = Some(true);
             config.preset = Some(if self.has_watch_option(script) {
                 TaskPreset::Watcher
             } else {
@@ -141,12 +139,12 @@ impl<'a> TasksInferrer<'a> {
             package_manager,
             JavaScriptPackageManager::Bun | JavaScriptPackageManager::Deno
         ) {
-            config.toolchain = Some(OneOrMany::Many(vec![
+            config.toolchains = Some(OneOrMany::Many(vec![
                 Id::raw("javascript"),
                 package_manager.get_runtime_toolchain(),
             ]));
         } else {
-            config.toolchain = Some(OneOrMany::Many(vec![
+            config.toolchains = Some(OneOrMany::Many(vec![
                 Id::raw("javascript"),
                 Id::raw(package_manager.to_string()),
                 package_manager.get_runtime_toolchain(),

@@ -171,7 +171,7 @@ mod javascript_toolchain_tier2 {
                             "run".into(),
                             "release".into(),
                         ])),
-                        toolchain: Some(OneOrMany::Many(vec![
+                        toolchains: Some(OneOrMany::Many(vec![
                             Id::raw("javascript"),
                             Id::raw("npm"),
                             Id::raw("node"),
@@ -194,7 +194,7 @@ mod javascript_toolchain_tier2 {
                                 "build".into(),
                             ])),
                             outputs: Some(vec![Output::parse("build").unwrap()]),
-                            toolchain: Some(OneOrMany::Many(vec![
+                            toolchains: Some(OneOrMany::Many(vec![
                                 Id::raw("javascript"),
                                 Id::raw("npm"),
                                 Id::raw("node"),
@@ -214,7 +214,7 @@ mod javascript_toolchain_tier2 {
                                 "build:vite".into(),
                             ])),
                             outputs: Some(vec![Output::parse("out").unwrap()]),
-                            toolchain: Some(OneOrMany::Many(vec![
+                            toolchains: Some(OneOrMany::Many(vec![
                                 Id::raw("javascript"),
                                 Id::raw("npm"),
                                 Id::raw("node"),
@@ -231,7 +231,7 @@ mod javascript_toolchain_tier2 {
                                 "run".into(),
                                 "info".into(),
                             ])),
-                            toolchain: Some(OneOrMany::Many(vec![
+                            toolchains: Some(OneOrMany::Many(vec![
                                 Id::raw("javascript"),
                                 Id::raw("npm"),
                                 Id::raw("node"),
@@ -260,9 +260,8 @@ mod javascript_toolchain_tier2 {
                                 "run".into(),
                                 "astro:serve".into(),
                             ])),
-                            local: Some(true),
                             preset: Some(TaskPreset::Server),
-                            toolchain: Some(OneOrMany::Many(vec![
+                            toolchains: Some(OneOrMany::Many(vec![
                                 Id::raw("javascript"),
                                 Id::raw("npm"),
                                 Id::raw("node"),
@@ -279,9 +278,8 @@ mod javascript_toolchain_tier2 {
                                 "run".into(),
                                 "dev".into(),
                             ])),
-                            local: Some(true),
                             preset: Some(TaskPreset::Watcher),
-                            toolchain: Some(OneOrMany::Many(vec![
+                            toolchains: Some(OneOrMany::Many(vec![
                                 Id::raw("javascript"),
                                 Id::raw("npm"),
                                 Id::raw("node"),
@@ -304,9 +302,8 @@ mod javascript_toolchain_tier2 {
                                 "run".into(),
                                 "start:vite".into(),
                             ])),
-                            local: Some(true),
                             preset: Some(TaskPreset::Server),
-                            toolchain: Some(OneOrMany::Many(vec![
+                            toolchains: Some(OneOrMany::Many(vec![
                                 Id::raw("javascript"),
                                 Id::raw("npm"),
                                 Id::raw("node"),
@@ -349,7 +346,7 @@ mod javascript_toolchain_tier2 {
                                 "task".into(),
                                 "build".into(),
                             ])),
-                            toolchain: Some(OneOrMany::Many(vec![
+                            toolchains: Some(OneOrMany::Many(vec![
                                 Id::raw("javascript"),
                                 Id::raw("deno"),
                             ])),
@@ -368,9 +365,9 @@ mod javascript_toolchain_tier2 {
                             deps: Some(vec![PartialTaskDependency::Target(
                                 Target::parse("~:build").unwrap()
                             )]),
-                            local: Some(true),
+
                             preset: Some(TaskPreset::Server),
-                            toolchain: Some(OneOrMany::Many(vec![
+                            toolchains: Some(OneOrMany::Many(vec![
                                 Id::raw("javascript"),
                                 Id::raw("deno"),
                             ])),
