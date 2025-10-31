@@ -1,5 +1,6 @@
 use crate::config::GoToolchainConfig;
 use extism_pdk::*;
+use moon_config::LanguageType;
 use moon_pdk::parse_toolchain_config;
 use moon_pdk_api::*;
 use schematic::SchemaBuilder;
@@ -15,6 +16,7 @@ pub fn register_toolchain(
     Ok(Json(RegisterToolchainOutput {
         name: "Go".into(),
         plugin_version: env!("CARGO_PKG_VERSION").into(),
+        language: Some(LanguageType::Go),
         config_file_globs: vec![],
         exe_names: vec!["go".into(), "gofmt".into()],
         lock_file_names: vec!["go.sum".into(), "go.work.sum".into()],

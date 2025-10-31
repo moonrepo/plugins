@@ -199,9 +199,16 @@ pub fn download_prebuilt(
             .replace("{file}", &filename)
     };
 
+    // Checksums were added/broken in v2 and were fixed in v2.0.1
+    let checksum_req = VersionReq::parse(">=2.0.1").unwrap();
+
     Ok(Json(DownloadPrebuiltOutput {
-        // Checksums were added in v2+
-        checksum_url: if version.is_latest() || version.as_version().is_some_and(|v| v.major >= 2) {
+        // Checksums were added in v2.0.1+ but were broken in v2.0.0
+        checksum_url: if version.is_latest()
+            || version
+                .as_version()
+                .is_some_and(|v| checksum_req.matches(v))
+        {
             Some(format!("{download_url}.sha256sum"))
         } else {
             None

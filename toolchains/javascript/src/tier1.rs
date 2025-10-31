@@ -2,7 +2,7 @@ use crate::config::*;
 use crate::package_json::PackageJson;
 use extism_pdk::*;
 use moon_common::path::{is_root_level_source, to_relative_virtual_string};
-use moon_config::DependencyScope;
+use moon_config::{DependencyScope, LanguageType};
 use moon_pdk::{
     HostLogInput, host_log, is_project_toolchain_enabled, map_miette_error,
     parse_toolchain_config_schema, plugin_err,
@@ -32,6 +32,7 @@ pub fn register_toolchain(
                 .into(),
         ),
         plugin_version: env!("CARGO_PKG_VERSION").into(),
+        language: Some(LanguageType::JavaScript),
         // For project detection
         config_file_globs: vec![
             "*.config.{js,cjs,mjs,ts,tsx,cts,mts}".into(),
@@ -46,6 +47,7 @@ pub fn register_toolchain(
             "pnpm-workspace.yaml".into(),
             ".pnpmfile.*".into(),
             // yarn
+            ".yarn/**/*".into(),
             ".yarnrc.*".into(),
         ],
         manifest_file_names: vec!["package.json".into()],

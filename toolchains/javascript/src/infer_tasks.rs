@@ -2,7 +2,7 @@ use crate::config::{JavaScriptPackageManager, JavaScriptToolchainConfig};
 use crate::lockfiles::DenoJsonTask;
 use moon_common::Id;
 use moon_config::{
-    OneOrMany, OutputPath, PartialTaskArgs, PartialTaskConfig, PartialTaskDependency,
+    OneOrMany, Output, PartialTaskArgs, PartialTaskConfig, PartialTaskDependency,
     PartialTaskOptionsConfig, TaskOptionRunInCI, TaskPreset,
 };
 use moon_pdk::{AnyResult, map_miette_error};
@@ -121,14 +121,12 @@ impl<'a> TasksInferrer<'a> {
                 config
                     .outputs
                     .get_or_insert_default()
-                    .push(OutputPath::ProjectFile(output_path));
+                    .push(Output::parse(output_path)?);
             }
         }
 
-        // preset + local
-        #[allow(deprecated)]
+        // preset
         if self.is_dev_script_name(name) {
-            config.local = Some(true);
             config.preset = Some(if self.has_watch_option(script) {
                 TaskPreset::Watcher
             } else {
@@ -141,12 +139,12 @@ impl<'a> TasksInferrer<'a> {
             package_manager,
             JavaScriptPackageManager::Bun | JavaScriptPackageManager::Deno
         ) {
-            config.toolchain = Some(OneOrMany::Many(vec![
+            config.toolchains = Some(OneOrMany::Many(vec![
                 Id::raw("javascript"),
                 package_manager.get_runtime_toolchain(),
             ]));
         } else {
-            config.toolchain = Some(OneOrMany::Many(vec![
+            config.toolchains = Some(OneOrMany::Many(vec![
                 Id::raw("javascript"),
                 Id::raw(package_manager.to_string()),
                 package_manager.get_runtime_toolchain(),
