@@ -47,7 +47,9 @@ while (true) {
   page += 1;
 
   // Uncomment to refresh old data!
-  break;
+  if (page == 3) {
+    break;
+  }
 }
 
 releases.sort((a, d) => a.id - d.id);
