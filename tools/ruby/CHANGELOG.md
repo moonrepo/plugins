@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added `irb` shim support.
+
 ## 0.2.4
 
 #### 🚀 Updates
