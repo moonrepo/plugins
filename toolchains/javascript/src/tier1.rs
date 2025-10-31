@@ -47,6 +47,7 @@ pub fn register_toolchain(
             "pnpm-workspace.yaml".into(),
             ".pnpmfile.*".into(),
             // yarn
+            ".yarn/**/*".into(),
             ".yarnrc.*".into(),
         ],
         manifest_file_names: vec!["package.json".into()],

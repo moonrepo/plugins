@@ -140,6 +140,8 @@ pub fn define_docker_metadata(
         "tsconfig.json".into(),
         "tsconfig.*.json".into(),
         "*.tsconfig.json".into(),
+        // postinstall scripts, etc
+        "*.{ts,tsx,cts,mts}".into(),
     ]);
 
     Ok(Json(output))

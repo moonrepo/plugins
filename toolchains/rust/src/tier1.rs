@@ -91,7 +91,7 @@ pub fn scaffold_docker(
     // the workspace/configs phase, which isn't copied till the
     // sources phase. Because scaffolding may attempt to run
     // Cargo commands, it will fail without these files!
-    if input.phase == ScaffoldDockerPhase::Configs {
+    if input.phase == ScaffoldDockerPhase::Configs && input.project.is_some() {
         let lib_file = input.output_dir.join("src/lib.rs");
         let main_file = input.output_dir.join("src/main.rs");
 
