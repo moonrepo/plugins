@@ -3828,6 +3828,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "python_toolchain"
+version = "0.2.0"
+dependencies = [
+ "extism-pdk",
+ "moon_common",
+ "moon_config",
+ "moon_pdk",
+ "moon_pdk_api",
+ "moon_pdk_test_utils",
+ "python_tool",
+ "schematic",
+ "serde",
+ "serde_json",
+ "starbase_sandbox",
+ "starbase_utils",
+ "tokio",
+ "toolchain_common",
+]
+
+[[package]]
 name = "python_uv_tool"
 version = "0.3.1"
 dependencies = [
