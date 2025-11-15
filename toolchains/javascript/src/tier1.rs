@@ -109,7 +109,7 @@ pub fn initialize_toolchain(
             "packageManager",
             "Package manager to install <file>package.json</file> dependencies with?",
             PromptType::Select {
-                default_index: 1,
+                default_index: 2,
                 options: vec![
                     JsonValue::String("bun".into()),
                     JsonValue::String("deno".into()),
