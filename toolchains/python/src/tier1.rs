@@ -21,7 +21,7 @@ pub fn register_toolchain(
         plugin_version: env!("CARGO_PKG_VERSION").into(),
         // For project detection
         config_file_globs: vec![
-            "poetry.*".into(),
+            // "poetry.*".into(),
             "uv.*".into(),
             ".python-version".into(),
             ".venv".into(),
@@ -32,7 +32,7 @@ pub fn register_toolchain(
             // pip
             "Pipfile".into(),
             // poetry
-            "poetry.toml".into(),
+            // "poetry.toml".into(),
             // uv
             "uv.toml".into(),
         ],
@@ -41,7 +41,7 @@ pub fn register_toolchain(
             // pip
             "Pipfile.lock".into(),
             // poetry
-            "poetry.lock".into(),
+            // "poetry.lock".into(),
             // uv
             "uv.lock".into(),
         ],
@@ -53,7 +53,7 @@ pub fn register_toolchain(
             // pip
             "pip".into(),
             // poetry
-            "poetry".into(),
+            // "poetry".into(),
             // uv
             "uv".into(),
         ],
@@ -84,7 +84,7 @@ pub fn initialize_toolchain(
                 default_index: 0,
                 options: vec![
                     JsonValue::String("pip".into()),
-                    JsonValue::String("poetry".into()),
+                    // JsonValue::String("poetry".into()),
                     JsonValue::String("uv".into()),
                 ],
             },
@@ -97,8 +97,8 @@ pub fn initialize_toolchain(
 fn detect_package_manager(root: &VirtualPath) -> AnyResult<Option<PythonPackageManager>> {
     if root.join("uv.toml").exists() || root.join("uv.lock").exists() {
         return Ok(Some(PythonPackageManager::Uv));
-    } else if root.join("poetry.toml").exists() || root.join("poetry.lock").exists() {
-        return Ok(Some(PythonPackageManager::Poetry));
+    // } else if root.join("poetry.toml").exists() || root.join("poetry.lock").exists() {
+    //     return Ok(Some(PythonPackageManager::Poetry));
     } else if root.join("Pipfile").exists() || root.join("Pipfile.lock").exists() {
         return Ok(Some(PythonPackageManager::Pip));
     }
