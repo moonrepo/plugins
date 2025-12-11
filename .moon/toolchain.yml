@@ -1,7 +1,7 @@
 $schema: "./cache/schemas/toolchain.json"
 
 unstable_rust:
-  version: "1.91.0"
+  version: "1.92.0"
   bins: ["cargo-nextest"]
   components: ["clippy", "rustfmt"]
   targets: ["wasm32-wasip1"]
