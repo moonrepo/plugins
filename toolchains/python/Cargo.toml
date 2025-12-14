@@ -20,6 +20,7 @@ extism-pdk = { workspace = true }
 moon_config = { workspace = true }
 moon_pdk = { workspace = true, features = ["schematic"] }
 moon_pdk_api = { workspace = true }
+pep440_rs = "0.7.3"
 pep508_rs = "0.9.2"
 pyproject-toml = "0.13.7"
 schematic = { workspace = true }

@@ -3901,6 +3901,7 @@ dependencies = [
  "moon_pdk",
  "moon_pdk_api",
  "moon_pdk_test_utils",
+ "pep440_rs",
  "pep508_rs",
  "pyproject-toml",
  "python_tool",
