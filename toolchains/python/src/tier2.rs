@@ -1,8 +1,9 @@
 use crate::config::*;
+use crate::managers::*;
 use extism_pdk::*;
 use moon_pdk::{
     get_host_environment, load_project_toolchain_config, load_toolchain_config, locate_root,
-    parse_toolchain_config_schema,
+    locate_root_many, locate_root_many_with_check, parse_toolchain_config_schema,
 };
 use moon_pdk_api::*;
 use starbase_utils::fs;
@@ -97,8 +98,7 @@ pub fn define_requirements(
 pub fn locate_dependencies_root(
     Json(input): Json<LocateDependenciesRootInput>,
 ) -> FnResult<Json<LocateDependenciesRootOutput>> {
-    let config =
-        parse_toolchain_config_schema::<JavaScriptToolchainConfig>(input.toolchain_config)?;
+    let config = parse_toolchain_config_schema::<PythonToolchainConfig>(input.toolchain_config)?;
     let mut output = LocateDependenciesRootOutput::default();
 
     let Some(package_manager) = config.package_manager else {
@@ -115,7 +115,7 @@ pub fn locate_dependencies_root(
     // First attempt: find lock files
     if let Some(root) = locate_root_many(&input.starting_dir, &lock_names) {
         output.root = root.virtual_path();
-        output.members = extract_workspace_members_and_catalogs(package_manager, &root)?;
+        // output.members = extract_workspace_members_and_catalogs(package_manager, &root)?;
     }
 
     // Second attempt: find workspace-compatible manifest files
@@ -193,6 +193,20 @@ pub fn install_dependencies(
     command.cwd = Some(input.root.clone());
 
     output.install_command = Some(command.into());
+
+    Ok(Json(output))
+}
+
+#[plugin_fn]
+pub fn parse_lock(Json(input): Json<ParseLockInput>) -> FnResult<Json<ParseLockOutput>> {
+    let mut output = ParseLockOutput::default();
+
+    match input.path.file_name().and_then(|name| name.to_str()) {
+        Some("requirements.txt") => parse_requirements_txt(&input.path, &mut output)?,
+        Some("pylock.toml") => parse_pylock_toml(&input.path, &mut output)?,
+        Some("uv.lock") => parse_uv_lock(&input.path, &mut output)?,
+        _ => {}
+    };
 
     Ok(Json(output))
 }
