@@ -1,3 +1,4 @@
+use super::parse_version_spec;
 use moon_config::UnresolvedVersionSpec;
 use moon_pdk::{AnyResult, VirtualPath};
 use moon_pdk_api::{LockDependency, ParseLockOutput};
@@ -72,8 +73,13 @@ pub fn parse_pylock_toml(path: &VirtualPath, output: &mut ParseLockOutput) -> An
     let lock: PyLock = toml::parse(&content)?;
 
     for package in lock.packages {
-        // TODO version
-        let mut dep = LockDependency::default();
+        let mut dep = LockDependency {
+            version: match package.version {
+                Some(version) => parse_version_spec(version)?,
+                None => None,
+            },
+            ..Default::default()
+        };
 
         if let Some(archive) = package.archive {
             if let Some(hash) = archive.hashes.get("sha256") {

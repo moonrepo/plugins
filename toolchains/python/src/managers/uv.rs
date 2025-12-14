@@ -1,4 +1,4 @@
-use moon_config::UnresolvedVersionSpec;
+use super::parse_version_spec;
 use moon_pdk::{AnyResult, VirtualPath};
 use moon_pdk_api::{LockDependency, ParseLockOutput};
 use serde::{Deserialize, Serialize};
@@ -38,12 +38,7 @@ pub fn parse_uv_lock(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyRes
             .entry(package.name)
             .or_default()
             .push(LockDependency {
-                // We use `UnresolvedVersionSpec` here because versions in uv
-                // lockfiles may have missing minor/patch parts
-                version: match UnresolvedVersionSpec::parse(package.version) {
-                    Ok(spec) => Some(spec.to_resolved_spec()),
-                    Err(_) => None,
-                },
+                version: parse_version_spec(package.version)?,
                 hash: Some(package.sdist.hash),
                 ..Default::default()
             });
