@@ -1,4 +1,5 @@
 pub mod config;
+mod managers;
 #[cfg(feature = "wasm")]
 mod tier1;
 #[cfg(feature = "wasm")]
