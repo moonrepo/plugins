@@ -1,5 +1,6 @@
 pub mod config;
 mod managers;
+mod pyproject_toml;
 #[cfg(feature = "wasm")]
 mod tier1;
 #[cfg(feature = "wasm")]

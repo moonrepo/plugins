@@ -1,12 +1,12 @@
 use crate::config::*;
 use crate::managers::*;
+use crate::pyproject_toml::PyProjectTomlWithWorkspace;
 use extism_pdk::*;
 use moon_pdk::{
-    get_host_environment, load_project_toolchain_config, load_toolchain_config, locate_root,
-    locate_root_many, locate_root_many_with_check, parse_toolchain_config_schema,
+    load_project_toolchain_config, load_toolchain_config, locate_root, locate_root_many,
+    locate_root_many_with_check, parse_toolchain_config_schema,
 };
 use moon_pdk_api::*;
-use starbase_utils::fs;
 use std::path::PathBuf;
 
 // #[plugin_fn]
@@ -115,15 +115,19 @@ pub fn locate_dependencies_root(
     // First attempt: find lock files
     if let Some(root) = locate_root_many(&input.starting_dir, &lock_names) {
         output.root = root.virtual_path();
-        // output.members = extract_workspace_members_and_catalogs(package_manager, &root)?;
+        output.members =
+            PyProjectTomlWithWorkspace::load(root.join("pyproject.toml"))?.extract_members()?;
     }
 
     // Second attempt: find workspace-compatible manifest files
     if output.root.is_none() {
-        locate_root_many_with_check(&input.starting_dir, &workspace_manifest_names, |root| {
+        locate_root_many_with_check(&input.starting_dir, &manifest_names, |root| {
+            let manifest = PyProjectTomlWithWorkspace::load(root.join("pyproject.toml"))?;
             let mut found = false;
 
-            if let Some(members) = extract_workspace_members_and_catalogs(package_manager, root)? {
+            if manifest.tool.is_some()
+                && let Some(members) = manifest.extract_members()?
+            {
                 output.root = root.virtual_path();
                 output.members = Some(members);
                 found = true;
@@ -137,8 +141,6 @@ pub fn locate_dependencies_root(
     if output.root.is_none()
         && let Some(root) = locate_root_many(&input.starting_dir, &manifest_names)
     {
-        extract_workspace_members_and_catalogs(package_manager, &root)?;
-
         output.root = root.virtual_path();
     }
 
