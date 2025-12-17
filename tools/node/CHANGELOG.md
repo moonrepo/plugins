@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added experimental support for musl on Linux ARM64.
+
 ## 0.17.3
 
 #### 🚀 Updates
