@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added support for moon v2+'s new distribution format.
+  - Binaries are now distributed as archives.
+  - Supports checksum files.
+  - Supports the `moonx` binary.
+
 ## 0.3.3
 
 #### ⚙️ Internal
