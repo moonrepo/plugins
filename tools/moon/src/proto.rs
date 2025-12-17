@@ -1,6 +1,5 @@
 use extism_pdk::*;
 use proto_pdk::*;
-use std::collections::HashMap;
 use tool_common::enable_tracing;
 
 #[host_fn]
@@ -49,8 +48,6 @@ pub fn build_instructions(
         ],
     )?;
 
-    let id = get_plugin_id()?;
-
     let output = BuildInstructionsOutput {
         source: Some(SourceLocation::Archive(ArchiveSource {
             url: format!("https://github.com/moonrepo/moon/archive/refs/tags/v{version}.tar.gz"),
@@ -60,13 +57,20 @@ pub fn build_instructions(
         instructions: vec![
             BuildInstruction::RunCommand(Box::new(CommandInstruction::new(
                 "cargo",
-                ["build", "--bin", "moon", "--release"],
+                ["build", "--bin", "moon", "--bin", "moonx", "--release"],
             ))),
             BuildInstruction::MoveFile(
                 env.os.get_exe_name("target/release/moon").into(),
-                env.os.get_exe_name(&id).into(),
+                env.os.get_exe_name("moon").into(),
             ),
-            BuildInstruction::RemoveAllExcept(vec![env.os.get_exe_name(&id).into()]),
+            BuildInstruction::MoveFile(
+                env.os.get_exe_name("target/release/moonx").into(),
+                env.os.get_exe_name("moonx").into(),
+            ),
+            BuildInstruction::RemoveAllExcept(vec![
+                env.os.get_exe_name("moon").into(),
+                env.os.get_exe_name("moonx").into(),
+            ]),
         ],
         ..Default::default()
     };
@@ -79,6 +83,7 @@ pub fn download_prebuilt(
     Json(input): Json<DownloadPrebuiltInput>,
 ) -> FnResult<Json<DownloadPrebuiltOutput>> {
     let env = get_host_environment()?;
+    let mut output = DownloadPrebuiltOutput::default();
 
     check_supported_os_and_arch(
         "moon",
@@ -93,11 +98,14 @@ pub fn download_prebuilt(
     let version = input.context.version;
     let arch = env.arch.to_rust_arch();
 
-    let tag = if version.is_canary() {
-        "canary".to_owned()
-    } else {
-        format!("v{version}")
-    };
+    let base_url = format!(
+        "https://github.com/moonrepo/moon/releases/download/{}",
+        if version.is_canary() {
+            "canary".to_owned()
+        } else {
+            format!("v{version}")
+        }
+    );
 
     let target = match env.os {
         HostOS::Linux => format!("{arch}-unknown-linux-{}", env.libc),
@@ -105,37 +113,66 @@ pub fn download_prebuilt(
         HostOS::Windows => format!("{arch}-pc-windows-msvc"),
         _ => unreachable!(),
     };
-    let target_name = format!("moon-{target}");
 
-    let download_file = if env.os.is_windows() {
-        format!("{target_name}.exe")
-    } else {
-        target_name
-    };
-    let base_url = format!("https://github.com/moonrepo/moon/releases/download/{tag}");
+    // moon v2+ binaries are published in an archive
+    if is_v2(&version) {
+        let target_ext = if env.os.is_windows() { "zip" } else { "tar.xz" };
+        let target_name = format!("moon_cli-{target}");
+        let download_file = format!("{target_name}.{target_ext}");
+        let checksum_file = format!("{download_file}.sha256");
 
-    Ok(Json(DownloadPrebuiltOutput {
-        download_url: format!("{base_url}/{download_file}"),
-        download_name: Some(download_file),
-        ..DownloadPrebuiltOutput::default()
-    }))
+        output.archive_prefix = Some(target_name);
+        output.checksum_url = Some(format!("{base_url}/{checksum_file}"));
+        output.checksum_name = Some(checksum_file);
+        output.download_url = format!("{base_url}/{download_file}");
+        output.download_name = Some(download_file);
+    }
+    // moon v1 binaries are published as standalone executables
+    else {
+        let target_name = format!("moon-{target}");
+        let download_file = if env.os.is_windows() {
+            format!("{target_name}.exe")
+        } else {
+            target_name
+        };
+
+        output.download_url = format!("{base_url}/{download_file}");
+        output.download_name = Some(download_file);
+    }
+
+    Ok(Json(output))
 }
 
 #[plugin_fn]
 pub fn locate_executables(
-    Json(_): Json<LocateExecutablesInput>,
+    Json(input): Json<LocateExecutablesInput>,
 ) -> FnResult<Json<LocateExecutablesOutput>> {
     let env = get_host_environment()?;
+    let mut output = LocateExecutablesOutput::default();
 
-    // Because moon releases do not package the binaries in archives,
-    // the downloaded file gets renamed to the plugin ID, and not just "moon".
-    let id = get_plugin_id()?;
-
-    Ok(Json(LocateExecutablesOutput {
-        exes: HashMap::from_iter([(
+    if is_v2(&input.context.version) {
+        output.exes.insert(
             "moon".into(),
-            ExecutableConfig::new_primary(env.os.get_exe_name(id)),
-        )]),
-        ..LocateExecutablesOutput::default()
-    }))
+            ExecutableConfig::new_primary(env.os.get_exe_name("moon")),
+        );
+        output.exes.insert(
+            "moonx".into(),
+            ExecutableConfig::new(env.os.get_exe_name("moonx")),
+        );
+    } else {
+        // Because moon releases do not package the binaries in archives,
+        // the downloaded file gets renamed to the plugin ID, and not just "moon".
+        let id = get_plugin_id()?;
+
+        output.exes.insert(
+            "moon".into(),
+            ExecutableConfig::new_primary(env.os.get_exe_name(&id)),
+        );
+    }
+
+    Ok(Json(output))
+}
+
+fn is_v2(version: &VersionSpec) -> bool {
+    version.as_version().is_some_and(|v| v.major >= 2)
 }
