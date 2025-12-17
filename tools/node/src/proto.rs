@@ -256,7 +256,10 @@ pub fn download_prebuilt(
 
     // Support unofficial MUSL builds
     // https://github.com/nodejs/unofficial-builds
-    if env.os.is_linux() && env.libc == HostLibc::Musl && env.arch == HostArch::X64 {
+    if env.os.is_linux()
+        && env.libc == HostLibc::Musl
+        && (env.arch == HostArch::X64 || env.arch == HostArch::Arm64)
+    {
         arch.push_str("-musl");
         host = "https://unofficial-builds.nodejs.org/download/release/v{version}/{file}".into();
     }
