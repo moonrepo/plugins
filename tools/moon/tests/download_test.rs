@@ -12,6 +12,38 @@ mod moon_tool {
     }
 
     #[tokio::test(flavor = "multi_thread")]
+    async fn supports_linux_for_moon_v2() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("moon-test", |config| {
+                config.host(HostOS::Linux, HostArch::Arm64);
+            })
+            .await;
+
+        assert_eq!(
+            plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("2.0.0").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await,
+            DownloadPrebuiltOutput {
+                archive_prefix: Some("moon_cli-aarch64-unknown-linux-gnu".into()),
+                checksum_name: Some("moon_cli-aarch64-unknown-linux-gnu.tar.xz.sha256".into()),
+                checksum_url: Some(
+                    "https://github.com/moonrepo/moon/releases/download/v2.0.0/moon_cli-aarch64-unknown-linux-gnu.tar.xz.sha256".into()
+                ),
+                download_name: Some("moon_cli-aarch64-unknown-linux-gnu.tar.xz".into()),
+                download_url: "https://github.com/moonrepo/moon/releases/download/v2.0.0/moon_cli-aarch64-unknown-linux-gnu.tar.xz".into(),
+                ..Default::default()
+            }
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
     async fn supports_linux_arm64() {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
@@ -68,6 +100,38 @@ mod moon_tool {
     }
 
     #[tokio::test(flavor = "multi_thread")]
+    async fn supports_macos_for_moon_v2() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("moon-test", |config| {
+                config.host(HostOS::MacOS, HostArch::Arm64);
+            })
+            .await;
+
+        assert_eq!(
+            plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("2.0.0").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await,
+            DownloadPrebuiltOutput {
+                archive_prefix: Some("moon_cli-aarch64-apple-darwin".into()),
+                checksum_name: Some("moon_cli-aarch64-apple-darwin.tar.xz.sha256".into()),
+                checksum_url: Some(
+                    "https://github.com/moonrepo/moon/releases/download/v2.0.0/moon_cli-aarch64-apple-darwin.tar.xz.sha256".into()
+                ),
+                download_name: Some("moon_cli-aarch64-apple-darwin.tar.xz".into()),
+                download_url: "https://github.com/moonrepo/moon/releases/download/v2.0.0/moon_cli-aarch64-apple-darwin.tar.xz".into(),
+                ..Default::default()
+            }
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
     async fn supports_macos_arm64() {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
@@ -118,6 +182,38 @@ mod moon_tool {
                 download_name: Some("moon-x86_64-apple-darwin".into()),
                 download_url: "https://github.com/moonrepo/moon/releases/download/v1.2.0/moon-x86_64-apple-darwin"
                     .into(),
+                ..Default::default()
+            }
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn supports_windows_for_moon_v2() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("moon-test", |config| {
+                config.host(HostOS::Windows, HostArch::X64);
+            })
+            .await;
+
+        assert_eq!(
+            plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("2.0.0").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await,
+            DownloadPrebuiltOutput {
+                archive_prefix: Some("moon_cli-x86_64-pc-windows-msvc".into()),
+                checksum_name: Some("moon_cli-x86_64-pc-windows-msvc.zip.sha256".into()),
+                checksum_url: Some(
+                    "https://github.com/moonrepo/moon/releases/download/v2.0.0/moon_cli-x86_64-pc-windows-msvc.zip.sha256".into()
+                ),
+                download_name: Some("moon_cli-x86_64-pc-windows-msvc.zip".into()),
+                download_url: "https://github.com/moonrepo/moon/releases/download/v2.0.0/moon_cli-x86_64-pc-windows-msvc.zip".into(),
                 ..Default::default()
             }
         );
