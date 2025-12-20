@@ -19,12 +19,14 @@ npm|pnpm|yarn = "https://github.com/moonrepo/plugins/releases/download/node_depm
 
 All plugins can be configured with a `.prototools` file.
 
-- `dist-url` (string) - The distribution URL to download npm registry archives from. Supports `{package}`, `{package_without_scope}`, `{version}`, and `{file}` tokens.
+- `registry-url` (string) - The registry URL to download archives from.
+- `dist-url` (string) - The distribution archives URL format. Supports `{registry}`, `{package}`, `{package_without_scope}`, `{version}`, and `{file}` tokens.
 - `shared-globals-dir` (bool) - EXPERIMENTAL: Global npm, pnpm, or yarn packages are installed to a shared location: `~/.proto/tools/node/globals`. Defaults to `false`.
 
 ```toml
 [tools.npm]
-dist-url = "https://..."
+registry-url = "https://..."
+dist-url = "{registry}/{package}/-/{package_without_scope}-{version}.tgz"
 shared-globals-dir = true
 
 # [tools.pnpm]

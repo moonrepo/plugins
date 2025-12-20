@@ -107,6 +107,7 @@ pub fn parse_version_file(
 pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
     let mut output = LoadVersionsOutput::default();
     let manager = PackageManager::detect()?;
+    let registry_url = get_tool_config::<NodeDepmanToolConfig>()?.registry_url;
     let package_name = manager.get_package_name(&input.initial);
 
     let mut map_output = |res_text: String, is_yarn: bool| -> Result<(), Error> {
@@ -138,14 +139,14 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
 
     // Yarn is managed by 2 different packages, so we need to request versions from both of them!
     if manager == PackageManager::Yarn {
-        map_output(fetch_text("https://registry.npmjs.org/yarn/")?, true)?;
+        map_output(fetch_text(format!("{registry_url}/yarn/"))?, true)?;
         map_output(
-            fetch_text("https://registry.npmjs.org/@yarnpkg/cli-dist/")?,
+            fetch_text(format!("{registry_url}/@yarnpkg/cli-dist/"))?,
             true,
         )?;
     } else {
         map_output(
-            fetch_text(format!("https://registry.npmjs.org/{package_name}/"))?,
+            fetch_text(format!("{registry_url}/{package_name}/"))?,
             false,
         )?;
     }
@@ -265,12 +266,14 @@ pub fn download_prebuilt(
         &package_name
     };
 
-    let host = get_tool_config::<NodeDepmanToolConfig>()?.dist_url;
+    let registry_url = get_tool_config::<NodeDepmanToolConfig>()?.registry_url;
+    let dist_url = get_tool_config::<NodeDepmanToolConfig>()?.dist_url;
     let filename = format!("{package_without_scope}-{version}.tgz");
 
     Ok(Json(DownloadPrebuiltOutput {
         archive_prefix: Some(get_archive_prefix(&manager, version)),
-        download_url: host
+        download_url: dist_url
+            .replace("{registry}", &registry_url)
             .replace("{package}", &package_name)
             .replace("{package_without_scope}", package_without_scope)
             .replace("{version}", &version.to_string())
