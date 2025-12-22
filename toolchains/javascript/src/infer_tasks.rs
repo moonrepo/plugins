@@ -128,10 +128,11 @@ impl<'a> TasksInferrer<'a> {
         // preset
         if self.is_dev_script_name(name) {
             if self.has_watch_option(script) {
-                let options = config.options.get_or_insert_default();
                 options.cache = Some(TaskOptionCache::Enabled(false));
                 options.persistent = Some(true);
                 options.run_in_ci = Some(TaskOptionRunInCI::Enabled(false));
+
+                modify_options = true;
             } else {
                 config.preset = Some(TaskPreset::Server);
             };

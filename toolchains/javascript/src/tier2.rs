@@ -245,15 +245,29 @@ fn extract_workspace_members_and_catalogs(
                 members = workspace.packages;
             }
         }
+        JavaScriptPackageManager::Yarn => {
+            let yarnrc_file = root.join(".yarnrc.yml");
+
+            if yarnrc_file.exists() {
+                let yarnrc: YarnRc = yaml::read_file(yarnrc_file)?;
+
+                catalogs = yarnrc.extract_catalogs();
+            }
+        }
         _ => {}
     };
 
     // Otherwise `package.json` itself
-    if members.is_none() {
+    if catalogs.is_none() || members.is_none() {
         let package_json = PackageJson::load(root.join("package.json"))?;
 
-        catalogs = package_json.extract_catalogs();
-        members = package_json.extract_members();
+        if catalogs.is_none() {
+            catalogs = package_json.extract_catalogs();
+        }
+
+        if members.is_none() {
+            members = package_json.extract_members();
+        }
     }
 
     // Cache the result!

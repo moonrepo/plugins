@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+#### 🚀 Updates
+
+- Added support for Yarn v4.10 catalogs.
+
 #### 🐞 Fixes
 
 - Fixed an issue where implicit dependencies would sometimes not resolve.

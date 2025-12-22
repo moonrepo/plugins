@@ -146,6 +146,8 @@ mod javascript_toolchain_tier2 {
         #[allow(deprecated)]
         #[tokio::test(flavor = "multi_thread")]
         async fn infers_package_scripts_when_enabled() {
+            use starbase_sandbox::pretty_assertions::assert_eq;
+
             let sandbox = create_moon_sandbox("projects");
             let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -1659,7 +1661,6 @@ mod javascript_toolchain_tier2 {
         #[tokio::test(flavor = "multi_thread")]
         async fn supports_catalogs() {
             let sandbox = create_moon_sandbox("catalogs");
-            sandbox.enable_logging();
             let plugin = sandbox.create_toolchain("javascript").await;
 
             // This must be ran to extract the catalogs
@@ -1701,7 +1702,6 @@ mod javascript_toolchain_tier2 {
         #[tokio::test(flavor = "multi_thread")]
         async fn supports_catalogs_pnpm() {
             let sandbox = create_moon_sandbox("catalogs");
-            sandbox.enable_logging();
             let plugin = sandbox.create_toolchain("javascript").await;
 
             // This must be ran to extract the catalogs
@@ -1710,6 +1710,47 @@ mod javascript_toolchain_tier2 {
                     starting_dir: VirtualPath::Real(sandbox.path().join("package")),
                     toolchain_config: json!({
                         "packageManager": "pnpm"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            let output = plugin
+                .parse_manifest(ParseManifestInput {
+                    path: VirtualPath::Real(sandbox.path().join("package/package.json")),
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.dependencies,
+                BTreeMap::from_iter([
+                    (
+                        "react".into(),
+                        ManifestDependency::Version(UnresolvedVersionSpec::parse(">=19").unwrap())
+                    ),
+                    (
+                        "react-legacy".into(),
+                        ManifestDependency::Version(
+                            UnresolvedVersionSpec::parse("^18.1.0").unwrap()
+                        ),
+                    )
+                ])
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_catalogs_yarn() {
+            let sandbox = create_moon_sandbox("catalogs");
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            // This must be ran to extract the catalogs
+            plugin
+                .locate_dependencies_root(LocateDependenciesRootInput {
+                    starting_dir: VirtualPath::Real(sandbox.path().join("package")),
+                    toolchain_config: json!({
+                        "packageManager": "yarn"
                     }),
                     ..Default::default()
                 })
