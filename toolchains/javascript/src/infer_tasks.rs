@@ -131,6 +131,7 @@ impl<'a> TasksInferrer<'a> {
                 let options = config.options.get_or_insert_default();
                 options.cache = Some(TaskOptionCache::Enabled(false));
                 options.persistent = Some(true);
+                options.run_in_ci = Some(TaskOptionRunInCI::Enabled(false));
             } else {
                 config.preset = Some(TaskPreset::Server);
             };

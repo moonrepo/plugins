@@ -1,7 +1,7 @@
 use moon_common::Id;
 use moon_config::{
     DependencyScope, OneOrMany, Output, PartialTaskArgs, PartialTaskConfig, PartialTaskDependency,
-    PartialTaskOptionsConfig, TaskOptionRunInCI, TaskPreset,
+    PartialTaskOptionsConfig, TaskOptionCache, TaskOptionRunInCI, TaskPreset,
 };
 use moon_pdk_api::*;
 use moon_pdk_test_utils::{create_empty_moon_sandbox, create_moon_sandbox};
@@ -278,13 +278,15 @@ mod javascript_toolchain_tier2 {
                                 "run".into(),
                                 "dev".into(),
                             ])),
-                            preset: Some(TaskPreset::Watcher),
+                            preset: None,
                             toolchains: Some(OneOrMany::Many(vec![
                                 Id::raw("javascript"),
                                 Id::raw("npm"),
                                 Id::raw("node"),
                             ])),
                             options: Some(PartialTaskOptionsConfig {
+                                cache: Some(TaskOptionCache::Enabled(false)),
+                                persistent: Some(true),
                                 run_in_ci: Some(TaskOptionRunInCI::Enabled(false)),
                                 ..Default::default()
                             }),
@@ -1747,12 +1749,7 @@ mod javascript_toolchain_tier2 {
             let sandbox = create_moon_sandbox("deps");
             let lockfiles = create_moon_sandbox("lockfiles");
 
-            fs::copy_dir_all(
-                lockfiles.path().join(pm),
-                lockfiles.path().join(pm),
-                sandbox.path(),
-            )
-            .unwrap();
+            fs::copy_dir_all(lockfiles.path().join(pm), sandbox.path()).unwrap();
 
             sandbox
         }
