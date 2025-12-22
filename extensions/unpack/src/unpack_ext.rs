@@ -22,7 +22,6 @@ pub fn register_extension(
         name: "Unpack".into(),
         description: Some("Unpack an archive into the provided destination.".into()),
         plugin_version: env!("CARGO_PKG_VERSION").into(),
-        config_schema: None,
     }))
 }
 

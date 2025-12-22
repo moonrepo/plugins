@@ -7,19 +7,19 @@ members = ["backends/*", "crates/*", "extensions/*", "tools/*", "toolchains/*"]
 extism-pdk = { version = "1.4.1" }
 regex = { version = "1.11.2", default-features = false, features = ["std"] }
 rustc-hash = "2.1.1"
-schematic = { version = "0.18.12", default-features = false, features = [
+schematic = { version = "0.19.1", default-features = false, features = [
     "schema",
 ] }
 semver = "1.0.27"
-serde = { version = "1.0.226", features = ["derive"] }
-serde_json = "1.0.145"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.146"
 serial_test = "3.2.0"
-shell-words = "1.1.0"
-starbase_archive = { version = "0.11.8", default-features = false }
-starbase_sandbox = "0.9.9"
-starbase_utils = { version = "0.11.19", default-features = false }
-tokio = { version = "1.47.1", features = ["full"] }
-toml = { version = "0.9.7", default-features = false, features = [
+shell-words = "1.1.1"
+starbase_archive = { version = "0.12.1", default-features = false }
+starbase_sandbox = "0.10.3"
+starbase_utils = { version = "0.12.3", default-features = false }
+tokio = { version = "1.48.0", features = ["full"] }
+toml = { version = "0.9.8", default-features = false, features = [
     "parse",
     "serde",
 ] }
@@ -41,9 +41,9 @@ moon_project = { path = "../../moon/crates/project" }
 moon_target = { path = "../../moon/crates/target" }
 
 # proto
-proto_pdk = { version = "0.32.1" }
-proto_pdk_api = { version = "0.31.2" }
-proto_pdk_test_utils = { version = "0.41.2" }
+proto_pdk = { version = "0.32.4" }
+proto_pdk_api = { version = "0.31.4" }
+proto_pdk_test_utils = { version = "0.42.1" }
 # proto_pdk = { path = "../../proto/crates/pdk" }
 # proto_pdk_api = { path = "../../proto/crates/pdk-api" }
 # proto_pdk_test_utils = { path = "../../proto/crates/pdk-test-utils" }
@@ -56,5 +56,5 @@ typescript_tsconfig_json = { version = "0.5.2", features = ["serialize"] }
 codegen-units = 1
 debug = false
 lto = true
-opt-level = 2 # speed
+opt-level = 2     # speed
 panic = "abort"

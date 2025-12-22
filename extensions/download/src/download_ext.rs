@@ -20,7 +20,6 @@ pub fn register_extension(
         name: "Download".into(),
         description: Some("Download a file from a URL into the current working directory.".into()),
         plugin_version: env!("CARGO_PKG_VERSION").into(),
-        config_schema: None,
     }))
 }
 

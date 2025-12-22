@@ -20,7 +20,6 @@ pub fn register_extension(
         name: "Migrate Turborepo".into(),
         description: Some("Migrate a Turborepo repository to moon by converting all <file>turbo.json</file> files into moon configuration files.".into()),
         plugin_version: env!("CARGO_PKG_VERSION").into(),
-        config_schema: None,
     }))
 }
 

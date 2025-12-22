@@ -3,7 +3,7 @@ use crate::lockfiles::DenoJsonTask;
 use moon_common::Id;
 use moon_config::{
     OneOrMany, Output, PartialTaskArgs, PartialTaskConfig, PartialTaskDependency,
-    PartialTaskOptionsConfig, TaskOptionRunInCI, TaskPreset,
+    PartialTaskOptionsConfig, TaskOptionCache, TaskOptionRunInCI, TaskPreset,
 };
 use moon_pdk::{AnyResult, map_miette_error};
 use moon_target::Target;
@@ -127,11 +127,13 @@ impl<'a> TasksInferrer<'a> {
 
         // preset
         if self.is_dev_script_name(name) {
-            config.preset = Some(if self.has_watch_option(script) {
-                TaskPreset::Watcher
+            if self.has_watch_option(script) {
+                let options = config.options.get_or_insert_default();
+                options.cache = Some(TaskOptionCache::Enabled(false));
+                options.persistent = Some(true);
             } else {
-                TaskPreset::Server
-            });
+                config.preset = Some(TaskPreset::Server);
+            };
         }
 
         // toolchains

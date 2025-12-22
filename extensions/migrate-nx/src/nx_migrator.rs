@@ -2,6 +2,7 @@ use crate::nx_json::*;
 use crate::nx_project_json::*;
 use extension_common::migrator::*;
 use moon_common::Id;
+use moon_config::EnvMap;
 use moon_config::{
     FilePath, GlobInput, GlobPath, Input, LayerType, OneOrMany, Output, PartialProjectDependsOn,
     PartialProjectMetadataConfig, PartialTaskArgs, PartialTaskConfig, PartialTaskDependency,
@@ -431,17 +432,17 @@ fn migrate_run_commands_task(nx_target: &NxTargetOptions) -> AnyResult<PartialTa
         if let Some(JsonValue::String(cwd)) = options.get("cwd") {
             config
                 .env
-                .get_or_insert(FxHashMap::default())
-                .insert("CWD".into(), cwd.to_owned());
+                .get_or_insert(EnvMap::default())
+                .insert("CWD".into(), Some(cwd.to_owned()));
         }
 
         if let Some(JsonValue::Object(envs)) = options.get("env") {
-            let env = config.env.get_or_insert(FxHashMap::default());
+            let env = config.env.get_or_insert(EnvMap::default());
 
             for (key, value) in envs {
                 env.insert(
                     key.to_owned(),
-                    convert_value_to_string_without_quotes(value),
+                    Some(convert_value_to_string_without_quotes(value)),
                 );
             }
         }

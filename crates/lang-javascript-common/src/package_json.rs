@@ -67,7 +67,7 @@ pub fn extract_volta_version(
             if extends_path.exists() && extends_path.is_file() {
                 let content = fs::read_file(&extends_path)?;
 
-                if let Ok(other_package_json) = json::parse::<&str, PackageJson>(&content) {
+                if let Ok(other_package_json) = json::parse::<PackageJson>(&content) {
                     return extract_volta_version(&other_package_json, &extends_path, key);
                 }
             }
