@@ -1,4 +1,4 @@
-use moon_pdk_test_utils::{ExecuteExtensionInput, create_empty_moon_sandbox};
+use moon_pdk_test_utils::{ExecuteExtensionInput, create_empty_moon_sandbox, create_moon_sandbox};
 
 mod unpack_extension {
     use super::*;
@@ -68,95 +68,105 @@ mod unpack_extension {
             .await;
     }
 
-    // #[test]
-    // fn unpacks_tar() {
-    //     let sandbox = create_sandbox("tar");
-    //     let plugin = sandbox.create_extension("test").await;
+    #[tokio::test(flavor = "multi_thread")]
+    async fn unpacks_tar() {
+        let sandbox = create_moon_sandbox("tar");
+        let plugin = sandbox.create_extension("test").await;
 
-    //     plugin.execute_extension(ExecuteExtensionInput {
-    //         args: vec![
-    //             "--src".into(),
-    //             "./archive.tar".into(),
-    //             "--dest".into(),
-    //             "./out".into(),
-    //         ],
-    //         context: plugin.create_context(sandbox.path()),
-    //     });
+        plugin
+            .execute_extension(ExecuteExtensionInput {
+                args: vec![
+                    "--src".into(),
+                    "./archive.tar".into(),
+                    "--dest".into(),
+                    "./out".into(),
+                ],
+                ..Default::default()
+            })
+            .await;
 
-    //     assert!(sandbox.path().join("out/file.txt").exists());
-    // }
+        assert!(sandbox.path().join("out/dir/file.txt").exists());
+    }
 
-    // #[test]
-    // fn unpacks_tar_gz() {
-    //     let sandbox = create_sandbox("tar");
-    //     let plugin = sandbox.create_extension("test").await;
+    #[tokio::test(flavor = "multi_thread")]
+    async fn unpacks_tar_gz() {
+        let sandbox = create_moon_sandbox("tar");
+        let plugin = sandbox.create_extension("test").await;
 
-    //     plugin.execute_extension(ExecuteExtensionInput {
-    //         args: vec![
-    //             "--src".into(),
-    //             "./archive.tar.gz".into(),
-    //             "--dest".into(),
-    //             "./out".into(),
-    //         ],
-    //         context: plugin.create_context(sandbox.path()),
-    //     });
+        plugin
+            .execute_extension(ExecuteExtensionInput {
+                args: vec![
+                    "--src".into(),
+                    "./archive.tar.gz".into(),
+                    "--dest".into(),
+                    "./out".into(),
+                ],
+                ..Default::default()
+            })
+            .await;
 
-    //     assert!(sandbox.path().join("out/file.txt").exists());
-    // }
+        assert!(sandbox.path().join("out/dir/file.txt").exists());
+    }
 
-    // #[test]
-    // fn unpacks_zip() {
-    //     let sandbox = create_sandbox("zip");
-    //     let plugin = sandbox.create_extension("test").await;
+    #[tokio::test(flavor = "multi_thread")]
+    async fn unpacks_zip() {
+        let sandbox = create_moon_sandbox("zip");
+        let plugin = sandbox.create_extension("test").await;
 
-    //     plugin.execute_extension(ExecuteExtensionInput {
-    //         args: vec![
-    //             "--src".into(),
-    //             "./archive.zip".into(),
-    //             "--dest".into(),
-    //             "./out".into(),
-    //         ],
-    //         context: plugin.create_context(sandbox.path()),
-    //     });
+        plugin
+            .execute_extension(ExecuteExtensionInput {
+                args: vec![
+                    "--src".into(),
+                    "./archive.zip".into(),
+                    "--dest".into(),
+                    "./out".into(),
+                ],
+                ..Default::default()
+            })
+            .await;
 
-    //     assert!(sandbox.path().join("out/file.txt").exists());
-    // }
+        assert!(sandbox.path().join("out/dir/file.txt").exists());
+    }
 
-    //  #[test]
-    // fn downloads_and_unpacks_tar() {
-    //     let sandbox = create_empty_moon_sandbox();
-    //     let plugin = sandbox.create_extension("test").await;
+    #[tokio::test(flavor = "multi_thread")]
+    async fn downloads_and_unpacks_tar() {
+        let sandbox = create_empty_moon_sandbox();
+        let plugin = sandbox.create_extension("test").await;
 
-    //     plugin.execute_extension(ExecuteExtensionInput {
-    //         args: vec![
-    //             "--src".into(),
-    //             "https://github.com/moonrepo/moon/archive/refs/tags/v1.0.0.tar.gz".into(),
-    //             "--dest".into(),
-    //             "./out".into(),
-    //         ],
-    //         context: plugin.create_context(sandbox.path()),
-    //     });
+        plugin
+            .execute_extension(ExecuteExtensionInput {
+                args: vec![
+                    "--src".into(),
+                    "https://github.com/moonrepo/moon/archive/refs/tags/v1.0.0.tar.gz".into(),
+                    "--dest".into(),
+                    "./out".into(),
+                ],
+                ..Default::default()
+            })
+            .await;
 
-    //     assert!(sandbox.path().join(".moon/temp/v1.0.0.zip").exists());
-    //     assert!(sandbox.path().join("out/README.md").exists());
-    // }
+        assert!(sandbox.path().join(".moon/temp/v1.0.0.zip").exists());
+        assert!(sandbox.path().join("out/README.md").exists());
+    }
 
-    // #[test]
-    // fn downloads_and_unpacks_zip() {
-    //     let sandbox = create_empty_moon_sandbox();
-    //     let plugin = sandbox.create_extension("test").await;
+    #[tokio::test(flavor = "multi_thread")]
+    async fn downloads_and_unpacks_zip() {
+        let sandbox = create_empty_moon_sandbox();
+        let plugin = sandbox.create_extension("test").await;
 
-    //     plugin.execute_extension(ExecuteExtensionInput {
-    //         args: vec![
-    //             "--src".into(),
-    //             "https://github.com/moonrepo/moon/archive/refs/tags/v1.0.0.zip".into(),
-    //             "--dest".into(),
-    //             "./out".into(),
-    //         ],
-    //         context: plugin.create_context(sandbox.path()),
-    //     });
+        plugin
+            .execute_extension(ExecuteExtensionInput {
+                args: vec![
+                    "--src".into(),
+                    "https://github.com/moonrepo/moon/archive/refs/tags/v1.0.0.zip".into(),
+                    "--dest".into(),
+                    "./out".into(),
+                ],
+                ..Default::default()
+            })
+            .await;
 
-    //     assert!(sandbox.path().join(".moon/temp/v1.0.0.zip").exists());
-    //     assert!(sandbox.path().join("out/README.md").exists());
-    // }
+        assert!(sandbox.path().join(".moon/temp/v1.0.0.zip").exists());
+        assert!(sandbox.path().join("out/moon-1.0.0/README.md").exists());
+    }
 }

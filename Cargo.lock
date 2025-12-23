@@ -5717,7 +5717,6 @@ dependencies = [
  "moon_pdk",
  "moon_pdk_api",
  "moon_pdk_test_utils",
- "starbase_archive",
  "starbase_sandbox",
  "starbase_utils 0.12.3",
  "tokio",

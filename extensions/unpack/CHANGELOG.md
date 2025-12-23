@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Updated to use `unzip` and `tar` commands.
+
 ## 0.0.7
 
 #### ⚙️ Internal

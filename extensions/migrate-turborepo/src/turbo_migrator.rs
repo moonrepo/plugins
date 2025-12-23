@@ -206,7 +206,7 @@ impl TurboMigrator {
                 tag_ids.push(Id::new(tag)?);
             }
 
-            self.inner.load_project_config(&project_source)?.tags = Some(tag_ids);
+            self.inner.load_project_config(project_source)?.tags = Some(tag_ids);
         }
 
         Ok(())
