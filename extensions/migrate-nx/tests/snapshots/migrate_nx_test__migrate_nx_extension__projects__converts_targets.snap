@@ -7,34 +7,34 @@ tasks:
   build:
     command: esbuild
     args:
-    - '--main'
+    - --main
     - app
-    - '--tsConfig'
+    - --tsConfig
     - $workspaceRoot/app/tsconfig.app.json
-    - '--outputPath'
+    - --outputPath
     - $workspaceRoot/dist/app
   create-script:
     command: mkdir -p apps/frontend/scripts && touch apps/frontend/scripts/my-script.sh && chmod +x apps/frontend/scripts/my-script.sh
-    toolchain: system
+    toolchains: system
   dev:
     command: next server
     args:
-    - '--buildTarget'
+    - --buildTarget
     - acme:build
-    - '--no-turbo'
-    - '--dev'
+    - --no-turbo
+    - --dev
   e2e:
     command: cypress
     args:
-    - '--cypressConfig'
+    - --cypressConfig
     - $workspaceRoot/apps/app-e2e/cypres.config.ts
-    - '--devServerTarget'
+    - --devServerTarget
     - my-react-app:serve
-    - '--testingType'
+    - --testingType
     - e2e
   ls-project-root:
     command: ls apps/frontend/src
-    toolchain: system
+    toolchains: system
   noop:
     command: noop
   run-script:
@@ -44,18 +44,18 @@ tasks:
   serve.development:
     extends: serve
     args:
-    - '--buildTarget'
+    - --buildTarget
     - my-app:build:development
   serve.production:
     extends: serve
     args:
-    - '--buildTarget'
+    - --buildTarget
     - my-app:build:production
   test:
     command: jest
     args:
-    - '--passWithNoTests'
-    - '--jestConfig'
+    - --passWithNoTests
+    - --jestConfig
     - $workspaceRoot/libs/my-lib/jest.config.ts
-toolchain:
+toolchains:
   default: node

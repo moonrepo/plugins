@@ -8,5 +8,5 @@ dependsOn:
 - c
 id: custom
 language: javascript
-toolchain:
+toolchains:
   default: node

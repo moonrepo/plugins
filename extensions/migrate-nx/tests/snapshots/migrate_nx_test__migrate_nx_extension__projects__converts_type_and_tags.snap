@@ -6,5 +6,5 @@ language: javascript
 tags:
 - scope.client
 - scope.server
-toolchain:
+toolchains:
   default: node

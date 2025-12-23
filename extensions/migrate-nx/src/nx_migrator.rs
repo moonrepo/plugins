@@ -629,5 +629,12 @@ fn migrate_task(
             .cache = nx_target.cache.map(TaskOptionCache::Enabled);
     }
 
+    if nx_target.continuous == Some(true) {
+        config
+            .options
+            .get_or_insert(PartialTaskOptionsConfig::default())
+            .persistent = Some(true);
+    }
+
     Ok(config)
 }

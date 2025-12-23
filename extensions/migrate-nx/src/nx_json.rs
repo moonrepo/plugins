@@ -72,6 +72,7 @@ pub struct NxTargetOptions {
     pub cache: Option<bool>,
     pub command: Option<String>,
     pub configurations: Option<FxHashMap<String, FxHashMap<String, JsonValue>>>,
+    pub continuous: Option<bool>,
     pub depends_on: Option<Vec<NxDependsOn>>,
     pub default_configuration: Option<String>,
     pub executor: Option<String>,
