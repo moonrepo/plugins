@@ -6,5 +6,5 @@ language: javascript
 tasks:
   build:
     command: npm run build
-toolchain:
+toolchains:
   default: node

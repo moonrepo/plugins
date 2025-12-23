@@ -3,16 +3,18 @@ source: extensions/migrate-turborepo/tests/migrate_turborepo_test.rs
 expression: "fs::read_to_string(sandbox.path().join(\"client/moon.yml\")).unwrap()"
 ---
 language: javascript
+tags:
+- client
 tasks:
   build:
     command: bun run build
     deps:
     - ^:build
     outputs:
-    - client/**/*
+    - glob: client/**/*
   typecheck:
     command: bun run typecheck
     deps:
     - ~:build
-toolchain:
+toolchains:
   default: bun

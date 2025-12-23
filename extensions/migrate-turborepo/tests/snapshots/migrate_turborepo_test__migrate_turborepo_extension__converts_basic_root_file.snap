@@ -3,10 +3,10 @@ source: extensions/migrate-turborepo/tests/migrate_turborepo_test.rs
 expression: "fs::read_to_string(sandbox.path().join(\".moon/tasks/node.yml\")).unwrap()"
 ---
 implicitInputs:
-- file: '.env'
+- file: .env
 - file: tsconfig.json
-- file: '.env.local'
-- file: '.env'
+- file: .env.local
+- file: .env
 - $GITHUB_TOKEN
 tasks:
   build:
@@ -14,7 +14,7 @@ tasks:
     deps:
     - ^:build
     outputs:
-    - dist/**/*
+    - glob: dist/**/*
     options:
       envFile: true
   dev:

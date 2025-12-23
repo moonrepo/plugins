@@ -148,53 +148,65 @@ impl TurboMigrator {
         turbo_json: TurboJson,
         from_source: Option<&str>,
     ) -> AnyResult<()> {
-        let Some(pipeline) = turbo_json.tasks.or(turbo_json.pipeline) else {
-            return Ok(());
-        };
-
         // package.json script names to turbo tasks
-        for (script, task) in pipeline {
-            let project_source;
-            let script_name;
+        if let Some(pipeline) = turbo_json.tasks.or(turbo_json.pipeline) {
+            for (script, task) in pipeline {
+                let project_source;
+                let script_name;
 
-            // Root-level task
-            if let Some(root_script) = script.strip_prefix("//#") {
-                project_source = String::new();
-                script_name = root_script.to_owned();
-            }
-            // Project-scoped task
-            else if script.contains('#') {
-                (project_source, script_name) = self
-                    .find_project_task_from_script(&script)
-                    .map(|(p, i)| (p.source.to_owned(), i))?;
-            }
-            // For a source task
-            else if let Some(source) = from_source {
-                project_source = source.to_owned();
-                script_name = script;
-            }
-            // Global task
-            else {
-                let task = self.migrate_task(task, &script)?;
-                let task_id = create_id(&script)?;
+                // Root-level task
+                if let Some(root_script) = script.strip_prefix("//#") {
+                    project_source = String::new();
+                    script_name = root_script.to_owned();
+                }
+                // Project-scoped task
+                else if script.contains('#') {
+                    (project_source, script_name) = self
+                        .find_project_task_from_script(&script)
+                        .map(|(p, i)| (p.source.to_owned(), i))?;
+                }
+                // For a source task
+                else if let Some(source) = from_source {
+                    project_source = source.to_owned();
+                    script_name = script;
+                }
+                // Global task
+                else {
+                    let task = self.migrate_task(task, &script)?;
+                    let task_id = create_id(&script)?;
+
+                    self.inner
+                        .load_tasks_platform_config()?
+                        .tasks
+                        .get_or_insert(BTreeMap::default())
+                        .insert(task_id, task);
+
+                    continue;
+                }
+
+                let task = self.migrate_task(task, &script_name)?;
+                let task_id = create_id(&script_name)?;
 
                 self.inner
-                    .load_tasks_platform_config()?
+                    .load_project_config(&project_source)?
                     .tasks
                     .get_or_insert(BTreeMap::default())
                     .insert(task_id, task);
+            }
+        }
 
-                continue;
+        // Tags
+        if let Some(project_source) = from_source
+            && let Some(tags) = turbo_json.tags
+            && !tags.is_empty()
+        {
+            let mut tag_ids = vec![];
+
+            for tag in tags {
+                tag_ids.push(Id::new(tag)?);
             }
 
-            let task = self.migrate_task(task, &script_name)?;
-            let task_id = create_id(&script_name)?;
-
-            self.inner
-                .load_project_config(&project_source)?
-                .tasks
-                .get_or_insert(BTreeMap::default())
-                .insert(task_id, task);
+            self.inner.load_project_config(&project_source)?.tags = Some(tag_ids);
         }
 
         Ok(())
@@ -260,7 +272,11 @@ impl TurboMigrator {
         // Inputs
         if let Some(env_vars) = &turbo_task.env {
             for env in env_vars {
-                inputs.push(Input::EnvVar(env.into()));
+                if env.contains("!") || env.contains("*") {
+                    inputs.push(Input::EnvVarGlob(env.into()));
+                } else {
+                    inputs.push(Input::EnvVar(env.into()));
+                }
             }
         }
 

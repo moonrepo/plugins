@@ -3,7 +3,7 @@
 use rustc_hash::FxHashMap;
 use serde::Deserialize;
 
-#[derive(Default, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum TurboEnvMode {
     Loose,
@@ -11,7 +11,7 @@ pub enum TurboEnvMode {
     Strict,
 }
 
-#[derive(Default, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum TurboOutputMode {
     #[default]
@@ -22,7 +22,7 @@ pub enum TurboOutputMode {
     None,
 }
 
-#[derive(Default, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum TurboUi {
     #[default]
@@ -30,7 +30,8 @@ pub enum TurboUi {
     Tui,
 }
 
-#[derive(Default, Deserialize)]
+// Future: interruptible, with
+#[derive(Debug, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TurboTask {
     pub cache: Option<bool>,
@@ -48,7 +49,7 @@ pub struct TurboTask {
     pub output_mode: Option<TurboOutputMode>,
 }
 
-#[derive(Default, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TurboJson {
     pub extends: Option<Vec<String>>,
@@ -60,6 +61,8 @@ pub struct TurboJson {
     pub daemon: Option<bool>,
     pub dangerously_disable_package_manager_check: Option<bool>,
     pub env_mode: Option<TurboEnvMode>,
+    pub no_update_notifier: Option<bool>,
+    pub tags: Option<Vec<String>>,
     pub tasks: Option<FxHashMap<String, TurboTask>>,
     pub ui: Option<TurboUi>,
     // v1 (removed)

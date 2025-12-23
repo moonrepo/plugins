@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added support for the following `turbo.json` fields:
+  - `tags`
+  - `tasks.*.env` (wildcards and negation)
+
 ## 0.1.8
 
 #### ⚙️ Internal
