@@ -2918,7 +2918,9 @@ checksum = "b52c1b33ff98142aecea13138bd399b68aa7ab5d9546c300988c345004001eea"
 
 [[package]]
 name = "moon_common"
-version = "0.2.0"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4e88db6e49c5997fdf21b52a505e1f44c71ca97dd2f72527ef161d5b0dae5685"
 dependencies = [
  "dirs",
  "miette 7.6.0",
@@ -2934,7 +2936,9 @@ dependencies = [
 
 [[package]]
 name = "moon_config"
-version = "0.2.0"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "540924313e22938d1efef2757b0b2105ec9982aeb72edb49a995e611044de92d"
 dependencies = [
  "hcl-rs",
  "indexmap",
@@ -2955,14 +2959,18 @@ dependencies = [
 
 [[package]]
 name = "moon_feature_flags"
-version = "0.1.0"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f11e7162d4a6b45710db66e75f571711e7381197e57c5546596c4a71e3eb8a47"
 dependencies = [
  "starbase_utils 0.12.3",
 ]
 
 [[package]]
 name = "moon_file_group"
-version = "0.2.0"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "06079a3e5f0f9dff7c8818310b00c7eeff71245f2ed49fabad37e8f0835aa9af"
 dependencies = [
  "common-path",
  "miette 7.6.0",
@@ -2976,7 +2984,9 @@ dependencies = [
 
 [[package]]
 name = "moon_pdk"
-version = "0.4.0"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6837f5959aa5996c1434d3391c0293a2125ed37e03e891043aa0784fa363c2f7"
 dependencies = [
  "clap",
  "extism-pdk",
@@ -2992,7 +3002,9 @@ dependencies = [
 
 [[package]]
 name = "moon_pdk_api"
-version = "0.4.1"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4d652be3e25f7f2059ceb57fb99d7c14e3157ed24b3255887d28e42726d63f98"
 dependencies = [
  "derive_setters",
  "moon_common",
@@ -3009,7 +3021,9 @@ dependencies = [
 
 [[package]]
 name = "moon_pdk_test_utils"
-version = "0.4.2"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "254fed4eb09101e38003b529848625009893e0501b4aee6eca963b8a4895c241"
 dependencies = [
  "extism",
  "moon_pdk_api",
@@ -3024,7 +3038,9 @@ dependencies = [
 
 [[package]]
 name = "moon_project"
-version = "0.2.0"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1340d648fe34443a2eff7de92f69e272ccbfde8ec92ad3112707b6dbc8dd915f"
 dependencies = [
  "miette 7.6.0",
  "moon_common",
@@ -3037,7 +3053,9 @@ dependencies = [
 
 [[package]]
 name = "moon_target"
-version = "0.2.0"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb016b3c3b23fae1099b3b29e574ca82c05ddaf4fd8699fca817acd85ed9232d"
 dependencies = [
  "compact_str 0.9.0",
  "miette 7.6.0",
@@ -3051,7 +3069,9 @@ dependencies = [
 
 [[package]]
 name = "moon_task"
-version = "0.2.0"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aaf0893aa5f3f3ab8bf6fbd676e5126b4697423df83cba73e0528cf428aa84f6"
 dependencies = [
  "miette 7.6.0",
  "moon_common",
