@@ -55,6 +55,7 @@ mod rust_toolchain_tier1 {
                     input_dir: VirtualPath::Real(sandbox.path().join("in")),
                     output_dir: VirtualPath::Real(output_dir.clone()),
                     phase: ScaffoldDockerPhase::Configs,
+                    project: Some(ProjectFragment::default()),
                     ..Default::default()
                 })
                 .await;
