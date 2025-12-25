@@ -52,7 +52,7 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
             args.src
         );
 
-        input.context.get_absolute_path(args.src)
+        input.context.get_absolute_path(&args.src)
     };
 
     if !src_file.exists() || !src_file.is_file() {
@@ -76,47 +76,32 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
 
     host_log!(
         stdout,
-        "Opening archive <path>{}</path>",
-        format_virtual_path(&src_file),
-    );
-
-    fs::create_dir_all(&dest_dir)?;
-
-    host_log!(
-        stdout,
         "Unpacking archive to <path>{}</path>",
         format_virtual_path(&dest_dir),
     );
 
-    match src_file.extension().and_then(|ext| ext.to_str()) {
-        Some("zip") => {
-            exec_streamed(
-                "unzip",
-                [
-                    src_file.real_path_string().unwrap(),
-                    "-d".into(),
-                    dest_dir.real_path_string().unwrap(),
-                ],
-            )?;
-        }
-        Some("tar") | Some("gz") | Some("tgz") => {
-            exec_streamed(
-                "tar",
-                [
-                    "-f".into(),
-                    src_file.real_path_string().unwrap(),
-                    "-C".into(),
-                    dest_dir.real_path_string().unwrap(),
-                    "-x".into(),
-                ],
-            )?;
-        }
-        _ => {
-            return Err(plugin_err!(
-                "Invalid source, only <file>.tar</file>, <file>.tar.gz</file>, and <file>.zip</file> archives are supported."
-            ));
-        }
-    };
+    fs::create_dir_all(&dest_dir)?;
+
+    if args.src.ends_with(".zip") {
+        exec_streamed(
+            "unzip",
+            [
+                src_file.real_path_string().expect("Invalid source"),
+                "-d".into(),
+                dest_dir.real_path_string().expect("Invalid destination"),
+            ],
+        )?;
+    } else {
+        exec_streamed(
+            "tar",
+            [
+                "-xf".into(),
+                src_file.real_path_string().expect("Invalid source"),
+                "-C".into(),
+                dest_dir.real_path_string().expect("Invalid destination"),
+            ],
+        )?;
+    }
 
     host_log!(stdout, "Unpacked archive!");
 
