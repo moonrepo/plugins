@@ -1,5 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "tags": ["server"],
   "pipeline": {
     "lint": {
       "outputMode": "errors-only"

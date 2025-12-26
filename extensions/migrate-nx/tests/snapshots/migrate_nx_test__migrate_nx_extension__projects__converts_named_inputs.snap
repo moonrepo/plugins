@@ -20,5 +20,5 @@ fileGroups:
     cache: true
   - file: src
 language: javascript
-toolchain:
+toolchains:
   default: node

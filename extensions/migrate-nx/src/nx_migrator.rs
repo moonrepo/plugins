@@ -2,11 +2,12 @@ use crate::nx_json::*;
 use crate::nx_project_json::*;
 use extension_common::migrator::*;
 use moon_common::Id;
+use moon_config::EnvMap;
 use moon_config::{
-    FilePath, GlobInput, GlobPath, Input, LayerType, OneOrMany, OutputPath,
-    PartialProjectDependsOn, PartialProjectMetadataConfig, PartialTaskArgs, PartialTaskConfig,
-    PartialTaskDependency, PartialTaskOptionsConfig, PartialVcsConfig, PartialWorkspaceProjects,
-    TaskOptionCache, TaskOptionEnvFile,
+    FilePath, GlobInput, GlobPath, Input, LayerType, OneOrMany, Output, PartialProjectDependsOn,
+    PartialProjectMetadataConfig, PartialTaskArgs, PartialTaskConfig, PartialTaskDependency,
+    PartialTaskOptionsConfig, PartialVcsConfig, PartialWorkspaceProjects, TaskOptionCache,
+    TaskOptionEnvFile,
 };
 use moon_pdk::{AnyResult, map_miette_error};
 use moon_pdk_api::MoonContext;
@@ -410,7 +411,7 @@ fn migrate_noop_task(nx_target: &NxTargetOptions) -> AnyResult<PartialTaskConfig
 // https://nx.dev/nx-api/nx/executors/run-commands
 fn migrate_run_commands_task(nx_target: &NxTargetOptions) -> AnyResult<PartialTaskConfig> {
     let mut config = PartialTaskConfig {
-        toolchain: Some(OneOrMany::One(Id::raw("system"))),
+        toolchains: Some(OneOrMany::One(Id::raw("system"))),
         ..PartialTaskConfig::default()
     };
 
@@ -431,17 +432,17 @@ fn migrate_run_commands_task(nx_target: &NxTargetOptions) -> AnyResult<PartialTa
         if let Some(JsonValue::String(cwd)) = options.get("cwd") {
             config
                 .env
-                .get_or_insert(FxHashMap::default())
-                .insert("CWD".into(), cwd.to_owned());
+                .get_or_insert(EnvMap::default())
+                .insert("CWD".into(), Some(cwd.to_owned()));
         }
 
         if let Some(JsonValue::Object(envs)) = options.get("env") {
-            let env = config.env.get_or_insert(FxHashMap::default());
+            let env = config.env.get_or_insert(EnvMap::default());
 
             for (key, value) in envs {
                 env.insert(
                     key.to_owned(),
-                    convert_value_to_string_without_quotes(value),
+                    Some(convert_value_to_string_without_quotes(value)),
                 );
             }
         }
@@ -613,7 +614,7 @@ fn migrate_task(
         let mut outputs = vec![];
 
         for output in raw_outputs {
-            outputs.push(OutputPath::from_str(&replace_tokens(output, true))?);
+            outputs.push(Output::parse(replace_tokens(output, true))?);
         }
 
         if !outputs.is_empty() {
@@ -626,6 +627,13 @@ fn migrate_task(
             .options
             .get_or_insert(PartialTaskOptionsConfig::default())
             .cache = nx_target.cache.map(TaskOptionCache::Enabled);
+    }
+
+    if nx_target.continuous == Some(true) {
+        config
+            .options
+            .get_or_insert(PartialTaskOptionsConfig::default())
+            .persistent = Some(true);
     }
 
     Ok(config)

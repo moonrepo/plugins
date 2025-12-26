@@ -3,7 +3,6 @@ use extension_common::{enable_tracing, format_virtual_path};
 use extism_pdk::*;
 use moon_pdk::*;
 use moon_pdk_api::{ExecuteExtensionInput, RegisterExtensionInput, RegisterExtensionOutput};
-use starbase_archive::Archiver;
 use starbase_utils::fs;
 
 #[host_fn]
@@ -22,7 +21,6 @@ pub fn register_extension(
         name: "Unpack".into(),
         description: Some("Unpack an archive into the provided destination.".into()),
         plugin_version: env!("CARGO_PKG_VERSION").into(),
-        config_schema: None,
     }))
 }
 
@@ -54,17 +52,8 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
             args.src
         );
 
-        into_virtual_path(input.context.get_absolute_path(args.src))?
+        input.context.get_absolute_path(&args.src)
     };
-
-    if !src_file
-        .extension()
-        .is_some_and(|ext| ext == "tar" || ext == "tgz" || ext == "gz" || ext == "zip")
-    {
-        return Err(plugin_err!(
-            "Invalid source, only <file>.tar</file>, <file>.tar.gz</file>, and <file>.zip</file> archives are supported."
-        ));
-    }
 
     if !src_file.exists() || !src_file.is_file() {
         return Err(plugin_err!(
@@ -73,18 +62,10 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
         ));
     }
 
-    host_log!(
-        stdout,
-        "Opening archive <path>{}</path>",
-        format_virtual_path(&src_file),
-    );
-
     // Convert the provided output into a virtual file path.
-    let dest_dir = into_virtual_path(
-        input
-            .context
-            .get_absolute_path(args.dest.as_deref().unwrap_or_default()),
-    )?;
+    let dest_dir = input
+        .context
+        .get_absolute_path(args.dest.as_deref().unwrap_or_default());
 
     if dest_dir.exists() && dest_dir.is_file() {
         return Err(plugin_err!(
@@ -93,29 +74,34 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
         ));
     }
 
-    fs::create_dir_all(&dest_dir)?;
-
     host_log!(
         stdout,
         "Unpacking archive to <path>{}</path>",
         format_virtual_path(&dest_dir),
     );
 
-    // Attempt to unpack the archive!
-    let mut archive = Archiver::new(dest_dir.as_ref(), src_file.as_ref());
+    fs::create_dir_all(&dest_dir)?;
 
-    // Diff against all files in the output dir
-    archive.add_source_glob("**/*");
-
-    // Remove the prefix from unpacked files
-    if let Some(prefix) = &args.prefix {
-        archive.set_prefix(prefix);
+    if args.src.ends_with(".zip") {
+        exec_streamed(
+            "unzip",
+            [
+                src_file.real_path_string().expect("Invalid source"),
+                "-d".into(),
+                dest_dir.real_path_string().expect("Invalid destination"),
+            ],
+        )?;
+    } else {
+        exec_streamed(
+            "tar",
+            [
+                "-xf".into(),
+                src_file.real_path_string().expect("Invalid source"),
+                "-C".into(),
+                dest_dir.real_path_string().expect("Invalid destination"),
+            ],
+        )?;
     }
-
-    // Unpack the files
-    if let Err(error) = archive.unpack_from_ext() {
-        return Err(plugin_err!("{}", error.to_string()));
-    };
 
     host_log!(stdout, "Unpacked archive!");
 

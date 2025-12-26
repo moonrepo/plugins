@@ -1,7 +1,7 @@
 use moon_common::Id;
 use moon_config::{
-    DependencyScope, OneOrMany, OutputPath, PartialTaskArgs, PartialTaskConfig,
-    PartialTaskDependency, PartialTaskOptionsConfig, TaskOptionRunInCI, TaskPreset,
+    DependencyScope, OneOrMany, Output, PartialTaskArgs, PartialTaskConfig, PartialTaskDependency,
+    PartialTaskOptionsConfig, TaskOptionCache, TaskOptionRunInCI, TaskPreset,
 };
 use moon_pdk_api::*;
 use moon_pdk_test_utils::{create_empty_moon_sandbox, create_moon_sandbox};
@@ -146,6 +146,8 @@ mod javascript_toolchain_tier2 {
         #[allow(deprecated)]
         #[tokio::test(flavor = "multi_thread")]
         async fn infers_package_scripts_when_enabled() {
+            use starbase_sandbox::pretty_assertions::assert_eq;
+
             let sandbox = create_moon_sandbox("projects");
             let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -171,7 +173,7 @@ mod javascript_toolchain_tier2 {
                             "run".into(),
                             "release".into(),
                         ])),
-                        toolchain: Some(OneOrMany::Many(vec![
+                        toolchains: Some(OneOrMany::Many(vec![
                             Id::raw("javascript"),
                             Id::raw("npm"),
                             Id::raw("node"),
@@ -193,8 +195,8 @@ mod javascript_toolchain_tier2 {
                                 "run".into(),
                                 "build".into(),
                             ])),
-                            outputs: Some(vec![OutputPath::ProjectFile("build".into())]),
-                            toolchain: Some(OneOrMany::Many(vec![
+                            outputs: Some(vec![Output::parse("build").unwrap()]),
+                            toolchains: Some(OneOrMany::Many(vec![
                                 Id::raw("javascript"),
                                 Id::raw("npm"),
                                 Id::raw("node"),
@@ -213,8 +215,8 @@ mod javascript_toolchain_tier2 {
                                 "run".into(),
                                 "build:vite".into(),
                             ])),
-                            outputs: Some(vec![OutputPath::ProjectFile("out".into())]),
-                            toolchain: Some(OneOrMany::Many(vec![
+                            outputs: Some(vec![Output::parse("out").unwrap()]),
+                            toolchains: Some(OneOrMany::Many(vec![
                                 Id::raw("javascript"),
                                 Id::raw("npm"),
                                 Id::raw("node"),
@@ -231,7 +233,7 @@ mod javascript_toolchain_tier2 {
                                 "run".into(),
                                 "info".into(),
                             ])),
-                            toolchain: Some(OneOrMany::Many(vec![
+                            toolchains: Some(OneOrMany::Many(vec![
                                 Id::raw("javascript"),
                                 Id::raw("npm"),
                                 Id::raw("node"),
@@ -260,9 +262,8 @@ mod javascript_toolchain_tier2 {
                                 "run".into(),
                                 "astro:serve".into(),
                             ])),
-                            local: Some(true),
                             preset: Some(TaskPreset::Server),
-                            toolchain: Some(OneOrMany::Many(vec![
+                            toolchains: Some(OneOrMany::Many(vec![
                                 Id::raw("javascript"),
                                 Id::raw("npm"),
                                 Id::raw("node"),
@@ -279,14 +280,15 @@ mod javascript_toolchain_tier2 {
                                 "run".into(),
                                 "dev".into(),
                             ])),
-                            local: Some(true),
-                            preset: Some(TaskPreset::Watcher),
-                            toolchain: Some(OneOrMany::Many(vec![
+                            preset: None,
+                            toolchains: Some(OneOrMany::Many(vec![
                                 Id::raw("javascript"),
                                 Id::raw("npm"),
                                 Id::raw("node"),
                             ])),
                             options: Some(PartialTaskOptionsConfig {
+                                cache: Some(TaskOptionCache::Enabled(false)),
+                                persistent: Some(true),
                                 run_in_ci: Some(TaskOptionRunInCI::Enabled(false)),
                                 ..Default::default()
                             }),
@@ -304,9 +306,8 @@ mod javascript_toolchain_tier2 {
                                 "run".into(),
                                 "start:vite".into(),
                             ])),
-                            local: Some(true),
                             preset: Some(TaskPreset::Server),
-                            toolchain: Some(OneOrMany::Many(vec![
+                            toolchains: Some(OneOrMany::Many(vec![
                                 Id::raw("javascript"),
                                 Id::raw("npm"),
                                 Id::raw("node"),
@@ -349,7 +350,7 @@ mod javascript_toolchain_tier2 {
                                 "task".into(),
                                 "build".into(),
                             ])),
-                            toolchain: Some(OneOrMany::Many(vec![
+                            toolchains: Some(OneOrMany::Many(vec![
                                 Id::raw("javascript"),
                                 Id::raw("deno"),
                             ])),
@@ -368,9 +369,9 @@ mod javascript_toolchain_tier2 {
                             deps: Some(vec![PartialTaskDependency::Target(
                                 Target::parse("~:build").unwrap()
                             )]),
-                            local: Some(true),
+
                             preset: Some(TaskPreset::Server),
-                            toolchain: Some(OneOrMany::Many(vec![
+                            toolchains: Some(OneOrMany::Many(vec![
                                 Id::raw("javascript"),
                                 Id::raw("deno"),
                             ])),
@@ -1660,7 +1661,6 @@ mod javascript_toolchain_tier2 {
         #[tokio::test(flavor = "multi_thread")]
         async fn supports_catalogs() {
             let sandbox = create_moon_sandbox("catalogs");
-            sandbox.enable_logging();
             let plugin = sandbox.create_toolchain("javascript").await;
 
             // This must be ran to extract the catalogs
@@ -1702,7 +1702,6 @@ mod javascript_toolchain_tier2 {
         #[tokio::test(flavor = "multi_thread")]
         async fn supports_catalogs_pnpm() {
             let sandbox = create_moon_sandbox("catalogs");
-            sandbox.enable_logging();
             let plugin = sandbox.create_toolchain("javascript").await;
 
             // This must be ran to extract the catalogs
@@ -1711,6 +1710,47 @@ mod javascript_toolchain_tier2 {
                     starting_dir: VirtualPath::Real(sandbox.path().join("package")),
                     toolchain_config: json!({
                         "packageManager": "pnpm"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            let output = plugin
+                .parse_manifest(ParseManifestInput {
+                    path: VirtualPath::Real(sandbox.path().join("package/package.json")),
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.dependencies,
+                BTreeMap::from_iter([
+                    (
+                        "react".into(),
+                        ManifestDependency::Version(UnresolvedVersionSpec::parse(">=19").unwrap())
+                    ),
+                    (
+                        "react-legacy".into(),
+                        ManifestDependency::Version(
+                            UnresolvedVersionSpec::parse("^18.1.0").unwrap()
+                        ),
+                    )
+                ])
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_catalogs_yarn() {
+            let sandbox = create_moon_sandbox("catalogs");
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            // This must be ran to extract the catalogs
+            plugin
+                .locate_dependencies_root(LocateDependenciesRootInput {
+                    starting_dir: VirtualPath::Real(sandbox.path().join("package")),
+                    toolchain_config: json!({
+                        "packageManager": "yarn"
                     }),
                     ..Default::default()
                 })
@@ -1750,12 +1790,7 @@ mod javascript_toolchain_tier2 {
             let sandbox = create_moon_sandbox("deps");
             let lockfiles = create_moon_sandbox("lockfiles");
 
-            fs::copy_dir_all(
-                lockfiles.path().join(pm),
-                lockfiles.path().join(pm),
-                sandbox.path(),
-            )
-            .unwrap();
+            fs::copy_dir_all(lockfiles.path().join(pm), sandbox.path()).unwrap();
 
             sandbox
         }

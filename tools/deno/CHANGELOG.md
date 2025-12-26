@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed an issue where checksums did not work in v2.0.0.
+
 ## 0.15.6
 
 #### 🚀 Updates

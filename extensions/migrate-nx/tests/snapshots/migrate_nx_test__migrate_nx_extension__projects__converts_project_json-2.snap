@@ -16,20 +16,20 @@ tasks:
   build:
     command: js tsc
     args:
-    - '--main'
+    - --main
     - $workspaceRoot/baz/src/main.ts
-    - '--tsConfig'
+    - --tsConfig
     - $workspaceRoot/baz/tsconfig.lib.json
     deps:
     - ^:build
     inputs:
     - '@group(production)'
     outputs:
-    - /dist/baz
+    - file: /dist/baz
   build.production:
     extends: build
     args:
-    - '--tsConfig'
+    - --tsConfig
     - $workspaceRoot/baz/tsconfig-prod.lib.json
-toolchain:
+toolchains:
   default: node

@@ -6,5 +6,5 @@ language: javascript
 tags:
 - foo-bar
 - baz_qux
-toolchain:
+toolchains:
   default: node

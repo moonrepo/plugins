@@ -9,34 +9,34 @@ tasks:
   run-env:
     command: echo 'foo'
     env:
-      BAR: abc
       FOO: '123'
+      BAR: abc
       BAZ: 'true'
-    toolchain: system
+    toolchains: system
   run-env-file:
     command: echo 'foo'
     options:
-      envFile: '.env.production'
-    toolchain: system
+      envFile: .env.production
+    toolchains: system
   run-multiple:
     command: mkdir -p apps/frontend/scripts && touch apps/frontend/scripts/my-script.sh && chmod +x apps/frontend/scripts/my-script.sh
-    toolchain: system
+    toolchains: system
   run-single:
     command: ls apps/frontend/src
-    toolchain: system
+    toolchains: system
   run-with-cwd:
     command: mkdir -p scripts
     env:
       CWD: apps/frontend
     outputs:
-    - scripts/**/*
-    toolchain: system
+    - glob: scripts/**/*
+    toolchains: system
   script:
     command: yarn run build
   script-alt:
     command: yarn run build
     outputs:
-    - dist
-    - docs
-toolchain:
+    - file: dist
+    - file: docs
+toolchains:
   default: node

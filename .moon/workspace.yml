@@ -33,6 +33,7 @@ projects:
   node-toolchain: toolchains/node
   node-depman-toolchain: toolchains/node-depman
   rust-toolchain: toolchains/rust
+  system-toolchain: toolchains/system
   typescript-toolchain: toolchains/typescript
 
 pipeline:

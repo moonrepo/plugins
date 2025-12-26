@@ -34,9 +34,14 @@ pub fn extend_project_graph(
         if package_path.exists() {
             let manifest = PackageJson::load(package_path)?;
 
-            if let Some(name) = &manifest.name {
-                packages.insert(name.to_owned(), (id, project_root, manifest));
-            }
+            // We need to track all packages, even those without a name
+            packages.insert(
+                manifest
+                    .name
+                    .clone()
+                    .unwrap_or_else(|| format!("@moon-js-toolchain/{id}")),
+                (id, project_root, manifest),
+            );
         }
     }
 
@@ -185,10 +190,10 @@ pub fn define_requirements(
 
     if let Some(package_manager) = config.package_manager {
         if package_manager.is_for_node() {
-            output.requires.push("unstable_node".into());
+            output.requires.push("node".into());
         }
 
-        output.requires.push(format!("unstable_{package_manager}"));
+        output.requires.push(format!("{package_manager}"));
     }
 
     Ok(Json(output))
@@ -240,15 +245,29 @@ fn extract_workspace_members_and_catalogs(
                 members = workspace.packages;
             }
         }
+        JavaScriptPackageManager::Yarn => {
+            let yarnrc_file = root.join(".yarnrc.yml");
+
+            if yarnrc_file.exists() {
+                let yarnrc: YarnRc = yaml::read_file(yarnrc_file)?;
+
+                catalogs = yarnrc.extract_catalogs();
+            }
+        }
         _ => {}
     };
 
     // Otherwise `package.json` itself
-    if members.is_none() {
+    if catalogs.is_none() || members.is_none() {
         let package_json = PackageJson::load(root.join("package.json"))?;
 
-        catalogs = package_json.extract_catalogs();
-        members = package_json.extract_members();
+        if catalogs.is_none() {
+            catalogs = package_json.extract_catalogs();
+        }
+
+        if members.is_none() {
+            members = package_json.extract_members();
+        }
     }
 
     // Cache the result!

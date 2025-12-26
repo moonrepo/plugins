@@ -8,6 +8,6 @@ tasks:
     deps:
     - ^:build
     outputs:
-    - dist/**/*
+    - glob: dist/**/*
   lint:
     command: eslint

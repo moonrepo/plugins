@@ -20,7 +20,6 @@ pub fn register_extension(
         name: "Migrate Nx".into(),
         description: Some("Migrate an Nx repository to moon by converting all <file>nx.json</file> and <file>project.json</file> files into moon configuration files.".into()),
         plugin_version: env!("CARGO_PKG_VERSION").into(),
-        config_schema: None,
     }))
 }
 
