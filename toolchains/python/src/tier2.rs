@@ -164,6 +164,8 @@ pub fn install_dependencies(
         None => load_toolchain_config(package_manager.to_string())?,
     };
 
+    extism_pdk::debug!("{package_manager_config:?}");
+
     // Install
     let mut command = match package_manager {
         PythonPackageManager::Pip => ExecCommandInput::new("python", ["-m", "pip", "install"]),
