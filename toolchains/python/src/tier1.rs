@@ -37,7 +37,7 @@ pub fn register_toolchain(
             "uv.toml".into(),
         ],
         lock_file_names: vec![
-            ".pylock.toml".into(),
+            "pylock.toml".into(),
             // pip
             "Pipfile.lock".into(),
             // poetry

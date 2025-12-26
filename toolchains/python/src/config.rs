@@ -13,6 +13,16 @@ derive_enum!(
     }
 );
 
+derive_enum!(
+    /// The location in which to create the Python virtual environment.
+    #[derive(ConfigEnum, Copy, Default)]
+    pub enum PythonVenvLocation {
+        #[default]
+        Project,
+        Workspace,
+    }
+);
+
 config_struct!(
     /// Configures and enables the Python toolchain.
     /// Docs: https://moonrepo.dev/docs/config/toolchain#python
@@ -22,8 +32,11 @@ config_struct!(
         /// running inferred tasks, and much more.
         pub package_manager: Option<PythonPackageManager>,
 
-        /// Defines the virtual environment name, which will be created in the workspace root.
-        /// Project dependencies will be installed into this.
+        /// The location where to create the virtual environment,
+        /// in which dependencies will be installed into.
+        pub venv_location: PythonVenvLocation,
+
+        /// The name of virtual environment folder name.
         #[setting(default = ".venv")]
         pub venv_name: String,
 
@@ -33,7 +46,7 @@ config_struct!(
 );
 
 // This config represents shared package manager configuration that
-// is loaded from external toolchains, primarily `node_depman_toolchain`.
+// is loaded from external toolchains.
 config_struct!(
     #[derive(Default)]
     pub struct SharedPackageManagerConfig {

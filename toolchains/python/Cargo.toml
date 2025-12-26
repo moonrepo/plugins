@@ -25,7 +25,7 @@ pep508_rs = "0.9.2"
 pyproject-toml = "0.13.7"
 schematic = { workspace = true }
 serde = { workspace = true }
-starbase_utils = { workspace = true, features = ["json"] }
+starbase_utils = { workspace = true, features = ["json", "toml"] }
 
 [dev-dependencies]
 moon_common = { workspace = true }
