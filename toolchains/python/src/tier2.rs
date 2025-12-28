@@ -1,6 +1,6 @@
 use crate::config::*;
 use crate::managers::*;
-use crate::pyproject_toml::PyProjectTomlWithWorkspace;
+use crate::pyproject_toml::PyProjectTomlWithTools;
 use extism_pdk::*;
 use moon_pdk::{
     load_project_toolchain_config, load_toolchain_config, locate_root, locate_root_many,
@@ -105,10 +105,13 @@ pub fn locate_dependencies_root(
         return Ok(Json(output));
     };
 
-    let manifest_names = vec!["pyproject.toml"];
+    let manifest_names = match package_manager {
+        PythonPackageManager::Pip => vec!["pyproject.toml", "requirements.txt"],
+        PythonPackageManager::Uv => vec!["pyproject.toml"],
+    };
 
     let lock_names = match package_manager {
-        PythonPackageManager::Pip => vec!["requirements.txt", "pylock.toml"],
+        PythonPackageManager::Pip => vec!["pylock.toml"],
         PythonPackageManager::Uv => vec!["uv.lock"],
     };
 
@@ -116,13 +119,13 @@ pub fn locate_dependencies_root(
     if let Some(root) = locate_root_many(&input.starting_dir, &lock_names) {
         output.root = root.virtual_path();
         output.members =
-            PyProjectTomlWithWorkspace::load(root.join("pyproject.toml"))?.extract_members()?;
+            PyProjectTomlWithTools::load(root.join("pyproject.toml"))?.extract_members()?;
     }
 
     // Second attempt: find workspace-compatible manifest files
     if output.root.is_none() {
         locate_root_many_with_check(&input.starting_dir, &manifest_names, |root| {
-            let manifest = PyProjectTomlWithWorkspace::load(root.join("pyproject.toml"))?;
+            let manifest = PyProjectTomlWithTools::load(root.join("pyproject.toml"))?;
             let mut found = false;
 
             if manifest.tool.is_some()
@@ -164,8 +167,6 @@ pub fn install_dependencies(
         None => load_toolchain_config(package_manager.to_string())?,
     };
 
-    extism_pdk::debug!("{package_manager_config:?}");
-
     // Install
     let mut command = match package_manager {
         PythonPackageManager::Pip => ExecCommandInput::new("python", ["-m", "pip", "install"]),
@@ -206,9 +207,23 @@ pub fn parse_lock(Json(input): Json<ParseLockInput>) -> FnResult<Json<ParseLockO
     let mut output = ParseLockOutput::default();
 
     match input.path.file_name().and_then(|name| name.to_str()) {
-        Some("requirements.txt") => parse_requirements_txt(&input.path, &mut output)?,
         Some("pylock.toml") => parse_pylock_toml(&input.path, &mut output)?,
         Some("uv.lock") => parse_uv_lock(&input.path, &mut output)?,
+        _ => {}
+    };
+
+    Ok(Json(output))
+}
+
+#[plugin_fn]
+pub fn parse_manifest(
+    Json(input): Json<ParseManifestInput>,
+) -> FnResult<Json<ParseManifestOutput>> {
+    let mut output = ParseManifestOutput::default();
+
+    match input.path.file_name().and_then(|name| name.to_str()) {
+        Some("pyproject.toml") => parse_pyproject_toml(&input.path, &mut output)?,
+        Some("requirements.txt") => parse_requirements_txt(&input.path, &mut output)?,
         _ => {}
     };
 

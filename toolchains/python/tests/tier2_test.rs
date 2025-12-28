@@ -379,45 +379,7 @@ mod python_toolchain_tier2 {
         use super::*;
 
         #[tokio::test(flavor = "multi_thread")]
-        async fn parses_requirements_txt() {
-            let sandbox = create_moon_sandbox("lockfiles");
-            let plugin = sandbox.create_toolchain("python").await;
-
-            let output = plugin
-                .parse_lock(ParseLockInput {
-                    path: VirtualPath::Real(sandbox.path().join("requirements.txt")),
-                    ..Default::default()
-                })
-                .await;
-
-            assert_eq!(
-                output.dependencies,
-                BTreeMap::from_iter([
-                    ("pytest".into(), vec![LockDependency::default()]),
-                    ("pytest-cov".into(), vec![LockDependency::default()]),
-                    (
-                        "docopt".into(),
-                        vec![LockDependency {
-                            version: Some(VersionSpec::parse("0.6.1").unwrap()),
-                            ..Default::default()
-                        }]
-                    ),
-                    (
-                        "requests".into(),
-                        vec![LockDependency {
-                            meta: Some("security".into()),
-                            ..Default::default()
-                        }]
-                    ),
-                    ("urllib3".into(), vec![LockDependency::default()]),
-                ])
-            );
-        }
-
-        #[tokio::test(flavor = "multi_thread")]
         async fn parses_pylock_toml() {
-            use starbase_sandbox::pretty_assertions::assert_eq;
-
             let sandbox = create_moon_sandbox("lockfiles");
             let plugin = sandbox.create_toolchain("python").await;
 
@@ -470,8 +432,6 @@ mod python_toolchain_tier2 {
 
         #[tokio::test(flavor = "multi_thread")]
         async fn parses_uv_lock() {
-            use starbase_sandbox::pretty_assertions::assert_eq;
-
             let sandbox = create_moon_sandbox("lockfiles");
             let plugin = sandbox.create_toolchain("python").await;
 
@@ -506,6 +466,109 @@ mod python_toolchain_tier2 {
                             version: Some(VersionSpec::parse("3.5.0").unwrap()),
                             ..Default::default()
                         }]
+                    ),
+                ])
+            );
+        }
+    }
+
+    mod parse_manifest {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn parses_pyproject_toml() {
+            let sandbox = create_moon_sandbox("manifests");
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let output = plugin
+                .parse_manifest(ParseManifestInput {
+                    path: VirtualPath::Real(sandbox.path().join("pyproject.toml")),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.dependencies,
+                BTreeMap::from_iter([
+                    (
+                        "django".into(),
+                        ManifestDependency::Config(ManifestDependencyConfig {
+                            version: Some(UnresolvedVersionSpec::parse(">2.1").unwrap()),
+                            ..Default::default()
+                        })
+                    ),
+                    (
+                        "gidgethub".into(),
+                        ManifestDependency::Config(ManifestDependencyConfig {
+                            features: vec!["httpx".into()],
+                            version: Some(UnresolvedVersionSpec::parse(">4.0.0").unwrap()),
+                            ..Default::default()
+                        })
+                    ),
+                    (
+                        "httpx".into(),
+                        ManifestDependency::Config(ManifestDependencyConfig {
+                            version: Some(UnresolvedVersionSpec::parse("6.7.8").unwrap()),
+                            ..Default::default()
+                        })
+                    ),
+                    (
+                        "requests".into(),
+                        ManifestDependency::Config(ManifestDependencyConfig {
+                            version: Some(UnresolvedVersionSpec::parse(">=2.13.0").unwrap()),
+                            ..Default::default()
+                        })
+                    ),
+                ])
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn parses_requirements_txt() {
+            let sandbox = create_moon_sandbox("manifests");
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let output = plugin
+                .parse_manifest(ParseManifestInput {
+                    path: VirtualPath::Real(sandbox.path().join("requirements.txt")),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.dependencies,
+                BTreeMap::from_iter([
+                    (
+                        "pytest".into(),
+                        ManifestDependency::Config(ManifestDependencyConfig::default())
+                    ),
+                    (
+                        "pytest-cov".into(),
+                        ManifestDependency::Config(ManifestDependencyConfig::default())
+                    ),
+                    (
+                        "docopt".into(),
+                        ManifestDependency::Config(ManifestDependencyConfig {
+                            version: Some(UnresolvedVersionSpec::parse("0.6.1").unwrap()),
+                            ..Default::default()
+                        })
+                    ),
+                    (
+                        "requests".into(),
+                        ManifestDependency::Config(ManifestDependencyConfig {
+                            features: vec!["security".into()],
+                            ..Default::default()
+                        })
+                    ),
+                    (
+                        "urllib3".into(),
+                        ManifestDependency::Config(ManifestDependencyConfig {
+                            url: Some(
+                                "https://github.com/urllib3/urllib3/archive/refs/tags/1.26.8.zip"
+                                    .into()
+                            ),
+                            ..Default::default()
+                        })
                     ),
                 ])
             );

@@ -1,4 +1,5 @@
 pub mod config;
+#[cfg(feature = "wasm")]
 mod managers;
 mod pyproject_toml;
 #[cfg(feature = "wasm")]

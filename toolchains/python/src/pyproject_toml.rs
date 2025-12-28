@@ -1,11 +1,11 @@
 // `pyproject.toml`
-#![allow(dead_code)]
 
 #[cfg(feature = "wasm")]
 use extism_pdk::*;
 #[cfg(feature = "wasm")]
 use moon_pdk::{HostLogInput, host_log};
 use moon_pdk_api::{AnyResult, toml_config};
+use pep508_rs::Requirement;
 use pyproject_toml::PyProjectToml as BasePyProjectToml;
 use serde::{Deserialize, Serialize};
 use starbase_utils::toml::{self, TomlValue};
@@ -18,6 +18,7 @@ extern "ExtismHost" {
 
 toml_config!(PyProjectToml, PyProjectTomlInner);
 
+#[allow(dead_code)]
 impl PyProjectToml {
     pub fn save_field(&self, _field: &str, _config: &mut TomlValue) -> AnyResult<()> {
         Ok(())
@@ -58,9 +59,10 @@ impl std::ops::DerefMut for PyProjectTomlInner {
 // Workspace support: https://docs.astral.sh/uv/concepts/projects/workspaces/
 // Only define fields we need!
 
-toml_config!(PyProjectTomlWithWorkspace, PyProjectTomlWithWorkspaceInner);
+toml_config!(PyProjectTomlWithTools, PyProjectTomlWithToolsInner);
 
-impl PyProjectTomlWithWorkspace {
+impl PyProjectTomlWithTools {
+    #[allow(dead_code)]
     pub fn save_field(&self, _field: &str, _config: &mut TomlValue) -> AnyResult<()> {
         Ok(())
     }
@@ -99,7 +101,7 @@ impl PyProjectTomlWithWorkspace {
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(default, rename_all = "kebab-case")]
-pub struct PyProjectTomlWithWorkspaceInner {
+pub struct PyProjectTomlWithToolsInner {
     pub tool: Option<Tool>,
 }
 
@@ -112,6 +114,7 @@ pub struct Tool {
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct ToolUv {
+    pub dev_dependencies: Vec<Requirement>,
     pub workspace: Option<ToolUvWorkspace>,
 }
 
