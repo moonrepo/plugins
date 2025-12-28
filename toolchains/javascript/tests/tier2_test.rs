@@ -4,7 +4,7 @@ use moon_config::{
     PartialTaskOptionsConfig, TaskOptionCache, TaskOptionRunInCI, TaskPreset,
 };
 use moon_pdk_api::*;
-use moon_pdk_test_utils::{create_empty_moon_sandbox, create_moon_sandbox};
+use moon_pdk_test_utils::{MoonWasmSandbox, create_empty_moon_sandbox, create_moon_sandbox};
 use moon_target::Target;
 use serde_json::json;
 use starbase_utils::fs;
@@ -1784,7 +1784,6 @@ mod javascript_toolchain_tier2 {
 
     mod parse_lock {
         use super::*;
-        use moon_pdk_test_utils::MoonWasmSandbox;
 
         fn create_lockfile_sandbox(pm: &str) -> MoonWasmSandbox {
             let sandbox = create_moon_sandbox("deps");

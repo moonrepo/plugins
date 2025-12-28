@@ -1,4 +1,5 @@
 // `pyproject.toml`
+#![allow(dead_code)]
 
 #[cfg(feature = "wasm")]
 use extism_pdk::*;
