@@ -1,7 +1,11 @@
 use super::parse_version_spec;
-use moon_config::{UnresolvedVersionSpec, VersionSpec};
+use crate::pyproject_toml::PyProjectToml;
+use moon_config::{UnresolvedVersionSpec, Version};
 use moon_pdk::{AnyResult, VirtualPath};
-use moon_pdk_api::{LockDependency, ParseLockOutput};
+use moon_pdk_api::{
+    LockDependency, ManifestDependency, ManifestDependencyConfig, ParseLockOutput,
+    ParseManifestOutput,
+};
 use pep440_rs::Operator;
 use pep508_rs::{Requirement, VerbatimUrl, VersionOrUrl};
 use serde::{Deserialize, Serialize};
@@ -10,47 +14,73 @@ use std::collections::HashMap;
 use std::io::{self, BufRead};
 use std::str::FromStr;
 
-pub fn parse_requirements_txt(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyResult<()> {
-    let file = fs::open_file(path)?;
+fn create_manifest_dep_from_requirement(req: &Requirement) -> ManifestDependency {
+    let mut dep = ManifestDependencyConfig::default();
 
-    for line in io::BufReader::new(file).lines().map_while(Result::ok) {
-        if let Ok(parsed) = Requirement::<VerbatimUrl>::from_str(&line) {
-            let mut dep = LockDependency::default();
-
-            if let Some(VersionOrUrl::VersionSpecifier(specs)) = parsed.version_or_url {
+    if let Some(version_or_url) = &req.version_or_url {
+        match version_or_url {
+            VersionOrUrl::Url(url) => {
+                dep.url = Some(url.to_string());
+            }
+            VersionOrUrl::VersionSpecifier(specs) => {
                 // Explicit version
                 if specs.len() == 1
                     && let Some(spec) = specs.first()
+                    && (spec.operator() == &Operator::Equal
+                        || spec.operator() == &Operator::ExactEqual)
                 {
-                    match spec.operator() {
-                        Operator::Equal | Operator::ExactEqual => {
-                            dep.version = VersionSpec::parse(spec.version().to_string()).ok();
-                        }
-                        _ => {}
-                    };
+                    dep.version = UnresolvedVersionSpec::parse(spec.version().to_string()).ok();
                 }
                 // Version range
                 else {
-                    dep.req = UnresolvedVersionSpec::parse(specs.to_string()).ok();
+                    dep.version = UnresolvedVersionSpec::parse(specs.to_string()).ok();
                 }
             }
+        };
+    }
 
-            if !parsed.extras.is_empty() {
-                dep.meta = Some(
-                    parsed
-                        .extras
-                        .into_iter()
-                        .map(|e| e.to_string())
-                        .collect::<Vec<_>>()
-                        .join(","),
-                );
-            }
+    if !req.extras.is_empty() {
+        dep.features = req.extras.iter().map(|e| e.to_string()).collect::<Vec<_>>();
+    }
 
-            output
-                .dependencies
-                .entry(parsed.name.to_string())
-                .or_default()
-                .push(dep);
+    ManifestDependency::Config(dep)
+}
+
+pub fn parse_requirements_txt(
+    path: &VirtualPath,
+    output: &mut ParseManifestOutput,
+) -> AnyResult<()> {
+    let file = fs::open_file(path)?;
+
+    for line in io::BufReader::new(file).lines().map_while(Result::ok) {
+        if let Ok(req) = Requirement::<VerbatimUrl>::from_str(&line) {
+            output.dependencies.insert(
+                req.name.to_string(),
+                create_manifest_dep_from_requirement(&req),
+            );
+        }
+    }
+
+    Ok(())
+}
+
+pub fn parse_pyproject_toml(path: &VirtualPath, output: &mut ParseManifestOutput) -> AnyResult<()> {
+    let manifest = PyProjectToml::load(path.to_owned())?;
+
+    let Some(project) = &manifest.project else {
+        return Ok(());
+    };
+
+    if let Some(version) = &project.version {
+        output.version = Version::parse(&version.to_string()).ok();
+    }
+
+    if let Some(dependencies) = &project.dependencies {
+        for req in dependencies {
+            output.dependencies.insert(
+                req.name.to_string(),
+                create_manifest_dep_from_requirement(req),
+            );
         }
     }
 
