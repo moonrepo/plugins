@@ -1,7 +1,8 @@
 use super::parse_version_spec;
-use moon_config::UnresolvedVersionSpec;
+use moon_config::{UnresolvedVersionSpec, VersionSpec};
 use moon_pdk::{AnyResult, VirtualPath};
 use moon_pdk_api::{LockDependency, ParseLockOutput};
+use pep440_rs::Operator;
 use pep508_rs::{Requirement, VerbatimUrl, VersionOrUrl};
 use serde::{Deserialize, Serialize};
 use starbase_utils::{fs, toml};
@@ -10,14 +11,28 @@ use std::io::{self, BufRead};
 use std::str::FromStr;
 
 pub fn parse_requirements_txt(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyResult<()> {
-    let file = fs::open_file(&path)?;
+    let file = fs::open_file(path)?;
 
     for line in io::BufReader::new(file).lines().map_while(Result::ok) {
         if let Ok(parsed) = Requirement::<VerbatimUrl>::from_str(&line) {
             let mut dep = LockDependency::default();
 
-            if let Some(VersionOrUrl::VersionSpecifier(spec)) = parsed.version_or_url {
-                dep.req = UnresolvedVersionSpec::parse(spec.to_string()).ok();
+            if let Some(VersionOrUrl::VersionSpecifier(specs)) = parsed.version_or_url {
+                // Explicit version
+                if specs.len() == 1
+                    && let Some(spec) = specs.first()
+                {
+                    match spec.operator() {
+                        Operator::Equal | Operator::ExactEqual => {
+                            dep.version = VersionSpec::parse(spec.version().to_string()).ok();
+                        }
+                        _ => {}
+                    };
+                }
+                // Version range
+                else {
+                    dep.req = UnresolvedVersionSpec::parse(specs.to_string()).ok();
+                }
             }
 
             if !parsed.extras.is_empty() {
@@ -54,8 +69,9 @@ pub struct PyLockPackageDist {
 pub struct PyLockPackage {
     pub archive: Option<PyLockPackageDist>,
     pub name: String,
-    pub version: Option<String>,
     pub sdist: Option<PyLockPackageDist>,
+    pub version: Option<String>,
+    pub wheels: Option<Vec<PyLockPackageDist>>,
 }
 
 // https://peps.python.org/pep-0751/
@@ -88,6 +104,13 @@ pub fn parse_pylock_toml(path: &VirtualPath, output: &mut ParseLockOutput) -> An
         } else if let Some(sdist) = package.sdist {
             if let Some(hash) = sdist.hashes.get("sha256") {
                 dep.hash = Some(hash.to_owned());
+            }
+        } else if let Some(wheels) = package.wheels {
+            for wheel in wheels {
+                if let Some(hash) = wheel.hashes.get("sha256") {
+                    dep.hash = Some(hash.to_owned());
+                    break;
+                }
             }
         }
 
