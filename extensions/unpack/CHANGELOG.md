@@ -4,6 +4,7 @@
 
 #### 🚀 Updates
 
+- Official major release for moon v2.
 - Updated to use `unzip` and `tar` commands.
 
 ## 0.0.7

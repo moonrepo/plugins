@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Official major release for moon v2.
+
 ## 0.0.11
 
 #### ⚙️ Internal

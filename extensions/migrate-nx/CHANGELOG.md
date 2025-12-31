@@ -4,9 +4,9 @@
 
 #### 🚀 Updates
 
+- Official major release for moon v2.
 - Added support for the following `project.json` fields:
   - `targets.*.continuous`
-
 
 ## 0.0.11
 

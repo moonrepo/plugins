@@ -4,6 +4,7 @@
 
 #### 🚀 Updates
 
+- Official major release for moon v2.
 - Added support for the following `turbo.json` fields:
   - `tags`
   - `tasks.*.env` (wildcards and negation)
