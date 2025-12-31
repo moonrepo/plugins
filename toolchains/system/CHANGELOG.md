@@ -4,4 +4,4 @@
 
 #### 🚀 Updates
 
-- Initial release!
+- Official major release for moon v2.

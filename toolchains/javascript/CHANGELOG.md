@@ -4,6 +4,7 @@
 
 #### 🚀 Updates
 
+- Official major release for moon v2.
 - Added support for Yarn v4.10 catalogs.
 
 #### 🐞 Fixes
