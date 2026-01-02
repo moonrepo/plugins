@@ -1,4 +1,4 @@
-$schema: ./cache/schemas/toolchain.json
+$schema: ./cache/schemas/toolchains.json
 
 rust:
   version: 1.92.0
