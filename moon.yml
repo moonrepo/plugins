@@ -2,28 +2,25 @@ id: root
 
 tasks:
   format:
-    command: "cargo fmt --all --check"
+    command: cargo fmt --all --check
     inputs: []
 
   format-write:
-    extends: "format"
-    command: "cargo fmt --all -- --emit=files"
-    options:
-      runInCI: false
+    extends: format
+    command: cargo fmt --all -- --emit=files
+    preset: utility
 
   build-all:
-    command: "just build"
+    command: just build
     inputs: []
-    options:
-      runInCI: false
+    preset: utility
 
   test-all:
-    command: "cargo nextest run --workspace"
+    command: cargo nextest run --workspace
     inputs: []
     deps:
-      - "build-all"
-    options:
-      runInCI: false
+      - build-all
+    preset: utility
 
 workspace:
   inheritedTasks:

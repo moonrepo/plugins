@@ -1,31 +1,30 @@
-$schema: "https://moonrepo.dev/schemas/tasks.json"
+$schema: ../.cache/schemas/tasks.json
+
+inheritedBy:
+  toolchain: rust
 
 fileGroups:
   cargo:
-    - "Cargo.toml"
-    - "/Cargo.toml"
-    # - "/.cargo/config.toml"
-    - "/rust-toolchain.toml"
+    - Cargo.toml
+    - /Cargo.toml
+    - /rust-toolchain.toml
   sources:
-    - "src/**/*"
+    - src/**/*
   tests:
-    - "benches/**/*"
-    - "tests/**/*"
+    - benches/**/*
+    - tests/**/*
 
 tasks:
   build:
-    command: "cargo build --target wasm32-wasip1 --release"
+    command: cargo build --target wasm32-wasip1 --release
     inputs:
       - "@group(cargo)"
       - "@group(sources)"
-    # outputs:
-    #   - "/target/wasm32-wasip1/release/*.wasm"
     env: &env
-      CARGO_TERM_COLOR: "always"
-      # CARGO_TERM_QUIET: "true"
+      CARGO_TERM_COLOR: always
 
   check:
-    command: "cargo check --all-targets"
+    command: cargo check --all-targets
     inputs:
       - "@group(cargo)"
       - "@group(sources)"
@@ -33,7 +32,7 @@ tasks:
     env: *env
 
   lint:
-    command: "cargo clippy --all-targets"
+    command: cargo clippy --all-targets
     inputs:
       - "@group(cargo)"
       - "@group(sources)"
@@ -41,14 +40,13 @@ tasks:
     env: *env
 
   test:
-    command: "cargo nextest run --no-default-features --no-fail-fast --no-tests=pass"
+    command: cargo nextest run --no-default-features --no-fail-fast --no-tests=pass
     deps:
-      - "build"
+      - build
     inputs:
       - "@group(cargo)"
       - "@group(sources)"
       - "@group(tests)"
-      # - "/.config/nextest.*"
     env:
       <<: *env
       NO_COLOR: "true"
