@@ -32,6 +32,7 @@ projects:
   javascript-toolchain: toolchains/javascript
   node-toolchain: toolchains/node
   node-depman-toolchain: toolchains/node-depman
+  python-toolchain: toolchains/python
   rust-toolchain: toolchains/rust
   system-toolchain: toolchains/system
   typescript-toolchain: toolchains/typescript
