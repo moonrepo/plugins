@@ -1,5 +1,11 @@
 use proto_pdk_test_utils::*;
 
+#[derive(Debug, Default, serde::Deserialize, serde::Serialize)]
+#[serde(default, deny_unknown_fields, rename_all = "kebab-case")]
+pub struct NodeDepmanPluginConfig {
+    pub registry_url: String,
+}
+
 mod node_depman_tool {
     use super::*;
 
@@ -59,6 +65,37 @@ mod node_depman_tool {
                     .unwrap()
                     .exe_path,
                 Some("shims/npm".into())
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn downloads_from_custom_registry() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("npm-test", |config| {
+                    config
+                        .host(HostOS::MacOS, HostArch::X64)
+                        .tool_config(NodeDepmanPluginConfig {
+                            registry_url: "https://npm.jsr.io".into(),
+                        });
+                })
+                .await;
+
+            assert_eq!(
+                plugin
+                    .download_prebuilt(DownloadPrebuiltInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("9.0.0").unwrap(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .await,
+                DownloadPrebuiltOutput {
+                    archive_prefix: Some("package".into()),
+                    download_url: "https://npm.jsr.io/npm/-/npm-9.0.0.tgz".into(),
+                    ..Default::default()
+                }
             );
         }
     }
@@ -121,6 +158,37 @@ mod node_depman_tool {
                 Some("shims/pnpm.cmd".into())
             );
         }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn downloads_from_custom_registry() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("pnpm-test", |config| {
+                    config
+                        .host(HostOS::MacOS, HostArch::X64)
+                        .tool_config(NodeDepmanPluginConfig {
+                            registry_url: "https://npm.jsr.io".into(),
+                        });
+                })
+                .await;
+
+            assert_eq!(
+                plugin
+                    .download_prebuilt(DownloadPrebuiltInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("8.0.0").unwrap(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .await,
+                DownloadPrebuiltOutput {
+                    archive_prefix: Some("package".into()),
+                    download_url: "https://npm.jsr.io/pnpm/-/pnpm-8.0.0.tgz".into(),
+                    ..Default::default()
+                }
+            );
+        }
     }
 
     mod yarn {
@@ -179,6 +247,37 @@ mod node_depman_tool {
                     .unwrap()
                     .exe_path,
                 Some("shims/yarn".into())
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn downloads_from_custom_registry() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("yarn-test", |config| {
+                    config
+                        .host(HostOS::MacOS, HostArch::X64)
+                        .tool_config(NodeDepmanPluginConfig {
+                            registry_url: "https://registry.yarnpkg.com".into(),
+                        });
+                })
+                .await;
+
+            assert_eq!(
+                plugin
+                    .download_prebuilt(DownloadPrebuiltInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("1.22.0").unwrap(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .await,
+                DownloadPrebuiltOutput {
+                    archive_prefix: Some("yarn-v1.22.0".into()),
+                    download_url: "https://registry.yarnpkg.com/yarn/-/yarn-1.22.0.tgz".into(),
+                    ..Default::default()
+                }
             );
         }
     }
