@@ -7,3 +7,4 @@ a = { path = "../a" }
 
 [dev-dependencies]
 b = { path = "../b" }
+c = { path = "." }

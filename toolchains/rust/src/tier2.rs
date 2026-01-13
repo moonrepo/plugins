@@ -40,8 +40,11 @@ pub fn extend_project_graph(
                     };
 
                     // Only inherit if the dependency is using the local `path = "..."` syntax,
-                    // and the package name exists in our gathered map
-                    if dep.detail().is_some_and(|det| det.path.is_some()) {
+                    // is not a self-dependency and the package name exists in our gathered map
+                    if dep
+                        .detail()
+                        .is_some_and(|det| det.path.as_ref().is_some_and(|path| path != "."))
+                    {
                         project_output.dependencies.push(ProjectDependency {
                             id: dep_id.to_owned(),
                             scope,
