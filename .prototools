@@ -1,4 +1,4 @@
-moon = "2.0.0-alpha.2"
+moon = "2.0.0-beta.0"
 bun = "1.2.20"
 node = "24.0.0"
 
