@@ -10,6 +10,8 @@ use pyproject_toml::PyProjectToml as BasePyProjectToml;
 use serde::{Deserialize, Serialize};
 use starbase_utils::toml::{self, TomlValue};
 
+use crate::config::PythonPackageManager;
+
 #[cfg(feature = "wasm")]
 #[host_fn]
 extern "ExtismHost" {
@@ -68,13 +70,17 @@ impl PyProjectTomlWithTools {
     }
 
     /// Extract package members if the current manifest is a workspace.
-    pub fn extract_members(&self) -> AnyResult<Option<Vec<String>>> {
-        if let Some(workspace) = self
-            .data
-            .tool
-            .as_ref()
-            .and_then(|tool| tool.uv.as_ref())
-            .and_then(|uv| uv.workspace.as_ref())
+    pub fn extract_members(
+        &self,
+        package_manager: PythonPackageManager,
+    ) -> AnyResult<Option<Vec<String>>> {
+        if package_manager == PythonPackageManager::Uv
+            && let Some(workspace) = self
+                .data
+                .tool
+                .as_ref()
+                .and_then(|tool| tool.uv.as_ref())
+                .and_then(|uv| uv.workspace.as_ref())
         {
             let mut members = vec![];
 

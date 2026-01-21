@@ -2,6 +2,7 @@ use moon_pdk_api::*;
 use moon_pdk_test_utils::{create_empty_moon_sandbox, create_moon_sandbox};
 use serde_json::json;
 use std::collections::BTreeMap;
+use std::path::PathBuf;
 
 mod python_toolchain_tier2 {
     use super::*;
@@ -203,6 +204,204 @@ mod python_toolchain_tier2 {
                     sandbox.path().join(".virtual-env/bin")
                 ]
             );
+        }
+    }
+
+    mod locate_dependencies_root {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn returns_nothing_if_nothing_found() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let output = plugin
+                .locate_dependencies_root(LocateDependenciesRootInput {
+                    starting_dir: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "packageManager": "pip"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.members.is_none());
+            assert!(output.root.is_none());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn returns_nothing_if_pm_not_configured() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let output = plugin
+                .locate_dependencies_root(LocateDependenciesRootInput {
+                    starting_dir: VirtualPath::Real(sandbox.path().join("package")),
+                    toolchain_config: json!({
+                        "packageManager": null
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.members.is_none());
+            assert!(output.root.is_none());
+        }
+
+        mod pip {
+            use super::*;
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn finds_package_without_lock() {
+                let sandbox = create_moon_sandbox("locate");
+                let plugin = sandbox.create_toolchain("python").await;
+
+                let output = plugin
+                    .locate_dependencies_root(LocateDependenciesRootInput {
+                        starting_dir: VirtualPath::Real(sandbox.path().join("package/nested")),
+                        toolchain_config: json!({
+                            "packageManager": "pip"
+                        }),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert!(output.members.is_none());
+                assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/package"));
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn finds_package_with_lock() {
+                let sandbox = create_moon_sandbox("locate");
+                sandbox.create_file("package/requirements.txt", "");
+
+                let plugin = sandbox.create_toolchain("python").await;
+
+                let output = plugin
+                    .locate_dependencies_root(LocateDependenciesRootInput {
+                        starting_dir: VirtualPath::Real(sandbox.path().join("package/nested")),
+                        toolchain_config: json!({
+                            "packageManager": "pip"
+                        }),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert!(output.members.is_none());
+                assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/package"));
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn doesnt_support_workspaces() {
+                let sandbox = create_moon_sandbox("locate");
+                let plugin = sandbox.create_toolchain("python").await;
+
+                let output = plugin
+                    .locate_dependencies_root(LocateDependenciesRootInput {
+                        starting_dir: VirtualPath::Real(
+                            sandbox.path().join("workspace/packages/a/nested"),
+                        ),
+                        toolchain_config: json!({
+                            "packageManager": "pip"
+                        }),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert!(output.members.is_none());
+                assert_eq!(
+                    output.root.unwrap(),
+                    PathBuf::from("/workspace/workspace/packages/a")
+                );
+            }
+        }
+
+        mod uv {
+            use super::*;
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn finds_package_without_lock() {
+                let sandbox = create_moon_sandbox("locate");
+                let plugin = sandbox.create_toolchain("python").await;
+
+                let output = plugin
+                    .locate_dependencies_root(LocateDependenciesRootInput {
+                        starting_dir: VirtualPath::Real(sandbox.path().join("package/nested")),
+                        toolchain_config: json!({
+                            "packageManager": "uv"
+                        }),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert!(output.members.is_none());
+                assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/package"));
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn finds_package_with_lock() {
+                let sandbox = create_moon_sandbox("locate");
+                sandbox.create_file("package/uv.lock", "");
+
+                let plugin = sandbox.create_toolchain("python").await;
+
+                let output = plugin
+                    .locate_dependencies_root(LocateDependenciesRootInput {
+                        starting_dir: VirtualPath::Real(sandbox.path().join("package/nested")),
+                        toolchain_config: json!({
+                            "packageManager": "uv"
+                        }),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert!(output.members.is_none());
+                assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/package"));
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn finds_workspace_without_lock() {
+                let sandbox = create_moon_sandbox("locate");
+                let plugin = sandbox.create_toolchain("python").await;
+
+                let output = plugin
+                    .locate_dependencies_root(LocateDependenciesRootInput {
+                        starting_dir: VirtualPath::Real(
+                            sandbox.path().join("workspace/packages/a/nested"),
+                        ),
+                        toolchain_config: json!({
+                            "packageManager": "uv"
+                        }),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert_eq!(output.members.unwrap(), ["packages/*"]);
+                assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/workspace"));
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn finds_workspace_with_lock() {
+                let sandbox = create_moon_sandbox("locate");
+                sandbox.create_file("workspace/uv.lock", "");
+
+                let plugin = sandbox.create_toolchain("python").await;
+
+                let output = plugin
+                    .locate_dependencies_root(LocateDependenciesRootInput {
+                        starting_dir: VirtualPath::Real(
+                            sandbox.path().join("workspace/packages/a/nested"),
+                        ),
+                        toolchain_config: json!({
+                            "packageManager": "uv"
+                        }),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert_eq!(output.members.unwrap(), ["packages/*"]);
+                assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/workspace"));
+            }
         }
     }
 
@@ -431,6 +630,42 @@ mod python_toolchain_tier2 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn parses_requirements_txt() {
+            let sandbox = create_moon_sandbox("lockfiles");
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let output = plugin
+                .parse_lock(ParseLockInput {
+                    path: VirtualPath::Real(sandbox.path().join("requirements.txt")),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.dependencies,
+                BTreeMap::from_iter([
+                    (
+                        "docopt".into(),
+                        vec![LockDependency {
+                            version: Some(VersionSpec::parse("0.6.1").unwrap()),
+                            ..Default::default()
+                        }]
+                    ),
+                    ("pytest".into(), vec![LockDependency::default()]),
+                    ("pytest-cov".into(), vec![LockDependency::default()]),
+                    (
+                        "requests".into(),
+                        vec![LockDependency {
+                            meta: Some("security".into()),
+                            ..Default::default()
+                        }]
+                    ),
+                    ("urllib3".into(), vec![LockDependency::default()]),
+                ])
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn parses_uv_lock() {
             let sandbox = create_moon_sandbox("lockfiles");
             let plugin = sandbox.create_toolchain("python").await;
@@ -524,13 +759,13 @@ mod python_toolchain_tier2 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
-        async fn parses_requirements_txt() {
+        async fn parses_requirements_in() {
             let sandbox = create_moon_sandbox("manifests");
             let plugin = sandbox.create_toolchain("python").await;
 
             let output = plugin
                 .parse_manifest(ParseManifestInput {
-                    path: VirtualPath::Real(sandbox.path().join("requirements.txt")),
+                    path: VirtualPath::Real(sandbox.path().join("requirements.in")),
                     ..Default::default()
                 })
                 .await;

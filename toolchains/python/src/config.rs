@@ -10,6 +10,7 @@ derive_enum!(
         Pip,
         // Poetry,
         Uv,
+        UvPip,
     }
 );
 

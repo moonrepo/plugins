@@ -46,7 +46,7 @@ fn create_manifest_dep_from_requirement(req: &Requirement) -> ManifestDependency
     ManifestDependency::Config(dep)
 }
 
-pub fn parse_requirements_txt(
+pub fn parse_requirements_in(
     path: &VirtualPath,
     output: &mut ParseManifestOutput,
 ) -> AnyResult<()> {
@@ -58,6 +58,41 @@ pub fn parse_requirements_txt(
                 req.name.to_string(),
                 create_manifest_dep_from_requirement(&req),
             );
+        }
+    }
+
+    Ok(())
+}
+
+pub fn parse_requirements_txt(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyResult<()> {
+    let file = fs::open_file(path)?;
+
+    for line in io::BufReader::new(file).lines().map_while(Result::ok) {
+        if let Ok(req) = Requirement::<VerbatimUrl>::from_str(&line)
+            && let ManifestDependency::Config(config) = create_manifest_dep_from_requirement(&req)
+        {
+            let mut dep = LockDependency::default();
+
+            if !config.features.is_empty() {
+                dep.meta = Some(config.features.join(","))
+            }
+
+            if let Some(version) = config.version {
+                if matches!(
+                    version,
+                    UnresolvedVersionSpec::Semantic(_) | UnresolvedVersionSpec::Calendar(_)
+                ) {
+                    dep.version = Some(version.to_resolved_spec());
+                } else {
+                    dep.req = Some(version);
+                }
+            }
+
+            output
+                .dependencies
+                .entry(req.name.to_string())
+                .or_default()
+                .push(dep);
         }
     }
 

@@ -106,20 +106,24 @@ pub fn locate_dependencies_root(
     };
 
     let manifest_names = match package_manager {
-        PythonPackageManager::Pip => vec!["pyproject.toml", "requirements.txt"],
+        PythonPackageManager::Pip | PythonPackageManager::UvPip => {
+            vec!["pyproject.toml", "requirements.in"]
+        }
         PythonPackageManager::Uv => vec!["pyproject.toml"],
     };
 
     let lock_names = match package_manager {
-        PythonPackageManager::Pip => vec!["pylock.toml"],
+        PythonPackageManager::Pip | PythonPackageManager::UvPip => {
+            vec!["pylock.toml", "requirements.txt"]
+        }
         PythonPackageManager::Uv => vec!["uv.lock"],
     };
 
     // First attempt: find lock files
     if let Some(root) = locate_root_many(&input.starting_dir, &lock_names) {
         output.root = root.virtual_path();
-        output.members =
-            PyProjectTomlWithTools::load(root.join("pyproject.toml"))?.extract_members()?;
+        output.members = PyProjectTomlWithTools::load(root.join("pyproject.toml"))?
+            .extract_members(package_manager)?;
     }
 
     // Second attempt: find workspace-compatible manifest files
@@ -129,7 +133,7 @@ pub fn locate_dependencies_root(
             let mut found = false;
 
             if manifest.tool.is_some()
-                && let Some(members) = manifest.extract_members()?
+                && let Some(members) = manifest.extract_members(package_manager)?
             {
                 output.root = root.virtual_path();
                 output.members = Some(members);
@@ -187,6 +191,7 @@ pub fn install_dependencies(
 
             cmd
         }
+        PythonPackageManager::UvPip => ExecCommandInput::new("uv", ["pip", "install"]),
     };
 
     if package_manager_config.install_args.is_empty() {
@@ -208,6 +213,7 @@ pub fn parse_lock(Json(input): Json<ParseLockInput>) -> FnResult<Json<ParseLockO
 
     match input.path.file_name().and_then(|name| name.to_str()) {
         Some("pylock.toml") => parse_pylock_toml(&input.path, &mut output)?,
+        Some("requirements.txt") => parse_requirements_txt(&input.path, &mut output)?,
         Some("uv.lock") => parse_uv_lock(&input.path, &mut output)?,
         _ => {}
     };
@@ -223,7 +229,7 @@ pub fn parse_manifest(
 
     match input.path.file_name().and_then(|name| name.to_str()) {
         Some("pyproject.toml") => parse_pyproject_toml(&input.path, &mut output)?,
-        Some("requirements.txt") => parse_requirements_txt(&input.path, &mut output)?,
+        Some("requirements.in") => parse_requirements_in(&input.path, &mut output)?,
         _ => {}
     };
 
