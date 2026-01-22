@@ -3,7 +3,8 @@ use crate::npm_registry::parse_registry_response;
 use crate::package_manager::PackageManager;
 use extism_pdk::*;
 use lang_javascript_common::{
-    NodeDistVersion, extract_engine_version, extract_package_manager_version, extract_volta_version,
+    NodeDistVersion, extract_dev_engine_package_manager_version, extract_engine_version,
+    extract_package_manager_version, extract_volta_version,
 };
 use nodejs_package_json::PackageJson;
 use proto_pdk::*;
@@ -73,7 +74,15 @@ pub fn parse_version_file(
     {
         let manager_name = PackageManager::detect()?.to_string();
 
-        if let Some(constraint) = extract_package_manager_version(&package_json, &manager_name) {
+        if let Some(constraint) =
+            extract_dev_engine_package_manager_version(&package_json, &manager_name)
+        {
+            version = Some(UnresolvedVersionSpec::parse(constraint)?);
+        }
+
+        if version.is_none()
+            && let Some(constraint) = extract_package_manager_version(&package_json, &manager_name)
+        {
             version = Some(UnresolvedVersionSpec::parse(constraint)?);
         }
 

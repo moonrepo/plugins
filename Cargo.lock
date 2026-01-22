@@ -2325,9 +2325,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "2.12.1"
+version = "2.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ad4bb2b565bca0645f4d68c5c9af97fba094e9791da685bf83cb5f3ce74acf2"
+checksum = "7714e70437a7dc3ac8eb7e6f8df75fd8eb422675fc7678aff7364301092b1017"
 dependencies = [
  "equivalent",
  "hashbrown 0.16.1",
@@ -3197,9 +3197,9 @@ dependencies = [
 
 [[package]]
 name = "nodejs_package_json"
-version = "0.4.4"
+version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4348324b8f1beb94088c4119d6d5fbd92346da4a048194d9652f62171e1dfd38"
+checksum = "e3371dcadabba67bb493d6188927c733c10c8af667227af3fbb31a4fbc7ea1b6"
 dependencies = [
  "indexmap",
  "regex",
