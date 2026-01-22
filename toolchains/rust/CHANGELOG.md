@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed an issue where dependency self-cycles (using `path = "."`) would be included in graph extension.
+
 ## 1.0.0
 
 #### 🚀 Updates
