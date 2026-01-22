@@ -16,7 +16,7 @@ use moon_pdk_api::VersionSpec;
 pub(super) fn parse_version_spec<T: AsRef<str>>(version: T) -> AnyResult<Option<VersionSpec>> {
     let version = version.as_ref();
 
-    if version.is_empty() || version.contains(':') {
+    if version.is_empty() || version.contains('#') || version.contains(':') {
         Ok(None)
     } else {
         Ok(Some(VersionSpec::parse(version)?))

@@ -1,6 +1,17 @@
-use nodejs_package_json::PackageJson;
+use nodejs_package_json::{PackageJson, VersionProtocol};
 use proto_pdk_api::{AnyResult, VirtualPath};
 use starbase_utils::{fs, json};
+
+pub fn extract_valid_version_protocol(version_protocol: &VersionProtocol) -> Option<String> {
+    if matches!(
+        version_protocol,
+        VersionProtocol::Range(_) | VersionProtocol::Requirement(_) | VersionProtocol::Version(_)
+    ) {
+        Some(version_protocol.to_string())
+    } else {
+        None
+    }
+}
 
 pub fn extract_version_from_text(content: &str) -> Option<&str> {
     for line in content.lines() {
@@ -21,8 +32,11 @@ pub fn extract_dev_engine_runtime_version(package_json: &PackageJson, key: &str)
         && let Some(engine) = &engines.runtime
     {
         for item in engine.list() {
-            if item.name == key && item.version.is_some() {
-                return item.version.as_ref().map(|version| version.to_string());
+            if item.name == key
+                && let Some(protocol) = &item.version
+                && let Some(version) = extract_valid_version_protocol(protocol)
+            {
+                return Some(version);
             }
         }
     }
@@ -38,8 +52,11 @@ pub fn extract_dev_engine_package_manager_version(
         && let Some(engine) = &engines.package_manager
     {
         for item in engine.list() {
-            if item.name == key && item.version.is_some() {
-                return item.version.as_ref().map(|version| version.to_string());
+            if item.name == key
+                && let Some(protocol) = &item.version
+                && let Some(version) = extract_valid_version_protocol(protocol)
+            {
+                return Some(version);
             }
         }
     }
@@ -49,7 +66,7 @@ pub fn extract_dev_engine_package_manager_version(
 
 pub fn extract_engine_version(package_json: &PackageJson, key: &str) -> Option<String> {
     if let Some(engines) = &package_json.engines {
-        return engines.get(key).map(|engine| engine.to_string());
+        return engines.get(key).and_then(extract_valid_version_protocol);
     }
 
     None

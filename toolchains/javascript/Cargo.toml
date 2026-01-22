@@ -23,7 +23,6 @@ moon_pdk = { workspace = true, features = ["schematic"] }
 moon_pdk_api = { workspace = true }
 moon_target = { workspace = true }
 nodejs_package_json = { workspace = true, features = [
-    "protocols",
     "serialize",
 ] }
 rustc-hash = { workspace = true }
