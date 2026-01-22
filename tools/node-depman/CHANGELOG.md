@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added `package.json` `devEngines.packageManager` support for version detection.
+
 ## 0.17.0
 
 #### 🚀 Updates

@@ -128,6 +128,25 @@ mod node_depman_tool {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn parses_dev_engines() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox.create_plugin("npm-test").await;
+
+            assert_eq!(
+                plugin
+                    .parse_version_file(ParseVersionFileInput {
+                        content: r#"{ "devEngines": { "packageManager": { "name": "npm", "version": "1.2.3" } } }"#.into(),
+                        file: "package.json".into(),
+                        ..Default::default()
+                    })
+                    .await,
+                ParseVersionFileOutput {
+                    version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn parses_volta() {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox.create_plugin("npm-test").await;
@@ -220,6 +239,26 @@ mod node_depman_tool {
                 plugin
                     .parse_version_file(ParseVersionFileInput {
                         content: r#"{ "engines": { "pnpm": "1.2.3" } }"#.into(),
+                        file: "package.json".into(),
+                        ..Default::default()
+                    })
+                    .await,
+                ParseVersionFileOutput {
+                    version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn parses_dev_engines() {
+            let sandbox = create_empty_proto_sandbox();
+            sandbox.enable_logging();
+            let plugin = sandbox.create_plugin("pnpm-test").await;
+
+            assert_eq!(
+                plugin
+                    .parse_version_file(ParseVersionFileInput {
+                        content: r#"{ "devEngines": { "packageManager": { "name": "pnpm", "version": "1.2.3" } } }"#.into(),
                         file: "package.json".into(),
                         ..Default::default()
                     })
@@ -324,6 +363,25 @@ mod node_depman_tool {
                 plugin
                     .parse_version_file(ParseVersionFileInput {
                         content: r#"{ "engines": { "yarn": "1.2.3" } }"#.into(),
+                        file: "package.json".into(),
+                        ..Default::default()
+                    })
+                    .await,
+                ParseVersionFileOutput {
+                    version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn parses_dev_engines() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox.create_plugin("yarn-test").await;
+
+            assert_eq!(
+                plugin
+                    .parse_version_file(ParseVersionFileInput {
+                        content: r#"{ "devEngines": { "packageManager": { "name": "yarn", "version": "1.2.3" } } }"#.into(),
                         file: "package.json".into(),
                         ..Default::default()
                     })

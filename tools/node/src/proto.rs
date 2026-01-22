@@ -1,8 +1,8 @@
 use crate::config::NodeToolConfig;
 use extism_pdk::*;
 use lang_javascript_common::{
-    NodeDistLTS, NodeDistVersion, extract_engine_version, extract_version_from_text,
-    extract_volta_version,
+    NodeDistLTS, NodeDistVersion, extract_dev_engine_runtime_version, extract_engine_version,
+    extract_version_from_text, extract_volta_version,
 };
 use nodejs_package_json::PackageJson;
 use proto_pdk::*;
@@ -57,7 +57,13 @@ pub fn parse_version_file(
 
     if input.file == "package.json" {
         if let Ok(package_json) = json::from_str::<PackageJson>(&input.content) {
-            if let Some(constraint) = extract_volta_version(&package_json, &input.path, "node")? {
+            if let Some(constraint) = extract_dev_engine_runtime_version(&package_json, "node") {
+                version = Some(UnresolvedVersionSpec::parse(constraint)?);
+            }
+
+            if version.is_none()
+                && let Some(constraint) = extract_volta_version(&package_json, &input.path, "node")?
+            {
                 version = Some(UnresolvedVersionSpec::parse(constraint)?);
             }
 

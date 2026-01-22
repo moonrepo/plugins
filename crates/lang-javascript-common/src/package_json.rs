@@ -16,6 +16,37 @@ pub fn extract_version_from_text(content: &str) -> Option<&str> {
     None
 }
 
+pub fn extract_dev_engine_runtime_version(package_json: &PackageJson, key: &str) -> Option<String> {
+    if let Some(engines) = &package_json.dev_engines
+        && let Some(engine) = &engines.runtime
+    {
+        for item in engine.list() {
+            if item.name == key && item.version.is_some() {
+                return item.version.as_ref().map(|version| version.to_string());
+            }
+        }
+    }
+
+    None
+}
+
+pub fn extract_dev_engine_package_manager_version(
+    package_json: &PackageJson,
+    key: &str,
+) -> Option<String> {
+    if let Some(engines) = &package_json.dev_engines
+        && let Some(engine) = &engines.package_manager
+    {
+        for item in engine.list() {
+            if item.name == key && item.version.is_some() {
+                return item.version.as_ref().map(|version| version.to_string());
+            }
+        }
+    }
+
+    None
+}
+
 pub fn extract_engine_version(package_json: &PackageJson, key: &str) -> Option<String> {
     if let Some(engines) = &package_json.engines {
         return engines.get(key).map(|engine| engine.to_string());
