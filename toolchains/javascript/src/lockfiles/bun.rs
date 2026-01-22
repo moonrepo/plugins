@@ -3,13 +3,13 @@ use super::yarn::parse_yarn_lock_content;
 use moon_pdk::{AnyResult, ExecCommandInput, VirtualPath, exec};
 use moon_pdk_api::{LockDependency, ParseLockOutput};
 use serde::Deserialize;
-use starbase_utils::{fs, json};
+use starbase_utils::{fs, json, json::JsonValue};
 use std::collections::BTreeMap;
 
 #[derive(Debug, Deserialize, Default)]
 #[serde(default, rename_all = "camelCase")]
 pub struct BunLockPackageJson {
-    pub name: String,
+    pub name: Option<String>,
     pub version: Option<String>,
     pub dependencies: BTreeMap<String, String>,
     pub dev_dependencies: BTreeMap<String, String>,
@@ -21,21 +21,21 @@ pub struct BunLockPackageJson {
 #[serde(untagged)]
 pub enum BunLockPackage {
     Dependency1(
-        String,             // identifier
-        String,             // ???
-        BunLockPackageJson, // dependencies
-        String,             // sha
+        String,    // identifier
+        String,    // ???
+        JsonValue, // object
+        String,    // sha
     ),
 
     Dependency2(
-        String,             // identifier
-        BunLockPackageJson, // dependencies
-        String,             // sha
+        String,    // identifier
+        JsonValue, // object
+        String,    // sha
     ),
 
     Dependency3(
-        String,             // identifier
-        BunLockPackageJson, // dependencies
+        String,    // identifier
+        JsonValue, // object
     ),
 
     // Must be last!
@@ -46,6 +46,7 @@ pub enum BunLockPackage {
 #[derive(Debug, Deserialize, Default)]
 #[serde(default, rename_all = "camelCase")]
 pub struct BunLock {
+    pub config_version: u32,
     pub lockfile_version: u32,
     pub packages: BTreeMap<String, BunLockPackage>,
     pub patched_dependencies: BTreeMap<String, String>,
@@ -60,8 +61,7 @@ pub fn parse_bun_lock(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyRe
     for package in lock.packages.into_values() {
         let (name, version, integrity) = match &package {
             BunLockPackage::Workspace(values) => {
-                if let Some((name, suffix)) = values[0].rsplit_once('@')
-                    && let Some(ref_name) = suffix.strip_prefix("workspace:")
+                if let Some((name, ref_name)) = values[0].split_once("@workspace:")
                     && let Some(ref_package) = lock.workspaces.get(ref_name)
                 {
                     output
@@ -80,21 +80,21 @@ pub fn parse_bun_lock(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyRe
                 continue;
             }
             BunLockPackage::Dependency1(id, _unknown, _data, integrity) => {
-                let Some((name, version)) = id.rsplit_once('@') else {
+                let Some((name, version)) = parse_name_and_version(id) else {
                     continue;
                 };
 
                 (name, version, Some(integrity))
             }
             BunLockPackage::Dependency2(id, _data, integrity) => {
-                let Some((name, version)) = id.rsplit_once('@') else {
+                let Some((name, version)) = parse_name_and_version(id) else {
                     continue;
                 };
 
                 (name, version, Some(integrity))
             }
             BunLockPackage::Dependency3(id, _data) => {
-                let Some((name, version)) = id.rsplit_once('@') else {
+                let Some((name, version)) = parse_name_and_version(id) else {
                     continue;
                 };
 
@@ -120,4 +120,12 @@ pub fn parse_bun_lockb(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyR
     let content = exec(ExecCommandInput::pipe("bun", ["bun.lockb"]).cwd(path.parent().unwrap()))?;
 
     parse_yarn_lock_content(content.stdout.trim(), output)
+}
+
+fn parse_name_and_version(value: &str) -> Option<(&str, &str)> {
+    if value.contains("http://") || value.contains("https://") {
+        return None;
+    }
+
+    value.rsplit_once('@')
 }
