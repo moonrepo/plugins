@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added `package.json` `devEngines.runtime` support for version detection.
+
 ## 0.16.3
 
 #### 🚀 Updates
