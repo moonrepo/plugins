@@ -76,7 +76,7 @@ mod node_depman_tool {
                     config
                         .host(HostOS::MacOS, HostArch::X64)
                         .tool_config(NodeDepmanPluginConfig {
-                            registry_url: "https://npm.jsr.io".into(),
+                            registry_url: "https://some-internal-url.example".into(),
                         });
                 })
                 .await;
@@ -93,7 +93,7 @@ mod node_depman_tool {
                     .await,
                 DownloadPrebuiltOutput {
                     archive_prefix: Some("package".into()),
-                    download_url: "https://npm.jsr.io/npm/-/npm-9.0.0.tgz".into(),
+                    download_url: "https://some-internal-url.example/npm/-/npm-9.0.0.tgz".into(),
                     ..Default::default()
                 }
             );
@@ -167,7 +167,7 @@ mod node_depman_tool {
                     config
                         .host(HostOS::MacOS, HostArch::X64)
                         .tool_config(NodeDepmanPluginConfig {
-                            registry_url: "https://npm.jsr.io".into(),
+                            registry_url: "https://some-internal-url.example".into(),
                         });
                 })
                 .await;
@@ -184,7 +184,7 @@ mod node_depman_tool {
                     .await,
                 DownloadPrebuiltOutput {
                     archive_prefix: Some("package".into()),
-                    download_url: "https://npm.jsr.io/pnpm/-/pnpm-8.0.0.tgz".into(),
+                    download_url: "https://some-internal-url.example/pnpm/-/pnpm-8.0.0.tgz".into(),
                     ..Default::default()
                 }
             );
