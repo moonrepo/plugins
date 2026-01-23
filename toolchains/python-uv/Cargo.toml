@@ -1,0 +1,27 @@
+[package]
+name = "python_uv_toolchain"
+version = "0.0.1"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[package.metadata.release]
+pre-release-replacements = [
+    { file = "./CHANGELOG.md", search = "Unreleased", replace = "{{version}}" },
+]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+toolchain_common = { path = "../../crates/toolchain-common" }
+python_uv_tool = { path = "../../tools/python-uv", default-features = false }
+extism-pdk = { workspace = true }
+moon_config = { workspace = true }
+moon_pdk_api = { workspace = true }
+schematic = { workspace = true }
+serde = { workspace = true }
+
+[features]
+default = ["wasm"]
+wasm = ["python_uv_tool/wasm"]
