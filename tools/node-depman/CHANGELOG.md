@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed an issue where major versions only (`18`) would not parse correctly.
+
 ## 0.17.1
 
 #### 🚀 Updates
