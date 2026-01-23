@@ -9,35 +9,6 @@ use moon_pdk::{
 use moon_pdk_api::*;
 use std::path::PathBuf;
 
-// #[plugin_fn]
-// pub fn setup_environment(
-//     Json(input): Json<SetupEnvironmentInput>,
-// ) -> FnResult<Json<SetupEnvironmentOutput>> {
-//     let config = parse_toolchain_config::<NodeToolchainConfig>(input.toolchain_config)?;
-//     let mut output = SetupEnvironmentOutput::default();
-
-//     // Sync version manager
-//     if let Some(version_manager) = config.sync_version_manager_config
-//         && let Some(version) = config.version
-//     {
-//         let (op, file) = Operation::track("sync-version-manager", || {
-//             let rc_path = input.root.join(match version_manager {
-//                 NodeVersionManager::Nodenv => ".node-version",
-//                 NodeVersionManager::Nvm => ".nvmrc",
-//             });
-
-//             fs::write_file(&rc_path, version.to_partial_string())?;
-
-//             Ok(rc_path)
-//         })?;
-
-//         output.operations.push(op);
-//         output.changed_files.extend(file.virtual_path());
-//     }
-
-//     Ok(Json(output))
-// }
-
 fn gather_shared_paths(
     config: &PythonToolchainConfig,
     context: &MoonContext,
@@ -88,7 +59,7 @@ pub fn define_requirements(
     let mut output = DefineRequirementsOutput::default();
 
     if let Some(package_manager) = config.package_manager {
-        output.requires.push(package_manager.to_string());
+        output.requires.push(format!("unstable_{package_manager}"));
     }
 
     Ok(Json(output))
@@ -165,7 +136,13 @@ pub fn install_dependencies(
         return Ok(Json(output));
     };
 
-    let mut fallback_install_args: Vec<String> = vec![];
+    let mut include_reqs_and_constraints = false;
+    let fallback_uv_args: Vec<String> = vec![
+        "--no-managed-python".into(),
+        "--no-python-downloads".into(),
+        "--no-progress".into(),
+    ];
+
     let package_manager_config: SharedPackageManagerConfig = match &input.project {
         Some(project) => load_project_toolchain_config(&project.id, package_manager.to_string())?,
         None => load_toolchain_config(package_manager.to_string())?,
@@ -173,15 +150,13 @@ pub fn install_dependencies(
 
     // Install
     let mut command = match package_manager {
-        PythonPackageManager::Pip => ExecCommandInput::new("python", ["-m", "pip", "install"]),
+        PythonPackageManager::Pip => {
+            include_reqs_and_constraints = true;
+
+            ExecCommandInput::new("python", ["-m", "pip", "install"])
+        }
         // PythonPackageManager::Poetry => ExecCommandInput::new("poetry", ["sync"]),
         PythonPackageManager::Uv => {
-            fallback_install_args.extend([
-                "--no-managed-python".into(),
-                "--no-python-downloads".into(),
-                "--no-progress".into(),
-            ]);
-
             let mut cmd = ExecCommandInput::new("uv", ["sync"]);
 
             for package_name in input.packages {
@@ -191,11 +166,30 @@ pub fn install_dependencies(
 
             cmd
         }
-        PythonPackageManager::UvPip => ExecCommandInput::new("uv", ["pip", "install"]),
+        PythonPackageManager::UvPip => {
+            include_reqs_and_constraints = true;
+
+            ExecCommandInput::new("uv", ["pip", "install"])
+        }
     };
 
-    if package_manager_config.install_args.is_empty() {
-        command.args.extend(fallback_install_args);
+    if include_reqs_and_constraints {
+        if input.root.join("requirements.txt").exists() {
+            command.args.push("-r".into());
+            command.args.push("requirements.txt".into());
+        } else if input.root.join("requirements.in").exists() {
+            command.args.push("-r".into());
+            command.args.push("requirements.in".into());
+        }
+
+        if input.root.join("constraints.txt").exists() {
+            command.args.push("-c".into());
+            command.args.push("constraints.txt".into());
+        }
+    }
+
+    if package_manager_config.install_args.is_empty() && package_manager.is_uv_based() {
+        command.args.extend(fallback_uv_args);
     } else {
         command.args.extend(package_manager_config.install_args);
     }
@@ -232,6 +226,53 @@ pub fn parse_manifest(
         Some("requirements.in") => parse_requirements_in(&input.path, &mut output)?,
         _ => {}
     };
+
+    Ok(Json(output))
+}
+
+#[plugin_fn]
+pub fn setup_environment(
+    Json(input): Json<SetupEnvironmentInput>,
+) -> FnResult<Json<SetupEnvironmentOutput>> {
+    let config = parse_toolchain_config_schema::<PythonToolchainConfig>(input.toolchain_config)?;
+    let mut output = SetupEnvironmentOutput::default();
+
+    let Some(package_manager) = config.package_manager else {
+        return Ok(Json(output));
+    };
+
+    let fallback_uv_args: Vec<String> = vec![
+        "--no-managed-python".into(),
+        "--no-python-downloads".into(),
+        "--no-progress".into(),
+    ];
+
+    let package_manager_config: SharedPackageManagerConfig = match &input.project {
+        Some(project) => load_project_toolchain_config(&project.id, package_manager.to_string())?,
+        None => load_toolchain_config(package_manager.to_string())?,
+    };
+
+    let mut command = match package_manager {
+        PythonPackageManager::Pip => {
+            ExecCommandInput::new("python", ["-m", "venv", &config.venv_name])
+        }
+        PythonPackageManager::Uv | PythonPackageManager::UvPip => {
+            ExecCommandInput::new("uv", ["venv", &config.venv_name])
+        }
+    };
+
+    if package_manager_config.venv_args.is_empty()
+        && config.version.is_some()
+        && package_manager.is_uv_based()
+    {
+        command.args.extend(fallback_uv_args);
+    } else {
+        command.args.extend(package_manager_config.venv_args);
+    }
+
+    command.cwd = Some(input.root.clone());
+
+    output.commands.push(command.into());
 
     Ok(Json(output))
 }

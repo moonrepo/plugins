@@ -14,6 +14,12 @@ derive_enum!(
     }
 );
 
+impl PythonPackageManager {
+    pub fn is_uv_based(&self) -> bool {
+        matches!(self, PythonPackageManager::Uv | PythonPackageManager::UvPip)
+    }
+}
+
 derive_enum!(
     /// The location in which to create the Python virtual environment.
     #[derive(ConfigEnum, Copy, Default)]
@@ -35,7 +41,7 @@ config_struct!(
 
         /// The location where to create the virtual environment,
         /// in which dependencies will be installed into.
-        pub venv_location: PythonVenvLocation,
+        // pub venv_location: PythonVenvLocation,
 
         /// The name of virtual environment folder name.
         #[setting(default = ".venv")]
@@ -53,6 +59,7 @@ config_struct!(
     pub struct SharedPackageManagerConfig {
         #[serde(alias = "syncArgs")] // uv
         pub install_args: Vec<String>,
+        pub venv_args: Vec<String>,
         pub version: Option<UnresolvedVersionSpec>,
     }
 );

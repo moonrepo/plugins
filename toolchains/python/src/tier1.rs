@@ -1,5 +1,6 @@
 use crate::config::{PythonPackageManager, PythonToolchainConfig};
 use extism_pdk::*;
+use moon_config::LanguageType;
 use moon_pdk::parse_toolchain_config;
 use moon_pdk_api::*;
 use schematic::SchemaBuilder;
@@ -18,6 +19,7 @@ pub fn register_toolchain(
             "Installs dependencies and provides sync operations that keep project's in a healthy state."
                 .into(),
         ),
+        language: Some(LanguageType::Python),
         plugin_version: env!("CARGO_PKG_VERSION").into(),
         // For project detection
         config_file_globs: vec![
@@ -28,7 +30,7 @@ pub fn register_toolchain(
         ],
         manifest_file_names: vec![
             "pyproject.toml".into(),
-            "requirements.txt".into(),
+            "requirements.in".into(),
             // pip
             "Pipfile".into(),
             // poetry
@@ -38,6 +40,8 @@ pub fn register_toolchain(
         ],
         lock_file_names: vec![
             "pylock.toml".into(),
+            "constraints.txt".into(),
+            "requirements.txt".into(),
             // pip
             "Pipfile.lock".into(),
             // poetry

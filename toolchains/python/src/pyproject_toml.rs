@@ -1,5 +1,6 @@
 // `pyproject.toml`
 
+use crate::config::PythonPackageManager;
 #[cfg(feature = "wasm")]
 use extism_pdk::*;
 #[cfg(feature = "wasm")]
@@ -9,8 +10,6 @@ use pep508_rs::Requirement;
 use pyproject_toml::PyProjectToml as BasePyProjectToml;
 use serde::{Deserialize, Serialize};
 use starbase_utils::toml::{self, TomlValue};
-
-use crate::config::PythonPackageManager;
 
 #[cfg(feature = "wasm")]
 #[host_fn]

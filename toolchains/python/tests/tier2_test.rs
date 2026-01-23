@@ -477,6 +477,64 @@ mod python_toolchain_tier2 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn supports_pip_with_requirements() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("requirements.txt", "");
+
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let output = plugin
+                .install_dependencies(InstallDependenciesInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "packageManager": "pip"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.install_command.unwrap(),
+                ExecCommand::new(
+                    ExecCommandInput::new(
+                        "python",
+                        ["-m", "pip", "install", "-r", "requirements.txt"]
+                    )
+                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_pip_with_constraints() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("constraints.txt", "");
+
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let output = plugin
+                .install_dependencies(InstallDependenciesInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "packageManager": "pip"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.install_command.unwrap(),
+                ExecCommand::new(
+                    ExecCommandInput::new(
+                        "python",
+                        ["-m", "pip", "install", "-c", "constraints.txt"]
+                    )
+                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn supports_uv() {
             let sandbox = create_empty_moon_sandbox();
             let plugin = sandbox.create_toolchain("python").await;
@@ -806,6 +864,191 @@ mod python_toolchain_tier2 {
                         })
                     ),
                 ])
+            );
+        }
+    }
+
+    mod setup_environment {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn does_nothing_if_no_package_manager() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "packageManager": null
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.commands.is_empty());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn can_customize_dir_name() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "packageManager": "uv",
+                        "venvName": ".virtual-env"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.commands,
+                vec![ExecCommand::new(
+                    ExecCommandInput::new("uv", ["venv", ".virtual-env"])
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_pip() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "packageManager": "pip"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.commands,
+                vec![ExecCommand::new(
+                    ExecCommandInput::new("python", ["-m", "venv", ".venv"])
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_pip_with_custom_args() {
+            let mut sandbox = create_empty_moon_sandbox();
+
+            sandbox
+                .host_funcs
+                .mock_load_toolchain_config(|_, _| json!({ "venvArgs": ["--clear"]}));
+
+            let plugin = sandbox.create_toolchain("python").await;
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "packageManager": "pip"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.commands,
+                vec![ExecCommand::new(
+                    ExecCommandInput::new("python", ["-m", "venv", ".venv", "--clear"])
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_uv() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "packageManager": "uv"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.commands,
+                vec![ExecCommand::new(
+                    ExecCommandInput::new("uv", ["venv", ".venv"])
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_uv_with_custom_args() {
+            let mut sandbox = create_empty_moon_sandbox();
+
+            sandbox
+                .host_funcs
+                .mock_load_toolchain_config(|_, _| json!({ "venvArgs": ["--clear"]}));
+
+            let plugin = sandbox.create_toolchain("python").await;
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "packageManager": "uv"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.commands,
+                vec![ExecCommand::new(
+                    ExecCommandInput::new("uv", ["venv", ".venv", "--clear"])
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn uses_proto_python_when_version_defined() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "packageManager": "uv",
+                        "version": "3.12.0"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.commands,
+                vec![ExecCommand::new(
+                    ExecCommandInput::new(
+                        "uv",
+                        [
+                            "venv",
+                            ".venv",
+                            "--no-managed-python",
+                            "--no-python-downloads",
+                            "--no-progress",
+                        ]
+                    )
+                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )]
             );
         }
     }
