@@ -3864,6 +3864,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "python_pip_toolchain"
+version = "0.0.1"
+dependencies = [
+ "extism-pdk",
+ "moon_config",
+ "moon_pdk_api",
+ "schematic",
+ "serde",
+ "toolchain_common",
+]
+
+[[package]]
 name = "python_poetry_tool"
 version = "0.1.5"
 dependencies = [
@@ -3926,6 +3938,19 @@ dependencies = [
  "tokio",
  "toml 0.9.10+spec-1.1.0",
  "tool_common",
+]
+
+[[package]]
+name = "python_uv_toolchain"
+version = "0.0.1"
+dependencies = [
+ "extism-pdk",
+ "moon_config",
+ "moon_pdk_api",
+ "python_uv_tool",
+ "schematic",
+ "serde",
+ "toolchain_common",
 ]
 
 [[package]]
