@@ -1,0 +1,39 @@
+[package]
+name = "python_toolchain"
+version = "0.0.1"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[package.metadata.release]
+pre-release-replacements = [
+    { file = "./CHANGELOG.md", search = "Unreleased", replace = "{{version}}" },
+]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+toolchain_common = { path = "../../crates/toolchain-common" }
+python_tool = { path = "../../tools/python", default-features = false }
+extism-pdk = { workspace = true }
+moon_config = { workspace = true }
+moon_pdk = { workspace = true, features = ["schematic"] }
+moon_pdk_api = { workspace = true }
+pep440_rs = "0.7.3"
+pep508_rs = "0.9.2"
+pyproject-toml = "0.13.7"
+schematic = { workspace = true }
+serde = { workspace = true }
+starbase_utils = { workspace = true, features = ["json", "toml"] }
+
+[dev-dependencies]
+moon_common = { workspace = true }
+moon_pdk_test_utils = { workspace = true }
+serde_json = { workspace = true }
+starbase_sandbox = { workspace = true }
+tokio = { workspace = true }
+
+[features]
+default = ["wasm"]
+wasm = ["python_tool/wasm"]

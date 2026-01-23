@@ -1,6 +1,6 @@
 [package]
-name = "python_uv_tool"
-version = "0.3.1"
+name = "python_pip_toolchain"
+version = "0.0.1"
 edition = "2024"
 license = "MIT"
 publish = false
@@ -11,19 +11,15 @@ pre-release-replacements = [
 ]
 
 [lib]
-crate-type = ["cdylib", "lib"]
+crate-type = ["cdylib"]
 
 [dependencies]
-tool_common = { path = "../../crates/tool-common" }
+toolchain_common = { path = "../../crates/toolchain-common" }
 extism-pdk = { workspace = true }
-proto_pdk = { workspace = true }
+moon_config = { workspace = true }
+moon_pdk_api = { workspace = true }
+schematic = { workspace = true }
 serde = { workspace = true }
-toml = { workspace = true }
-
-[dev-dependencies]
-proto_pdk_test_utils = { workspace = true }
-starbase_sandbox = { workspace = true }
-tokio = { workspace = true }
 
 [features]
 default = ["wasm"]
