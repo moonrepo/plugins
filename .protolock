@@ -10,9 +10,9 @@ checksum = "sha256:404f5a6dd1f604b40eb3b156d4197bb8d398bb26e0ae4c8ac8e7aa490f7e2
 [[tools.moon]]
 os = "macos"
 arch = "arm64"
-spec = "1.41.0"
-version = "1.41.0"
-checksum = "sha256:1f6dcaf3cfb605e5169302a0ce6cdeddba199654466f1c35ce7068b929e18f69"
+spec = "2.0.0-beta.0"
+version = "2.0.0-beta.0"
+checksum = "sha256:53aee75c1385309d07467b80abc93fb09476c05437dbe8fa8a42d5749cfa217c"
 
 [[tools.node]]
 os = "macos"
