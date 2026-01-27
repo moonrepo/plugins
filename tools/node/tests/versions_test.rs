@@ -72,6 +72,25 @@ mod node_tool {
     }
 
     #[tokio::test(flavor = "multi_thread")]
+    async fn parses_engines_range() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("node-test").await;
+
+        assert_eq!(
+            plugin
+                .parse_version_file(ParseVersionFileInput {
+                    content: r#"{ "engines": { "node": "^18.18.0 || ^20.9.0 || >=21.1.0" } }"#.into(),
+                    file: "package.json".into(),
+                    ..Default::default()
+                })
+                .await,
+            ParseVersionFileOutput {
+                version: Some(UnresolvedVersionSpec::parse("^18.18.0 || ^20.9.0 || >=21.1.0").unwrap()),
+            }
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
     async fn parses_dev_engines() {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox.create_plugin("node-test").await;

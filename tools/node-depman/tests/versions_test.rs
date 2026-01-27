@@ -336,6 +336,25 @@ mod node_depman_tool {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn parses_package_manager_corepack_metadata() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox.create_plugin("yarn-test").await;
+
+            assert_eq!(
+                plugin
+                    .parse_version_file(ParseVersionFileInput {
+                        content: r#"{ "packageManager": "yarn@4.11.0+sha224.209a3e277c6bbc03df6e4206fbfcb0c1621c27ecf0688f79a0c619f0" }"#.into(),
+                                    file: "package.json".into(),
+                        ..Default::default()
+                    })
+                    .await,
+                ParseVersionFileOutput {
+                    version: Some(UnresolvedVersionSpec::parse("4.11.0").unwrap()),
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn parses_package_manager_latest() {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox.create_plugin("yarn-test").await;
