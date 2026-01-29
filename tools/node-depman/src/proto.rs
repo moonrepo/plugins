@@ -32,11 +32,6 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
     Ok(Json(RegisterToolOutput {
         name: manager.to_string(),
         type_of: PluginType::DependencyManager,
-        default_version: if manager == PackageManager::Npm {
-            Some(UnresolvedVersionSpec::Alias("bundled".into()))
-        } else {
-            None
-        },
         lock_options: ToolLockOptions {
             ignore_os_arch: true,
             ..Default::default()
@@ -266,8 +261,9 @@ pub fn download_prebuilt(
         &package_name
     };
 
-    let registry_url = get_tool_config::<NodeDepmanToolConfig>()?.registry_url;
-    let dist_url = get_tool_config::<NodeDepmanToolConfig>()?.dist_url;
+    let config = get_tool_config::<NodeDepmanToolConfig>()?;
+    let registry_url = config.registry_url;
+    let dist_url = config.dist_url;
     let filename = format!("{package_without_scope}-{version}.tgz");
 
     Ok(Json(DownloadPrebuiltOutput {

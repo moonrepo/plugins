@@ -66,9 +66,9 @@ fn create_script_from_context(
 
 fn create_script_from_unresolved_context(
     virtual_script_path: &Path,
-    context: &PluginUnresolvedContext,
+    _context: &PluginUnresolvedContext,
 ) -> AnyResult<ExecCommandInput> {
-    create_script(virtual_script_path, context.version.as_ref(), None, None)
+    create_script(virtual_script_path, None, None, None)
 }
 
 fn create_script(
