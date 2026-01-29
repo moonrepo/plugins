@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed some `package.json` version parsing issues.
+
 ## 1.0.1
 
 #### 🐞 Fixes

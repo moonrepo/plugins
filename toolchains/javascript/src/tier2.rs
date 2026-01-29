@@ -553,7 +553,7 @@ fn create_manifest_dependency(
     catalogs: &CatalogsMap,
 ) -> AnyResult<Option<ManifestDependency>> {
     let dep = match version {
-        VersionProtocol::Alias(_) => {
+        VersionProtocol::Alias(_) | VersionProtocol::Patch(_) => {
             return Ok(None);
         }
         VersionProtocol::Catalog(key) => {

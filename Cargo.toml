@@ -48,7 +48,7 @@ proto_pdk_test_utils = { version = "0.42.1" }
 # proto_pdk_test_utils = { path = "../../proto/crates/pdk-test-utils" }
 
 # JavaScript
-nodejs_package_json = { version = "0.4.6", features = ["protocols"] }
+nodejs_package_json = { version = "0.4.7", features = ["protocols"] }
 typescript_tsconfig_json = { version = "0.5.2", features = ["serialize"] }
 
 [profile.release]
