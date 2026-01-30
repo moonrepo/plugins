@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+#### 🚀 Updates
+
+- Updated with moon v2 plugin APIs.
+
 #### 🐞 Fixes
 
 - Fixed some `package.json` version parsing issues.
