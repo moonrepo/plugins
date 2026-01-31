@@ -4,7 +4,8 @@ use crate::package_manager::PackageManager;
 use extism_pdk::*;
 use lang_javascript_common::{
     NodeDistVersion, extract_dev_engine_package_manager_version, extract_engine_version,
-    extract_package_manager_version, extract_volta_version,
+    extract_package_manager_version, extract_volta_version, insert_dev_engine_version,
+    remove_dev_engine,
 };
 use nodejs_package_json::PackageJson;
 use proto_pdk::*;
@@ -96,6 +97,59 @@ pub fn parse_version_file(
     }
 
     Ok(Json(ParseVersionFileOutput { version }))
+}
+
+#[plugin_fn]
+pub fn pin_version(Json(input): Json<PinVersionInput>) -> FnResult<Json<PinVersionOutput>> {
+    let mut output = PinVersionOutput::default();
+    let manager = PackageManager::detect()?;
+    let file = input.dir.join("package.json");
+
+    if file.exists() {
+        let mut package_json: PackageJson = starbase_utils::json::read_file(&file)?;
+
+        insert_dev_engine_version(
+            &mut package_json,
+            "packageManager".into(),
+            manager.to_string(),
+            input.version.to_string(),
+        )?;
+
+        starbase_utils::json::write_file(&file, &package_json, true)?;
+
+        output.pinned = true;
+        output.file = Some(file);
+    } else {
+        output.error = Some("No <file>package.json</file> exists in the target directory.".into());
+    }
+
+    Ok(Json(output))
+}
+
+#[plugin_fn]
+pub fn unpin_version(Json(input): Json<UnpinVersionInput>) -> FnResult<Json<UnpinVersionOutput>> {
+    let mut output = UnpinVersionOutput::default();
+    let manager = PackageManager::detect()?;
+    let file = input.dir.join("package.json");
+
+    if file.exists() {
+        let mut package_json: PackageJson = starbase_utils::json::read_file(&file)?;
+
+        if let Some(version) = remove_dev_engine(
+            &mut package_json,
+            "packageManager".into(),
+            manager.to_string(),
+        )? {
+            output.unpinned = true;
+            output.version = Some(UnresolvedVersionSpec::parse(&version)?);
+
+            starbase_utils::json::write_file(&file, &package_json, true)?;
+        }
+    } else {
+        output.error = Some("No <file>package.json</file> exists in the target directory.".into());
+    }
+
+    Ok(Json(output))
 }
 
 #[plugin_fn]

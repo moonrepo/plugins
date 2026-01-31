@@ -1,4 +1,4 @@
-use nodejs_package_json::{PackageJson, VersionProtocol};
+use nodejs_package_json::{DevEngineField, OneOrMany, PackageJson, VersionProtocol};
 use proto_pdk_api::{AnyResult, VirtualPath};
 use starbase_utils::{fs, json};
 
@@ -123,4 +123,96 @@ pub fn extract_volta_version(
     }
 
     Ok(None)
+}
+
+pub fn insert_dev_engine_version(
+    package_json: &mut PackageJson,
+    kind: String,
+    name: String,
+    version: String,
+) -> AnyResult<()> {
+    let dev_engines = package_json.dev_engines.get_or_insert_default();
+
+    let dev_engine = if kind == "runtime" {
+        dev_engines
+            .runtime
+            .get_or_insert_with(|| OneOrMany::One(DevEngineField::default()))
+    } else {
+        dev_engines
+            .package_manager
+            .get_or_insert_with(|| OneOrMany::One(DevEngineField::default()))
+    };
+
+    match dev_engine {
+        OneOrMany::One(engine) => {
+            engine.name = name.into();
+            engine.version = Some(VersionProtocol::try_from(version)?);
+        }
+        OneOrMany::Many(engines) => {
+            if let Some(existing) = engines.iter_mut().find(|engine| engine.name == name) {
+                existing.name = name.into();
+                existing.version = Some(VersionProtocol::try_from(version)?);
+            } else {
+                engines.push(DevEngineField {
+                    name: name.into(),
+                    version: Some(VersionProtocol::try_from(version)?),
+                    ..Default::default()
+                });
+            }
+        }
+    };
+
+    Ok(())
+}
+
+pub fn remove_dev_engine(
+    package_json: &mut PackageJson,
+    kind: String,
+    name: String,
+) -> AnyResult<Option<String>> {
+    let mut removed_version = None;
+
+    if let Some(dev_engines) = &mut package_json.dev_engines {
+        let mut remove_kind = false;
+
+        let dev_engine = if kind == "runtime" {
+            dev_engines.runtime.as_mut()
+        } else {
+            dev_engines.package_manager.as_mut()
+        };
+
+        if let Some(dev_engine) = dev_engine {
+            match dev_engine {
+                OneOrMany::One(engine) => {
+                    if engine.name == name {
+                        remove_kind = true;
+                        removed_version =
+                            engine.version.as_ref().map(|version| version.to_string());
+                    }
+                }
+                OneOrMany::Many(engines) => {
+                    engines.retain(|engine| {
+                        if engine.name == name {
+                            removed_version =
+                                engine.version.as_ref().map(|version| version.to_string());
+                            false
+                        } else {
+                            true
+                        }
+                    });
+                    remove_kind = engines.is_empty();
+                }
+            };
+        }
+
+        if remove_kind {
+            if kind == "runtime" {
+                dev_engines.runtime = None;
+            } else {
+                dev_engines.package_manager = None;
+            }
+        }
+    }
+
+    Ok(removed_version)
 }

@@ -3203,6 +3203,7 @@ dependencies = [
  "serde",
  "serial_test",
  "starbase_sandbox",
+ "starbase_utils",
  "tokio",
  "tool_common",
 ]
