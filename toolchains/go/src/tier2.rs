@@ -43,7 +43,7 @@ pub fn extend_project_graph(
         };
 
         for dep in &manifest.require {
-            if packages.contains_key(&dep.module.module_path) {
+            if !dep.indirect && packages.contains_key(&dep.module.module_path) {
                 project_output.dependencies.push(ProjectDependency {
                     id: Id::raw(dep.module.module_path.clone()),
                     scope: DependencyScope::Production,
