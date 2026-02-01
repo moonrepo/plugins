@@ -1,6 +1,9 @@
-use nodejs_package_json::{DevEngineField, OneOrMany, PackageJson, VersionProtocol};
+use nodejs_package_json::{PackageJson, VersionProtocol};
 use proto_pdk_api::{AnyResult, VirtualPath};
-use starbase_utils::{fs, json};
+use starbase_utils::{
+    fs,
+    json::{self, JsonMap, JsonValue},
+};
 
 pub fn extract_valid_version_protocol(version_protocol: &VersionProtocol) -> Option<String> {
     if matches!(
@@ -126,91 +129,132 @@ pub fn extract_volta_version(
 }
 
 pub fn insert_dev_engine_version(
-    package_json: &mut PackageJson,
+    package_json: &mut JsonValue,
     kind: String,
     name: String,
     version: String,
 ) -> AnyResult<()> {
-    let dev_engines = package_json.dev_engines.get_or_insert_default();
-
-    let dev_engine = if kind == "runtime" {
-        dev_engines
-            .runtime
-            .get_or_insert_with(|| OneOrMany::One(DevEngineField::default()))
-    } else {
-        dev_engines
-            .package_manager
-            .get_or_insert_with(|| OneOrMany::One(DevEngineField::default()))
-    };
-
-    match dev_engine {
-        OneOrMany::One(engine) => {
-            engine.name = name.into();
-            engine.version = Some(VersionProtocol::try_from(version)?);
+    if let Some(root) = package_json.as_object_mut() {
+        if root.get("devEngines").is_none_or(|node| !node.is_object()) {
+            root.insert("devEngines".into(), JsonValue::Object(JsonMap::default()));
         }
-        OneOrMany::Many(engines) => {
-            if let Some(existing) = engines.iter_mut().find(|engine| engine.name == name) {
-                existing.name = name.into();
-                existing.version = Some(VersionProtocol::try_from(version)?);
-            } else {
-                engines.push(DevEngineField {
-                    name: name.into(),
-                    version: Some(VersionProtocol::try_from(version)?),
-                    ..Default::default()
-                });
+
+        if let Some(JsonValue::Object(dev_engines)) = root.get_mut("devEngines") {
+            if dev_engines.get(&kind).is_none_or(|node| !node.is_object()) {
+                dev_engines.insert(kind.clone(), JsonValue::Object(JsonMap::default()));
+            }
+
+            let mut convert_to_list = false;
+            let mut new_list = vec![];
+
+            if let Some(runtime_or_pm) = dev_engines.get_mut(&kind) {
+                match runtime_or_pm {
+                    JsonValue::Array(list) => {
+                        let mut inserted = false;
+
+                        for item in list.iter_mut() {
+                            if let Some(object) = item.as_object_mut()
+                                && object
+                                    .get("name")
+                                    .and_then(|n| n.as_str())
+                                    .is_some_and(|n| n == name)
+                            {
+                                object.insert("version".into(), JsonValue::String(version.clone()));
+                                inserted = true;
+                                break;
+                            }
+                        }
+
+                        if !inserted {
+                            list.push(JsonValue::Object(JsonMap::from_iter([
+                                ("name".to_owned(), JsonValue::String(name)),
+                                ("version".to_owned(), JsonValue::String(version)),
+                            ])));
+                        }
+                    }
+                    JsonValue::Object(object) => {
+                        if object.is_empty() {
+                            object.insert("name".into(), JsonValue::String(name));
+                            object.insert("version".into(), JsonValue::String(version));
+                        } else if object
+                            .get("name")
+                            .and_then(|n| n.as_str())
+                            .is_some_and(|n| n == name)
+                        {
+                            object.insert("version".into(), JsonValue::String(version));
+                        } else {
+                            convert_to_list = true;
+
+                            new_list.push(JsonValue::Object(object.to_owned()));
+                            new_list.push(JsonValue::Object(JsonMap::from_iter([
+                                ("name".to_owned(), JsonValue::String(name)),
+                                ("version".to_owned(), JsonValue::String(version)),
+                            ])));
+                        }
+                    }
+                    _ => {}
+                };
+            }
+
+            if convert_to_list {
+                dev_engines.insert(kind, JsonValue::Array(new_list));
             }
         }
-    };
+    }
 
     Ok(())
 }
 
 pub fn remove_dev_engine(
-    package_json: &mut PackageJson,
+    package_json: &mut JsonValue,
     kind: String,
     name: String,
 ) -> AnyResult<Option<String>> {
     let mut removed_version = None;
 
-    if let Some(dev_engines) = &mut package_json.dev_engines {
+    if let Some(root) = package_json.as_object_mut()
+        && let Some(JsonValue::Object(dev_engines)) = root.get_mut("devEngines")
+    {
         let mut remove_kind = false;
 
-        let dev_engine = if kind == "runtime" {
-            dev_engines.runtime.as_mut()
-        } else {
-            dev_engines.package_manager.as_mut()
-        };
-
-        if let Some(dev_engine) = dev_engine {
-            match dev_engine {
-                OneOrMany::One(engine) => {
-                    if engine.name == name {
-                        remove_kind = true;
-                        removed_version =
-                            engine.version.as_ref().map(|version| version.to_string());
-                    }
-                }
-                OneOrMany::Many(engines) => {
-                    engines.retain(|engine| {
-                        if engine.name == name {
-                            removed_version =
-                                engine.version.as_ref().map(|version| version.to_string());
+        if let Some(runtime_or_pm) = dev_engines.get_mut(&kind) {
+            match runtime_or_pm {
+                JsonValue::Array(list) => {
+                    list.retain_mut(|item| {
+                        if let Some(object) = item.as_object_mut()
+                            && object
+                                .get("name")
+                                .and_then(|n| n.as_str())
+                                .is_some_and(|n| n == name)
+                        {
+                            removed_version = object.remove("version").and_then(|version| {
+                                version.as_str().map(|version| version.to_owned())
+                            });
                             false
                         } else {
                             true
                         }
                     });
-                    remove_kind = engines.is_empty();
+                    remove_kind = list.is_empty();
                 }
+                JsonValue::Object(object) => {
+                    if object
+                        .get("name")
+                        .and_then(|n| n.as_str())
+                        .is_some_and(|n| n == name)
+                    {
+                        remove_kind = true;
+                        removed_version = object
+                            .remove("version")
+                            .and_then(|version| version.as_str().map(|version| version.to_owned()));
+                    }
+                }
+                _ => {}
             };
         }
 
         if remove_kind {
-            if kind == "runtime" {
-                dev_engines.runtime = None;
-            } else {
-                dev_engines.package_manager = None;
-            }
+            dev_engines.remove(&kind);
         }
     }
 

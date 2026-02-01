@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+#### 🚀 Updates
+
+- Updated to support proto v0.55 release.
+
 #### 🐞 Fixes
 
 - Fixed some `package.json` version parsing issues.

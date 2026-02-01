@@ -1,0 +1,7 @@
+---
+source: tools/node/tests/versions_test.rs
+expression: "fs::read_to_string(sandbox.path().join(\"package.json\")).unwrap()"
+---
+{
+  "devEngines": {}
+}

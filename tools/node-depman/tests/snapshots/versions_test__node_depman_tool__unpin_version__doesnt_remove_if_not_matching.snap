@@ -1,0 +1,12 @@
+---
+source: tools/node-depman/tests/versions_test.rs
+expression: "fs::read_to_string(sandbox.path().join(\"package.json\")).unwrap()"
+---
+{
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^10"
+    }
+  }
+}

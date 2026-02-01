@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Updated to support proto v0.55 release.
+
 ## 0.3.1
 
 #### ⚙️ Internal

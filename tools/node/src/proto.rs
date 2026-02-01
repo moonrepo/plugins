@@ -86,7 +86,7 @@ pub fn pin_version(Json(input): Json<PinVersionInput>) -> FnResult<Json<PinVersi
     let file = input.dir.join("package.json");
 
     if file.exists() {
-        let mut package_json: PackageJson = starbase_utils::json::read_file(&file)?;
+        let mut package_json: json::Value = starbase_utils::json::read_file(&file)?;
 
         insert_dev_engine_version(
             &mut package_json,
@@ -112,15 +112,16 @@ pub fn unpin_version(Json(input): Json<UnpinVersionInput>) -> FnResult<Json<Unpi
     let file = input.dir.join("package.json");
 
     if file.exists() {
-        let mut package_json: PackageJson = starbase_utils::json::read_file(&file)?;
+        let mut package_json: json::Value = starbase_utils::json::read_file(&file)?;
 
         if let Some(version) =
             remove_dev_engine(&mut package_json, "runtime".into(), "node".into())?
         {
+            starbase_utils::json::write_file(&file, &package_json, true)?;
+
             output.unpinned = true;
             output.version = Some(UnresolvedVersionSpec::parse(&version)?);
-
-            starbase_utils::json::write_file(&file, &package_json, true)?;
+            output.file = Some(file);
         }
     } else {
         output.error = Some("No <file>package.json</file> exists in the target directory.".into());
