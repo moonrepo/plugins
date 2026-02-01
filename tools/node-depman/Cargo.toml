@@ -22,7 +22,7 @@ proto_pdk = { workspace = true }
 regex = { workspace = true, features = ["unicode"] }
 schematic = { workspace = true }
 serde = { workspace = true }
-starbase_utils = { workspace = true }
+starbase_utils = { workspace = true, features = ["json"] }
 
 [dev-dependencies]
 proto_pdk_api = { workspace = true }

@@ -21,6 +21,7 @@ nodejs_package_json = { workspace = true }
 proto_pdk = { workspace = true }
 schematic = { workspace = true }
 serde = { workspace = true }
+starbase_utils = { workspace = true, features = ["json"] }
 
 [dev-dependencies]
 proto_pdk_test_utils = { workspace = true }

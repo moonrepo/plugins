@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Updated with moon v2 plugin APIs.
+
+#### 🐞 Fixes
+
+- Fixed indirect `go.mod` dependencies being considered a project dependency.
+
 ## 1.0.0
 
 #### 🚀 Updates

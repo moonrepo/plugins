@@ -7,7 +7,7 @@ members = ["backends/*", "crates/*", "extensions/*", "tools/*", "toolchains/*"]
 extism-pdk = { version = "1.4.1" }
 regex = { version = "1.11.2", default-features = false, features = ["std"] }
 rustc-hash = "2.1.1"
-schematic = { version = "0.19.1", default-features = false, features = [
+schematic = { version = "0.19.4", default-features = false, features = [
     "schema",
 ] }
 semver = "1.0.27"
@@ -17,20 +17,20 @@ serial_test = "3.2.0"
 shell-words = "1.1.1"
 starbase_sandbox = "0.10.3"
 starbase_utils = { version = "0.12.3", default-features = false }
-tokio = { version = "1.48.0", features = ["full"] }
+tokio = { version = "1.49.0", features = ["full"] }
 toml = { version = "0.9.8", default-features = false, features = [
     "parse",
     "serde",
 ] }
 
 # moon
-moon_common = { version = "1.0.0" }
-moon_config = { version = "1.0.0" }
-moon_pdk = { version = "1.0.0" }
-moon_pdk_api = { version = "1.0.0" }
-moon_pdk_test_utils = { version = "1.0.0" }
-moon_project = { version = "1.0.0" }
-moon_target = { version = "1.0.0" }
+moon_common = { version = "2.0.0" }
+moon_config = { version = "2.0.0" }
+moon_pdk = { version = "2.0.0" }
+moon_pdk_api = { version = "2.0.0" }
+moon_pdk_test_utils = { version = "2.0.0" }
+moon_project = { version = "2.0.0" }
+moon_target = { version = "2.0.0" }
 # moon_common = { path = "../../moon/crates/common" }
 # moon_config = { path = "../../moon/crates/config" }
 # moon_pdk = { path = "../../moon/crates/pdk" }
@@ -40,15 +40,15 @@ moon_target = { version = "1.0.0" }
 # moon_target = { path = "../../moon/crates/target" }
 
 # proto
-proto_pdk = { version = "0.32.4" }
-proto_pdk_api = { version = "0.31.4" }
-proto_pdk_test_utils = { version = "0.42.1" }
+proto_pdk = { version = "0.32.6" }
+proto_pdk_api = { version = "0.31.6" }
+proto_pdk_test_utils = { version = "0.43.2" }
 # proto_pdk = { path = "../../proto/crates/pdk" }
 # proto_pdk_api = { path = "../../proto/crates/pdk-api" }
 # proto_pdk_test_utils = { path = "../../proto/crates/pdk-test-utils" }
 
 # JavaScript
-nodejs_package_json = { version = "0.4.6", features = ["protocols"] }
+nodejs_package_json = { version = "0.4.7", features = ["protocols"] }
 typescript_tsconfig_json = { version = "0.5.2", features = ["serialize"] }
 
 [profile.release]

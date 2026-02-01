@@ -1,4 +1,6 @@
 use proto_pdk_test_utils::*;
+use starbase_sandbox::assert_snapshot;
+use std::fs;
 
 mod node_tool {
     use super::*;
@@ -185,5 +187,278 @@ mod node_tool {
                 version: Some(UnresolvedVersionSpec::parse("^20.1").unwrap()),
             }
         );
+    }
+
+    mod pin_version {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn errors_if_no_package_json() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox.create_plugin("node-test").await;
+
+            assert_eq!(
+                plugin
+                    .pin_version(PinVersionInput {
+                        dir: VirtualPath::Real(sandbox.path().into()),
+                        version: UnresolvedVersionSpec::parse(">=20").unwrap(),
+                        ..Default::default()
+                    })
+                    .await,
+                PinVersionOutput {
+                    file: None,
+                    error: Some(
+                        "No <file>package.json</file> exists in the target directory.".into()
+                    ),
+                    pinned: false,
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn inserts_when_missing() {
+            let sandbox = create_empty_proto_sandbox();
+            sandbox.create_file("package.json", "{}");
+
+            let plugin = sandbox.create_plugin("node-test").await;
+
+            assert_eq!(
+                plugin
+                    .pin_version(PinVersionInput {
+                        dir: VirtualPath::Real(sandbox.path().into()),
+                        version: UnresolvedVersionSpec::parse(">=20").unwrap(),
+                        ..Default::default()
+                    })
+                    .await,
+                PinVersionOutput {
+                    file: Some(
+                        plugin
+                            .tool
+                            .to_virtual_path(sandbox.path().join("package.json"))
+                    ),
+                    error: None,
+                    pinned: true,
+                }
+            );
+
+            assert_snapshot!(fs::read_to_string(sandbox.path().join("package.json")).unwrap());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn updates_when_matching() {
+            let sandbox = create_empty_proto_sandbox();
+            sandbox.create_file(
+                "package.json",
+                r#"{
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "^18"
+    }
+  }
+}"#,
+            );
+
+            let plugin = sandbox.create_plugin("node-test").await;
+
+            assert_eq!(
+                plugin
+                    .pin_version(PinVersionInput {
+                        dir: VirtualPath::Real(sandbox.path().into()),
+                        version: UnresolvedVersionSpec::parse(">=20").unwrap(),
+                        ..Default::default()
+                    })
+                    .await,
+                PinVersionOutput {
+                    file: Some(
+                        plugin
+                            .tool
+                            .to_virtual_path(sandbox.path().join("package.json"))
+                    ),
+                    error: None,
+                    pinned: true,
+                }
+            );
+
+            assert_snapshot!(fs::read_to_string(sandbox.path().join("package.json")).unwrap());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn converts_to_list_when_not_matching() {
+            let sandbox = create_empty_proto_sandbox();
+            sandbox.create_file(
+                "package.json",
+                r#"{
+  "devEngines": {
+    "runtime": {
+      "name": "bun",
+      "version": "^1"
+    }
+  }
+}"#,
+            );
+
+            let plugin = sandbox.create_plugin("node-test").await;
+
+            assert_eq!(
+                plugin
+                    .pin_version(PinVersionInput {
+                        dir: VirtualPath::Real(sandbox.path().into()),
+                        version: UnresolvedVersionSpec::parse(">=20").unwrap(),
+                        ..Default::default()
+                    })
+                    .await,
+                PinVersionOutput {
+                    file: Some(
+                        plugin
+                            .tool
+                            .to_virtual_path(sandbox.path().join("package.json"))
+                    ),
+                    error: None,
+                    pinned: true,
+                }
+            );
+
+            assert_snapshot!(fs::read_to_string(sandbox.path().join("package.json")).unwrap());
+        }
+    }
+
+    mod unpin_version {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn errors_if_no_package_json() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox.create_plugin("node-test").await;
+
+            assert_eq!(
+                plugin
+                    .unpin_version(UnpinVersionInput {
+                        dir: VirtualPath::Real(sandbox.path().into()),
+                        ..Default::default()
+                    })
+                    .await,
+                UnpinVersionOutput {
+                    error: Some(
+                        "No <file>package.json</file> exists in the target directory.".into()
+                    ),
+                    ..Default::default()
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn removes_if_matching() {
+            let sandbox = create_empty_proto_sandbox();
+            sandbox.create_file(
+                "package.json",
+                r#"{
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": ">=20"
+    }
+  }
+}"#,
+            );
+
+            let plugin = sandbox.create_plugin("node-test").await;
+
+            assert_eq!(
+                plugin
+                    .unpin_version(UnpinVersionInput {
+                        dir: VirtualPath::Real(sandbox.path().into()),
+                        ..Default::default()
+                    })
+                    .await,
+                UnpinVersionOutput {
+                    file: Some(
+                        plugin
+                            .tool
+                            .to_virtual_path(sandbox.path().join("package.json"))
+                    ),
+                    error: None,
+                    unpinned: true,
+                    version: UnresolvedVersionSpec::parse(">=20").ok(),
+                }
+            );
+
+            assert_snapshot!(fs::read_to_string(sandbox.path().join("package.json")).unwrap());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn removes_from_list_if_matching() {
+            let sandbox = create_empty_proto_sandbox();
+            sandbox.create_file(
+                "package.json",
+                r#"{
+  "devEngines": {
+    "runtime": [
+      {
+        "name": "node",
+        "version": ">=20"
+      },
+      {
+        "name": "bun",
+        "version": "^1"
+      }
+    ]
+  }
+}"#,
+            );
+
+            let plugin = sandbox.create_plugin("node-test").await;
+
+            assert_eq!(
+                plugin
+                    .unpin_version(UnpinVersionInput {
+                        dir: VirtualPath::Real(sandbox.path().into()),
+                        ..Default::default()
+                    })
+                    .await,
+                UnpinVersionOutput {
+                    file: Some(
+                        plugin
+                            .tool
+                            .to_virtual_path(sandbox.path().join("package.json"))
+                    ),
+                    error: None,
+                    unpinned: true,
+                    version: UnresolvedVersionSpec::parse(">=20").ok(),
+                }
+            );
+
+            assert_snapshot!(fs::read_to_string(sandbox.path().join("package.json")).unwrap());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn doesnt_remove_if_not_matching() {
+            let sandbox = create_empty_proto_sandbox();
+            sandbox.create_file(
+                "package.json",
+                r#"{
+  "devEngines": {
+    "runtime": {
+      "name": "bun",
+      "version": "^1"
+    }
+  }
+}"#,
+            );
+
+            let plugin = sandbox.create_plugin("node-test").await;
+
+            assert_eq!(
+                plugin
+                    .unpin_version(UnpinVersionInput {
+                        dir: VirtualPath::Real(sandbox.path().into()),
+                        ..Default::default()
+                    })
+                    .await,
+                UnpinVersionOutput::default(),
+            );
+
+            assert_snapshot!(fs::read_to_string(sandbox.path().join("package.json")).unwrap());
+        }
     }
 }

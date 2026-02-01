@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Updated with moon v2 plugin APIs.
+
+#### 🐞 Fixes
+
+- Fixed some `package.json` version parsing issues.
+
 ## 1.0.0
 
 #### 🚀 Updates

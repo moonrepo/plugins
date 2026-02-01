@@ -1,0 +1,16 @@
+---
+source: tools/bun/tests/versions_test.rs
+expression: "fs::read_to_string(sandbox.path().join(\"package.json\")).unwrap()"
+---
+{
+  "devEngines": {
+    "packageManager": {
+      "name": "bun",
+      "version": ">=1"
+    },
+    "runtime": {
+      "name": "bun",
+      "version": ">=1"
+    }
+  }
+}

@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Updated to support proto v0.55 release.
+- Added a `registry-url` config setting.
+- Added `pin_version` and `unpin_version` support, which maps to `package.json` `devEngines.packageManager`.
+
+#### 🐞 Fixes
+
+- Fixed some `package.json` version parsing issues.
+
 ## 0.17.2
 
 #### 🐞 Fixes
