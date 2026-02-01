@@ -3902,7 +3902,7 @@ dependencies = [
 
 [[package]]
 name = "python_poetry_tool"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "extism-pdk",
  "proto_pdk",
