@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed an issue where `package.json` properties would be re-ordered while saving.
+
 ## 0.17.7
 
 #### 🚀 Updates
