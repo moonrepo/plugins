@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Reduced memory consumption.
+
+#### 🐞 Fixes
+
+- Fixed more `package.json` version parsing issues.
+
 ## 1.0.2
 
 #### 🚀 Updates

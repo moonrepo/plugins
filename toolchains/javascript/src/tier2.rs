@@ -32,7 +32,19 @@ pub fn extend_project_graph(
         let package_path = project_root.join("package.json");
 
         if package_path.exists() {
-            let manifest = PackageJson::load(package_path)?;
+            let mut manifest = PackageJson::load(package_path)?;
+
+            // Remove fields we don't need to avoid eating a ton of memory
+            manifest.browser = None;
+            manifest.imports = None;
+            manifest.exports = None;
+            manifest.resolutions = None;
+            manifest.dev_engines = None;
+            manifest.engines = None;
+            manifest.workspaces = None;
+            manifest.catalog = None;
+            manifest.catalogs = None;
+            manifest.other_fields.clear();
 
             // We need to track all packages, even those without a name
             packages.insert(
@@ -553,7 +565,10 @@ fn create_manifest_dependency(
     catalogs: &CatalogsMap,
 ) -> AnyResult<Option<ManifestDependency>> {
     let dep = match version {
-        VersionProtocol::Alias(_) | VersionProtocol::Patch(_) => {
+        VersionProtocol::Alias(_)
+        | VersionProtocol::Exec(_)
+        | VersionProtocol::Patch(_)
+        | VersionProtocol::Unknown(_) => {
             return Ok(None);
         }
         VersionProtocol::Catalog(key) => {
