@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Respect `.editorconfig` when writing `package.json` files.
+
 ## 0.16.7
 
 #### 🐞 Fixes

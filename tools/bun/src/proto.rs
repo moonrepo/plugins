@@ -114,7 +114,7 @@ pub fn pin_version(Json(input): Json<PinVersionInput>) -> FnResult<Json<PinVersi
             input.version.to_string(),
         )?;
 
-        starbase_utils::json::write_file(&file, &package_json, true)?;
+        starbase_utils::json::write_file_with_config(&file, &package_json, true)?;
 
         output.pinned = true;
         output.file = Some(file);
@@ -151,7 +151,7 @@ pub fn unpin_version(Json(input): Json<UnpinVersionInput>) -> FnResult<Json<Unpi
             }
         }
 
-        starbase_utils::json::write_file(&file, &package_json, true)?;
+        starbase_utils::json::write_file_with_config(&file, &package_json, true)?;
     } else {
         output.error = Some("No <file>package.json</file> exists in the target directory.".into());
     }
