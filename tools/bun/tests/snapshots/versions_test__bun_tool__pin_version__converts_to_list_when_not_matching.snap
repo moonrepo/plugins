@@ -4,10 +4,6 @@ expression: "fs::read_to_string(sandbox.path().join(\"package.json\")).unwrap()"
 ---
 {
   "devEngines": {
-    "packageManager": {
-      "name": "bun",
-      "version": ">=1"
-    },
     "runtime": [
       {
         "name": "node",
@@ -17,6 +13,10 @@ expression: "fs::read_to_string(sandbox.path().join(\"package.json\")).unwrap()"
         "name": "bun",
         "version": ">=1"
       }
-    ]
+    ],
+    "packageManager": {
+      "name": "bun",
+      "version": ">=1"
+    }
   }
 }

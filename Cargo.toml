@@ -16,7 +16,7 @@ serde_json = { version = "1.0.146", features = ["preserve_order"] }
 serial_test = "3.2.0"
 shell-words = "1.1.1"
 starbase_sandbox = "0.10.3"
-starbase_utils = { version = "0.12.6", default-features = false }
+starbase_utils = { version = "0.12.6", default-features = false, features = ["editor-config"] }
 tokio = { version = "1.49.0", features = ["full"] }
 toml = { version = "0.9.8", default-features = false, features = [
     "parse",
@@ -24,8 +24,8 @@ toml = { version = "0.9.8", default-features = false, features = [
 ] }
 
 # moon
-moon_common = { version = "2.0.0" }
-moon_config = { version = "2.0.0" }
+moon_common = { version = "2.0.1" }
+moon_config = { version = "2.0.2" }
 moon_pdk = { version = "2.0.0" }
 moon_pdk_api = { version = "2.0.0" }
 moon_pdk_test_utils = { version = "2.0.0" }
@@ -48,8 +48,8 @@ proto_pdk_test_utils = { version = "0.43.2" }
 # proto_pdk_test_utils = { path = "../../proto/crates/pdk-test-utils" }
 
 # JavaScript
-nodejs_package_json = { version = "0.4.7", features = ["protocols"] }
-typescript_tsconfig_json = { version = "0.5.2", features = ["serialize"] }
+nodejs_package_json = { version = "0.4.8", features = ["protocols"] }
+typescript_tsconfig_json = { version = "0.5.4", features = ["serialize"] }
 
 [profile.release]
 codegen-units = 1

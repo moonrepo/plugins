@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- API compatibility.
+
 ## 1.0.2
 
 #### 🚀 Updates

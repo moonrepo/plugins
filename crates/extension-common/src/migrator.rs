@@ -121,15 +121,15 @@ impl Migrator {
 
     pub fn save_configs(&self) -> AnyResult<()> {
         if let Some(workspace_config) = &self.workspace_config {
-            yaml::write_file(&self.workspace_config_path, workspace_config)?;
+            yaml::write_file_with_config(&self.workspace_config_path, workspace_config)?;
         }
 
         for (tasks_config_path, tasks_config) in &self.tasks_configs {
-            yaml::write_file(tasks_config_path, tasks_config)?;
+            yaml::write_file_with_config(tasks_config_path, tasks_config)?;
         }
 
         for (project_config_path, project_config) in &self.project_configs {
-            yaml::write_file(project_config_path, project_config)?;
+            yaml::write_file_with_config(project_config_path, project_config)?;
         }
 
         Ok(())
