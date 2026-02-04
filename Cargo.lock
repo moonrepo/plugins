@@ -4410,7 +4410,7 @@ dependencies = [
 
 [[package]]
 name = "rust_toolchain"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "cargo-lock",
  "cargo_toml",
