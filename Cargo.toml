@@ -24,8 +24,8 @@ toml = { version = "0.9.8", default-features = false, features = [
 ] }
 
 # moon
-moon_common = { version = "2.0.0" }
-moon_config = { version = "2.0.0" }
+moon_common = { version = "2.0.1" }
+moon_config = { version = "2.0.2" }
 moon_pdk = { version = "2.0.0" }
 moon_pdk_api = { version = "2.0.0" }
 moon_pdk_test_utils = { version = "2.0.0" }

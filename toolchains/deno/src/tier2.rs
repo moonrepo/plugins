@@ -138,11 +138,11 @@ pub fn setup_environment(
             let mut args = vec!["install", "--global", "--allow-net", "--allow-read"];
 
             let name = match bin {
-                BinEntry::Name(bin) => {
+                BinEntry::String(bin) => {
                     args.push(bin);
                     bin
                 }
-                BinEntry::Config(cfg) => {
+                BinEntry::Object(cfg) => {
                     if cfg.local && env.ci {
                         continue;
                     }

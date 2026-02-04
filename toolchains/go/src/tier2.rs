@@ -264,8 +264,8 @@ pub fn setup_environment(
 
         for bin in &config.bins {
             let name = match bin {
-                BinEntry::Name(inner) => inner,
-                BinEntry::Config(cfg) => {
+                BinEntry::String(inner) => inner,
+                BinEntry::Object(cfg) => {
                     if cfg.local && env.ci {
                         continue;
                     } else {

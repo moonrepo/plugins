@@ -92,10 +92,10 @@ pub fn setup_environment(
 
         for bin in &config.bins {
             match bin {
-                BinEntry::Name(inner) => {
+                BinEntry::String(inner) => {
                     non_force_bins.push(inner.as_str());
                 }
-                BinEntry::Config(cfg) => {
+                BinEntry::Object(cfg) => {
                     if cfg.local && env.ci {
                         continue;
                     } else if cfg.force {
