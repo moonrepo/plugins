@@ -1,6 +1,4 @@
-# Bump 1
-
-$schema: "./cache/schemas/workspace.json"
+$schema: ./cache/schemas/workspace.json
 
 projects:
   root: .
@@ -40,10 +38,10 @@ projects:
 pipeline:
   logRunningCommand: true
 
-unstable_remote:
-  host: "grpcs://cache.depot.dev"
+remote:
+  host: grpcs://cache.depot.dev
   auth:
-    token: "DEPOT_TOKEN"
+    token: DEPOT_TOKEN
     headers:
-      "X-Depot-Org": "1xtpjd084j"
-      "X-Depot-Project": "n30s525s5q"
+      X-Depot-Org: 1xtpjd084j
+      X-Depot-Project: n30s525s5q
