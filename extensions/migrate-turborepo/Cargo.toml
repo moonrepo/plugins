@@ -1,6 +1,6 @@
 [package]
 name = "migrate_turborepo_extension"
-version = "1.0.1"
+version = "1.0.2"
 edition = "2024"
 license = "MIT"
 publish = false
