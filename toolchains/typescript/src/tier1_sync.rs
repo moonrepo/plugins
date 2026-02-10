@@ -146,12 +146,18 @@ pub fn sync_project_options(
 
     // Route `outDir` to moon's cache
     if config.route_out_dir_to_cache {
-        let out_dir = tsconfig.to_relative_path(
-            context
-                .workspace_root
-                .join(".moon/cache/types")
-                .join(&project.source),
-        )?;
+        let out_dir =
+            tsconfig.to_relative_path(if context.workspace_root.join(".config/moon").exists() {
+                context
+                    .workspace_root
+                    .join(".config/moon/cache/types")
+                    .join(&project.source)
+            } else {
+                context
+                    .workspace_root
+                    .join(".moon/cache/types")
+                    .join(&project.source)
+            })?;
 
         tsconfig.update_compiler_options(|options| {
             if options.out_dir.is_none()
