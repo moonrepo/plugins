@@ -8,22 +8,26 @@ use rustc_hash::FxHashMap;
 use starbase_utils::yaml;
 
 pub struct Migrator {
+    pub moon_config_dir: VirtualPath,
     pub project_configs: FxHashMap<VirtualPath, PartialProjectConfig>,
     pub root: VirtualPath,
     pub tasks_configs: FxHashMap<VirtualPath, PartialInheritedTasksConfig>,
     pub toolchain: Id,
     pub workspace_config: Option<PartialWorkspaceConfig>,
-    pub workspace_config_path: VirtualPath,
 }
 
 impl Migrator {
     pub fn new(workspace_root: &VirtualPath) -> AnyResult<Self> {
         Ok(Self {
+            moon_config_dir: if workspace_root.join(".config/moon").exists() {
+                workspace_root.join(".config/moon")
+            } else {
+                workspace_root.join(".moon")
+            },
             project_configs: FxHashMap::default(),
             tasks_configs: FxHashMap::default(),
             toolchain: Id::raw("node"),
             workspace_config: None,
-            workspace_config_path: workspace_root.join(".moon/workspace.yml"),
             root: workspace_root.to_owned(),
         })
     }
@@ -31,7 +35,10 @@ impl Migrator {
     pub fn detect_package_manager(&self) -> String {
         let mut package_manager = "npm";
 
-        if self.root.join("bun.lockb").exists() || self.toolchain == "bun" {
+        if self.root.join("bun.lock").exists()
+            || self.root.join("bun.lockb").exists()
+            || self.toolchain == "bun"
+        {
             package_manager = "bun";
         } else if self.root.join("pnpm-lock.yaml").exists() {
             package_manager = "pnpm";
@@ -87,7 +94,10 @@ impl Migrator {
         &mut self,
         scope: &str,
     ) -> AnyResult<&mut PartialInheritedTasksConfig> {
-        let tasks_config_path = self.root.join(".moon/tasks").join(format!("{scope}.yml"));
+        let tasks_config_path = self
+            .moon_config_dir
+            .join("tasks")
+            .join(format!("{scope}.yml"));
 
         if !self.tasks_configs.contains_key(&tasks_config_path) {
             self.tasks_configs.insert(
@@ -109,8 +119,9 @@ impl Migrator {
 
     pub fn load_workspace_config(&mut self) -> AnyResult<&mut PartialWorkspaceConfig> {
         if self.workspace_config.is_none() {
-            if self.workspace_config_path.exists() {
-                self.workspace_config = Some(yaml::read_file(&self.workspace_config_path)?);
+            if self.moon_config_dir.join("workspace.yml").exists() {
+                self.workspace_config =
+                    Some(yaml::read_file(self.moon_config_dir.join("workspace.yml"))?);
             } else {
                 self.workspace_config = Some(PartialWorkspaceConfig::default());
             }
@@ -121,7 +132,10 @@ impl Migrator {
 
     pub fn save_configs(&self) -> AnyResult<()> {
         if let Some(workspace_config) = &self.workspace_config {
-            yaml::write_file_with_config(&self.workspace_config_path, workspace_config)?;
+            yaml::write_file_with_config(
+                self.moon_config_dir.join("workspace.yml"),
+                workspace_config,
+            )?;
         }
 
         for (tasks_config_path, tasks_config) in &self.tasks_configs {

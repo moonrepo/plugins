@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added support for `.config/moon` directory.
+
 ## 1.0.1
 
 #### 🚀 Updates
