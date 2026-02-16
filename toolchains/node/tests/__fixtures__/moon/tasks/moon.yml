@@ -1,5 +1,4 @@
 language: javascript
-
 tasks:
   standard:
     command: node ./standard.js
@@ -11,8 +10,6 @@ tasks:
     command: node ./execArgs.js
   execBinSelf:
     command: node ./execBin.js
-
-  # Pipeline cases
   exitCodeNonZero:
     command: node ./exitCodeNonZero.js
   exitCodeZero:
@@ -33,8 +30,8 @@ tasks:
     command: node ./envVars.js
     env:
       MOON_FOO: abc
-      MOON_BAR: "123"
-      MOON_BAZ: "true"
+      MOON_BAR: '123'
+      MOON_BAZ: 'true'
   envVarsMoon:
     command: node ./envVarsMoon.js
   runFromProject:
@@ -55,11 +52,11 @@ tasks:
   affectedFilesArgs:
     command: node ./affectedFiles.js
     options:
-      affectedFiles: "args"
+      affectedFiles: args
   affectedFilesEnvVar:
     command: node ./affectedFiles.js
     options:
-      affectedFiles: "env"
+      affectedFiles: env
   ctrlc:
     command: node ./ctrlc.js
   ctrlcInteractive:
@@ -67,4 +64,4 @@ tasks:
     options:
       interactive: true
   viaScript:
-    script: 'echo "node toolchain" && node --version'
+    script: echo "node toolchain" && node --version

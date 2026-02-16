@@ -1,0 +1,12 @@
+$schema: ./cache/schemas/toolchains.json
+
+rust:
+  version: 1.93.0
+  bins:
+    - cargo-nextest
+  components:
+    - clippy
+    - rustfmt
+  targets:
+    - wasm32-wasip1
+  syncToolchainConfig: true

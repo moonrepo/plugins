@@ -2,26 +2,6 @@
 import fs from "node:fs";
 import { exec } from "./utils.mjs";
 
-const raw = await exec(
-  "moon",
-  [
-    "query",
-    "tasks",
-    "--affected",
-    "--upstream",
-    "deep",
-    "--downstream",
-    "deep",
-  ],
-  {
-    stdio: "pipe",
-  }
-);
-
-console.log("Tasks:");
-console.log(raw.out);
-console.log();
-
 const data = await exec(
   "moon",
   [
@@ -32,13 +12,17 @@ const data = await exec(
     "deep",
     "--downstream",
     "deep",
-    "--json",
   ],
   {
     stdio: "pipe",
   }
 );
 const { tasks } = JSON.parse(data.out);
+
+console.log("Tasks:");
+console.log(tasks);
+console.log();
+
 const taskCount = tasks.length;
 const taskPerJob = 10;
 const jobs = [];
