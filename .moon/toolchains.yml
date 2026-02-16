@@ -1,7 +1,7 @@
 $schema: ./cache/schemas/toolchains.json
 
 rust:
-  version: 1.92.0
+  version: 1.93.0
   bins:
     - cargo-nextest
   components:
