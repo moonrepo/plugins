@@ -1113,7 +1113,7 @@ dependencies = [
 
 [[package]]
 name = "deno_toolchain"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "deno_tool",
  "extism-pdk",
