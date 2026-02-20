@@ -5312,7 +5312,7 @@ dependencies = [
 
 [[package]]
 name = "system_toolchain"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "extism-pdk",
  "moon_pdk_api",
