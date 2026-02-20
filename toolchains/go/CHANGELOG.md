@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Updated with latest moon v2 plugin APIs.
+
 ## 1.0.2
 
 #### 🐞 Fixes

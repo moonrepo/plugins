@@ -15,8 +15,10 @@ serde = { version = "1.0.228", features = ["derive"] }
 serde_json = { version = "1.0.146", features = ["preserve_order"] }
 serial_test = "3.2.0"
 shell-words = "1.1.1"
-starbase_sandbox = "0.10.3"
-starbase_utils = { version = "0.12.6", default-features = false, features = ["editor-config"] }
+starbase_sandbox = "0.10.5"
+starbase_utils = { version = "0.12.6", default-features = false, features = [
+    "editor-config",
+] }
 tokio = { version = "1.49.0", features = ["full"] }
 toml = { version = "0.9.8", default-features = false, features = [
     "parse",
@@ -24,13 +26,13 @@ toml = { version = "0.9.8", default-features = false, features = [
 ] }
 
 # moon
-moon_common = { version = "2.0.1" }
-moon_config = { version = "2.0.2" }
-moon_pdk = { version = "2.0.0" }
-moon_pdk_api = { version = "2.0.0" }
-moon_pdk_test_utils = { version = "2.0.0" }
-moon_project = { version = "2.0.0" }
-moon_target = { version = "2.0.0" }
+moon_common = { version = "2.0.2" }
+moon_config = { version = "2.0.5" }
+moon_pdk = { version = "2.0.1" }
+moon_pdk_api = { version = "2.0.1" }
+moon_pdk_test_utils = { version = "2.0.1" }
+moon_project = { version = "2.0.1" }
+moon_target = { version = "2.0.1" }
 # moon_common = { path = "../../moon/crates/common" }
 # moon_config = { path = "../../moon/crates/config" }
 # moon_pdk = { path = "../../moon/crates/pdk" }
@@ -42,7 +44,7 @@ moon_target = { version = "2.0.0" }
 # proto
 proto_pdk = { version = "0.32.6" }
 proto_pdk_api = { version = "0.31.6" }
-proto_pdk_test_utils = { version = "0.43.2" }
+proto_pdk_test_utils = { version = "0.43.5" }
 # proto_pdk = { path = "../../proto/crates/pdk" }
 # proto_pdk_api = { path = "../../proto/crates/pdk-api" }
 # proto_pdk_test_utils = { path = "../../proto/crates/pdk-test-utils" }
