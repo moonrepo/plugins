@@ -481,6 +481,60 @@
       "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20220227/cpython-3.10.2+20220227-x86_64-unknown-linux-musl-lto-full.tar.zst"
     }
   },
+  "3.10.20": {
+    "aarch64-apple-darwin": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.10.20+20260303-aarch64-apple-darwin-pgo+lto-full.tar.zst"
+    },
+    "aarch64-unknown-linux-gnu": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.10.20+20260303-aarch64-unknown-linux-gnu-pgo+lto-full.tar.zst"
+    },
+    "aarch64-unknown-linux-musl": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.10.20+20260303-aarch64-unknown-linux-musl-lto-full.tar.zst"
+    },
+    "armv7-unknown-linux-gnueabi": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.10.20+20260303-armv7-unknown-linux-gnueabi-lto-full.tar.zst"
+    },
+    "armv7-unknown-linux-gnueabihf": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.10.20+20260303-armv7-unknown-linux-gnueabihf-lto-full.tar.zst"
+    },
+    "i686-pc-windows-msvc": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.10.20+20260303-i686-pc-windows-msvc-pgo-full.tar.zst"
+    },
+    "powerpc64le-unknown-linux-gnu": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.10.20+20260303-ppc64le-unknown-linux-gnu-lto-full.tar.zst"
+    },
+    "riscv64gc-unknown-linux-gnu": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.10.20+20260303-riscv64-unknown-linux-gnu-lto-full.tar.zst"
+    },
+    "s390x-unknown-linux-gnu": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.10.20+20260303-s390x-unknown-linux-gnu-lto-full.tar.zst"
+    },
+    "x86_64-apple-darwin": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.10.20+20260303-x86_64-apple-darwin-pgo+lto-full.tar.zst"
+    },
+    "x86_64-pc-windows-msvc": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.10.20+20260303-x86_64-pc-windows-msvc-pgo-full.tar.zst"
+    },
+    "x86_64-unknown-linux-gnu": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.10.20+20260303-x86_64-unknown-linux-gnu-pgo+lto-full.tar.zst"
+    },
+    "x86_64-unknown-linux-musl": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.10.20+20260303-x86_64-unknown-linux-musl-lto-full.tar.zst"
+    }
+  },
   "3.10.3": {
     "aarch64-apple-darwin": {
       "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20220318/cpython-3.10.3+20220318-aarch64-apple-darwin-pgo+lto-full.tar.zst.sha256",
@@ -1015,6 +1069,64 @@
       "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.11.14+20260211-x86_64-unknown-linux-musl-lto-full.tar.zst"
     }
   },
+  "3.11.15": {
+    "aarch64-apple-darwin": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.11.15+20260303-aarch64-apple-darwin-pgo+lto-full.tar.zst"
+    },
+    "aarch64-pc-windows-msvc": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.11.15+20260303-aarch64-pc-windows-msvc-pgo-full.tar.zst"
+    },
+    "aarch64-unknown-linux-gnu": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.11.15+20260303-aarch64-unknown-linux-gnu-pgo+lto-full.tar.zst"
+    },
+    "aarch64-unknown-linux-musl": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.11.15+20260303-aarch64-unknown-linux-musl-lto-full.tar.zst"
+    },
+    "armv7-unknown-linux-gnueabi": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.11.15+20260303-armv7-unknown-linux-gnueabi-lto-full.tar.zst"
+    },
+    "armv7-unknown-linux-gnueabihf": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.11.15+20260303-armv7-unknown-linux-gnueabihf-lto-full.tar.zst"
+    },
+    "i686-pc-windows-msvc": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.11.15+20260303-i686-pc-windows-msvc-pgo-full.tar.zst"
+    },
+    "powerpc64le-unknown-linux-gnu": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.11.15+20260303-ppc64le-unknown-linux-gnu-lto-full.tar.zst"
+    },
+    "riscv64gc-unknown-linux-gnu": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.11.15+20260303-riscv64-unknown-linux-gnu-lto-full.tar.zst"
+    },
+    "s390x-unknown-linux-gnu": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.11.15+20260303-s390x-unknown-linux-gnu-lto-full.tar.zst"
+    },
+    "x86_64-apple-darwin": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.11.15+20260303-x86_64-apple-darwin-pgo+lto-full.tar.zst"
+    },
+    "x86_64-pc-windows-msvc": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.11.15+20260303-x86_64-pc-windows-msvc-pgo-full.tar.zst"
+    },
+    "x86_64-unknown-linux-gnu": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.11.15+20260303-x86_64-unknown-linux-gnu-pgo+lto-full.tar.zst"
+    },
+    "x86_64-unknown-linux-musl": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.11.15+20260303-x86_64-unknown-linux-musl-lto-full.tar.zst"
+    }
+  },
   "3.11.3": {
     "aarch64-apple-darwin": {
       "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20230507/cpython-3.11.3+20230507-aarch64-apple-darwin-pgo+lto-full.tar.zst.sha256",
@@ -1537,6 +1649,64 @@
     "x86_64-unknown-linux-musl": {
       "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
       "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.12.12+20260211-x86_64-unknown-linux-musl-lto-full.tar.zst"
+    }
+  },
+  "3.12.13": {
+    "aarch64-apple-darwin": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.12.13+20260303-aarch64-apple-darwin-pgo+lto-full.tar.zst"
+    },
+    "aarch64-pc-windows-msvc": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.12.13+20260303-aarch64-pc-windows-msvc-pgo-full.tar.zst"
+    },
+    "aarch64-unknown-linux-gnu": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.12.13+20260303-aarch64-unknown-linux-gnu-pgo+lto-full.tar.zst"
+    },
+    "aarch64-unknown-linux-musl": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.12.13+20260303-aarch64-unknown-linux-musl-lto-full.tar.zst"
+    },
+    "armv7-unknown-linux-gnueabi": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.12.13+20260303-armv7-unknown-linux-gnueabi-lto-full.tar.zst"
+    },
+    "armv7-unknown-linux-gnueabihf": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.12.13+20260303-armv7-unknown-linux-gnueabihf-lto-full.tar.zst"
+    },
+    "i686-pc-windows-msvc": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.12.13+20260303-i686-pc-windows-msvc-pgo-full.tar.zst"
+    },
+    "powerpc64le-unknown-linux-gnu": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.12.13+20260303-ppc64le-unknown-linux-gnu-lto-full.tar.zst"
+    },
+    "riscv64gc-unknown-linux-gnu": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.12.13+20260303-riscv64-unknown-linux-gnu-lto-full.tar.zst"
+    },
+    "s390x-unknown-linux-gnu": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.12.13+20260303-s390x-unknown-linux-gnu-lto-full.tar.zst"
+    },
+    "x86_64-apple-darwin": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.12.13+20260303-x86_64-apple-darwin-pgo+lto-full.tar.zst"
+    },
+    "x86_64-pc-windows-msvc": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.12.13+20260303-x86_64-pc-windows-msvc-pgo-full.tar.zst"
+    },
+    "x86_64-unknown-linux-gnu": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.12.13+20260303-x86_64-unknown-linux-gnu-pgo+lto-full.tar.zst"
+    },
+    "x86_64-unknown-linux-musl": {
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.12.13+20260303-x86_64-unknown-linux-musl-lto-full.tar.zst"
     }
   },
   "3.12.2": {
@@ -2213,60 +2383,60 @@
   },
   "3.13.12": {
     "aarch64-apple-darwin": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.13.12+20260211-aarch64-apple-darwin-pgo+lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.13.12+20260303-aarch64-apple-darwin-pgo+lto-full.tar.zst"
     },
     "aarch64-pc-windows-msvc": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.13.12+20260211-aarch64-pc-windows-msvc-pgo-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.13.12+20260303-aarch64-pc-windows-msvc-pgo-full.tar.zst"
     },
     "aarch64-unknown-linux-gnu": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.13.12+20260211-aarch64-unknown-linux-gnu-pgo+lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.13.12+20260303-aarch64-unknown-linux-gnu-pgo+lto-full.tar.zst"
     },
     "aarch64-unknown-linux-musl": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.13.12+20260211-aarch64-unknown-linux-musl-lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.13.12+20260303-aarch64-unknown-linux-musl-lto-full.tar.zst"
     },
     "armv7-unknown-linux-gnueabi": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.13.12+20260211-armv7-unknown-linux-gnueabi-lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.13.12+20260303-armv7-unknown-linux-gnueabi-lto-full.tar.zst"
     },
     "armv7-unknown-linux-gnueabihf": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.13.12+20260211-armv7-unknown-linux-gnueabihf-lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.13.12+20260303-armv7-unknown-linux-gnueabihf-lto-full.tar.zst"
     },
     "i686-pc-windows-msvc": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.13.12+20260211-i686-pc-windows-msvc-pgo-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.13.12+20260303-i686-pc-windows-msvc-pgo-full.tar.zst"
     },
     "powerpc64le-unknown-linux-gnu": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.13.12+20260211-ppc64le-unknown-linux-gnu-lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.13.12+20260303-ppc64le-unknown-linux-gnu-lto-full.tar.zst"
     },
     "riscv64gc-unknown-linux-gnu": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.13.12+20260211-riscv64-unknown-linux-gnu-lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.13.12+20260303-riscv64-unknown-linux-gnu-lto-full.tar.zst"
     },
     "s390x-unknown-linux-gnu": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.13.12+20260211-s390x-unknown-linux-gnu-lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.13.12+20260303-s390x-unknown-linux-gnu-lto-full.tar.zst"
     },
     "x86_64-apple-darwin": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.13.12+20260211-x86_64-apple-darwin-pgo+lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.13.12+20260303-x86_64-apple-darwin-pgo+lto-full.tar.zst"
     },
     "x86_64-pc-windows-msvc": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.13.12+20260211-x86_64-pc-windows-msvc-pgo-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.13.12+20260303-x86_64-pc-windows-msvc-pgo-full.tar.zst"
     },
     "x86_64-unknown-linux-gnu": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.13.12+20260211-x86_64-unknown-linux-gnu-pgo+lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.13.12+20260303-x86_64-unknown-linux-gnu-pgo+lto-full.tar.zst"
     },
     "x86_64-unknown-linux-musl": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.13.12+20260211-x86_64-unknown-linux-musl-lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.13.12+20260303-x86_64-unknown-linux-musl-lto-full.tar.zst"
     }
   },
   "3.13.2": {
@@ -3477,60 +3647,60 @@
   },
   "3.14.3": {
     "aarch64-apple-darwin": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.14.3+20260211-aarch64-apple-darwin-pgo+lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.14.3+20260303-aarch64-apple-darwin-pgo+lto-full.tar.zst"
     },
     "aarch64-pc-windows-msvc": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.14.3+20260211-aarch64-pc-windows-msvc-pgo-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.14.3+20260303-aarch64-pc-windows-msvc-pgo-full.tar.zst"
     },
     "aarch64-unknown-linux-gnu": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.14.3+20260211-aarch64-unknown-linux-gnu-pgo+lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.14.3+20260303-aarch64-unknown-linux-gnu-pgo+lto-full.tar.zst"
     },
     "aarch64-unknown-linux-musl": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.14.3+20260211-aarch64-unknown-linux-musl-lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.14.3+20260303-aarch64-unknown-linux-musl-lto-full.tar.zst"
     },
     "armv7-unknown-linux-gnueabi": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.14.3+20260211-armv7-unknown-linux-gnueabi-lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.14.3+20260303-armv7-unknown-linux-gnueabi-lto-full.tar.zst"
     },
     "armv7-unknown-linux-gnueabihf": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.14.3+20260211-armv7-unknown-linux-gnueabihf-lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.14.3+20260303-armv7-unknown-linux-gnueabihf-lto-full.tar.zst"
     },
     "i686-pc-windows-msvc": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.14.3+20260211-i686-pc-windows-msvc-pgo-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.14.3+20260303-i686-pc-windows-msvc-pgo-full.tar.zst"
     },
     "powerpc64le-unknown-linux-gnu": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.14.3+20260211-ppc64le-unknown-linux-gnu-lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.14.3+20260303-ppc64le-unknown-linux-gnu-lto-full.tar.zst"
     },
     "riscv64gc-unknown-linux-gnu": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.14.3+20260211-riscv64-unknown-linux-gnu-lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.14.3+20260303-riscv64-unknown-linux-gnu-lto-full.tar.zst"
     },
     "s390x-unknown-linux-gnu": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.14.3+20260211-s390x-unknown-linux-gnu-lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.14.3+20260303-s390x-unknown-linux-gnu-lto-full.tar.zst"
     },
     "x86_64-apple-darwin": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.14.3+20260211-x86_64-apple-darwin-pgo+lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.14.3+20260303-x86_64-apple-darwin-pgo+lto-full.tar.zst"
     },
     "x86_64-pc-windows-msvc": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.14.3+20260211-x86_64-pc-windows-msvc-pgo-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.14.3+20260303-x86_64-pc-windows-msvc-pgo-full.tar.zst"
     },
     "x86_64-unknown-linux-gnu": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.14.3+20260211-x86_64-unknown-linux-gnu-pgo+lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.14.3+20260303-x86_64-unknown-linux-gnu-pgo+lto-full.tar.zst"
     },
     "x86_64-unknown-linux-musl": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.14.3+20260211-x86_64-unknown-linux-musl-lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.14.3+20260303-x86_64-unknown-linux-musl-lto-full.tar.zst"
     }
   },
   "3.15.0-a.1": {
@@ -3825,60 +3995,60 @@
   },
   "3.15.0-a.6": {
     "aarch64-apple-darwin": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.15.0a6+20260211-aarch64-apple-darwin-pgo+lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.15.0a6+20260303-aarch64-apple-darwin-pgo+lto-full.tar.zst"
     },
     "aarch64-pc-windows-msvc": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.15.0a6+20260211-aarch64-pc-windows-msvc-pgo-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.15.0a6+20260303-aarch64-pc-windows-msvc-pgo-full.tar.zst"
     },
     "aarch64-unknown-linux-gnu": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.15.0a6+20260211-aarch64-unknown-linux-gnu-pgo+lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.15.0a6+20260303-aarch64-unknown-linux-gnu-pgo+lto-full.tar.zst"
     },
     "aarch64-unknown-linux-musl": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.15.0a6+20260211-aarch64-unknown-linux-musl-lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.15.0a6+20260303-aarch64-unknown-linux-musl-lto-full.tar.zst"
     },
     "armv7-unknown-linux-gnueabi": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.15.0a6+20260211-armv7-unknown-linux-gnueabi-lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.15.0a6+20260303-armv7-unknown-linux-gnueabi-lto-full.tar.zst"
     },
     "armv7-unknown-linux-gnueabihf": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.15.0a6+20260211-armv7-unknown-linux-gnueabihf-lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.15.0a6+20260303-armv7-unknown-linux-gnueabihf-lto-full.tar.zst"
     },
     "i686-pc-windows-msvc": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.15.0a6+20260211-i686-pc-windows-msvc-pgo-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.15.0a6+20260303-i686-pc-windows-msvc-pgo-full.tar.zst"
     },
     "powerpc64le-unknown-linux-gnu": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.15.0a6+20260211-ppc64le-unknown-linux-gnu-lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.15.0a6+20260303-ppc64le-unknown-linux-gnu-lto-full.tar.zst"
     },
     "riscv64gc-unknown-linux-gnu": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.15.0a6+20260211-riscv64-unknown-linux-gnu-lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.15.0a6+20260303-riscv64-unknown-linux-gnu-lto-full.tar.zst"
     },
     "s390x-unknown-linux-gnu": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.15.0a6+20260211-s390x-unknown-linux-gnu-lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.15.0a6+20260303-s390x-unknown-linux-gnu-lto-full.tar.zst"
     },
     "x86_64-apple-darwin": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.15.0a6+20260211-x86_64-apple-darwin-pgo+lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.15.0a6+20260303-x86_64-apple-darwin-pgo+lto-full.tar.zst"
     },
     "x86_64-pc-windows-msvc": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.15.0a6+20260211-x86_64-pc-windows-msvc-pgo-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.15.0a6+20260303-x86_64-pc-windows-msvc-pgo-full.tar.zst"
     },
     "x86_64-unknown-linux-gnu": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.15.0a6+20260211-x86_64-unknown-linux-gnu-pgo+lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.15.0a6+20260303-x86_64-unknown-linux-gnu-pgo+lto-full.tar.zst"
     },
     "x86_64-unknown-linux-musl": {
-      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/SHA256SUMS",
-      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.15.0a6+20260211-x86_64-unknown-linux-musl-lto-full.tar.zst"
+      "checksum": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/SHA256SUMS",
+      "download": "https://github.com/astral-sh/python-build-standalone/releases/download/20260303/cpython-3.15.0a6+20260303-x86_64-unknown-linux-musl-lto-full.tar.zst"
     }
   },
   "3.7.6": {
