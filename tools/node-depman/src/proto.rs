@@ -350,6 +350,7 @@ pub fn locate_executables(
     // NOT where the packages/node modules are stored. Some package managers
     // have separate folders for the 2 processes, and then create symlinks.
     let mut globals_lookup_dirs = vec![
+        "$PREFIX/bin".into(),
         "$PREFIX/shims".into(),
         "$PROTO_HOME/tools/node/$PROTO_NODE_VERSION/bin".into(),
     ];
@@ -440,97 +441,63 @@ pub fn locate_executables(
 }
 
 #[plugin_fn]
-pub fn pre_run(Json(input): Json<RunHook>) -> FnResult<Json<RunHookResult>> {
-    let mut result = RunHookResult::default();
-
-    let Some(globals_dir) = &input.globals_dir else {
-        return Ok(Json(result));
-    };
-
-    let args = &input.passthrough_args;
+pub fn activate_environment(
+    Json(input): Json<ActivateEnvironmentInput>,
+) -> FnResult<Json<ActivateEnvironmentOutput>> {
+    let mut output = ActivateEnvironmentOutput::default();
     let config = get_tool_config::<NodeDepmanToolConfig>()?;
 
-    if args.len() < 3 || !config.shared_globals_dir {
-        return Ok(Json(result));
+    if config.shared_globals_dir
+        && let Some(globals_dir) = &input.globals_dir
+    {
+        // Includes trailing /bin folder
+        let globals_bin_dir = globals_dir.real_path_string().unwrap();
+        // Parent directory, doesn't include /bin folder
+        let globals_root_dir = globals_dir
+            .real_path()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .to_string_lossy()
+            .to_string();
+
+        let env = get_host_environment()?;
+        let manager = PackageManager::detect()?;
+
+        match manager {
+            // Unix will create a /bin directory when installing into the root,
+            // while Windows installs directly into the /bin directory.
+            PackageManager::Npm => {
+                output.env.insert(
+                    "PREFIX".into(),
+                    if env.os.is_windows() {
+                        globals_bin_dir
+                    } else {
+                        globals_root_dir
+                    },
+                );
+            }
+
+            // Pnpm has explicit support for the bin and root dirs,
+            // which makes this super simple to handle.
+            PackageManager::Pnpm => {
+                output
+                    .env
+                    .insert("pnpm_config_global_dir".into(), globals_root_dir);
+                output
+                    .env
+                    .insert("pnpm_config_global_bin_dir".into(), globals_bin_dir);
+            }
+
+            // Both Unix and Windows will create a /bin directory,
+            // when installing into the root.
+            PackageManager::Yarn => {
+                output.env.insert("PREFIX".into(), globals_root_dir);
+            }
+        };
     }
 
-    let env = get_host_environment()?;
-    let manager = PackageManager::detect()?;
-
-    // Includes trailing /bin folder
-    let globals_bin_dir = globals_dir.real_path_string().unwrap();
-    // Parent directory, doesn't include /bin folder
-    let globals_root_dir = globals_dir
-        .real_path()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .to_string_lossy()
-        .to_string();
-
-    match manager {
-        // npm install|add|etc -g <dep>
-        PackageManager::Npm => {
-            let has_global = args
-                .iter()
-                .any(|arg| arg == "--global" || arg == "-g" || arg == "--location=global");
-            let has_location = args.iter().any(|arg| arg == "--location")
-                && args.iter().any(|arg| arg == "global");
-
-            if (has_global || has_location) && args.iter().all(|arg| arg != "--prefix") {
-                result
-                    .env
-                    .get_or_insert(HashMap::default())
-                    // Unix will create a /bin directory when installing into the root,
-                    // while Windows installs directly into the /bin directory.
-                    .insert(
-                        "PREFIX".into(),
-                        if env.os.is_windows() {
-                            globals_bin_dir
-                        } else {
-                            globals_root_dir
-                        },
-                    );
-            }
-        }
-
-        // pnpm add|update|etc -g <dep>
-        PackageManager::Pnpm => {
-            let aliases = [
-                "add", "update", "remove", "list", "outdated", "why", "root", "bin", "env",
-                "config",
-            ];
-
-            if aliases.iter().any(|alias| *alias == args[0])
-                && args.iter().any(|arg| arg == "--global" || arg == "-g")
-                && args
-                    .iter()
-                    .all(|arg| arg != "--global-dir" && arg != "--global-bin-dir")
-            {
-                // These arguments aren't ideal, but pnpm doesn't support
-                // environment variables from what I've seen...
-                let new_args = result.args.get_or_insert(vec![]);
-                new_args.push("--global-dir".into());
-                new_args.push(globals_root_dir);
-                new_args.push("--global-bin-dir".into());
-                new_args.push(globals_bin_dir);
-            }
-        }
-
-        // yarn global add|remove|etc <dep>
-        PackageManager::Yarn => {
-            if args[0] == "global" && args.iter().all(|arg| arg != "--prefix") {
-                result
-                    .env
-                    .get_or_insert(HashMap::default())
-                    // Both Unix and Windows will create a /bin directory,
-                    // when installing into the root.
-                    .insert("PREFIX".into(), globals_root_dir);
-            }
-        }
-    };
-
-    Ok(Json(result))
+    Ok(Json(output))
 }
 
 fn create_internal_shim(

@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Replaced `pre_run` hook with `activate_environment` function.
+- Updated `shared-globals-dir` to also work with `proto activate` and not just `proto run`.
+- Now sets `pnpm_config_global_dir` and `pnpm_config_global_bin_dir` environment variables.
+
 ## 0.17.5
 
 #### 🚀 Updates
