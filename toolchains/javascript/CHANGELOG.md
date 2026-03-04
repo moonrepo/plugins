@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added support for `*` versions when determining project relationships.
+
 ## 1.0.4
 
 #### 🚀 Updates

@@ -81,6 +81,9 @@ pub fn extend_project_graph(
                         | VersionProtocol::Portal(rel_path) => {
                             paths_are_equal(dep_root, project_root.join(rel_path))
                         }
+                        VersionProtocol::Requirement(req) if req == &VersionReq::STAR => {
+                            packages.contains_key(dep_name)
+                        }
                         VersionProtocol::Workspace(_) => true,
                         _ => false,
                     };
