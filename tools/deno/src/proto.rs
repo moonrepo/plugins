@@ -159,7 +159,7 @@ pub fn download_prebuilt(
         permutations! [
             HostOS::Linux => [HostArch::X64, HostArch::Arm64],
             HostOS::MacOS => [HostArch::X64, HostArch::Arm64],
-            HostOS::Windows => [HostArch::X64],
+            HostOS::Windows => [HostArch::X64, HostArch::Arm64],
         ],
     )?;
 

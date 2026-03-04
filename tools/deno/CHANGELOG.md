@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added Windows arm64 support. Requires Deno >= v2.7.
+
 ## 0.15.8
 
 #### 🚀 Updates
