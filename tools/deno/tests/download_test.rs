@@ -126,10 +126,7 @@ mod deno_tool {
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    #[should_panic(
-        expected = "Unable to install Deno, unsupported architecture arm64 for windows."
-    )]
-    async fn doesnt_support_windows_arm64() {
+    async fn supports_windows_arm64() {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("deno-test", |config| {
@@ -149,8 +146,8 @@ mod deno_tool {
                 .await,
             DownloadPrebuiltOutput {
                 download_name: Some("deno-aarch64-pc-windows-msvc.zip".into()),
-                download_url:
-                    "https://github.com/denoland/deno/releases/download/v1.2.0/deno-aarch64-pc-windows-msvc.zip".into(),
+                download_url: "https://github.com/denoland/deno/releases/download/v1.2.0/deno-aarch64-pc-windows-msvc.zip"
+                    .into(),
                 ..Default::default()
             }
         );

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added `extend_project_graph` support. Will now read `pyproject.toml` dependencies to determine project relationships.
+
 ## 0.1.2
 
 #### 🚀 Updates

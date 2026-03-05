@@ -81,6 +81,9 @@ pub fn extend_project_graph(
                         | VersionProtocol::Portal(rel_path) => {
                             paths_are_equal(dep_root, project_root.join(rel_path))
                         }
+                        VersionProtocol::Requirement(req) if req == &VersionReq::STAR => {
+                            packages.contains_key(dep_name)
+                        }
                         VersionProtocol::Workspace(_) => true,
                         _ => false,
                     };
@@ -493,11 +496,7 @@ pub fn install_dependencies(
             }
             JavaScriptPackageManager::Pnpm => {
                 output.dedupe_command =
-                    Some(if package_manager_config.version_satisfies(">=7.26.0") {
-                        ExecCommandInput::new("pnpm", ["dedupe"])
-                            .cwd(input.root)
-                            .into()
-                    } else {
+                    Some(if package_manager_config.version_satisfies("<7.26.0") {
                         ExecCommandInput::new(
                             "npx",
                             [
@@ -510,15 +509,15 @@ pub fn install_dependencies(
                         )
                         .cwd(input.root)
                         .into()
+                    } else {
+                        ExecCommandInput::new("pnpm", ["dedupe"])
+                            .cwd(input.root)
+                            .into()
                     });
             }
             JavaScriptPackageManager::Yarn => {
                 output.dedupe_command =
-                    Some(if package_manager_config.version_satisfies(">=2.0.0") {
-                        ExecCommandInput::new("yarn", ["dedupe"])
-                            .cwd(input.root)
-                            .into()
-                    } else {
+                    Some(if package_manager_config.version_satisfies("<2.0.0") {
                         ExecCommandInput::new(
                             "npx",
                             [
@@ -532,6 +531,10 @@ pub fn install_dependencies(
                         )
                         .cwd(input.root)
                         .into()
+                    } else {
+                        ExecCommandInput::new("yarn", ["dedupe"])
+                            .cwd(input.root)
+                            .into()
                     });
             }
         };
