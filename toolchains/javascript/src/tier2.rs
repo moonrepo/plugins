@@ -496,11 +496,7 @@ pub fn install_dependencies(
             }
             JavaScriptPackageManager::Pnpm => {
                 output.dedupe_command =
-                    Some(if package_manager_config.version_satisfies(">=7.26.0") {
-                        ExecCommandInput::new("pnpm", ["dedupe"])
-                            .cwd(input.root)
-                            .into()
-                    } else {
+                    Some(if package_manager_config.version_satisfies("<7.26.0") {
                         ExecCommandInput::new(
                             "npx",
                             [
@@ -513,15 +509,15 @@ pub fn install_dependencies(
                         )
                         .cwd(input.root)
                         .into()
+                    } else {
+                        ExecCommandInput::new("pnpm", ["dedupe"])
+                            .cwd(input.root)
+                            .into()
                     });
             }
             JavaScriptPackageManager::Yarn => {
                 output.dedupe_command =
-                    Some(if package_manager_config.version_satisfies(">=2.0.0") {
-                        ExecCommandInput::new("yarn", ["dedupe"])
-                            .cwd(input.root)
-                            .into()
-                    } else {
+                    Some(if package_manager_config.version_satisfies("<2.0.0") {
                         ExecCommandInput::new(
                             "npx",
                             [
@@ -535,6 +531,10 @@ pub fn install_dependencies(
                         )
                         .cwd(input.root)
                         .into()
+                    } else {
+                        ExecCommandInput::new("yarn", ["dedupe"])
+                            .cwd(input.root)
+                            .into()
                     });
             }
         };

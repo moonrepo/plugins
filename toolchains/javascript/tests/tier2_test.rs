@@ -1304,7 +1304,12 @@ mod javascript_toolchain_tier2 {
 
             #[tokio::test(flavor = "multi_thread")]
             async fn legacy_dedupe_for_older_versions() {
-                let sandbox = create_empty_moon_sandbox();
+                let mut sandbox = create_empty_moon_sandbox();
+
+                sandbox
+                    .host_funcs
+                    .mock_load_toolchain_config(|_, _| json!({ "version": "6" }));
+
                 let plugin = sandbox.create_toolchain("javascript").await;
 
                 let output = plugin
@@ -1489,7 +1494,12 @@ mod javascript_toolchain_tier2 {
 
             #[tokio::test(flavor = "multi_thread")]
             async fn legacy_dedupe_for_older_versions() {
-                let sandbox = create_empty_moon_sandbox();
+                let mut sandbox = create_empty_moon_sandbox();
+
+                sandbox
+                    .host_funcs
+                    .mock_load_toolchain_config(|_, _| json!({ "version": "1" }));
+
                 let plugin = sandbox.create_toolchain("javascript").await;
 
                 let output = plugin

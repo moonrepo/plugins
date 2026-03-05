@@ -6,6 +6,10 @@
 
 - Added support for `*` versions when determining project relationships.
 
+#### 🐞 Fixes
+
+- Reworked `pnpm dedupe` and `yarn dedupe` detection logic.
+
 ## 1.0.4
 
 #### 🚀 Updates
