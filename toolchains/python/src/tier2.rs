@@ -1,13 +1,100 @@
 use crate::config::*;
 use crate::managers::*;
-use crate::pyproject_toml::PyProjectTomlWithTools;
+use crate::pyproject_toml::{PyProjectToml, PyProjectTomlWithTools};
 use extism_pdk::*;
+use moon_config::DependencyScope;
 use moon_pdk::{
     load_project_toolchain_config, load_toolchain_config, locate_root, locate_root_many,
     locate_root_many_with_check, parse_toolchain_config_schema,
 };
 use moon_pdk_api::*;
+use pep508_rs::Requirement;
+use std::collections::BTreeMap;
 use std::path::PathBuf;
+
+#[plugin_fn]
+pub fn extend_project_graph(
+    Json(input): Json<ExtendProjectGraphInput>,
+) -> FnResult<Json<ExtendProjectGraphOutput>> {
+    let mut output = ExtendProjectGraphOutput::default();
+
+    // First pass, gather all packages and their manifests
+    let mut packages = BTreeMap::default();
+
+    for (id, source) in input.project_sources {
+        let project_root = input.context.get_project_root_from_source(&source);
+        let manifest_path = project_root.join("pyproject.toml");
+
+        if manifest_path.exists() {
+            let mut manifest = PyProjectToml::load(manifest_path)?;
+
+            // Remove fields we don't need to avoid eating a ton of memory
+            manifest.build_system = None;
+            manifest.dependency_groups = None;
+
+            // We need to track all packages, even those without a name
+            if let Some(project) = &mut manifest.project {
+                project.description = None;
+                project.authors = None;
+                project.maintainers = None;
+                project.keywords = None;
+                project.classifiers = None;
+
+                packages.insert(project.name.clone(), (id, manifest));
+            }
+        }
+    }
+
+    // Second pass, extract packages and their relationships
+    for (id, manifest) in packages.values() {
+        let mut project_output = ExtendProjectOutput::default();
+
+        let mut extract_implicit_deps =
+            |reqs: &[Requirement], scope: DependencyScope| -> AnyResult<()> {
+                for req in reqs {
+                    let req_name = req.name.to_string();
+
+                    if req.extras.is_empty()
+                        && req.version_or_url.is_none()
+                        && req.origin.is_none()
+                        && let Some((dep_id, _)) = packages.get(&req_name)
+                    {
+                        project_output.dependencies.push(ProjectDependency {
+                            id: dep_id.to_owned(),
+                            scope,
+                            via: Some(format!("requirement {req_name}")),
+                        });
+                    }
+                }
+
+                Ok(())
+            };
+
+        if let Some(project) = &manifest.project {
+            project_output.alias = Some(project.name.clone());
+
+            if let Some(deps) = &project.dependencies {
+                extract_implicit_deps(deps, DependencyScope::Production)?;
+            }
+
+            if let Some(deps) = &project.optional_dependencies {
+                for reqs in deps.values() {
+                    extract_implicit_deps(reqs, DependencyScope::Production)?;
+                }
+            }
+        }
+
+        output
+            .extended_projects
+            .insert(id.to_owned(), project_output);
+
+        if let Some(file) = manifest.path.virtual_path() {
+            output.input_files.push(file);
+        }
+    }
+
+    Ok(Json(output))
+}
 
 fn gather_shared_paths(
     config: &PythonToolchainConfig,
