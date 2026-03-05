@@ -1,0 +1,7 @@
+[project]
+name = "c"
+version = "1.0.0"
+dependencies = ["a", "click"]
+
+[project.optional-dependencies]
+misc = ["b"]

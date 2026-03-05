@@ -1,0 +1,6 @@
+[project]
+name = "root"
+version = "1.0.0"
+
+[tool.uv.workspace]
+members = ["a", "b", "c"]

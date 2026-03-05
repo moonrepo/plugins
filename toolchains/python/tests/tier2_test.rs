@@ -1,3 +1,4 @@
+use moon_config::DependencyScope;
 use moon_pdk_api::*;
 use moon_pdk_test_utils::{create_empty_moon_sandbox, create_moon_sandbox};
 use serde_json::json;
@@ -6,6 +7,116 @@ use std::path::PathBuf;
 
 mod python_toolchain_tier2 {
     use super::*;
+
+    mod extend_project_graph {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn loads_for_all_sources() {
+            let sandbox = create_moon_sandbox("projects");
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let mut input = ExtendProjectGraphInput::default();
+            input.project_sources.insert(Id::raw("a"), "a".into());
+            input.project_sources.insert(Id::raw("b"), "b".into());
+            input.project_sources.insert(Id::raw("c"), "c".into());
+
+            let mut output = plugin.extend_project_graph(input).await;
+
+            assert_eq!(
+                output.extended_projects,
+                BTreeMap::from_iter([
+                    (
+                        Id::raw("a"),
+                        ExtendProjectOutput {
+                            alias: Some("a".into()),
+                            ..Default::default()
+                        }
+                    ),
+                    (
+                        Id::raw("b"),
+                        ExtendProjectOutput {
+                            alias: Some("b".into()),
+                            ..Default::default()
+                        }
+                    ),
+                    (
+                        Id::raw("c"),
+                        ExtendProjectOutput {
+                            alias: Some("c".into()),
+                            dependencies: vec![
+                                ProjectDependency {
+                                    id: Id::raw("a"),
+                                    scope: DependencyScope::Production,
+                                    via: Some("requirement a".into()),
+                                },
+                                ProjectDependency {
+                                    id: Id::raw("b"),
+                                    scope: DependencyScope::Production,
+                                    via: Some("requirement b".into()),
+                                }
+                            ],
+                            ..Default::default()
+                        }
+                    ),
+                ])
+            );
+
+            output.input_files.sort();
+
+            assert_eq!(
+                output.input_files,
+                [
+                    PathBuf::from("/workspace/a/pyproject.toml"),
+                    PathBuf::from("/workspace/b/pyproject.toml"),
+                    PathBuf::from("/workspace/c/pyproject.toml"),
+                ]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn ignores_projects_not_in_sources() {
+            let sandbox = create_moon_sandbox("projects");
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let mut input = ExtendProjectGraphInput::default();
+            input.project_sources.insert(Id::raw("a"), "a".into());
+
+            let output = plugin.extend_project_graph(input).await;
+
+            assert_eq!(
+                output.extended_projects,
+                BTreeMap::from_iter([(
+                    Id::raw("a"),
+                    ExtendProjectOutput {
+                        alias: Some("a".into()),
+                        ..Default::default()
+                    }
+                ),])
+            );
+
+            assert_eq!(
+                output.input_files,
+                [PathBuf::from("/workspace/a/pyproject.toml")]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn skips_projects_without_a_manifest() {
+            let sandbox = create_moon_sandbox("projects");
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let mut input = ExtendProjectGraphInput::default();
+            input
+                .project_sources
+                .insert(Id::raw("no-manifest"), "no-manifest".into());
+
+            let output = plugin.extend_project_graph(input).await;
+
+            assert!(output.extended_projects.is_empty());
+            assert!(output.input_files.is_empty());
+        }
+    }
 
     mod extend_task_command {
         use super::*;
