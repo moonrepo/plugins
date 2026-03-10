@@ -75,6 +75,51 @@ mod python_toolchain_tier2 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn resolves_requirements_against_normalized_manifest_name() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "backend_service/pyproject.toml",
+                r#"[project]
+name = "internal_lib"
+version = "1.0.0"
+"#,
+            );
+            sandbox.create_file(
+                "consumer/pyproject.toml",
+                r#"[project]
+name = "consumer"
+version = "1.0.0"
+dependencies = ["internal-lib"]
+"#,
+            );
+
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let mut input = ExtendProjectGraphInput::default();
+            input
+                .project_sources
+                .insert(Id::raw("backend-service"), "backend_service".into());
+            input
+                .project_sources
+                .insert(Id::raw("consumer"), "consumer".into());
+
+            let output = plugin.extend_project_graph(input).await;
+
+            assert_eq!(
+                output
+                    .extended_projects
+                    .get("consumer")
+                    .unwrap()
+                    .dependencies,
+                vec![ProjectDependency {
+                    id: Id::raw("backend-service"),
+                    scope: DependencyScope::Production,
+                    via: Some("requirement internal-lib".into()),
+                }]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn ignores_projects_not_in_sources() {
             let sandbox = create_moon_sandbox("projects");
             let plugin = sandbox.create_toolchain("python").await;

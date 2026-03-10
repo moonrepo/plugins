@@ -1,6 +1,6 @@
 use crate::config::*;
 use crate::managers::*;
-use crate::pyproject_toml::{PyProjectToml, PyProjectTomlWithTools};
+use crate::pyproject_toml::{PyProjectToml, PyProjectTomlWithTools, normalize_distribution_name};
 use extism_pdk::*;
 use moon_config::DependencyScope;
 use moon_pdk::{
@@ -18,7 +18,7 @@ pub fn extend_project_graph(
 ) -> FnResult<Json<ExtendProjectGraphOutput>> {
     let mut output = ExtendProjectGraphOutput::default();
 
-    // First pass, gather all packages and their manifests
+    // First pass, gather all packages and their manifests.
     let mut packages = BTreeMap::default();
 
     for (id, source) in input.project_sources {
@@ -40,7 +40,7 @@ pub fn extend_project_graph(
                 project.keywords = None;
                 project.classifiers = None;
 
-                packages.insert(project.name.clone(), (id, manifest));
+                packages.insert(normalize_distribution_name(&project.name), (id, manifest));
             }
         }
     }
@@ -52,7 +52,8 @@ pub fn extend_project_graph(
         let mut extract_implicit_deps =
             |reqs: &[Requirement], scope: DependencyScope| -> AnyResult<()> {
                 for req in reqs {
-                    let req_name = req.name.to_string();
+                    let req_label = req.name.as_ref().to_owned();
+                    let req_name = normalize_distribution_name(req.name.as_ref());
 
                     if req.extras.is_empty()
                         && req.version_or_url.is_none()
@@ -62,7 +63,7 @@ pub fn extend_project_graph(
                         project_output.dependencies.push(ProjectDependency {
                             id: dep_id.to_owned(),
                             scope,
-                            via: Some(format!("requirement {req_name}")),
+                            via: Some(format!("requirement {req_label}")),
                         });
                     }
                 }

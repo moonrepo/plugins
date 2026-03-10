@@ -57,6 +57,26 @@ impl std::ops::DerefMut for PyProjectTomlInner {
     }
 }
 
+// Python distribution names are compared using the normalized form from PEP 503.
+pub fn normalize_distribution_name(name: &str) -> String {
+    let mut normalized = String::with_capacity(name.len());
+    let mut last_was_separator = false;
+
+    for ch in name.chars() {
+        if matches!(ch, '-' | '_' | '.') {
+            if !last_was_separator {
+                normalized.push('-');
+                last_was_separator = true;
+            }
+        } else {
+            normalized.push(ch.to_ascii_lowercase());
+            last_was_separator = false;
+        }
+    }
+
+    normalized
+}
+
 // Workspace support: https://docs.astral.sh/uv/concepts/projects/workspaces/
 // Only define fields we need!
 
