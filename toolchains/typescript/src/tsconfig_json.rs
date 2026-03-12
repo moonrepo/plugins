@@ -196,13 +196,13 @@ impl TsConfigJson {
         paths: &[VirtualPath],
         tsconfig_name: &str,
     ) -> AnyResult<bool> {
-        let mut deduped_refs = BTreeSet::new();
-
-        for path in paths {
-            deduped_refs.insert(self.create_project_ref(path, tsconfig_name)?.path);
-        }
-
-        let next_refs = deduped_refs
+        let next_refs = paths
+            .iter()
+            .map(|path| {
+                self.create_project_ref(path, tsconfig_name)
+                    .map(|reference| reference.path)
+            })
+            .collect::<AnyResult<BTreeSet<_>>>()?
             .into_iter()
             .map(|path| ProjectReference {
                 path,
