@@ -1,0 +1,24 @@
+---
+source: toolchains/typescript/tests/tier1_sync_test.rs
+assertion_line: 390
+expression: "fs::read_file(sandbox.path().join(\"extra-refs/tsconfig.json\")).unwrap()"
+---
+{
+  "references": [
+    {
+      "path": "../a"
+    },
+    {
+      "path": "../b"
+    },
+    {
+      "path": "../c"
+    },
+    {
+      "path": "../types"
+    }
+  ],
+  "include": [
+    "../types/**/*"
+  ]
+}

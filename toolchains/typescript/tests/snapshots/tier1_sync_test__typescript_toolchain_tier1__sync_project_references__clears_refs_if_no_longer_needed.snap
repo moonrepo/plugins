@@ -1,0 +1,8 @@
+---
+source: toolchains/typescript/tests/tier1_sync_test.rs
+assertion_line: 310
+expression: "fs::read_file(sandbox.path().join(\"only-stale/tsconfig.json\")).unwrap()"
+---
+{
+  "references": []
+}

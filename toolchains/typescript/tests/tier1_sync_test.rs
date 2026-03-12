@@ -237,6 +237,162 @@ mod typescript_toolchain_tier1 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn keeps_stale_refs_if_prune_disabled() {
+            let sandbox = create_moon_sandbox("refs");
+            let plugin = sandbox.create_toolchain("typescript").await;
+
+            let output = plugin
+                .sync_project(SyncProjectInput {
+                    project: create_project("extra-refs"),
+                    project_dependencies: create_project_dependencies(),
+                    toolchain_config: json!({
+                        "syncProjectReferences": true,
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(has_changed_file(
+                &output,
+                "/workspace/extra-refs/tsconfig.json"
+            ));
+            assert_snapshot!(
+                fs::read_file(sandbox.path().join("extra-refs/tsconfig.json")).unwrap()
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn prunes_stale_refs_if_enabled() {
+            let sandbox = create_moon_sandbox("refs");
+            let plugin = sandbox.create_toolchain("typescript").await;
+
+            let output = plugin
+                .sync_project(SyncProjectInput {
+                    project: create_project("extra-refs"),
+                    project_dependencies: create_project_dependencies(),
+                    toolchain_config: json!({
+                        "pruneProjectReferences": true,
+                        "syncProjectReferences": true,
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(has_changed_file(
+                &output,
+                "/workspace/extra-refs/tsconfig.json"
+            ));
+            assert_snapshot!(
+                fs::read_file(sandbox.path().join("extra-refs/tsconfig.json")).unwrap()
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn clears_refs_if_no_longer_needed() {
+            let sandbox = create_moon_sandbox("refs");
+            let plugin = sandbox.create_toolchain("typescript").await;
+
+            let output = plugin
+                .sync_project(SyncProjectInput {
+                    project: create_project("only-stale"),
+                    toolchain_config: json!({
+                        "pruneProjectReferences": true,
+                        "syncProjectReferences": true,
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(has_changed_file(
+                &output,
+                "/workspace/only-stale/tsconfig.json"
+            ));
+            assert_snapshot!(
+                fs::read_file(sandbox.path().join("only-stale/tsconfig.json")).unwrap()
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn doesnt_change_if_pruned_refs_already_match() {
+            let sandbox = create_moon_sandbox("refs");
+            let plugin = sandbox.create_toolchain("typescript").await;
+
+            let output = plugin
+                .sync_project(SyncProjectInput {
+                    project: create_project("all-refs"),
+                    project_dependencies: create_project_dependencies(),
+                    toolchain_config: json!({
+                        "pruneProjectReferences": true,
+                        "syncProjectReferences": true,
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(!has_changed_file(
+                &output,
+                "/workspace/all-refs/tsconfig.json"
+            ));
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn prunes_stale_refs_with_custom_config_name() {
+            let sandbox = create_moon_sandbox("refs-custom");
+            let plugin = sandbox.create_toolchain("typescript").await;
+
+            let output = plugin
+                .sync_project(SyncProjectInput {
+                    project: create_project("extra-refs"),
+                    project_dependencies: create_project_dependencies(),
+                    toolchain_config: json!({
+                        "projectConfigFileName": "tsconfig.ref.json",
+                        "pruneProjectReferences": true,
+                        "syncProjectReferences": true,
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(has_changed_file(
+                &output,
+                "/workspace/extra-refs/tsconfig.ref.json"
+            ));
+            assert_snapshot!(
+                fs::read_file(sandbox.path().join("extra-refs/tsconfig.ref.json")).unwrap()
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn preserves_shared_types_ref_when_pruning() {
+            let sandbox = create_moon_sandbox("refs");
+            sandbox.create_file("types/index.d.ts", "");
+            sandbox.create_file("types/tsconfig.json", "{}");
+
+            let plugin = sandbox.create_toolchain("typescript").await;
+
+            let output = plugin
+                .sync_project(SyncProjectInput {
+                    project: create_project("extra-refs"),
+                    project_dependencies: create_project_dependencies(),
+                    toolchain_config: json!({
+                        "includeSharedTypes": true,
+                        "pruneProjectReferences": true,
+                        "syncProjectReferences": true,
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(has_changed_file(
+                &output,
+                "/workspace/extra-refs/tsconfig.json"
+            ));
+            assert_snapshot!(
+                fs::read_file(sandbox.path().join("extra-refs/tsconfig.json")).unwrap()
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn skips_invalid_deps() {
             let sandbox = create_moon_sandbox("refs");
             let plugin = sandbox.create_toolchain("typescript").await;

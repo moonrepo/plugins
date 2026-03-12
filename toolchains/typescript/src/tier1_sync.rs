@@ -71,6 +71,7 @@ pub fn sync_project_options(
     project_refs: &BTreeMap<Id, ReferenceData>,
 ) -> AnyResult<Option<VirtualPath>> {
     let types_root = context.workspace_root.join(&config.root);
+    let mut managed_project_refs = vec![];
 
     if !context.project_config.exists() {
         return Ok(None);
@@ -90,14 +91,22 @@ pub fn sync_project_options(
                 .join(&config.project_config_file_name)
                 .exists()
         {
-            tsconfig.add_project_ref(&shared_types_root, &config.project_config_file_name)?;
+            if config.prune_project_references {
+                managed_project_refs.push(shared_types_root.clone());
+            } else {
+                tsconfig.add_project_ref(&shared_types_root, &config.project_config_file_name)?;
+            }
         }
     }
 
     // Sync project dependencies as project `references`
-    if config.sync_project_references && !project_refs.is_empty() {
+    if config.sync_project_references {
         for project_ref in project_refs.values() {
-            tsconfig.add_project_ref(&project_ref.path, &config.project_config_file_name)?;
+            if config.prune_project_references {
+                managed_project_refs.push(project_ref.path.clone());
+            } else {
+                tsconfig.add_project_ref(&project_ref.path, &config.project_config_file_name)?;
+            }
 
             // Include their sources
             if config.include_project_reference_sources {
@@ -141,6 +150,10 @@ pub fn sync_project_options(
 
                 tsconfig.update_compiler_option_paths(compiler_paths);
             }
+        }
+
+        if config.prune_project_references {
+            tsconfig.sync_project_refs(&managed_project_refs, &config.project_config_file_name)?;
         }
     }
 

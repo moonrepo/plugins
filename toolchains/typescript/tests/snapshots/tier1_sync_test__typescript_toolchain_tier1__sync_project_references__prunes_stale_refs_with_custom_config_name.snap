@@ -1,0 +1,18 @@
+---
+source: toolchains/typescript/tests/tier1_sync_test.rs
+assertion_line: 360
+expression: "fs::read_file(sandbox.path().join(\"extra-refs/tsconfig.ref.json\")).unwrap()"
+---
+{
+  "references": [
+    {
+      "path": "../a/tsconfig.ref.json"
+    },
+    {
+      "path": "../b/tsconfig.ref.json"
+    },
+    {
+      "path": "../c/tsconfig.ref.json"
+    }
+  ]
+}
