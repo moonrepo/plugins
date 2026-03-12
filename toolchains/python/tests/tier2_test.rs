@@ -786,6 +786,123 @@ dependencies = ["internal-lib"]
                 )
             );
         }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_uvpip() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("python").await;
+            let output = plugin
+                .install_dependencies(InstallDependenciesInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "packageManager": "uv-pip"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            // For uv-based managers with no custom args, we append the uv fallback flags.
+            assert_eq!(
+                output.install_command.unwrap(),
+                ExecCommand::new(
+                    ExecCommandInput::new(
+                        "uv",
+                        [
+                            "pip",
+                            "install",
+                            "--no-managed-python",
+                            "--no-python-downloads",
+                            "--no-progress"
+                        ]
+                    )
+                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_uvpip_with_custom_args() {
+            let mut sandbox = create_empty_moon_sandbox();
+            sandbox
+                .host_funcs
+                .mock_load_toolchain_config(|_, _| json!({ "installArgs": ["-a", "b", "--c"] }));
+            let plugin = sandbox.create_toolchain("python").await;
+            let output = plugin
+                .install_dependencies(InstallDependenciesInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({ "packageManager": "uv-pip" }),
+                    ..Default::default()
+                })
+                .await;
+            assert_eq!(
+                output.install_command.unwrap(),
+                ExecCommand::new(
+                    ExecCommandInput::new("uv", ["pip", "install", "-a", "b", "--c"])
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_uvpip_with_requirements_and_constraints() {
+            let sandbox = create_empty_moon_sandbox();
+            // Add requirement & constraint files so the tool injects -r / -c
+            sandbox.create_file("requirements.txt", "");
+            sandbox.create_file("constraints.txt", "");
+            let plugin = sandbox.create_toolchain("python").await;
+            let output = plugin
+                .install_dependencies(InstallDependenciesInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({ "packageManager": "uv-pip" }),
+                    ..Default::default()
+                })
+                .await;
+            // With no custom args for uv-based, expect the fallback flags too.
+            assert_eq!(
+                output.install_command.unwrap(),
+                ExecCommand::new(
+                    ExecCommandInput::new(
+                        "uv",
+                        [
+                            "pip",
+                            "install",
+                            "-r",
+                            "requirements.txt",
+                            "-c",
+                            "constraints.txt",
+                            "--no-managed-python",
+                            "--no-python-downloads",
+                            "--no-progress"
+                        ]
+                    )
+                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )
+            );
+        }
+
+        // We don't assert the full PATH value (OS/host-dependent), just that it is present.
+        #[tokio::test(flavor = "multi_thread")]
+        async fn activates_venv_paths_for_uvpip_when_venv_exists() {
+            let sandbox = create_empty_moon_sandbox();
+            // Ensure a .venv folder exists so activation code runs.
+            sandbox.create_file(".venv/file", "");
+            let plugin = sandbox.create_toolchain("python").await;
+            let output = plugin
+                .install_dependencies(InstallDependenciesInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
+                    }),
+                    toolchain_config: json!({ "packageManager": "uv-pip" }),
+                    ..Default::default()
+                })
+                .await;
+            let cmd = output.install_command.unwrap();
+            assert_eq!(cmd.command.command, "uv");
+            assert!(cmd.command.env.contains_key("PATH"));
+        }
     }
 
     mod parse_lock {
@@ -1190,6 +1307,55 @@ dependencies = ["internal-lib"]
                 })
                 .await;
 
+            assert_eq!(
+                output.commands,
+                vec![ExecCommand::new(
+                    ExecCommandInput::new(
+                        "uv",
+                        [
+                            "venv",
+                            ".venv",
+                            "--no-managed-python",
+                            "--no-python-downloads",
+                            "--no-progress",
+                        ]
+                    )
+                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_uvpip() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("python").await;
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({ "packageManager": "uv-pip" }),
+                    ..Default::default()
+                })
+                .await;
+            assert_eq!(
+                output.commands,
+                vec![ExecCommand::new(
+                    ExecCommandInput::new("uv", ["venv", ".venv"])
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn uses_proto_python_when_version_defined_uvpip() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("python").await;
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({ "packageManager": "uv-pip", "version": "3.12.0" }),
+                    ..Default::default()
+                })
+                .await;
             assert_eq!(
                 output.commands,
                 vec![ExecCommand::new(
