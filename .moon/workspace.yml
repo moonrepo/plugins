@@ -31,6 +31,8 @@ projects:
   node-toolchain: toolchains/node
   node-depman-toolchain: toolchains/node-depman
   python-toolchain: toolchains/python
+  python-pip-toolchain: toolchains/python-pip
+  python-uv-toolchain: toolchains/python-uv
   rust-toolchain: toolchains/rust
   system-toolchain: toolchains/system
   typescript-toolchain: toolchains/typescript

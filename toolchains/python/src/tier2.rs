@@ -5,7 +5,7 @@ use extism_pdk::*;
 use moon_config::DependencyScope;
 use moon_pdk::{
     load_project_toolchain_config, load_toolchain_config, locate_root, locate_root_many,
-    locate_root_many_with_check, parse_toolchain_config_schema,
+    locate_root_many_with_check, parse_toolchain_config_schema, get_host_environment,
 };
 use moon_pdk_api::*;
 use pep508_rs::Requirement;
@@ -147,7 +147,7 @@ pub fn define_requirements(
     let mut output = DefineRequirementsOutput::default();
 
     if let Some(package_manager) = config.package_manager {
-        output.requires.push(format!("unstable_{package_manager}"));
+        output.requires.push(format!("{package_manager}"));
     }
 
     Ok(Json(output))
@@ -231,10 +231,26 @@ pub fn install_dependencies(
         "--no-progress".into(),
     ];
 
-    let package_manager_config: SharedPackageManagerConfig = match &input.project {
+    let mut package_manager_config: SharedPackageManagerConfig = match &input.project {
         Some(project) => load_project_toolchain_config(&project.id, package_manager.to_string())?,
         None => load_toolchain_config(package_manager.to_string())?,
     };
+    // Fallback to global pip/uv config when project-level config is empty
+    if package_manager_config.install_args.is_empty()
+        && package_manager_config.venv_args.is_empty()
+        && package_manager_config.version.is_none()
+    {
+        let global_cfg: SharedPackageManagerConfig = load_toolchain_config(package_manager.to_string())?;
+        if package_manager_config.install_args.is_empty() {
+            package_manager_config.install_args = global_cfg.install_args;
+        }
+        if package_manager_config.venv_args.is_empty() {
+            package_manager_config.venv_args = global_cfg.venv_args;
+        }
+        if package_manager_config.version.is_none() {
+            package_manager_config.version = global_cfg.version;
+        }
+    }
 
     // Install
     let mut command = match package_manager {
@@ -243,7 +259,6 @@ pub fn install_dependencies(
 
             ExecCommandInput::new("python", ["-m", "pip", "install"])
         }
-        // PythonPackageManager::Poetry => ExecCommandInput::new("poetry", ["sync"]),
         PythonPackageManager::Uv => {
             let mut cmd = ExecCommandInput::new("uv", ["sync"]);
 
@@ -283,6 +298,36 @@ pub fn install_dependencies(
     }
 
     command.cwd = Some(input.root.clone());
+
+    // --- activate the venv by modifying PATH ---
+    let mut activation_paths: Vec<PathBuf> = Vec::new();
+
+    if let Some(project) = &input.project {
+        gather_shared_paths(&config, &input.context, project, &mut activation_paths)?;
+    }
+
+    // Build PATH prefix for venv
+    if !activation_paths.is_empty() {
+        let mut prefix = String::new();
+        for p in activation_paths {
+            let s = p.to_string_lossy();
+            if !prefix.is_empty() {
+                prefix.push(if get_host_environment()?.os.is_windows() { ';' } else { ':' });
+            }
+            prefix.push_str(&s);
+        }
+
+        // Final PATH value with shell interpolation
+        let path = moon_pdk::get_host_env_var("PATH")?;
+        let final_path = if get_host_environment()?.os.is_windows() {
+            format!("{};{}", prefix, path.unwrap())
+        } else {
+            format!("{}:{}", prefix, path.unwrap())
+        };
+
+        // Inject
+        command.env.insert("PATH".into(), final_path);
+    }
 
     output.install_command = Some(command.into());
 
@@ -335,10 +380,27 @@ pub fn setup_environment(
         "--no-progress".into(),
     ];
 
-    let package_manager_config: SharedPackageManagerConfig = match &input.project {
+    let mut package_manager_config: SharedPackageManagerConfig = match &input.project {
         Some(project) => load_project_toolchain_config(&project.id, package_manager.to_string())?,
         None => load_toolchain_config(package_manager.to_string())?,
     };
+    // Fallback to global pip/uv config when project-level config is empty
+    if package_manager_config.install_args.is_empty()
+        && package_manager_config.venv_args.is_empty()
+        && package_manager_config.version.is_none()
+    {
+        let global_cfg: SharedPackageManagerConfig = load_toolchain_config(package_manager.to_string())?;
+        if package_manager_config.install_args.is_empty() {
+            package_manager_config.install_args = global_cfg.install_args;
+        }
+        if package_manager_config.venv_args.is_empty() {
+            package_manager_config.venv_args = global_cfg.venv_args;
+        }
+        if package_manager_config.version.is_none() {
+            package_manager_config.version = global_cfg.version;
+        }
+    }
+
 
     let mut command = match package_manager {
         PythonPackageManager::Pip => {
