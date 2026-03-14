@@ -231,9 +231,10 @@ pub fn install_dependencies(
         "--no-progress".into(),
     ];
 
+    let package_manager_id = format!("unstable_{package_manager}");
     let package_manager_config: SharedPackageManagerConfig = match &input.project {
-        Some(project) => load_project_toolchain_config(&project.id, package_manager.to_string())?,
-        None => load_toolchain_config(package_manager.to_string())?,
+        Some(project) => load_project_toolchain_config(&project.id, package_manager_id)?,
+        None => load_toolchain_config(package_manager_id)?,
     };
 
     // Install
@@ -335,9 +336,10 @@ pub fn setup_environment(
         "--no-progress".into(),
     ];
 
+    let package_manager_id = format!("unstable_{package_manager}");
     let package_manager_config: SharedPackageManagerConfig = match &input.project {
-        Some(project) => load_project_toolchain_config(&project.id, package_manager.to_string())?,
-        None => load_toolchain_config(package_manager.to_string())?,
+        Some(project) => load_project_toolchain_config(&project.id, package_manager_id)?,
+        None => load_toolchain_config(package_manager_id)?,
     };
 
     let mut command = match package_manager {

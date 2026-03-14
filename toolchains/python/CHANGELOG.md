@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Normalized package/dependency names to PEP 503 during graph extending.
+
+#### 🐞 Fixes
+
+- Fixed an issue where package manager toolchain settings were not being inherited correctly.
+
 ## 0.1.3
 
 #### 🚀 Updates
