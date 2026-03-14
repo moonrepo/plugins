@@ -3,29 +3,81 @@ use crate::go_mod::parse_go_mod;
 use crate::go_sum::GoSum;
 use crate::go_work::GoWork;
 use extism_pdk::*;
+use gomod_parser2::{Module, ModuleDependency};
 use moon_config::{BinEntry, DependencyScope};
 use moon_pdk::{
-    get_host_env_var, get_host_environment, locate_root, parse_toolchain_config_schema,
+    command_exists, exec_captured, get_host_env_var, get_host_environment, locate_root,
+    parse_toolchain_config_schema,
 };
 use moon_pdk_api::*;
 use starbase_utils::fs;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::path::PathBuf;
+
+fn execute_go_list(dir: &VirtualPath, test: bool) -> AnyResult<Vec<ModuleDependency>> {
+    let mut args = vec!["list", "--deps"];
+
+    if test {
+        args.push("--test");
+    }
+
+    if dir.join("main.go").exists() {
+        args.push("main.go");
+    }
+
+    let result = exec_captured("go", args)?;
+
+    if result.exit_code != 0 {
+        return Ok(vec![]);
+    }
+
+    Ok(result
+        .stdout
+        .lines()
+        .flat_map(|line| {
+            let line = line.trim();
+
+            if line.is_empty() {
+                None
+            } else {
+                Some(ModuleDependency {
+                    module: Module {
+                        module_path: line.into(),
+                        // This is a hack for our use case!
+                        version: if test { "test".into() } else { "".into() },
+                    },
+                    indirect: false,
+                })
+            }
+        })
+        .collect())
+}
 
 #[plugin_fn]
 pub fn extend_project_graph(
     Json(input): Json<ExtendProjectGraphInput>,
 ) -> FnResult<Json<ExtendProjectGraphOutput>> {
     let mut output = ExtendProjectGraphOutput::default();
+    let env = get_host_environment()?;
+    let go_exists = command_exists(&env, "go");
 
     // First pass, gather all packages and their manifests
     let mut packages = BTreeMap::default();
 
     for (id, source) in input.project_sources {
-        let go_mod_path = input.context.workspace_root.join(source).join("go.mod");
+        let project_root = input.context.workspace_root.join(source);
+        let go_mod_path = project_root.join("go.mod");
 
         if go_mod_path.exists() {
-            let manifest = parse_go_mod(fs::read_file(&go_mod_path)?)?;
+            let mut manifest = parse_go_mod(fs::read_file(&go_mod_path)?)?;
+
+            if go_exists {
+                let prod_deps = execute_go_list(&project_root, false)?;
+                let test_deps = execute_go_list(&project_root, true)?;
+
+                manifest.require.extend(prod_deps);
+                manifest.require.extend(test_deps);
+            }
 
             packages.insert(manifest.module.clone(), (id, manifest));
 
@@ -41,13 +93,27 @@ pub fn extend_project_graph(
             alias: Some(manifest.module.clone()),
             ..Default::default()
         };
+        let mut inserted = HashSet::<&String>::default();
 
         for dep in &manifest.require {
-            if !dep.indirect && packages.contains_key(&dep.module.module_path) {
+            let dep_module = &dep.module.module_path;
+
+            if !dep.indirect
+                // Only add if within the project graph
+                && packages.contains_key(dep_module)
+                // Don't add if it already exists
+                && inserted.contains(dep_module)
+            {
+                inserted.insert(dep_module);
+
                 project_output.dependencies.push(ProjectDependency {
-                    id: Id::raw(dep.module.module_path.clone()),
-                    scope: DependencyScope::Production,
-                    via: Some(format!("module {}", dep.module.module_path)),
+                    id: Id::raw(dep_module.clone()),
+                    scope: if dep.module.version == "test" {
+                        DependencyScope::Development
+                    } else {
+                        DependencyScope::Production
+                    },
+                    via: Some(format!("module {}", dep_module)),
                 });
             }
         }
