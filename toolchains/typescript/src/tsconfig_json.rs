@@ -7,6 +7,7 @@ use moon_common::path::to_relative_virtual_string;
 use moon_pdk::{HostLogInput, host_log};
 use moon_pdk_api::{AnyResult, VirtualPath, anyhow, json_config};
 use starbase_utils::json::{self, JsonValue};
+use std::collections::BTreeSet;
 use typescript_tsconfig_json::{
     CompilerOptions, CompilerOptionsPathsMap, CompilerPath, ProjectReference,
     TsConfigJson as BaseTsConfigJson,
@@ -102,6 +103,23 @@ impl TsConfigJson {
 }
 
 impl TsConfigJson {
+    fn create_project_ref(
+        &self,
+        path: &VirtualPath,
+        tsconfig_name: &str,
+    ) -> AnyResult<ProjectReference> {
+        Ok(ProjectReference {
+            path: CompilerPath::from(self.to_relative_path(
+                if tsconfig_name != "tsconfig.json" {
+                    path.join(tsconfig_name)
+                } else {
+                    path.to_owned()
+                },
+            )?),
+            prepend: None,
+        })
+    }
+
     /// Convert an absolute virtual path to a relative virtual string,
     /// for use within tsconfig include, exclude, and other paths.
     pub fn to_relative_path(&self, path: impl AsRef<VirtualPath>) -> AnyResult<String> {
@@ -143,12 +161,8 @@ impl TsConfigJson {
     /// path and tsconfig file name, and sort the list based on path.
     /// Return true if the new value is different from the old value.
     pub fn add_project_ref(&mut self, path: &VirtualPath, tsconfig_name: &str) -> AnyResult<bool> {
-        // File name is optional when using standard naming
-        let ref_path = self.to_relative_path(if tsconfig_name != "tsconfig.json" {
-            path.join(tsconfig_name)
-        } else {
-            path.to_owned()
-        })?;
+        let reference = self.create_project_ref(path, tsconfig_name)?;
+        let ref_path = reference.path.as_str().to_owned();
 
         let references = self.data.references.get_or_insert_default();
 
@@ -166,13 +180,48 @@ impl TsConfigJson {
         }
 
         // Add and sort the references
-        references.push(ProjectReference {
-            path: CompilerPath::from(ref_path),
-            prepend: None,
-        });
+        references.push(reference);
 
         references.sort_by_key(|r| r.path.clone());
 
+        self.dirty.push("references".into());
+
+        Ok(true)
+    }
+
+    /// Replace the `references` field with the provided project references.
+    /// Return true if the new value is different from the old value.
+    pub fn sync_project_refs(
+        &mut self,
+        paths: &[VirtualPath],
+        tsconfig_name: &str,
+    ) -> AnyResult<bool> {
+        let next_refs = paths
+            .iter()
+            .map(|path| {
+                self.create_project_ref(path, tsconfig_name)
+                    .map(|reference| reference.path)
+            })
+            .collect::<AnyResult<BTreeSet<_>>>()?
+            .into_iter()
+            .map(|path| ProjectReference {
+                path,
+                prepend: None,
+            })
+            .collect::<Vec<_>>();
+
+        if self.data.references.as_ref() == Some(&next_refs)
+            || (self.data.references.is_none() && next_refs.is_empty())
+        {
+            return Ok(false);
+        }
+
+        #[cfg(feature = "wasm")]
+        {
+            host_log!("Syncing project references in <path>{}</path>", self.path);
+        }
+
+        self.data.references = Some(next_refs);
         self.dirty.push("references".into());
 
         Ok(true)

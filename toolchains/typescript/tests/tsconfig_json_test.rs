@@ -325,6 +325,59 @@ mod tsconfig_json {
         }
     }
 
+    mod sync_project_refs {
+        use super::*;
+
+        #[test]
+        fn replaces_existing_refs() {
+            let mut tsc = TsConfigJsonContainer {
+                data: TsConfigJson {
+                    references: Some(vec![ProjectReference {
+                        path: "../stale".into(),
+                        prepend: None,
+                    }]),
+                    ..TsConfigJson::default()
+                },
+                path: VirtualPath::Real(PathBuf::from("/base/tsconfig.json")),
+                ..Default::default()
+            };
+
+            assert!(
+                tsc.sync_project_refs(
+                    &[VirtualPath::Real(PathBuf::from("/sibling"))],
+                    "tsconfig.json"
+                )
+                .unwrap()
+            );
+
+            assert_eq!(
+                tsc.data.references.unwrap(),
+                vec![ProjectReference {
+                    path: "../sibling".into(),
+                    prepend: None,
+                }]
+            );
+        }
+
+        #[test]
+        fn clears_existing_refs() {
+            let mut tsc = TsConfigJsonContainer {
+                data: TsConfigJson {
+                    references: Some(vec![ProjectReference {
+                        path: "../stale".into(),
+                        prepend: None,
+                    }]),
+                    ..TsConfigJson::default()
+                },
+                path: VirtualPath::Real(PathBuf::from("/base/tsconfig.json")),
+                ..Default::default()
+            };
+
+            assert!(tsc.sync_project_refs(&[], "tsconfig.json").unwrap());
+            assert_eq!(tsc.data.references.unwrap(), Vec::<ProjectReference>::new());
+        }
+    }
+
     mod update_compiler_options {
         use super::*;
 

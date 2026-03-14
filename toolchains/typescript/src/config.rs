@@ -27,6 +27,11 @@ config_struct!(
         #[schema(default = "tsconfig.json")]
         pub project_config_file_name: String,
 
+        /// Prunes synced project `references` in `tsconfig.json` when they are
+        /// no longer needed. When enabled, existing references are treated as
+        /// moon-managed and may be removed during sync.
+        pub prune_project_references: bool,
+
         /// The relative root to the TypeScript root. Primarily used for
         /// resolving project references.
         #[schema(default = ".")]
@@ -63,6 +68,7 @@ impl Default for TypeScriptToolchainConfig {
             include_project_reference_sources: false,
             include_shared_types: false,
             project_config_file_name: "tsconfig.json".into(),
+            prune_project_references: false,
             root: ".".into(),
             root_config_file_name: "tsconfig.json".into(),
             root_options_config_file_name: "tsconfig.options.json".into(),
