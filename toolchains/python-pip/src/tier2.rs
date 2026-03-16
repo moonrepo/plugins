@@ -8,6 +8,6 @@ pub fn define_requirements(
     Json(_): Json<DefineRequirementsInput>,
 ) -> FnResult<Json<DefineRequirementsOutput>> {
     Ok(Json(DefineRequirementsOutput {
-        requires: vec!["python".into()],
+        requires: vec!["unstable_python".into()],
     }))
 }

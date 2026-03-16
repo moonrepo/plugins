@@ -147,7 +147,7 @@ pub fn define_requirements(
     let mut output = DefineRequirementsOutput::default();
 
     if let Some(package_manager) = config.package_manager {
-        output.requires.push(format!("{package_manager}"));
+        output.requires.push(format!("unstable_{package_manager}"));
     }
 
     Ok(Json(output))
@@ -300,35 +300,28 @@ pub fn install_dependencies(
 
     command.cwd = Some(input.root.clone());
 
-    // --- activate the venv by modifying PATH ---
+    // Activate the venv by modifying PATH
     let mut activation_paths: Vec<PathBuf> = Vec::new();
 
     if let Some(project) = &input.project {
         gather_shared_paths(&config, &input.context, project, &mut activation_paths)?;
     }
 
-    // Build PATH prefix for venv
-    if !activation_paths.is_empty() {
-        let mut prefix = String::new();
-        for p in activation_paths {
-            let s = p.to_string_lossy();
-            if !prefix.is_empty() {
-                prefix.push(if get_host_environment()?.os.is_windows() { ';' } else { ':' });
-            }
-            prefix.push_str(&s);
+    let host = get_host_environment()?;
+    let sep = if host.os.is_windows() { ';' } else { ':' };
+
+    let mut prefix = String::new();
+    for p in activation_paths {
+        if !prefix.is_empty() {
+            prefix.push(sep);
         }
-
-        // Final PATH value with shell interpolation
-        let path = moon_pdk::get_host_env_var("PATH")?;
-        let final_path = if get_host_environment()?.os.is_windows() {
-            format!("{};{}", prefix, path.unwrap())
-        } else {
-            format!("{}:{}", prefix, path.unwrap())
-        };
-
-        // Inject
-        command.env.insert("PATH".into(), final_path);
+        prefix.push_str(&p.to_string_lossy());
     }
+
+    let path = moon_pdk::get_host_env_var("PATH")?.unwrap_or_default();
+    let final_path = if prefix.is_empty() { path.clone() } else { format!("{prefix}{sep}{path}") };
+
+    command.env.insert("PATH".into(), final_path);
 
     output.install_command = Some(command.into());
 
@@ -402,7 +395,6 @@ pub fn setup_environment(
             package_manager_config.version = global_cfg.version;
         }
     }
-
 
     let mut command = match package_manager {
         PythonPackageManager::Pip => {

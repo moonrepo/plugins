@@ -57,7 +57,7 @@ config_struct!(
 config_struct!(
     #[derive(Default)]
     pub struct SharedPackageManagerConfig {
-        #[serde(alias = "syncArgs", alias = "installArgs")]
+        #[serde(alias = "syncArgs")] // uv
         pub install_args: Vec<String>,
         pub venv_args: Vec<String>,
         pub version: Option<UnresolvedVersionSpec>,
