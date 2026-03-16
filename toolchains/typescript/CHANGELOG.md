@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added a `pruneProjectReferences` setting that prunes non-moon managed project references when syncing.
+
 ## 1.0.3
 
 #### 🚀 Updates
