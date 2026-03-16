@@ -11,7 +11,7 @@ use moon_pdk::{
 };
 use moon_pdk_api::*;
 use starbase_utils::fs;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 fn execute_go_list(dir: &VirtualPath, test: bool) -> AnyResult<Vec<ModuleDependency>> {
@@ -44,7 +44,11 @@ fn execute_go_list(dir: &VirtualPath, test: bool) -> AnyResult<Vec<ModuleDepende
                     module: Module {
                         module_path: line.into(),
                         // This is a hack for our use case!
-                        version: if test { "test".into() } else { "".into() },
+                        version: if test {
+                            "internal-test".into()
+                        } else {
+                            "".into()
+                        },
                     },
                     indirect: false,
                 })
@@ -93,22 +97,14 @@ pub fn extend_project_graph(
             alias: Some(manifest.module.clone()),
             ..Default::default()
         };
-        let mut inserted = HashSet::<&String>::default();
 
         for dep in &manifest.require {
             let dep_module = &dep.module.module_path;
 
-            if !dep.indirect
-                // Only add if within the project graph
-                && packages.contains_key(dep_module)
-                // Don't add if it already exists
-                && inserted.contains(dep_module)
-            {
-                inserted.insert(dep_module);
-
+            if !dep.indirect && packages.contains_key(dep_module) {
                 project_output.dependencies.push(ProjectDependency {
                     id: Id::raw(dep_module.clone()),
-                    scope: if dep.module.version == "test" {
+                    scope: if dep.module.version == "internal-test" {
                         DependencyScope::Development
                     } else {
                         DependencyScope::Production
