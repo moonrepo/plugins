@@ -728,7 +728,7 @@ dependencies = ["internal-lib"]
 
             sandbox
                 .host_funcs
-                .mock_load_toolchain_config(|_, _| json!({ "installArgs": ["-a", "b", "--c"]}));
+                .mock_load_toolchain_config(|_, _| json!({ "syncArgs": ["-a", "b", "--c"]}));
 
             let plugin = sandbox.create_toolchain("python").await;
             let output = plugin

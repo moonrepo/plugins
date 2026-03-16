@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Will now run `go list --deps` to determine project relationships while extending the project graph.
+
 ## 1.0.3
 
 #### 🚀 Updates
