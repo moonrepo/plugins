@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Updated `deno.lock` and `yarn.lock` parsing dependencies.
+
 ## 1.0.5
 
 #### 🚀 Updates
