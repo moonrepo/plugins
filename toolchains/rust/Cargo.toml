@@ -16,7 +16,7 @@ crate-type = ["cdylib", "lib"]
 [dependencies]
 toolchain_common = { path = "../../crates/toolchain-common" }
 rust_tool = { path = "../../tools/rust", default-features = false }
-cargo-lock = "10.1.0"
+cargo-lock = "11.0.1"
 cargo_toml = "0.22.3"
 extism-pdk = { workspace = true }
 moon_config = { workspace = true }

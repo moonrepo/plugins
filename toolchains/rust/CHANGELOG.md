@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Updated `Cargo.lock` parsing dependencies.
+
 ## 1.0.4
 
 #### 🚀 Updates
