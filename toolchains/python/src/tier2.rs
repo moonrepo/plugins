@@ -274,22 +274,6 @@ pub fn install_dependencies(
         Some(project) => load_project_toolchain_config(&project.id, package_manager_id)?,
         None => load_toolchain_config(package_manager_id)?,
     };
-    // Fallback to global pip/uv config when project-level config is empty
-    if package_manager_config.install_args.is_empty()
-        && package_manager_config.venv_args.is_empty()
-        && package_manager_config.version.is_none()
-    {
-        let global_cfg: SharedPackageManagerConfig = load_toolchain_config(package_manager.to_string())?;
-        if package_manager_config.install_args.is_empty() {
-            package_manager_config.install_args = global_cfg.install_args;
-        }
-        if package_manager_config.venv_args.is_empty() {
-            package_manager_config.venv_args = global_cfg.venv_args;
-        }
-        if package_manager_config.version.is_none() {
-            package_manager_config.version = global_cfg.version;
-        }
-    }
 
     // Install
     let mut command = match package_manager {
@@ -417,22 +401,6 @@ pub fn setup_environment(
         Some(project) => load_project_toolchain_config(&project.id, package_manager_id)?,
         None => load_toolchain_config(package_manager_id)?,
     };
-    // Fallback to global pip/uv config when project-level config is empty
-    if package_manager_config.install_args.is_empty()
-        && package_manager_config.venv_args.is_empty()
-        && package_manager_config.version.is_none()
-    {
-        let global_cfg: SharedPackageManagerConfig = load_toolchain_config(package_manager.to_string())?;
-        if package_manager_config.install_args.is_empty() {
-            package_manager_config.install_args = global_cfg.install_args;
-        }
-        if package_manager_config.venv_args.is_empty() {
-            package_manager_config.venv_args = global_cfg.venv_args;
-        }
-        if package_manager_config.version.is_none() {
-            package_manager_config.version = global_cfg.version;
-        }
-    }
 
     let mut command = match package_manager {
         PythonPackageManager::Pip => {
