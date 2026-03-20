@@ -115,44 +115,6 @@ fn gather_shared_paths(
     Ok(())
 }
 
-fn load_effective_package_manager_config(
-    project: Option<&ProjectFragment>,
-    package_manager: &str,
-) -> AnyResult<SharedPackageManagerConfig> {
-
-    // Extract project ID safely
-    let project_id_opt = project
-        .filter(|p| !p.id.is_empty())
-        .map(|p| p.id.clone());
-
-    // Load project-level or default config
-    let mut cfg = match project_id_opt {
-        Some(project_id) => load_project_toolchain_config(project_id, package_manager)?,
-        None => SharedPackageManagerConfig::default(),
-    };
-
-    // Apply fallback to global configuration
-    if cfg.install_args.is_empty()
-        && cfg.venv_args.is_empty()
-        && cfg.version.is_none()
-    {
-        let global_cfg: SharedPackageManagerConfig =
-            load_toolchain_config(package_manager)?;
-
-        if cfg.install_args.is_empty() {
-            cfg.install_args = global_cfg.install_args;
-        }
-        if cfg.venv_args.is_empty() {
-            cfg.venv_args = global_cfg.venv_args;
-        }
-        if cfg.version.is_none() {
-            cfg.version = global_cfg.version;
-        }
-    }
-
-    Ok(cfg)
-}
-
 #[plugin_fn]
 pub fn extend_task_command(
     Json(input): Json<ExtendTaskCommandInput>,
