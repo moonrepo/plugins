@@ -4,8 +4,8 @@ use crate::pyproject_toml::{PyProjectToml, PyProjectTomlWithTools, normalize_dis
 use extism_pdk::*;
 use moon_config::DependencyScope;
 use moon_pdk::{
-    get_host_environment, load_project_toolchain_config, load_toolchain_config, locate_root,
-    locate_root_many, locate_root_many_with_check, parse_toolchain_config_schema,
+    get_host_env_var, get_host_environment, load_project_toolchain_config, load_toolchain_config,
+    locate_root, locate_root_many, locate_root_many_with_check, parse_toolchain_config_schema,
 };
 use moon_pdk_api::*;
 use pep508_rs::Requirement;
@@ -146,7 +146,12 @@ pub fn define_requirements(
     let mut output = DefineRequirementsOutput::default();
 
     if let Some(package_manager) = config.package_manager {
-        output.requires.push(format!("unstable_{package_manager}"));
+        if matches!(package_manager, PythonPackageManager::UvPip) {
+            output.requires.push("unstable_pip".into());
+            output.requires.push("unstable_uv".into());
+        } else {
+            output.requires.push(format!("unstable_{package_manager}"));
+        }
     }
 
     Ok(Json(output))
@@ -224,16 +229,12 @@ pub fn install_dependencies(
     };
 
     let mut include_reqs_and_constraints = false;
+    let mut package_manager_id = "pip";
     let fallback_uv_args: Vec<String> = vec![
         "--no-managed-python".into(),
         "--no-python-downloads".into(),
         "--no-progress".into(),
     ];
-
-    let package_manager_config: SharedPackageManagerConfig = match &input.project {
-        Some(project) => load_project_toolchain_config(&project.id, package_manager.to_string())?,
-        None => load_toolchain_config(package_manager.to_string())?,
-    };
 
     // Install
     let mut command = match package_manager {
@@ -243,6 +244,8 @@ pub fn install_dependencies(
             ExecCommandInput::new("python", ["-m", "pip", "install"])
         }
         PythonPackageManager::Uv => {
+            package_manager_id = "uv";
+
             let mut cmd = ExecCommandInput::new("uv", ["sync"]);
 
             for package_name in input.packages {
@@ -257,6 +260,11 @@ pub fn install_dependencies(
 
             ExecCommandInput::new("uv", ["pip", "install"])
         }
+    };
+
+    let package_manager_config: SharedPackageManagerConfig = match &input.project {
+        Some(project) => load_project_toolchain_config(&project.id, package_manager_id)?,
+        None => load_toolchain_config(package_manager_id)?,
     };
 
     if include_reqs_and_constraints {
@@ -300,14 +308,16 @@ pub fn install_dependencies(
         prefix.push_str(&p.to_string_lossy());
     }
 
-    let path = moon_pdk::get_host_env_var("PATH")?.unwrap_or_default();
-    let final_path = if prefix.is_empty() {
-        path.clone()
-    } else {
-        format!("{prefix}{sep}{path}")
-    };
+    let path = get_host_env_var("PATH")?.unwrap_or_default();
 
-    command.env.insert("PATH".into(), final_path);
+    command.env.insert(
+        "PATH".into(),
+        if prefix.is_empty() {
+            path
+        } else {
+            format!("{prefix}{sep}{path}")
+        },
+    );
 
     output.install_command = Some(command.into());
 
@@ -360,18 +370,20 @@ pub fn setup_environment(
         "--no-progress".into(),
     ];
 
-    let package_manager_config: SharedPackageManagerConfig = match &input.project {
-        Some(project) => load_project_toolchain_config(&project.id, package_manager.to_string())?,
-        None => load_toolchain_config(package_manager.to_string())?,
+    let (mut command, package_manager_id) = match package_manager {
+        PythonPackageManager::Pip => (
+            ExecCommandInput::new("python", ["-m", "venv", &config.venv_name]),
+            "pip",
+        ),
+        PythonPackageManager::Uv | PythonPackageManager::UvPip => (
+            ExecCommandInput::new("uv", ["venv", &config.venv_name]),
+            "uv",
+        ),
     };
 
-    let mut command = match package_manager {
-        PythonPackageManager::Pip => {
-            ExecCommandInput::new("python", ["-m", "venv", &config.venv_name])
-        }
-        PythonPackageManager::Uv | PythonPackageManager::UvPip => {
-            ExecCommandInput::new("uv", ["venv", &config.venv_name])
-        }
+    let package_manager_config: SharedPackageManagerConfig = match &input.project {
+        Some(project) => load_project_toolchain_config(&project.id, package_manager_id)?,
+        None => load_toolchain_config(package_manager_id)?,
     };
 
     if package_manager_config.venv_args.is_empty()
