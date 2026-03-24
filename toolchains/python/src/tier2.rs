@@ -4,8 +4,8 @@ use crate::pyproject_toml::{PyProjectToml, PyProjectTomlWithTools, normalize_dis
 use extism_pdk::*;
 use moon_config::DependencyScope;
 use moon_pdk::{
-    load_project_toolchain_config, load_toolchain_config, locate_root, locate_root_many,
-    locate_root_many_with_check, parse_toolchain_config_schema, get_host_environment,
+    get_host_environment, load_project_toolchain_config, load_toolchain_config, locate_root,
+    locate_root_many, locate_root_many_with_check, parse_toolchain_config_schema,
 };
 use moon_pdk_api::*;
 use pep508_rs::Requirement;
@@ -55,8 +55,7 @@ pub fn extend_project_graph(
                     let req_label = req.name.as_ref().to_owned();
                     let req_name = normalize_distribution_name(req.name.as_ref());
 
-                    if req.extras.is_empty()
-                        && req.version_or_url.is_none()
+                    if req.version_or_url.is_none()
                         && req.origin.is_none()
                         && let Some((dep_id, _)) = packages.get(&req_name)
                     {
@@ -231,10 +230,9 @@ pub fn install_dependencies(
         "--no-progress".into(),
     ];
 
-    let package_manager_id = format!("unstable_{package_manager}");
     let package_manager_config: SharedPackageManagerConfig = match &input.project {
-        Some(project) => load_project_toolchain_config(&project.id, package_manager_id)?,
-        None => load_toolchain_config(package_manager_id)?,
+        Some(project) => load_project_toolchain_config(&project.id, package_manager.to_string())?,
+        None => load_toolchain_config(package_manager.to_string())?,
     };
 
     // Install
@@ -303,7 +301,11 @@ pub fn install_dependencies(
     }
 
     let path = moon_pdk::get_host_env_var("PATH")?.unwrap_or_default();
-    let final_path = if prefix.is_empty() { path.clone() } else { format!("{prefix}{sep}{path}") };
+    let final_path = if prefix.is_empty() {
+        path.clone()
+    } else {
+        format!("{prefix}{sep}{path}")
+    };
 
     command.env.insert("PATH".into(), final_path);
 
@@ -358,10 +360,9 @@ pub fn setup_environment(
         "--no-progress".into(),
     ];
 
-    let package_manager_id = format!("unstable_{package_manager}");
     let package_manager_config: SharedPackageManagerConfig = match &input.project {
-        Some(project) => load_project_toolchain_config(&project.id, package_manager_id)?,
-        None => load_toolchain_config(package_manager_id)?,
+        Some(project) => load_project_toolchain_config(&project.id, package_manager.to_string())?,
+        None => load_toolchain_config(package_manager.to_string())?,
     };
 
     let mut command = match package_manager {
