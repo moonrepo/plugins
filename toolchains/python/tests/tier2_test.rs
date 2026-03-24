@@ -585,28 +585,53 @@ dependencies = ["internal-lib"]
             let sandbox = create_empty_moon_sandbox();
             let plugin = sandbox.create_toolchain("python").await;
 
+            // Simulate the virtual environment
+            sandbox.create_file(".venv/bin/activate", "");
+
             let output = plugin
                 .install_dependencies(InstallDependenciesInput {
+                    context: MoonContext {
+                        working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
+                        ..Default::default()
+                    },
                     root: VirtualPath::Real(sandbox.path().into()),
                     toolchain_config: json!({
                         "packageManager": "pip"
+                    }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
                     }),
                     ..Default::default()
                 })
                 .await;
 
-            assert_eq!(
-                output.install_command.unwrap(),
-                ExecCommand::new(
-                    ExecCommandInput::new("python", ["-m", "pip", "install"])
-                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                )
+            let mut actual = output.install_command.unwrap();
+
+            // 1) Assert that PATH was injected (and optionally that it contains .venv)
+            if let Some(path_val) = actual.command.env.get("PATH") {
+                assert!(path_val.contains(".venv/Scripts") || path_val.contains(".venv/bin"));
+            } else {
+                panic!("Expected PATH to be injected for venv activation");
+            }
+
+            // 2) Remove PATH so the rest can be compared deterministically
+            actual.command.env.remove("PATH");
+
+            // 3) Now compare with a clean expected ExecCommand (no PATH)
+            let expected = ExecCommand::new(
+                ExecCommandInput::new("python", ["-m", "pip", "install"])
+                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
             );
+
+            assert_eq!(actual, expected);
         }
 
         #[tokio::test(flavor = "multi_thread")]
         async fn supports_pip_with_custom_args() {
             let mut sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(".venv/bin/activate", "");
 
             sandbox
                 .host_funcs
@@ -615,116 +640,191 @@ dependencies = ["internal-lib"]
             let plugin = sandbox.create_toolchain("python").await;
             let output = plugin
                 .install_dependencies(InstallDependenciesInput {
+                    context: MoonContext {
+                        working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
+                        ..Default::default()
+                    },
                     root: VirtualPath::Real(sandbox.path().into()),
                     toolchain_config: json!({
                         "packageManager": "pip"
+                    }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
                     }),
                     ..Default::default()
                 })
                 .await;
 
-            assert_eq!(
-                output.install_command.unwrap(),
-                ExecCommand::new(
-                    ExecCommandInput::new("python", ["-m", "pip", "install", "-a", "b", "--c"])
-                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                )
+            let mut actual = output.install_command.unwrap();
+
+            // 1) Assert that PATH was injected (and optionally that it contains .venv)
+            if let Some(path_val) = actual.command.env.get("PATH") {
+                assert!(path_val.contains(".venv/Scripts") || path_val.contains(".venv/bin"));
+            } else {
+                panic!("Expected PATH to be injected for venv activation");
+            }
+
+            // 2) Remove PATH so the rest can be compared deterministically
+            actual.command.env.remove("PATH");
+
+            // 3) Now compare with a clean expected ExecCommand (no PATH)
+            let expected = ExecCommand::new(
+                ExecCommandInput::new("python", ["-m", "pip", "install", "-a", "b", "--c"])
+                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
             );
+
+            assert_eq!(actual, expected);
         }
 
         #[tokio::test(flavor = "multi_thread")]
         async fn supports_pip_with_requirements() {
             let sandbox = create_empty_moon_sandbox();
             sandbox.create_file("requirements.txt", "");
+            sandbox.create_file(".venv/bin/activate", "");
 
             let plugin = sandbox.create_toolchain("python").await;
 
             let output = plugin
                 .install_dependencies(InstallDependenciesInput {
+                    context: MoonContext {
+                        working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
+                        ..Default::default()
+                    },
                     root: VirtualPath::Real(sandbox.path().into()),
                     toolchain_config: json!({
                         "packageManager": "pip"
+                    }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
                     }),
                     ..Default::default()
                 })
                 .await;
 
-            assert_eq!(
-                output.install_command.unwrap(),
-                ExecCommand::new(
-                    ExecCommandInput::new(
-                        "python",
-                        ["-m", "pip", "install", "-r", "requirements.txt"]
-                    )
+            let mut actual = output.install_command.unwrap();
+
+            // 1) Assert that PATH was injected (and optionally that it contains .venv)
+            if let Some(path_val) = actual.command.env.get("PATH") {
+                assert!(path_val.contains(".venv/Scripts") || path_val.contains(".venv/bin"));
+            } else {
+                panic!("Expected PATH to be injected for venv activation");
+            }
+
+            // 2) Remove PATH so the rest can be compared deterministically
+            actual.command.env.remove("PATH");
+
+            // 3) Now compare with a clean expected ExecCommand (no PATH)
+            let expected = ExecCommand::new(
+                ExecCommandInput::new("python", ["-m", "pip", "install", "-r", "requirements.txt"])
                     .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                )
             );
+
+            assert_eq!(actual, expected);
         }
 
         #[tokio::test(flavor = "multi_thread")]
         async fn supports_pip_with_constraints() {
             let sandbox = create_empty_moon_sandbox();
+
             sandbox.create_file("constraints.txt", "");
+            sandbox.create_file(".venv/bin/activate", "");
 
             let plugin = sandbox.create_toolchain("python").await;
 
             let output = plugin
                 .install_dependencies(InstallDependenciesInput {
+                    context: MoonContext {
+                        working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
+                        ..Default::default()
+                    },
                     root: VirtualPath::Real(sandbox.path().into()),
                     toolchain_config: json!({
                         "packageManager": "pip"
+                    }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
                     }),
                     ..Default::default()
                 })
                 .await;
 
-            assert_eq!(
-                output.install_command.unwrap(),
-                ExecCommand::new(
-                    ExecCommandInput::new(
-                        "python",
-                        ["-m", "pip", "install", "-c", "constraints.txt"]
-                    )
+            let mut actual = output.install_command.unwrap();
+
+            // 1) Assert that PATH was injected (and optionally that it contains .venv)
+            if let Some(path_val) = actual.command.env.get("PATH") {
+                assert!(path_val.contains(".venv/Scripts") || path_val.contains(".venv/bin"));
+            } else {
+                panic!("Expected PATH to be injected for venv activation");
+            }
+
+            // 2) Remove PATH so the rest can be compared deterministically
+            actual.command.env.remove("PATH");
+
+            // 3) Now compare with a clean expected ExecCommand (no PATH)
+            let expected = ExecCommand::new(
+                ExecCommandInput::new("python", ["-m", "pip", "install", "-c", "constraints.txt"])
                     .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                )
             );
+
+            assert_eq!(actual, expected);
         }
 
         #[tokio::test(flavor = "multi_thread")]
         async fn supports_uv() {
             let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(".venv/bin/activate", "");
             let plugin = sandbox.create_toolchain("python").await;
 
             let output = plugin
                 .install_dependencies(InstallDependenciesInput {
+                    context: MoonContext {
+                        working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
+                        ..Default::default()
+                    },
                     root: VirtualPath::Real(sandbox.path().into()),
                     toolchain_config: json!({
                         "packageManager": "uv"
+                    }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
                     }),
                     ..Default::default()
                 })
                 .await;
 
-            assert_eq!(
-                output.install_command.unwrap(),
-                ExecCommand::new(
-                    ExecCommandInput::new(
-                        "uv",
-                        [
-                            "sync",
-                            "--no-managed-python",
-                            "--no-python-downloads",
-                            "--no-progress",
-                        ]
-                    )
+            let mut actual = output.install_command.unwrap();
+
+            // 1) Assert that PATH was injected (and optionally that it contains .venv)
+            if let Some(path_val) = actual.command.env.get("PATH") {
+                assert!(path_val.contains(".venv/Scripts") || path_val.contains(".venv/bin"));
+            } else {
+                panic!("Expected PATH to be injected for venv activation");
+            }
+
+            // 2) Remove PATH so the rest can be compared deterministically
+            actual.command.env.remove("PATH");
+
+            // 3) Now compare with a clean expected ExecCommand (no PATH)
+            let expected = ExecCommand::new(
+                ExecCommandInput::new("uv", ["sync", "--no-managed-python", "--no-python-downloads", "--no-progress"])
                     .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                )
             );
+
+            assert_eq!(actual, expected);
         }
 
         #[tokio::test(flavor = "multi_thread")]
         async fn supports_uv_with_custom_args() {
             let mut sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(".venv/bin/activate", "");
 
             sandbox
                 .host_funcs
@@ -733,58 +833,284 @@ dependencies = ["internal-lib"]
             let plugin = sandbox.create_toolchain("python").await;
             let output = plugin
                 .install_dependencies(InstallDependenciesInput {
+                    context: MoonContext {
+                        working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
+                        ..Default::default()
+                    },
                     root: VirtualPath::Real(sandbox.path().into()),
                     toolchain_config: json!({
                         "packageManager": "uv"
+                    }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
                     }),
                     ..Default::default()
                 })
                 .await;
 
-            assert_eq!(
-                output.install_command.unwrap(),
-                ExecCommand::new(
-                    ExecCommandInput::new("uv", ["sync", "-a", "b", "--c"])
-                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                )
+            let mut actual = output.install_command.unwrap();
+
+            // 1) Assert that PATH was injected (and optionally that it contains .venv)
+            if let Some(path_val) = actual.command.env.get("PATH") {
+                assert!(path_val.contains(".venv/Scripts") || path_val.contains(".venv/bin"));
+            } else {
+                panic!("Expected PATH to be injected for venv activation");
+            }
+
+            // 2) Remove PATH so the rest can be compared deterministically
+            actual.command.env.remove("PATH");
+
+            // 3) Now compare with a clean expected ExecCommand (no PATH)
+            let expected = ExecCommand::new(
+                ExecCommandInput::new("uv", ["sync", "-a", "b", "--c"])
+                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
             );
+
+            assert_eq!(actual, expected);
         }
 
         #[tokio::test(flavor = "multi_thread")]
         async fn supports_uv_with_focused_projects() {
             let sandbox = create_empty_moon_sandbox();
             let plugin = sandbox.create_toolchain("python").await;
+            sandbox.create_file(".venv/bin/activate", "");
 
             let output = plugin
                 .install_dependencies(InstallDependenciesInput {
+                    context: MoonContext {
+                        working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
+                        ..Default::default()
+                    },
                     root: VirtualPath::Real(sandbox.path().into()),
                     toolchain_config: json!({
                         "packageManager": "uv"
+                    }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
                     }),
                     packages: vec!["foo".into(), "bar".into()],
                     ..Default::default()
                 })
                 .await;
 
-            assert_eq!(
-                output.install_command.unwrap(),
-                ExecCommand::new(
-                    ExecCommandInput::new(
-                        "uv",
-                        [
-                            "sync",
-                            "--package",
-                            "foo",
-                            "--package",
-                            "bar",
+            let mut actual = output.install_command.unwrap();
+
+            // 1) Assert that PATH was injected (and optionally that it contains .venv)
+            if let Some(path_val) = actual.command.env.get("PATH") {
+                assert!(path_val.contains(".venv/Scripts") || path_val.contains(".venv/bin"));
+            } else {
+                panic!("Expected PATH to be injected for venv activation");
+            }
+
+            // 2) Remove PATH so the rest can be compared deterministically
+            actual.command.env.remove("PATH");
+
+            // 3) Now compare with a clean expected ExecCommand (no PATH)
+            let expected = ExecCommand {
+                command: ExecCommandInput {
+                    command: "uv".into(),
+                    args: vec!(
+                        "sync".into(),
+                        "--package".into(),
+                        "foo".into(),
+                        "--package".into(),
+                        "bar".into(),
+                        "--no-managed-python".into(),
+                        "--no-python-downloads".into(),
+                        "--no-progress".into(),
+                    ),
+                    stream: true,
+                    cwd: Some(plugin.plugin.to_virtual_path(sandbox.path())),
+                    ..ExecCommandInput::default()
+                },
+                ..ExecCommand::default()
+                };
+
+            assert_eq!(actual, expected);
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_uvpip() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("python").await;
+            sandbox.create_file(".venv/bin/activate", "");
+
+            let output = plugin
+                .install_dependencies(InstallDependenciesInput {
+                    context: MoonContext {
+                        working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
+                        ..Default::default()
+                    },
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "packageManager": "uv-pip"
+                    }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            let mut actual = output.install_command.unwrap();
+
+            // 1) Assert that PATH was injected (and optionally that it contains .venv)
+            if let Some(path_val) = actual.command.env.get("PATH") {
+                assert!(path_val.contains(".venv/Scripts") || path_val.contains(".venv/bin"));
+            } else {
+                panic!("Expected PATH to be injected for venv activation");
+            }
+
+            // 2) Remove PATH so the rest can be compared deterministically
+            actual.command.env.remove("PATH");
+
+            // 3) Now compare with a clean expected ExecCommand (no PATH)
+            let expected = ExecCommand {
+                command: ExecCommandInput {
+                    command: "uv".into(),
+                    args: vec!("pip".into(), "install".into(), "--no-managed-python".into(), "--no-python-downloads".into(), "--no-progress".into()),
+                    cwd: Some(plugin.plugin.to_virtual_path(sandbox.path())),
+                    stream: true,
+                    ..ExecCommandInput::default()
+                },
+                ..ExecCommand::default()
+            };
+
+            assert_eq!(actual, expected);
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_uvpip_with_custom_args() {
+            let mut sandbox = create_empty_moon_sandbox();
+            sandbox
+                .host_funcs
+                .mock_load_toolchain_config(|_, _| json!({ "installArgs": ["-a", "b", "--c"] }));
+            let plugin = sandbox.create_toolchain("python").await;
+            sandbox.create_file(".venv/bin/activate", "");
+
+            let output = plugin
+                .install_dependencies(InstallDependenciesInput {
+                    context: MoonContext {
+                        working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
+                        ..Default::default()
+                    },
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({ "packageManager": "uv-pip" }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                })
+                .await;
+            let mut actual = output.install_command.unwrap();
+
+            // 1) Assert that PATH was injected (and optionally that it contains .venv)
+            if let Some(path_val) = actual.command.env.get("PATH") {
+                assert!(path_val.contains(".venv/Scripts") || path_val.contains(".venv/bin"));
+            } else {
+                panic!("Expected PATH to be injected for venv activation");
+            }
+
+            // 2) Remove PATH so the rest can be compared deterministically
+            actual.command.env.remove("PATH");
+
+            // 3) Now compare with a clean expected ExecCommand (no PATH)
+            let expected = ExecCommand::new(
+                ExecCommandInput::new("uv", ["pip", "install", "-a", "b", "--c"])
+                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+            );
+
+            assert_eq!(actual, expected);
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_uvpip_with_requirements_and_constraints() {
+            let sandbox = create_empty_moon_sandbox();
+            // Add requirement & constraint files so the tool injects -r / -c
+            sandbox.create_file("requirements.txt", "");
+            sandbox.create_file("constraints.txt", "");
+            sandbox.create_file(".venv/bin/activate", "");
+
+            let plugin = sandbox.create_toolchain("python").await;
+            let output = plugin
+                .install_dependencies(InstallDependenciesInput {
+                    context: MoonContext {
+                        working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
+                        ..Default::default()
+                    },
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({ "packageManager": "uv-pip" }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                })
+                .await;
+            let mut actual = output.install_command.unwrap();
+
+            // 1) Assert that PATH was injected (and optionally that it contains .venv)
+            if let Some(path_val) = actual.command.env.get("PATH") {
+                assert!(path_val.contains(".venv/Scripts") || path_val.contains(".venv/bin"));
+            } else {
+                panic!("Expected PATH to be injected for venv activation");
+            }
+
+            // 2) Remove PATH so the rest can be compared deterministically
+            actual.command.env.remove("PATH");
+
+            // 3) Now compare with a clean expected ExecCommand (no PATH)
+            let expected = ExecCommand::new(
+                ExecCommandInput::new(
+                    "uv",
+                    [
+                            "pip",
+                            "install",
+                            "-r",
+                            "requirements.txt",
+                            "-c",
+                            "constraints.txt",
                             "--no-managed-python",
                             "--no-python-downloads",
                             "--no-progress",
-                        ]
-                    )
+                    ])
                     .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                )
             );
+
+            assert_eq!(actual, expected);
+        }
+
+        // We don't assert the full PATH value (OS/host-dependent), just that it is present.
+        #[tokio::test(flavor = "multi_thread")]
+        async fn activates_venv_paths_for_uvpip_when_venv_exists() {
+            let sandbox = create_empty_moon_sandbox();
+            // Ensure a .venv folder exists so activation code runs.
+            sandbox.create_file(".venv/file", "");
+            let plugin = sandbox.create_toolchain("python").await;
+            let output = plugin
+                .install_dependencies(InstallDependenciesInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
+                    }),
+                    toolchain_config: json!({ "packageManager": "uv-pip" }),
+                    ..Default::default()
+                })
+                .await;
+            let cmd = output.install_command.unwrap();
+            assert_eq!(cmd.command.command, "uv");
+            assert!(cmd.command.env.contains_key("PATH"));
         }
     }
 
@@ -1057,6 +1383,11 @@ dependencies = ["internal-lib"]
                         "packageManager": "uv",
                         "venvName": ".virtual-env"
                     }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
+                    }),
                     ..Default::default()
                 })
                 .await;
@@ -1080,6 +1411,11 @@ dependencies = ["internal-lib"]
                     root: VirtualPath::Real(sandbox.path().into()),
                     toolchain_config: json!({
                         "packageManager": "pip"
+                    }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
                     }),
                     ..Default::default()
                 })
@@ -1109,6 +1445,11 @@ dependencies = ["internal-lib"]
                     toolchain_config: json!({
                         "packageManager": "pip"
                     }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
+                    }),
                     ..Default::default()
                 })
                 .await;
@@ -1132,6 +1473,11 @@ dependencies = ["internal-lib"]
                     root: VirtualPath::Real(sandbox.path().into()),
                     toolchain_config: json!({
                         "packageManager": "uv"
+                    }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
                     }),
                     ..Default::default()
                 })
@@ -1161,6 +1507,11 @@ dependencies = ["internal-lib"]
                     toolchain_config: json!({
                         "packageManager": "uv"
                     }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
+                    }),
                     ..Default::default()
                 })
                 .await;
@@ -1186,10 +1537,74 @@ dependencies = ["internal-lib"]
                         "packageManager": "uv",
                         "version": "3.12.0"
                     }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
+                    }),
                     ..Default::default()
                 })
                 .await;
 
+            assert_eq!(
+                output.commands,
+                vec![ExecCommand::new(
+                    ExecCommandInput::new(
+                        "uv",
+                        [
+                            "venv",
+                            ".venv",
+                            "--no-managed-python",
+                            "--no-python-downloads",
+                            "--no-progress",
+                        ]
+                    )
+                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_uvpip() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("python").await;
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({ "packageManager": "uv-pip" }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                })
+                .await;
+            assert_eq!(
+                output.commands,
+                vec![ExecCommand::new(
+                    ExecCommandInput::new("uv", ["venv", ".venv"])
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn uses_proto_python_when_version_defined_uvpip() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("python").await;
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({ "packageManager": "uv-pip", "version": "3.12.0" }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                })
+                .await;
             assert_eq!(
                 output.commands,
                 vec![ExecCommand::new(

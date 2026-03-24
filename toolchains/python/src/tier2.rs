@@ -5,7 +5,7 @@ use extism_pdk::*;
 use moon_config::DependencyScope;
 use moon_pdk::{
     load_project_toolchain_config, load_toolchain_config, locate_root, locate_root_many,
-    locate_root_many_with_check, parse_toolchain_config_schema,
+    locate_root_many_with_check, parse_toolchain_config_schema, get_host_environment,
 };
 use moon_pdk_api::*;
 use pep508_rs::Requirement;
@@ -244,7 +244,6 @@ pub fn install_dependencies(
 
             ExecCommandInput::new("python", ["-m", "pip", "install"])
         }
-        // PythonPackageManager::Poetry => ExecCommandInput::new("poetry", ["sync"]),
         PythonPackageManager::Uv => {
             let mut cmd = ExecCommandInput::new("uv", ["sync"]);
 
@@ -284,6 +283,29 @@ pub fn install_dependencies(
     }
 
     command.cwd = Some(input.root.clone());
+
+    // Activate the venv by modifying PATH
+    let mut activation_paths: Vec<PathBuf> = Vec::new();
+
+    if let Some(project) = &input.project {
+        gather_shared_paths(&config, &input.context, project, &mut activation_paths)?;
+    }
+
+    let host = get_host_environment()?;
+    let sep = if host.os.is_windows() { ';' } else { ':' };
+
+    let mut prefix = String::new();
+    for p in activation_paths {
+        if !prefix.is_empty() {
+            prefix.push(sep);
+        }
+        prefix.push_str(&p.to_string_lossy());
+    }
+
+    let path = moon_pdk::get_host_env_var("PATH")?.unwrap_or_default();
+    let final_path = if prefix.is_empty() { path.clone() } else { format!("{prefix}{sep}{path}") };
+
+    command.env.insert("PATH".into(), final_path);
 
     output.install_command = Some(command.into());
 
