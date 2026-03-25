@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added `inferRelationships` and `inferRelationshipsFromTests` settings to control `go list --deps` usage.
+
 ## 1.1.0
 
 #### 🚀 Updates

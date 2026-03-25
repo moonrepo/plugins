@@ -51,7 +51,7 @@ proto_pdk_test_utils = { version = "0.43.6" }
 
 # JavaScript
 nodejs_package_json = { version = "0.4.8", features = ["protocols"] }
-typescript_tsconfig_json = { version = "0.5.4", features = ["serialize"] }
+typescript_tsconfig_json = { version = "0.5.5", features = ["serialize"] }
 
 [profile.release]
 codegen-units = 1

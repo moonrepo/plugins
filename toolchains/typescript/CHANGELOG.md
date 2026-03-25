@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added TypeScript v6 support.
+
 ## 1.1.0
 
 #### 🚀 Updates

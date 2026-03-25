@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed an issue where install commands didn't have access to venv bins.
+- Fixed an issue where project dependencies were not being inferred correctly when the dependency contains extras metadata.
+
 ## 0.1.4
 
 #### 🚀 Updates

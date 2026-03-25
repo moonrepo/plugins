@@ -62,6 +62,7 @@ pub fn extend_project_graph(
     Json(input): Json<ExtendProjectGraphInput>,
 ) -> FnResult<Json<ExtendProjectGraphOutput>> {
     let mut output = ExtendProjectGraphOutput::default();
+    let config = parse_toolchain_config_schema::<GoToolchainConfig>(input.toolchain_config)?;
     let env = get_host_environment()?;
     let go_exists = command_exists(&env, "go");
 
@@ -76,11 +77,17 @@ pub fn extend_project_graph(
             let mut manifest = parse_go_mod(fs::read_file(&go_mod_path)?)?;
 
             if go_exists {
-                let prod_deps = execute_go_list(&project_root, false)?;
-                let test_deps = execute_go_list(&project_root, true)?;
+                if config.infer_relationships {
+                    manifest
+                        .require
+                        .extend(execute_go_list(&project_root, false)?);
+                }
 
-                manifest.require.extend(prod_deps);
-                manifest.require.extend(test_deps);
+                if config.infer_relationships_from_tests {
+                    manifest
+                        .require
+                        .extend(execute_go_list(&project_root, true)?);
+                }
             }
 
             packages.insert(manifest.module.clone(), (id, manifest));

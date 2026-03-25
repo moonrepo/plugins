@@ -92,6 +92,7 @@ pub fn initialize_toolchain(
                     JsonValue::String("pip".into()),
                     // JsonValue::String("poetry".into()),
                     JsonValue::String("uv".into()),
+                    JsonValue::String("uv-pip".into()),
                 ],
             },
         ));

@@ -10,6 +10,14 @@ config_struct!(
         #[setting(nested)]
         pub bins: Vec<BinEntry>,
 
+        /// Infer project production relationships between modules by running
+        /// `go list --deps`.
+        pub infer_relationships: bool,
+
+        /// Infer project development relationships between test modules by running
+        /// `go list --deps --test`.
+        pub infer_relationships_from_tests: bool,
+
         /// Tidy modules when dependencies or `go.sum` changes by running `go mod tidy`.
         /// This setting is ignored when using Go workspaces.
         pub tidy_on_change: bool,
