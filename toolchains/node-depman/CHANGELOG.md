@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Updated to always include the "shared globals" directory.
+
 ## 1.0.2
 
 #### 🚀 Updates
