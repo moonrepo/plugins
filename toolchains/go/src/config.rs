@@ -12,6 +12,7 @@ config_struct!(
 
         /// Infer project production relationships between modules by running
         /// `go list --deps`.
+        #[setting(default = true)]
         pub infer_relationships: bool,
 
         /// Infer project development relationships between test modules by running

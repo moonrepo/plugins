@@ -6,7 +6,7 @@ use extism_pdk::*;
 use gomod_parser2::{Module, ModuleDependency};
 use moon_config::{BinEntry, DependencyScope};
 use moon_pdk::{
-    command_exists, exec_captured, get_host_env_var, get_host_environment, locate_root,
+    command_exists, exec, get_host_env_var, get_host_environment, locate_root,
     parse_toolchain_config_schema,
 };
 use moon_pdk_api::*;
@@ -15,17 +15,17 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 fn execute_go_list(dir: &VirtualPath, test: bool) -> AnyResult<Vec<ModuleDependency>> {
-    let mut args = vec!["list", "--deps"];
+    let mut args = vec!["list", "-deps"];
 
     if test {
-        args.push("--test");
+        args.push("-test");
     }
 
     if dir.join("main.go").exists() {
         args.push("main.go");
     }
 
-    let result = exec_captured("go", args)?;
+    let result = exec(ExecCommandInput::pipe("go", args).cwd(dir.to_owned()))?;
 
     if result.exit_code != 0 {
         return Ok(vec![]);
@@ -108,7 +108,11 @@ pub fn extend_project_graph(
         for dep in &manifest.require {
             let dep_module = &dep.module.module_path;
 
-            if !dep.indirect && packages.contains_key(dep_module) {
+            if !dep.indirect
+                && packages
+                    .get(dep_module)
+                    .is_some_and(|(dep_id, _)| dep_id != id)
+            {
                 project_output.dependencies.push(ProjectDependency {
                     id: Id::raw(dep_module.clone()),
                     scope: if dep.module.version == "internal-test" {

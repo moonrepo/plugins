@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed install/venv args being passed incorrectly in some situations.
+
 ## 0.1.5
 
 #### 🐞 Fixes
