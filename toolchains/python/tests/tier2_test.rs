@@ -622,7 +622,7 @@ dependencies = ["internal-lib"]
             // 3) Now compare with a clean expected ExecCommand (no PATH)
             let expected = ExecCommand::new(
                 ExecCommandInput::new("python", ["-m", "pip", "install"])
-                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    .cwd(plugin.plugin.to_virtual_path(sandbox.path())),
             );
 
             assert_eq!(actual, expected);
@@ -672,7 +672,7 @@ dependencies = ["internal-lib"]
             // 3) Now compare with a clean expected ExecCommand (no PATH)
             let expected = ExecCommand::new(
                 ExecCommandInput::new("python", ["-m", "pip", "install", "-a", "b", "--c"])
-                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    .cwd(plugin.plugin.to_virtual_path(sandbox.path())),
             );
 
             assert_eq!(actual, expected);
@@ -720,7 +720,7 @@ dependencies = ["internal-lib"]
             // 3) Now compare with a clean expected ExecCommand (no PATH)
             let expected = ExecCommand::new(
                 ExecCommandInput::new("python", ["-m", "pip", "install", "-r", "requirements.txt"])
-                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    .cwd(plugin.plugin.to_virtual_path(sandbox.path())),
             );
 
             assert_eq!(actual, expected);
@@ -769,7 +769,7 @@ dependencies = ["internal-lib"]
             // 3) Now compare with a clean expected ExecCommand (no PATH)
             let expected = ExecCommand::new(
                 ExecCommandInput::new("python", ["-m", "pip", "install", "-c", "constraints.txt"])
-                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    .cwd(plugin.plugin.to_virtual_path(sandbox.path())),
             );
 
             assert_eq!(actual, expected);
@@ -814,8 +814,16 @@ dependencies = ["internal-lib"]
 
             // 3) Now compare with a clean expected ExecCommand (no PATH)
             let expected = ExecCommand::new(
-                ExecCommandInput::new("uv", ["sync", "--no-managed-python", "--no-python-downloads", "--no-progress"])
-                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                ExecCommandInput::new(
+                    "uv",
+                    [
+                        "sync",
+                        "--no-managed-python",
+                        "--no-python-downloads",
+                        "--no-progress",
+                    ],
+                )
+                .cwd(plugin.plugin.to_virtual_path(sandbox.path())),
             );
 
             assert_eq!(actual, expected);
@@ -865,7 +873,7 @@ dependencies = ["internal-lib"]
             // 3) Now compare with a clean expected ExecCommand (no PATH)
             let expected = ExecCommand::new(
                 ExecCommandInput::new("uv", ["sync", "-a", "b", "--c"])
-                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    .cwd(plugin.plugin.to_virtual_path(sandbox.path())),
             );
 
             assert_eq!(actual, expected);
@@ -913,7 +921,7 @@ dependencies = ["internal-lib"]
             let expected = ExecCommand {
                 command: ExecCommandInput {
                     command: "uv".into(),
-                    args: vec!(
+                    args: vec![
                         "sync".into(),
                         "--package".into(),
                         "foo".into(),
@@ -922,13 +930,13 @@ dependencies = ["internal-lib"]
                         "--no-managed-python".into(),
                         "--no-python-downloads".into(),
                         "--no-progress".into(),
-                    ),
+                    ],
                     stream: true,
                     cwd: Some(plugin.plugin.to_virtual_path(sandbox.path())),
                     ..ExecCommandInput::default()
                 },
                 ..ExecCommand::default()
-                };
+            };
 
             assert_eq!(actual, expected);
         }
@@ -974,7 +982,7 @@ dependencies = ["internal-lib"]
             let expected = ExecCommand {
                 command: ExecCommandInput {
                     command: "uv".into(),
-                    args: vec!("pip".into(), "install".into(), "--no-managed-python".into(), "--no-python-downloads".into(), "--no-progress".into()),
+                    args: vec!["pip".into(), "install".into()],
                     cwd: Some(plugin.plugin.to_virtual_path(sandbox.path())),
                     stream: true,
                     ..ExecCommandInput::default()
@@ -1025,7 +1033,7 @@ dependencies = ["internal-lib"]
             // 3) Now compare with a clean expected ExecCommand (no PATH)
             let expected = ExecCommand::new(
                 ExecCommandInput::new("uv", ["pip", "install", "-a", "b", "--c"])
-                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    .cwd(plugin.plugin.to_virtual_path(sandbox.path())),
             );
 
             assert_eq!(actual, expected);
@@ -1073,17 +1081,15 @@ dependencies = ["internal-lib"]
                 ExecCommandInput::new(
                     "uv",
                     [
-                            "pip",
-                            "install",
-                            "-r",
-                            "requirements.txt",
-                            "-c",
-                            "constraints.txt",
-                            "--no-managed-python",
-                            "--no-python-downloads",
-                            "--no-progress",
-                    ])
-                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                        "pip",
+                        "install",
+                        "-r",
+                        "requirements.txt",
+                        "-c",
+                        "constraints.txt",
+                    ],
+                )
+                .cwd(plugin.plugin.to_virtual_path(sandbox.path())),
             );
 
             assert_eq!(actual, expected);
