@@ -113,6 +113,126 @@ mod go_toolchain_tier2 {
             assert!(output.extended_projects.is_empty());
             assert!(output.input_files.is_empty());
         }
+
+        mod go_list {
+            use super::*;
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn infers_relations_for_sources() {
+                let sandbox = create_moon_sandbox("projects-workspace");
+                let plugin = sandbox.create_toolchain("go").await;
+
+                let mut input = ExtendProjectGraphInput::default();
+                input.project_sources.insert(Id::raw("a"), "a".into());
+                input.project_sources.insert(Id::raw("b"), "b".into());
+                input.project_sources.insert(Id::raw("c"), "c".into());
+                input.toolchain_config = json!({
+                    "inferRelationships": true
+                });
+
+                let output = plugin.extend_project_graph(input).await;
+
+                assert_eq!(
+                    output.extended_projects,
+                    BTreeMap::from_iter([
+                        (
+                            Id::raw("a"),
+                            ExtendProjectOutput {
+                                alias: Some("example.com/org/a".into()),
+                                ..Default::default()
+                            }
+                        ),
+                        (
+                            Id::raw("b"),
+                            ExtendProjectOutput {
+                                alias: Some("example.com/org/b".into()),
+                                ..Default::default()
+                            }
+                        ),
+                        (
+                            Id::raw("c"),
+                            ExtendProjectOutput {
+                                alias: Some("example.com/org/c".into()),
+                                dependencies: vec![
+                                    ProjectDependency {
+                                        id: Id::raw("example.com/org/a"),
+                                        scope: DependencyScope::Production,
+                                        via: Some("module example.com/org/a".into()),
+                                    },
+                                    ProjectDependency {
+                                        id: Id::raw("example.com/org/b"),
+                                        scope: DependencyScope::Production,
+                                        via: Some("module example.com/org/b".into()),
+                                    }
+                                ],
+                                ..Default::default()
+                            }
+                        ),
+                    ])
+                );
+
+                assert_eq!(
+                    output.input_files,
+                    [
+                        PathBuf::from("/workspace/a/go.mod"),
+                        PathBuf::from("/workspace/b/go.mod"),
+                        PathBuf::from("/workspace/c/go.mod"),
+                    ]
+                );
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn doesnt_infer_relations_if_config_disabled() {
+                let sandbox = create_moon_sandbox("projects-workspace");
+                let plugin = sandbox.create_toolchain("go").await;
+
+                let mut input = ExtendProjectGraphInput::default();
+                input.project_sources.insert(Id::raw("a"), "a".into());
+                input.project_sources.insert(Id::raw("b"), "b".into());
+                input.project_sources.insert(Id::raw("c"), "c".into());
+                input.toolchain_config = json!({
+                    "inferRelationships": false
+                });
+
+                let output = plugin.extend_project_graph(input).await;
+
+                assert_eq!(
+                    output.extended_projects,
+                    BTreeMap::from_iter([
+                        (
+                            Id::raw("a"),
+                            ExtendProjectOutput {
+                                alias: Some("example.com/org/a".into()),
+                                ..Default::default()
+                            }
+                        ),
+                        (
+                            Id::raw("b"),
+                            ExtendProjectOutput {
+                                alias: Some("example.com/org/b".into()),
+                                ..Default::default()
+                            }
+                        ),
+                        (
+                            Id::raw("c"),
+                            ExtendProjectOutput {
+                                alias: Some("example.com/org/c".into()),
+                                ..Default::default()
+                            }
+                        ),
+                    ])
+                );
+
+                assert_eq!(
+                    output.input_files,
+                    [
+                        PathBuf::from("/workspace/a/go.mod"),
+                        PathBuf::from("/workspace/b/go.mod"),
+                        PathBuf::from("/workspace/c/go.mod"),
+                    ]
+                );
+            }
+        }
     }
 
     mod extend_task_command {

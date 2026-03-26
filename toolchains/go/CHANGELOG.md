@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed an issue where `go list` was not running in the project root.
+- Fixed an issue where `go list` would add a project dependency to itself.
+
 ## 1.1.1
 
 #### 🚀 Updates

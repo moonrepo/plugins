@@ -14,12 +14,6 @@ derive_enum!(
     }
 );
 
-impl PythonPackageManager {
-    pub fn is_uv_based(&self) -> bool {
-        matches!(self, PythonPackageManager::Uv | PythonPackageManager::UvPip)
-    }
-}
-
 derive_enum!(
     /// The location in which to create the Python virtual environment.
     #[derive(ConfigEnum, Copy, Default)]

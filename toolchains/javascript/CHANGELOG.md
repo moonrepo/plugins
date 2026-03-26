@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Will now remove `node_modules` during Docker prune, as some package managers don't do this automatically.
+- Removed `*.config.*` files from the Docker scaffold process.
+
 ## 1.0.6
 
 #### 🚀 Updates

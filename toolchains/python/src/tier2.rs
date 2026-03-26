@@ -147,8 +147,8 @@ pub fn define_requirements(
 
     if let Some(package_manager) = config.package_manager {
         if matches!(package_manager, PythonPackageManager::UvPip) {
-            output.requires.push("unstable_pip".into());
             output.requires.push("unstable_uv".into());
+            output.requires.push("unstable_pip".into());
         } else {
             output.requires.push(format!("unstable_{package_manager}"));
         }
@@ -282,7 +282,9 @@ pub fn install_dependencies(
         }
     }
 
-    if package_manager_config.install_args.is_empty() && package_manager.is_uv_based() {
+    if package_manager_config.install_args.is_empty()
+        && matches!(package_manager, PythonPackageManager::Uv)
+    {
         command.args.extend(fallback_uv_args);
     } else {
         command.args.extend(package_manager_config.install_args);
@@ -388,7 +390,10 @@ pub fn setup_environment(
 
     if package_manager_config.venv_args.is_empty()
         && config.version.is_some()
-        && package_manager.is_uv_based()
+        && matches!(
+            package_manager,
+            PythonPackageManager::Uv | PythonPackageManager::UvPip
+        )
     {
         command.args.extend(fallback_uv_args);
     } else {

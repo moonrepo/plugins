@@ -4,13 +4,13 @@ use extism_pdk::*;
 use moon_common::path::{is_root_level_source, to_relative_virtual_string};
 use moon_config::{DependencyScope, LanguageType};
 use moon_pdk::{
-    HostLogInput, host_log, is_project_toolchain_enabled, map_miette_error,
+    HostLogInput, host_log, is_project_toolchain_enabled, map_miette_error, parse_toolchain_config,
     parse_toolchain_config_schema, plugin_err,
 };
 use moon_pdk_api::*;
 use nodejs_package_json::VersionProtocol;
 use schematic::SchemaBuilder;
-use starbase_utils::json::JsonValue;
+use starbase_utils::{fs, json::JsonValue};
 use std::str::FromStr;
 use toolchain_common::enable_tracing;
 
@@ -35,7 +35,6 @@ pub fn register_toolchain(
         language: Some(LanguageType::JavaScript),
         // For project detection
         config_file_globs: vec![
-            "*.config.{js,cjs,mjs,ts,tsx,cts,mts}".into(),
             // bun
             "bunfig.toml".into(),
             // deno
@@ -48,6 +47,7 @@ pub fn register_toolchain(
             ".pnpmfile.*".into(),
             // yarn
             ".yarn/**/*".into(),
+            ".yarnrc".into(),
             ".yarnrc.*".into(),
         ],
         manifest_file_names: vec!["package.json".into()],
@@ -308,4 +308,20 @@ fn sync_project_workspace_dependencies(
     }
 
     Ok(())
+}
+
+#[plugin_fn]
+pub fn prune_docker(Json(input): Json<PruneDockerInput>) -> FnResult<Json<PruneDockerOutput>> {
+    let mut output = PruneDockerOutput::default();
+    let node_modules_dir = input.root.join("node_modules");
+
+    if node_modules_dir.exists() && input.docker_config.delete_vendor_directories {
+        fs::remove_dir_all(&node_modules_dir)?;
+
+        if let Some(file) = node_modules_dir.virtual_path() {
+            output.changed_files.push(file);
+        }
+    }
+
+    Ok(Json(output))
 }

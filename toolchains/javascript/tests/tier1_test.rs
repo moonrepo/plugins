@@ -1,6 +1,8 @@
+use moon_config::DockerPruneConfig;
 use moon_pdk_api::*;
 use moon_pdk_test_utils::create_empty_moon_sandbox;
 use starbase_utils::json::JsonValue;
+use std::path::PathBuf;
 
 mod javascript_toolchain_tier1 {
     use super::*;
@@ -178,6 +180,76 @@ mod javascript_toolchain_tier1 {
             assert_eq!(
                 output.default_settings.get("packageManager").unwrap(),
                 &JsonValue::String("yarn".into())
+            );
+        }
+    }
+
+    mod prune_docker {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn does_nothing_if_no_modules_dir() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .prune_docker(PruneDockerInput {
+                    docker_config: DockerPruneConfig {
+                        delete_vendor_directories: true,
+                        ..Default::default()
+                    },
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.changed_files.is_empty());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn does_nothing_if_disabled() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("node_modules/file", "");
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .prune_docker(PruneDockerInput {
+                    docker_config: DockerPruneConfig {
+                        delete_vendor_directories: false,
+                        ..Default::default()
+                    },
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.changed_files.is_empty());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn removes_modules_dir() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("node_modules/file", "");
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .prune_docker(PruneDockerInput {
+                    docker_config: DockerPruneConfig {
+                        delete_vendor_directories: true,
+                        ..Default::default()
+                    },
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(!sandbox.path().join("node_modules").exists());
+
+            assert_eq!(
+                output.changed_files,
+                [PathBuf::from("/workspace/node_modules")]
             );
         }
     }
