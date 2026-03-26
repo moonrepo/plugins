@@ -410,10 +410,13 @@ pub fn locate_executables(
 
     let config = get_tool_config::<NodeDepmanToolConfig>()?;
 
+    // If only shared dir, clear everything else
     if config.shared_globals_dir {
         globals_lookup_dirs.clear();
-        globals_lookup_dirs.push("$PROTO_HOME/tools/node/globals/bin".into());
     }
+
+    // Always add this so that it's available for `get_global_dirs`
+    globals_lookup_dirs.push("$PROTO_HOME/tools/node/globals/bin".into());
 
     let mut exes = HashMap::from_iter([(manager.to_string(), primary)]);
     exes.extend(secondary);

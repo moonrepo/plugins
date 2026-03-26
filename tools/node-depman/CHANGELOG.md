@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed the shared globals dir not always being available for lookup.
+
 ## 0.17.6
 
 #### 🚀 Updates
