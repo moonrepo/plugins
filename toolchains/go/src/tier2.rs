@@ -1,9 +1,8 @@
 use crate::config::GoToolchainConfig;
-use crate::go_mod::parse_go_mod;
+use crate::go_mod::{GoMod, Module, ModuleDependency, parse_go_mod};
 use crate::go_sum::GoSum;
 use crate::go_work::GoWork;
 use extism_pdk::*;
-use gomod_parser2::{Module, ModuleDependency};
 use moon_config::{BinEntry, DependencyScope};
 use moon_pdk::{
     command_exists, exec, get_host_env_var, get_host_environment, locate_root,
@@ -73,35 +72,45 @@ pub fn extend_project_graph(
         let project_root = input.context.workspace_root.join(source);
         let go_mod_path = project_root.join("go.mod");
 
-        if go_mod_path.exists() {
-            let mut manifest = parse_go_mod(fs::read_file(&go_mod_path)?)?;
-
-            if go_exists {
-                if config.infer_relationships {
-                    manifest
-                        .require
-                        .extend(execute_go_list(&project_root, false)?);
-                }
-
-                if config.infer_relationships_from_tests {
-                    manifest
-                        .require
-                        .extend(execute_go_list(&project_root, true)?);
-                }
-            }
-
-            packages.insert(manifest.module.clone(), (id, manifest));
-
+        let mut manifest = if go_mod_path.exists() {
             if let Some(file) = go_mod_path.virtual_path() {
                 output.input_files.push(file);
             }
+
+            parse_go_mod(fs::read_file(&go_mod_path)?)?
+        } else {
+            GoMod {
+                // This name isn't correct, but we need something!
+                module: id.to_string(),
+                ..Default::default()
+            }
+        };
+
+        if go_exists {
+            if config.infer_relationships {
+                manifest
+                    .require
+                    .extend(execute_go_list(&project_root, false)?);
+            }
+
+            if config.infer_relationships_from_tests {
+                manifest
+                    .require
+                    .extend(execute_go_list(&project_root, true)?);
+            }
         }
+
+        packages.insert(manifest.module.clone(), (id, manifest));
     }
 
     // Second pass, extract packages and their relationships
     for (id, manifest) in packages.values() {
         let mut project_output = ExtendProjectOutput {
-            alias: Some(manifest.module.clone()),
+            alias: if manifest.module.is_empty() || manifest.module == id.as_str() {
+                None
+            } else {
+                Some(manifest.module.clone())
+            },
             ..Default::default()
         };
 
@@ -125,9 +134,14 @@ pub fn extend_project_graph(
             }
         }
 
-        output
-            .extended_projects
-            .insert(id.to_owned(), project_output);
+        if project_output.alias.is_some()
+            || !project_output.dependencies.is_empty()
+            || !project_output.tasks.is_empty()
+        {
+            output
+                .extended_projects
+                .insert(id.to_owned(), project_output);
+        }
     }
 
     Ok(Json(output))

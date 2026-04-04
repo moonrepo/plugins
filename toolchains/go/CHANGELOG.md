@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Updated `go list` to not require `go.mod` file to run.
+
 ## 1.1.2
 
 #### 🐞 Fixes
