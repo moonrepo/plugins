@@ -134,9 +134,14 @@ pub fn extend_project_graph(
             }
         }
 
-        output
-            .extended_projects
-            .insert(id.to_owned(), project_output);
+        if project_output.alias.is_some()
+            || !project_output.dependencies.is_empty()
+            || !project_output.tasks.is_empty()
+        {
+            output
+                .extended_projects
+                .insert(id.to_owned(), project_output);
+        }
     }
 
     Ok(Json(output))
