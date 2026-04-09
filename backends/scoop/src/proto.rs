@@ -57,18 +57,8 @@ pub fn define_tool_config(_: ()) -> FnResult<Json<DefineToolConfigOutput>> {
 
 #[plugin_fn]
 pub fn register_backend(
-    Json(input): Json<RegisterBackendInput>,
+    Json(_input): Json<RegisterBackendInput>,
 ) -> FnResult<Json<RegisterBackendOutput>> {
-    let env = get_host_environment()?;
-
-    if !env.os.is_windows() {
-        return Err(PluginError::UnsupportedOS {
-            tool: input.id.to_string(),
-            os: env.os.to_string(),
-        }
-        .into());
-    }
-
     let config = get_tool_config::<ScoopToolConfig>()?;
 
     Ok(Json(RegisterBackendOutput {
@@ -246,12 +236,16 @@ pub fn pre_run(Json(_): Json<RunHook>) -> FnResult<Json<RunHookResult>> {
     let config = get_tool_config::<ScoopToolConfig>()?;
     let manifest = fetch_manifest(&config)?;
 
-    if let Some(env_set) = manifest.env_set {
-        let mut env = FxHashMap::default();
+    let env = get_host_environment()?;
+    let arch = map_arch(env.arch);
+    let env_set = manifest.get_env_set_for_arch(arch);
+
+    if !env_set.is_empty() {
+        let mut env_map = FxHashMap::default();
         for (key, value) in env_set {
-            env.insert(key, value);
+            env_map.insert(key, value);
         }
-        output.env = Some(env);
+        output.env = Some(env_map);
     }
 
     Ok(Json(output))
