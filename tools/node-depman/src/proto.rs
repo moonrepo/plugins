@@ -8,7 +8,9 @@ use lang_javascript_common::{
     remove_dev_engine,
 };
 use nodejs_package_json::PackageJson;
+use npmrc_config_rs::{Credentials, LoadOptions, NpmrcConfig, registry::parse_registry_url};
 use proto_pdk::*;
+use rustc_hash::FxHashMap;
 use schematic::SchemaBuilder;
 use starbase_utils::fs;
 use std::collections::HashMap;
@@ -295,6 +297,38 @@ fn get_archive_prefix(manager: &PackageManager, spec: &VersionSpec) -> String {
     "package".into()
 }
 
+fn get_http_headers(registry_url: &str) -> AnyResult<FxHashMap<String, String>> {
+    let mut headers = FxHashMap::default();
+
+    let rc = NpmrcConfig::load_with_options(LoadOptions {
+        cwd: Some("/cwd/.npmrc".into()),
+        global_prefix: None,
+        user_config: Some("/userhome/.npmrc".into()),
+        skip_project: false,
+        skip_user: false,
+        skip_global: true,
+    })?;
+
+    let url = parse_registry_url(registry_url)?;
+
+    // https://github.com/npm/registry/blob/main/docs/user/authentication.md
+    if let Some(creds) = rc.credentials_for(&url) {
+        match &creds {
+            Credentials::Token { token, .. } => {
+                headers.insert("Authorization".into(), format!("Bearer {token}"));
+            }
+            Credentials::BasicAuth { .. } | Credentials::LegacyAuth { .. } => {
+                if let Some(encoded) = creds.basic_auth_header() {
+                    headers.insert("Authorization".into(), format!("Basic {encoded}"));
+                }
+            }
+            Credentials::ClientCertOnly(_) => {}
+        };
+    }
+
+    Ok(headers)
+}
+
 #[plugin_fn]
 pub fn download_prebuilt(
     Json(input): Json<DownloadPrebuiltInput>,
@@ -329,7 +363,8 @@ pub fn download_prebuilt(
             .replace("{package_without_scope}", package_without_scope)
             .replace("{version}", &version.to_string())
             .replace("{file}", &filename),
-        ..DownloadPrebuiltOutput::default()
+        http_headers: get_http_headers(&registry_url)?,
+        ..Default::default()
     }))
 }
 
