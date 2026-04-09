@@ -10,76 +10,6 @@ pub struct NodeDepmanPluginConfig {
 mod node_depman_tool {
     use super::*;
 
-    #[tokio::test(flavor = "multi_thread")]
-    async fn extracts_auth_token_header() {
-        let sandbox = create_empty_proto_sandbox();
-        sandbox.create_file(".npmrc", "//registry.npmjs.org/:_authToken = abc123");
-
-        let plugin = sandbox
-            .create_plugin_with_config("npm-test", |config| {
-                config.host(HostOS::Linux, HostArch::Arm64);
-            })
-            .await;
-
-        assert_eq!(
-            plugin
-                .download_prebuilt(DownloadPrebuiltInput {
-                    context: PluginContext {
-                        version: VersionSpec::parse("9.0.0").unwrap(),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                })
-                .await,
-            DownloadPrebuiltOutput {
-                archive_prefix: Some("package".into()),
-                download_url: "https://registry.npmjs.org/npm/-/npm-9.0.0.tgz".into(),
-                http_headers: FxHashMap::from_iter([(
-                    "Authorization".into(),
-                    "Bearer abc123".into()
-                )]),
-                ..Default::default()
-            }
-        );
-    }
-
-    #[tokio::test(flavor = "multi_thread")]
-    async fn extracts_auth_token_header_for_custom_registry() {
-        let sandbox = create_empty_proto_sandbox();
-        sandbox.create_file(".npmrc", "//registry.yarnpkg.com/:_authToken = abc123");
-
-        let plugin = sandbox
-            .create_plugin_with_config("npm-test", |config| {
-                config
-                    .host(HostOS::Linux, HostArch::Arm64)
-                    .tool_config(NodeDepmanPluginConfig {
-                        registry_url: "https://registry.yarnpkg.com".into(),
-                    });
-            })
-            .await;
-
-        assert_eq!(
-            plugin
-                .download_prebuilt(DownloadPrebuiltInput {
-                    context: PluginContext {
-                        version: VersionSpec::parse("9.0.0").unwrap(),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                })
-                .await,
-            DownloadPrebuiltOutput {
-                archive_prefix: Some("package".into()),
-                download_url: "https://registry.yarnpkg.com/npm/-/npm-9.0.0.tgz".into(),
-                http_headers: FxHashMap::from_iter([(
-                    "Authorization".into(),
-                    "Bearer abc123".into()
-                )]),
-                ..Default::default()
-            }
-        );
-    }
-
     mod npm {
         use super::*;
 
@@ -165,6 +95,76 @@ mod node_depman_tool {
                 DownloadPrebuiltOutput {
                     archive_prefix: Some("package".into()),
                     download_url: "https://some-internal-url.example/npm/-/npm-9.0.0.tgz".into(),
+                    ..Default::default()
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn extracts_auth_token_header() {
+            let sandbox = create_empty_proto_sandbox();
+            sandbox.create_file(".npmrc", "//registry.npmjs.org/:_authToken = abc123");
+
+            let plugin = sandbox
+                .create_plugin_with_config("npm-test", |config| {
+                    config.host(HostOS::Linux, HostArch::Arm64);
+                })
+                .await;
+
+            assert_eq!(
+                plugin
+                    .download_prebuilt(DownloadPrebuiltInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("9.0.0").unwrap(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .await,
+                DownloadPrebuiltOutput {
+                    archive_prefix: Some("package".into()),
+                    download_url: "https://registry.npmjs.org/npm/-/npm-9.0.0.tgz".into(),
+                    http_headers: FxHashMap::from_iter([(
+                        "Authorization".into(),
+                        "Bearer abc123".into()
+                    )]),
+                    ..Default::default()
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn extracts_auth_token_header_for_custom_registry() {
+            let sandbox = create_empty_proto_sandbox();
+            sandbox.create_file(".npmrc", "//registry.yarnpkg.com/:_authToken = abc123");
+
+            let plugin = sandbox
+                .create_plugin_with_config("npm-test", |config| {
+                    config.host(HostOS::Linux, HostArch::Arm64).tool_config(
+                        NodeDepmanPluginConfig {
+                            registry_url: "https://registry.yarnpkg.com".into(),
+                        },
+                    );
+                })
+                .await;
+
+            assert_eq!(
+                plugin
+                    .download_prebuilt(DownloadPrebuiltInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("9.0.0").unwrap(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .await,
+                DownloadPrebuiltOutput {
+                    archive_prefix: Some("package".into()),
+                    download_url: "https://registry.yarnpkg.com/npm/-/npm-9.0.0.tgz".into(),
+                    http_headers: FxHashMap::from_iter([(
+                        "Authorization".into(),
+                        "Bearer abc123".into()
+                    )]),
                     ..Default::default()
                 }
             );
@@ -256,6 +256,76 @@ mod node_depman_tool {
                 DownloadPrebuiltOutput {
                     archive_prefix: Some("package".into()),
                     download_url: "https://some-internal-url.example/pnpm/-/pnpm-8.0.0.tgz".into(),
+                    ..Default::default()
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn extracts_auth_token_header() {
+            let sandbox = create_empty_proto_sandbox();
+            sandbox.create_file(".npmrc", "//registry.npmjs.org/:_authToken = abc123");
+
+            let plugin = sandbox
+                .create_plugin_with_config("pnpm-test", |config| {
+                    config.host(HostOS::Linux, HostArch::Arm64);
+                })
+                .await;
+
+            assert_eq!(
+                plugin
+                    .download_prebuilt(DownloadPrebuiltInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("9.0.0").unwrap(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .await,
+                DownloadPrebuiltOutput {
+                    archive_prefix: Some("package".into()),
+                    download_url: "https://registry.npmjs.org/npm/-/npm-9.0.0.tgz".into(),
+                    http_headers: FxHashMap::from_iter([(
+                        "Authorization".into(),
+                        "Bearer abc123".into()
+                    )]),
+                    ..Default::default()
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn extracts_auth_token_header_for_custom_registry() {
+            let sandbox = create_empty_proto_sandbox();
+            sandbox.create_file(".npmrc", "//registry.yarnpkg.com/:_authToken = abc123");
+
+            let plugin = sandbox
+                .create_plugin_with_config("pnpm-test", |config| {
+                    config.host(HostOS::Linux, HostArch::Arm64).tool_config(
+                        NodeDepmanPluginConfig {
+                            registry_url: "https://registry.yarnpkg.com".into(),
+                        },
+                    );
+                })
+                .await;
+
+            assert_eq!(
+                plugin
+                    .download_prebuilt(DownloadPrebuiltInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("9.0.0").unwrap(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .await,
+                DownloadPrebuiltOutput {
+                    archive_prefix: Some("package".into()),
+                    download_url: "https://registry.yarnpkg.com/npm/-/npm-9.0.0.tgz".into(),
+                    http_headers: FxHashMap::from_iter([(
+                        "Authorization".into(),
+                        "Bearer abc123".into()
+                    )]),
                     ..Default::default()
                 }
             );
@@ -417,6 +487,85 @@ mod node_depman_tool {
                     .unwrap()
                     .exe_path,
                 Some("shims/yarn".into())
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn extracts_auth_token_header() {
+            let sandbox = create_empty_proto_sandbox();
+            sandbox.create_file(".yarnrc.yml", "npmAuthToken: abc123");
+
+            let plugin = sandbox
+                .create_plugin_with_config("yarn-test", |config| {
+                    config.host(HostOS::Linux, HostArch::Arm64);
+                })
+                .await;
+
+            assert_eq!(
+                plugin
+                    .download_prebuilt(DownloadPrebuiltInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("9.0.0").unwrap(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .await,
+                DownloadPrebuiltOutput {
+                    archive_prefix: Some("package".into()),
+                    download_url: "https://registry.npmjs.org/npm/-/npm-9.0.0.tgz".into(),
+                    http_headers: FxHashMap::from_iter([(
+                        "Authorization".into(),
+                        "Bearer abc123".into()
+                    )]),
+                    ..Default::default()
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn extracts_auth_token_header_for_custom_registry() {
+            let sandbox = create_empty_proto_sandbox();
+            sandbox.create_file(
+                ".yarnrc.yml",
+                r#"
+npmAuthToken: xyz789
+
+npmRegistries:
+    //registry.yarnpkg.com:
+        npmAuthToken: abc123
+"#,
+            );
+
+            let plugin = sandbox
+                .create_plugin_with_config("yarn-test", |config| {
+                    config.host(HostOS::Linux, HostArch::Arm64).tool_config(
+                        NodeDepmanPluginConfig {
+                            registry_url: "https://registry.yarnpkg.com".into(),
+                        },
+                    );
+                })
+                .await;
+
+            assert_eq!(
+                plugin
+                    .download_prebuilt(DownloadPrebuiltInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("9.0.0").unwrap(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .await,
+                DownloadPrebuiltOutput {
+                    archive_prefix: Some("package".into()),
+                    download_url: "https://registry.yarnpkg.com/npm/-/npm-9.0.0.tgz".into(),
+                    http_headers: FxHashMap::from_iter([(
+                        "Authorization".into(),
+                        "Bearer abc123".into()
+                    )]),
+                    ..Default::default()
+                }
             );
         }
     }

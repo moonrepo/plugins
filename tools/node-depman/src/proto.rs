@@ -8,12 +8,10 @@ use lang_javascript_common::{
     remove_dev_engine,
 };
 use nodejs_package_json::PackageJson;
-use npmrc_config_rs::{Credentials, LoadOptions, NpmrcConfig, registry::parse_registry_url};
 use proto_pdk::*;
 use rustc_hash::FxHashMap;
 use schematic::SchemaBuilder;
 use starbase_utils::fs;
-use std::collections::HashMap;
 use tool_common::enable_tracing;
 
 const BASH_SHIM_TEMPLATE: &str = include_str!("../templates/bash-shim.sh");
@@ -39,7 +37,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
             ignore_os_arch: true,
             ..Default::default()
         },
-        minimum_proto_version: Some(Version::new(0, 46, 0)),
+        minimum_proto_version: Some(Version::new(0, 56, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         requires: vec!["node".into()],
         ..RegisterToolOutput::default()
@@ -297,42 +295,6 @@ fn get_archive_prefix(manager: &PackageManager, spec: &VersionSpec) -> String {
     "package".into()
 }
 
-fn get_http_headers(registry_url: &str) -> AnyResult<FxHashMap<String, String>> {
-    let mut headers = FxHashMap::default();
-
-    let rc = NpmrcConfig::load_with_options(LoadOptions {
-        cwd: Some(if get_test_environment()?.is_some() {
-            "/sandbox".into()
-        } else {
-            "/cwd".into()
-        }),
-        global_prefix: None,
-        user_config: Some("/userhome/.npmrc".into()),
-        skip_project: false,
-        skip_user: false,
-        skip_global: true,
-    })?;
-
-    let url = parse_registry_url(registry_url)?;
-
-    // https://github.com/npm/registry/blob/main/docs/user/authentication.md
-    if let Some(creds) = rc.credentials_for(&url) {
-        match &creds {
-            Credentials::Token { token, .. } => {
-                headers.insert("Authorization".into(), format!("Bearer {token}"));
-            }
-            Credentials::BasicAuth { .. } | Credentials::LegacyAuth { .. } => {
-                if let Some(encoded) = creds.basic_auth_header() {
-                    headers.insert("Authorization".into(), format!("Basic {encoded}"));
-                }
-            }
-            Credentials::ClientCertOnly(_) => {}
-        };
-    }
-
-    Ok(headers)
-}
-
 #[plugin_fn]
 pub fn download_prebuilt(
     Json(input): Json<DownloadPrebuiltInput>,
@@ -367,7 +329,7 @@ pub fn download_prebuilt(
             .replace("{package_without_scope}", package_without_scope)
             .replace("{version}", &version.to_string())
             .replace("{file}", &filename),
-        http_headers: get_http_headers(&registry_url)?,
+        http_headers: manager.get_http_headers(&registry_url, &input.context.working_dir)?,
         ..Default::default()
     }))
 }
@@ -378,7 +340,7 @@ pub fn locate_executables(
 ) -> FnResult<Json<LocateExecutablesOutput>> {
     let env = get_host_environment()?;
     let manager = PackageManager::detect()?;
-    let mut secondary = HashMap::<String, ExecutableConfig>::default();
+    let mut secondary = FxHashMap::<String, ExecutableConfig>::default();
     let primary;
 
     if !input.install_dir.join("shims").exists() {
@@ -457,7 +419,7 @@ pub fn locate_executables(
     // Always add this so that it's available for `get_global_dirs`
     globals_lookup_dirs.push("$PROTO_HOME/tools/node/globals/bin".into());
 
-    let mut exes = HashMap::from_iter([(manager.to_string(), primary)]);
+    let mut exes = FxHashMap::from_iter([(manager.to_string(), primary)]);
     exes.extend(secondary);
 
     // Update the permissions of each executable since they are custom shims

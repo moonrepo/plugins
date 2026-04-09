@@ -4,7 +4,7 @@ use extism_pdk::*;
 use moon_common::path::{is_root_level_source, to_relative_virtual_string};
 use moon_config::{DependencyScope, LanguageType};
 use moon_pdk::{
-    HostLogInput, host_log, is_project_toolchain_enabled, map_miette_error, parse_toolchain_config,
+    HostLogInput, host_log, is_project_toolchain_enabled, map_miette_error,
     parse_toolchain_config_schema, plugin_err,
 };
 use moon_pdk_api::*;

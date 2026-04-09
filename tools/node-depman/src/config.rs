@@ -1,3 +1,5 @@
+pub const DEFAULT_REGISTRY: &str = "https://registry.npmjs.org";
+
 #[derive(Debug, schematic::Schematic, serde::Deserialize, serde::Serialize)]
 #[serde(default, deny_unknown_fields, rename_all = "kebab-case")]
 pub struct NodeDepmanToolConfig {
@@ -9,7 +11,7 @@ pub struct NodeDepmanToolConfig {
 impl Default for NodeDepmanToolConfig {
     fn default() -> Self {
         Self {
-            registry_url: "https://registry.npmjs.org".into(),
+            registry_url: DEFAULT_REGISTRY.into(),
             dist_url: "{registry}/{package}/-/{package_without_scope}-{version}.tgz".into(),
             shared_globals_dir: false,
         }

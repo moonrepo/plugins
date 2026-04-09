@@ -7,6 +7,7 @@ mod npm_registry;
 mod package_manager;
 #[cfg(feature = "wasm")]
 mod proto;
+mod yarn_compat;
 
 pub use config::*;
 #[cfg(feature = "wasm")]
