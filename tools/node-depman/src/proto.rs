@@ -9,9 +9,9 @@ use lang_javascript_common::{
 };
 use nodejs_package_json::PackageJson;
 use proto_pdk::*;
+use rustc_hash::FxHashMap;
 use schematic::SchemaBuilder;
 use starbase_utils::fs;
-use std::collections::HashMap;
 use tool_common::enable_tracing;
 
 const BASH_SHIM_TEMPLATE: &str = include_str!("../templates/bash-shim.sh");
@@ -37,7 +37,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
             ignore_os_arch: true,
             ..Default::default()
         },
-        minimum_proto_version: Some(Version::new(0, 46, 0)),
+        minimum_proto_version: Some(Version::new(0, 56, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         requires: vec!["node".into()],
         ..RegisterToolOutput::default()
@@ -329,7 +329,8 @@ pub fn download_prebuilt(
             .replace("{package_without_scope}", package_without_scope)
             .replace("{version}", &version.to_string())
             .replace("{file}", &filename),
-        ..DownloadPrebuiltOutput::default()
+        http_headers: manager.get_http_headers(&registry_url, &input.context.working_dir)?,
+        ..Default::default()
     }))
 }
 
@@ -339,7 +340,7 @@ pub fn locate_executables(
 ) -> FnResult<Json<LocateExecutablesOutput>> {
     let env = get_host_environment()?;
     let manager = PackageManager::detect()?;
-    let mut secondary = HashMap::<String, ExecutableConfig>::default();
+    let mut secondary = FxHashMap::<String, ExecutableConfig>::default();
     let primary;
 
     if !input.install_dir.join("shims").exists() {
@@ -418,7 +419,7 @@ pub fn locate_executables(
     // Always add this so that it's available for `get_global_dirs`
     globals_lookup_dirs.push("$PROTO_HOME/tools/node/globals/bin".into());
 
-    let mut exes = HashMap::from_iter([(manager.to_string(), primary)]);
+    let mut exes = FxHashMap::from_iter([(manager.to_string(), primary)]);
     exes.extend(secondary);
 
     // Update the permissions of each executable since they are custom shims

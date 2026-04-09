@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added `.npmrc` and `.yarnrc.yml` support. Will parse local and user rc files to extract auth token information.
+- Will pass authorization HTTP headers when making requests for downloading prebuilts.
+
 ## 0.17.7
 
 #### 🐞 Fixes

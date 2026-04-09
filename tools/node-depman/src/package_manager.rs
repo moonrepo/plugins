@@ -1,6 +1,13 @@
 #![allow(dead_code)]
 
-use proto_pdk::{AnyResult, UnresolvedVersionSpec, get_plugin_id};
+use crate::config::DEFAULT_REGISTRY;
+use crate::yarn_compat::*;
+use npmrc_config_rs::{
+    Credentials, LoadOptions, NpmrcConfig, nerf_dart, registry::parse_registry_url,
+};
+use proto_pdk::{AnyResult, UnresolvedVersionSpec, VirtualPath, get_plugin_id};
+use rustc_hash::FxHashMap;
+use starbase_utils::{fs::find_upwards, yaml};
 use std::fmt;
 
 #[derive(PartialEq)]
@@ -43,6 +50,80 @@ impl PackageManager {
         }
 
         self.to_string()
+    }
+
+    pub fn get_http_headers(
+        &self,
+        registry_url: &str,
+        working_dir: &VirtualPath,
+    ) -> AnyResult<FxHashMap<String, String>> {
+        let mut headers = FxHashMap::default();
+        let url = parse_registry_url(registry_url)?;
+
+        let credentials = match self {
+            Self::Npm | Self::Pnpm => {
+                let rc = NpmrcConfig::load_with_options(LoadOptions {
+                    cwd: Some(working_dir.into()),
+                    global_prefix: None,
+                    user_config: Some("/userhome/.npmrc".into()),
+                    skip_project: false,
+                    skip_user: false,
+                    skip_global: true,
+                })?;
+
+                rc.credentials_for(&url)
+            }
+            Self::Yarn => {
+                if let Some(rc_path) = find_upwards(".yarnrc.yml", working_dir) {
+                    let mut rc: YarnRcYaml = yaml::read_file(rc_path)?;
+                    let registry_shorthand = nerf_dart(&url);
+
+                    let (token, basic) =
+                        if let Some(config) = rc.npm_registries.remove(&registry_shorthand) {
+                            (config.npm_auth_token, config.npm_auth_ident)
+                        } else if rc.npm_registry_server.as_ref().is_none_or(|server| {
+                            registry_url == server || registry_url == DEFAULT_REGISTRY
+                        }) {
+                            (rc.npm_auth_token, rc.npm_auth_ident)
+                        } else {
+                            (None, None)
+                        };
+
+                    if let Some(token) = token {
+                        Some(Credentials::Token { token, cert: None })
+                    } else if let Some(basic) = basic
+                        && let Some((user, pass)) = basic.split_once(':')
+                    {
+                        Some(Credentials::BasicAuth {
+                            username: user.into(),
+                            password: pass.into(),
+                            cert: None,
+                        })
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            }
+        };
+
+        // https://github.com/npm/registry/blob/main/docs/user/authentication.md
+        if let Some(creds) = credentials {
+            match &creds {
+                Credentials::Token { token, .. } => {
+                    headers.insert("Authorization".into(), format!("Bearer {token}"));
+                }
+                Credentials::BasicAuth { .. } | Credentials::LegacyAuth { .. } => {
+                    if let Some(encoded) = creds.basic_auth_header() {
+                        headers.insert("Authorization".into(), format!("Basic {encoded}"));
+                    }
+                }
+                Credentials::ClientCertOnly(_) => {}
+            };
+        }
+
+        Ok(headers)
     }
 
     pub fn is_yarn_classic(&self, version: impl AsRef<UnresolvedVersionSpec>) -> bool {

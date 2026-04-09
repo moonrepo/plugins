@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
 use extism_pdk::{Error, json};
+use rustc_hash::FxHashMap;
 use serde::Deserialize;
-use std::collections::HashMap;
 
 #[derive(Deserialize)]
 pub struct RegistryVersion {
@@ -13,8 +13,8 @@ pub struct RegistryVersion {
 pub struct RegistryResponse {
     pub name: String,
     #[serde(rename = "dist-tags")]
-    pub dist_tags: HashMap<String, String>,
-    pub versions: HashMap<String, RegistryVersion>,
+    pub dist_tags: FxHashMap<String, String>,
+    pub versions: FxHashMap<String, RegistryVersion>,
 }
 
 pub fn parse_registry_response(res_text: String, is_yarn: bool) -> Result<RegistryResponse, Error> {
