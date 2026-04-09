@@ -301,7 +301,11 @@ fn get_http_headers(registry_url: &str) -> AnyResult<FxHashMap<String, String>> 
     let mut headers = FxHashMap::default();
 
     let rc = NpmrcConfig::load_with_options(LoadOptions {
-        cwd: Some("/cwd/.npmrc".into()),
+        cwd: Some(if get_test_environment()?.is_some() {
+            "/sandbox".into()
+        } else {
+            "/cwd".into()
+        }),
         global_prefix: None,
         user_config: Some("/userhome/.npmrc".into()),
         skip_project: false,
