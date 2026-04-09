@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Updated build from source system dependencies and added `apk` (Alpine) support.
+
 ## 0.2.6
 
 #### 🚀 Updates

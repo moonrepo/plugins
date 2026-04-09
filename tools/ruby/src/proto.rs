@@ -74,24 +74,28 @@ pub fn build_instructions(
         ),
         system_dependencies: vec![
             SystemDependency::for_pm(
+                HostPackageManager::Apk,
+                "build-base gcc patch bzip2 libffi-dev openssl-dev ncurses-dev gdbm-dev zlib-dev readline-dev yaml-dev".split(' ').collect::<Vec<_>>(),
+            ),
+            SystemDependency::for_pm(
                 HostPackageManager::Apt,
-                "autoconf patch build-essential rustc libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libgmp-dev libncurses5-dev libffi-dev libgdbm6 libgdbm-dev libdb-dev uuid-dev".split(' ').collect::<Vec<_>>(),
+                "build-essential autoconf libssl-dev libyaml-dev zlib1g-dev libffi-dev libgmp-dev rustc patch libreadline6-dev libncurses5-dev libgdbm6 libgdbm-dev libdb-dev".split(' ').collect::<Vec<_>>(),
             ),
             SystemDependency::for_pm(
                 HostPackageManager::Brew,
-                ["openssl@3", "readline", "libyaml", "gmp", "autoconf"],
+                "openssl@3 readline libyaml gmp autoconf".split(' ').collect::<Vec<_>>(),
             ),
             SystemDependency::for_pm(
                 HostPackageManager::Dnf,
-                "autoconf gcc patch bzip2 openssl-devel libffi-devel readline zlib-devel gdbm ncurses-devel tar perl-FindBin".split(' ').collect::<Vec<_>>(),
+                "autoconf gcc rust patch make bzip2 openssl-devel libyaml-devel libffi-devel readline-devel gdbm-devel ncurses-devel zlib-devel perl-FindBin".split(' ').collect::<Vec<_>>(),
             ),
             SystemDependency::for_pm(
                 HostPackageManager::Pacman,
-                "base-devel libffi libyaml openssl zlib".split(' ').collect::<Vec<_>>(),
+                "base-devel rust libffi libyaml openssl zlib".split(' ').collect::<Vec<_>>(),
             ),
             SystemDependency::for_pm(
                 HostPackageManager::Pkg,
-                "devel/autoconf devel/bison devel/patch lang/gcc databases/gdbm devel/gmake devel/libffi textproc/libyaml devel/ncurses security/openssl devel/readline".split(' ').collect::<Vec<_>>(),
+                "devel/autoconf devel/bison devel/patch lang/gcc lang/rust databases/gdbm devel/gmake devel/libffi textproc/libyaml devel/ncurses security/openssl devel/readline".split(' ').collect::<Vec<_>>(),
             ),
             SystemDependency::for_pm(
                 HostPackageManager::Yum,

@@ -84,14 +84,20 @@ pub fn build_instructions(
         ),
         system_dependencies: vec![
             SystemDependency::for_pm(
+                HostPackageManager::Apk,
+                "build-base libffi-dev openssl-dev bzip2-dev zlib-dev xz-dev readline-dev sqlite-dev tk-dev zstd-dev"
+                    .split(' ')
+                    .collect::<Vec<_>>(),
+            ),
+            SystemDependency::for_pm(
                 HostPackageManager::Apt,
-                "build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev curl git libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev"
+                "make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev curl libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev"
                     .split(' ')
                     .collect::<Vec<_>>(),
             ),
             SystemDependency::for_pm(
                 HostPackageManager::Brew,
-                "openssl readline sqlite3 xz zlib tcl-tk@8"
+                "openssl readline sqlite3 xz tcl-tk@8 libb2 zstd zlib pkgconfig"
                     .split(' ')
                     .collect::<Vec<_>>(),
             ),
@@ -103,7 +109,7 @@ pub fn build_instructions(
             ),
             SystemDependency::for_pm(
                 HostPackageManager::Pacman,
-                "base-devel openssl zlib xz tk"
+                "base-devel openssl zlib xz tk zstd"
                     .split(' ')
                     .collect::<Vec<_>>(),
             ),
