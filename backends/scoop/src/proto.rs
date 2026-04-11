@@ -21,7 +21,17 @@ fn map_arch(arch: HostArch) -> &'static str {
 
 fn fetch_manifest(config: &ScoopToolConfig) -> AnyResult<ScoopManifest> {
     let url = config.get_manifest_url()?;
+    let cache_key = format!("manifest-{url}");
+
+    if let Some(cache) = var::get::<String>(&cache_key)? {
+        let manifest: ScoopManifest = json::from_str(&cache)?;
+
+        return Ok(manifest);
+    }
+
     let manifest: ScoopManifest = fetch_json(&url)?;
+
+    var::set(cache_key, json::to_string(&manifest)?)?;
 
     Ok(manifest)
 }
@@ -115,7 +125,7 @@ pub fn download_prebuilt(
     let env = get_host_environment()?;
 
     check_supported_os_and_arch(
-        "Scoop",
+        "scoop",
         &env,
         permutations![
             HostOS::Windows => [HostArch::X64, HostArch::X86, HostArch::Arm64],

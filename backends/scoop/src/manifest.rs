@@ -3,14 +3,14 @@
 //! Derived from the JSON schema at:
 //! https://github.com/ScoopInstaller/Scoop/blob/master/schema.json
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 // ---------------------------------------------------------------------------
 // Primitive union types (from schema definitions)
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum OneOrMany<T1, T2 = T1> {
     One(T1),
@@ -69,7 +69,7 @@ pub type ShortcutsArray = Vec<Vec<String>>;
 ///
 /// Schema: object with optional `find`, `regex`, `jp`, `jsonpath`, `xpath`,
 /// `mode`, `type`, `url`.
-#[derive(Debug, Default, Clone, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct HashExtraction {
     #[serde(alias = "find")]
@@ -84,7 +84,7 @@ pub struct HashExtraction {
 }
 
 /// Extraction modes for `hashExtraction.mode`.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum HashExtractionMode {
     Download,
@@ -98,7 +98,7 @@ pub enum HashExtractionMode {
 }
 
 /// Hash algorithm types (deprecated in schema).
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum HashType {
     Md5,
@@ -114,7 +114,7 @@ pub enum HashType {
 /// `license`: either an SPDX identifier string or `{ identifier, url? }`.
 ///
 /// Schema: `anyOf: [licenseIdentifiers, { identifier: string, url?: string }]`
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum License {
     Identifier(String),
@@ -135,7 +135,7 @@ impl Default for License {
 // ---------------------------------------------------------------------------
 
 /// `installer`: installation configuration.
-#[derive(Debug, Default, Clone, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct Installer {
     pub args: Option<StringOrArray>,
@@ -145,7 +145,7 @@ pub struct Installer {
 }
 
 /// `uninstaller`: uninstallation configuration.
-#[derive(Debug, Default, Clone, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct Uninstaller {
     pub args: Option<StringOrArray>,
@@ -160,7 +160,7 @@ pub struct Uninstaller {
 /// `checkver`: a regex string or an object with version-check configuration.
 ///
 /// Schema: `anyOf: [string, object]`
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum Checkver {
     Regex(String),
@@ -174,7 +174,7 @@ impl Default for Checkver {
 }
 
 /// Object form of `checkver`.
-#[derive(Debug, Default, Clone, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct CheckverConfig {
     pub github: Option<String>,
@@ -196,7 +196,7 @@ pub struct CheckverConfig {
 // ---------------------------------------------------------------------------
 
 /// `psmodule`: PowerShell module installation.
-#[derive(Debug, Default, Clone, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct PsModule {
     pub name: Option<String>,
@@ -210,7 +210,7 @@ pub struct PsModule {
 ///
 /// Contains the same download/install fields as the top-level manifest but
 /// scoped to a specific architecture.
-#[derive(Debug, Default, Clone, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct ArchitectureEntry {
     pub bin: Option<StringOrArrayNested>,
@@ -230,7 +230,7 @@ pub struct ArchitectureEntry {
 }
 
 /// Top-level `architecture` property: maps arch names to entries.
-#[derive(Debug, Default, Clone, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct Architecture {
     #[serde(rename = "32bit")]
@@ -256,7 +256,7 @@ impl Architecture {
 // ---------------------------------------------------------------------------
 
 /// `autoupdateArch`: per-architecture autoupdate fields.
-#[derive(Debug, Default, Clone, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct AutoupdateArchEntry {
     pub bin: Option<StringOrArrayNested>,
@@ -270,14 +270,14 @@ pub struct AutoupdateArchEntry {
 }
 
 /// Autoupdate installer (only has `file`).
-#[derive(Debug, Default, Clone, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct AutoupdateInstaller {
     pub file: Option<String>,
 }
 
 /// Autoupdate architecture map.
-#[derive(Debug, Default, Clone, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct AutoupdateArchitecture {
     #[serde(rename = "32bit")]
@@ -299,7 +299,7 @@ impl AutoupdateArchitecture {
 }
 
 /// `autoupdate`: top-level autoupdate configuration.
-#[derive(Debug, Default, Clone, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct Autoupdate {
     pub architecture: Option<AutoupdateArchitecture>,
@@ -325,7 +325,7 @@ pub struct Autoupdate {
 ///
 /// https://github.com/ScoopInstaller/Scoop/wiki/App-Manifests
 /// https://github.com/ScoopInstaller/Scoop/blob/master/schema.json
-#[derive(Debug, Default, Clone, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct ScoopManifest {
     // -- Required fields ---------------------------------------------------
