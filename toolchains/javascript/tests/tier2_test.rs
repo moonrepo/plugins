@@ -2040,6 +2040,47 @@ mod javascript_toolchain_tier2 {
             assert_eq!(output.dependencies, expected_base_dependencies());
         }
 
+        // pnpm v10 with `managePackageManagerVersions` writes a multi-document
+        // pnpm-lock.yaml (separated by `---`) — one document for the package
+        // manager metadata, one for the project lockfile.
+        #[tokio::test(flavor = "multi_thread")]
+        async fn parses_pnpm_multidoc() {
+            let sandbox = create_lockfile_sandbox("pnpm-multidoc");
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .parse_lock(ParseLockInput {
+                    path: VirtualPath::Real(sandbox.path().join("pnpm-lock.yaml")),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.dependencies,
+                BTreeMap::from_iter([
+                    (
+                        "pnpm".into(),
+                        vec![LockDependency {
+                            hash: Some("sha512-pmhash==".into()),
+                            version: Some(VersionSpec::parse("10.33.0").unwrap()),
+                            ..Default::default()
+                        }],
+                    ),
+                    (
+                        "typescript".into(),
+                        vec![LockDependency {
+                            hash: Some(
+                                "sha512-CWBzXQrc/qOkhidw1OzBTQuYRbfyxDXJMVJ1XNwUHGROVmuaeiEm3OslpZ1RV96d7SKKjZKrSJu3+t/xlw3R9A=="
+                                    .into()
+                            ),
+                            version: Some(VersionSpec::parse("5.9.2").unwrap()),
+                            ..Default::default()
+                        }],
+                    ),
+                ])
+            );
+        }
+
         #[tokio::test(flavor = "multi_thread")]
         async fn parses_yarn() {
             let sandbox = create_lockfile_sandbox("yarn");
