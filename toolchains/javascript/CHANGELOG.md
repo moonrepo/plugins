@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed `pnpm-lock.yaml` parsing for pnpm v10's multi-document lockfiles, which
+  are written when `managePackageManagerVersions` is enabled (the default).
+
 ## 1.0.7
 
 #### 🚀 Updates

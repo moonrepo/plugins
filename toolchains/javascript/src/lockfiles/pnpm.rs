@@ -9,9 +9,18 @@ use starbase_utils::{fs, yaml};
 
 pub fn parse_pnpm_lock_yaml(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyResult<()> {
     let content = fs::read_file(path)?;
-    let lock: PnpmLock = yaml::parse(&content)?;
 
-    for (name, package) in lock.packages {
+    // pnpm v10 with `managePackageManagerVersions` writes a multi-document
+    // pnpm-lock.yaml — the package-manager metadata in one document and the
+    // project lockfile in another, separated by `---` markers. Merge packages
+    // from every document so we don't fail on `more than one document`.
+    let mut packages = FxHashMap::default();
+    for doc in yaml::serde_yaml::Deserializer::from_str(&content) {
+        let lock = PnpmLock::deserialize(doc)?;
+        packages.extend(lock.packages);
+    }
+
+    for (name, package) in packages {
         let (name, version) = parse_name_and_version(&name);
         let reso = package.resolution;
 
