@@ -31,7 +31,7 @@ starbase_utils = { workspace = true, features = ["json", "yaml"] }
 
 # Lockfiles
 # chaste-pnpm = "0.5.0"
-deno_lockfile = "0.40.0"
+deno_lockfile = "0.47.0"
 package-lock-json-parser = "0.4.0"
 yarn-lock-parser = "0.14.0"
 

@@ -7,7 +7,7 @@ members = ["backends/*", "crates/*", "extensions/*", "tools/*", "toolchains/*"]
 extism-pdk = { version = "1.4.1" }
 regex = { version = "1.11.2", default-features = false, features = ["std"] }
 rustc-hash = "2.1.1"
-schematic = { version = "0.19.4", default-features = false, features = [
+schematic = { version = "0.19.7", default-features = false, features = [
     "schema",
 ] }
 semver = "1.0.27"
@@ -15,24 +15,24 @@ serde = { version = "1.0.228", features = ["derive"] }
 serde_json = { version = "1.0.146", features = ["preserve_order"] }
 serial_test = "3.4.0"
 shell-words = "1.1.1"
-starbase_sandbox = "0.10.5"
-starbase_utils = { version = "0.12.6", default-features = false, features = [
+starbase_sandbox = "0.10.7"
+starbase_utils = { version = "0.12.9", default-features = false, features = [
     "editor-config",
 ] }
-tokio = { version = "1.50.0", features = ["full"] }
-toml = { version = "0.9.8", default-features = false, features = [
+tokio = { version = "1.51.1", features = ["full"] }
+toml = { version = "1.1.2", default-features = false, features = [
     "parse",
     "serde",
 ] }
 
 # moon
-moon_common = { version = "2.0.2" }
-moon_config = { version = "2.0.5" }
-moon_pdk = { version = "2.0.1" }
-moon_pdk_api = { version = "2.0.1" }
-moon_pdk_test_utils = { version = "2.0.1" }
-moon_project = { version = "2.0.1" }
-moon_target = { version = "2.0.1" }
+moon_common = { version = "2.0.5" }
+moon_config = { version = "2.0.11" }
+moon_pdk = { version = "2.0.3" }
+moon_pdk_api = { version = "2.0.3" }
+moon_pdk_test_utils = { version = "2.0.3" }
+moon_project = { version = "2.0.4" }
+moon_target = { version = "2.1.1" }
 # moon_common = { path = "../../moon/crates/common" }
 # moon_config = { path = "../../moon/crates/config" }
 # moon_pdk = { path = "../../moon/crates/pdk" }
@@ -42,9 +42,9 @@ moon_target = { version = "2.0.1" }
 # moon_target = { path = "../../moon/crates/target" }
 
 # proto
-proto_pdk = { version = "0.32.6" }
-proto_pdk_api = { version = "0.31.10" }
-proto_pdk_test_utils = { version = "0.43.6" }
+proto_pdk = { version = "0.32.8" }
+proto_pdk_api = { version = "0.31.11" }
+proto_pdk_test_utils = { version = "0.44.1" }
 # proto_pdk = { path = "../../proto/crates/pdk" }
 # proto_pdk_api = { path = "../../proto/crates/pdk-api" }
 # proto_pdk_test_utils = { path = "../../proto/crates/pdk-test-utils" }
