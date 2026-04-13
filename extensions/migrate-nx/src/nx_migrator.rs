@@ -546,7 +546,10 @@ fn migrate_task(
                         match projects {
                             StringOrList::List(ids) => {
                                 for id in ids {
-                                    deps.push(Target::new(id, target).map_err(map_miette_error)?);
+                                    deps.push(
+                                        Target::new_project(id, target)
+                                            .map_err(map_miette_error)?,
+                                    );
                                 }
                             }
                             StringOrList::String(scope) => {
