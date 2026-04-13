@@ -40,6 +40,12 @@ projects:
 pipeline:
   logRunningCommand: true
 
+experiments:
+  asyncAffectedTracking: true
+  asyncGraphBuilding: true
+
+unstable_daemon: true
+
 remote:
   host: grpcs://cache.depot.dev
   auth:
