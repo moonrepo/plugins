@@ -1,7 +1,7 @@
 use rustc_hash::FxHashMap;
 use serde::Deserialize;
 
-#[derive(Default, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct YarnAuthSettings {
     pub npm_always_auth: bool,
@@ -11,7 +11,7 @@ pub struct YarnAuthSettings {
     pub npm_registry_server: Option<String>,
 }
 
-#[derive(Default, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct YarnRcYaml {
     pub npm_auth_ident: Option<String>,

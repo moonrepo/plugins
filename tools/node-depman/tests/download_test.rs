@@ -116,6 +116,7 @@ mod node_depman_tool {
                     .download_prebuilt(DownloadPrebuiltInput {
                         context: PluginContext {
                             version: VersionSpec::parse("9.0.0").unwrap(),
+                            working_dir: VirtualPath::Real(sandbox.path().into()),
                             ..Default::default()
                         },
                         ..Default::default()
@@ -153,6 +154,7 @@ mod node_depman_tool {
                     .download_prebuilt(DownloadPrebuiltInput {
                         context: PluginContext {
                             version: VersionSpec::parse("9.0.0").unwrap(),
+                            working_dir: VirtualPath::Real(sandbox.path().into()),
                             ..Default::default()
                         },
                         ..Default::default()
@@ -277,6 +279,7 @@ mod node_depman_tool {
                     .download_prebuilt(DownloadPrebuiltInput {
                         context: PluginContext {
                             version: VersionSpec::parse("9.0.0").unwrap(),
+                            working_dir: VirtualPath::Real(sandbox.path().into()),
                             ..Default::default()
                         },
                         ..Default::default()
@@ -284,7 +287,7 @@ mod node_depman_tool {
                     .await,
                 DownloadPrebuiltOutput {
                     archive_prefix: Some("package".into()),
-                    download_url: "https://registry.npmjs.org/npm/-/npm-9.0.0.tgz".into(),
+                    download_url: "https://registry.npmjs.org/pnpm/-/pnpm-9.0.0.tgz".into(),
                     http_headers: FxHashMap::from_iter([(
                         "Authorization".into(),
                         "Bearer abc123".into()
@@ -314,6 +317,7 @@ mod node_depman_tool {
                     .download_prebuilt(DownloadPrebuiltInput {
                         context: PluginContext {
                             version: VersionSpec::parse("9.0.0").unwrap(),
+                            working_dir: VirtualPath::Real(sandbox.path().into()),
                             ..Default::default()
                         },
                         ..Default::default()
@@ -321,7 +325,7 @@ mod node_depman_tool {
                     .await,
                 DownloadPrebuiltOutput {
                     archive_prefix: Some("package".into()),
-                    download_url: "https://registry.yarnpkg.com/npm/-/npm-9.0.0.tgz".into(),
+                    download_url: "https://registry.yarnpkg.com/pnpm/-/pnpm-9.0.0.tgz".into(),
                     http_headers: FxHashMap::from_iter([(
                         "Authorization".into(),
                         "Bearer abc123".into()
@@ -506,6 +510,7 @@ mod node_depman_tool {
                     .download_prebuilt(DownloadPrebuiltInput {
                         context: PluginContext {
                             version: VersionSpec::parse("9.0.0").unwrap(),
+                            working_dir: VirtualPath::Real(sandbox.path().into()),
                             ..Default::default()
                         },
                         ..Default::default()
@@ -513,7 +518,8 @@ mod node_depman_tool {
                     .await,
                 DownloadPrebuiltOutput {
                     archive_prefix: Some("package".into()),
-                    download_url: "https://registry.npmjs.org/npm/-/npm-9.0.0.tgz".into(),
+                    download_url:
+                        "https://registry.npmjs.org/@yarnpkg/cli-dist/-/cli-dist-9.0.0.tgz".into(),
                     http_headers: FxHashMap::from_iter([(
                         "Authorization".into(),
                         "Bearer abc123".into()
@@ -532,7 +538,7 @@ mod node_depman_tool {
 npmAuthToken: xyz789
 
 npmRegistries:
-    //registry.yarnpkg.com:
+    //registry.yarnpkg.com/:
         npmAuthToken: abc123
 "#,
             );
@@ -552,6 +558,7 @@ npmRegistries:
                     .download_prebuilt(DownloadPrebuiltInput {
                         context: PluginContext {
                             version: VersionSpec::parse("9.0.0").unwrap(),
+                            working_dir: VirtualPath::Real(sandbox.path().into()),
                             ..Default::default()
                         },
                         ..Default::default()
@@ -559,7 +566,8 @@ npmRegistries:
                     .await,
                 DownloadPrebuiltOutput {
                     archive_prefix: Some("package".into()),
-                    download_url: "https://registry.yarnpkg.com/npm/-/npm-9.0.0.tgz".into(),
+                    download_url:
+                        "https://registry.yarnpkg.com/@yarnpkg/cli-dist/-/cli-dist-9.0.0.tgz".into(),
                     http_headers: FxHashMap::from_iter([(
                         "Authorization".into(),
                         "Bearer abc123".into()

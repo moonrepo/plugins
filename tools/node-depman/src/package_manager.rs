@@ -77,9 +77,14 @@ impl PackageManager {
                 if let Some(rc_path) = find_upwards(".yarnrc.yml", working_dir) {
                     let mut rc: YarnRcYaml = yaml::read_file(rc_path)?;
                     let registry_shorthand = nerf_dart(&url);
+                    let registry_shorthand_without_slash = registry_shorthand.trim_end_matches('/');
 
                     let (token, basic) =
                         if let Some(config) = rc.npm_registries.remove(&registry_shorthand) {
+                            (config.npm_auth_token, config.npm_auth_ident)
+                        } else if let Some(config) =
+                            rc.npm_registries.remove(registry_shorthand_without_slash)
+                        {
                             (config.npm_auth_token, config.npm_auth_ident)
                         } else if rc.npm_registry_server.as_ref().is_none_or(|server| {
                             registry_url == server || registry_url == DEFAULT_REGISTRY
