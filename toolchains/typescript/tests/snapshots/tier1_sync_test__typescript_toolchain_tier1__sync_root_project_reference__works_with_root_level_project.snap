@@ -6,7 +6,7 @@ expression: "fs::read_file(sandbox.path().join(\"tsconfig.json\")).unwrap()"
   "files": [],
   "references": [
     {
-      "path": "tsconfig.project.json"
+      "path": "./tsconfig.project.json"
     }
   ]
 }
