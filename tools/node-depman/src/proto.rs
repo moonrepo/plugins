@@ -344,7 +344,7 @@ pub fn locate_executables(
     let primary;
 
     if !input.install_dir.join("shims").exists() {
-        create_internal_shims(&env, &input.install_dir, &manager)?;
+        create_internal_shims(&env, &input.install_dir, &input.context.version, &manager)?;
     }
 
     // These are the directories that contain the executable binaries,
@@ -379,6 +379,11 @@ pub fn locate_executables(
 
             // pnpx
             secondary.insert("pnpx".into(), ExecutableConfig::new("shims/pnpx"));
+
+            if manager.is_pnpm_11(&input.context.version) {
+                secondary.insert("pn".into(), ExecutableConfig::new("shims/pn"));
+                secondary.insert("pnx".into(), ExecutableConfig::new("shims/pnx"));
+            }
 
             // https://pnpm.io/npmrc#global-dir
             // https://github.com/pnpm/pnpm/blob/main/config/config/src/index.ts#L350
@@ -528,6 +533,7 @@ fn create_internal_shim(
 fn create_internal_shims(
     env: &HostEnvironment,
     tool_dir: &VirtualPath,
+    version: &VersionSpec,
     package_manager: &PackageManager,
 ) -> AnyResult<()> {
     match package_manager {
@@ -538,6 +544,11 @@ fn create_internal_shims(
         PackageManager::Pnpm => {
             create_internal_shim(env, tool_dir, "pnpm", "pnpm.cjs")?;
             create_internal_shim(env, tool_dir, "pnpx", "pnpx.cjs")?;
+
+            if package_manager.is_pnpm_11(version) {
+                create_internal_shim(env, tool_dir, "pn", "pnpm.cjs")?;
+                create_internal_shim(env, tool_dir, "pnx", "pnpx.cjs")?;
+            }
         }
         PackageManager::Yarn => {
             create_internal_shim(env, tool_dir, "yarn", "yarn.js")?;

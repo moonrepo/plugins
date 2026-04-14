@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Updated project references to start with `./` in preparation for the removal of `baseUrl` in TypeScript v7.
+
 ## 1.1.1
 
 #### 🚀 Updates

@@ -123,11 +123,18 @@ impl TsConfigJson {
     /// Convert an absolute virtual path to a relative virtual string,
     /// for use within tsconfig include, exclude, and other paths.
     pub fn to_relative_path(&self, path: impl AsRef<VirtualPath>) -> AnyResult<String> {
-        to_relative_virtual_string(
+        let mut rel_path = to_relative_virtual_string(
             path.as_ref().any_path(),
             self.path.parent().unwrap().any_path(),
         )
-        .map_err(|error| anyhow!("{error}"))
+        .map_err(|error| anyhow!("{error}"))?;
+
+        // This is required for TS >= v6 because `baseUrl` was removed
+        if rel_path != "." && !rel_path.starts_with(".") {
+            rel_path = format!("./{rel_path}");
+        }
+
+        Ok(rel_path)
     }
 
     /// Add an include pattern to the `include` field with the defined
