@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added support for pnpm v11 `pn` and `pnx` shims.
+
 ## 0.18.0
 
 #### 🚀 Updates

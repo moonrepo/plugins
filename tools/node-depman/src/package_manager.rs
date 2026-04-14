@@ -5,7 +5,9 @@ use crate::yarn_compat::*;
 use npmrc_config_rs::{
     Credentials, LoadOptions, NpmrcConfig, nerf_dart, registry::parse_registry_url,
 };
-use proto_pdk::{AnyResult, UnresolvedVersionSpec, VirtualPath, get_plugin_id};
+use proto_pdk::{
+    AnyResult, UnresolvedVersionSpec, Version, VersionSpec, VirtualPath, get_plugin_id,
+};
 use rustc_hash::FxHashMap;
 use starbase_utils::{fs::find_upwards, yaml};
 use std::fmt;
@@ -129,6 +131,26 @@ impl PackageManager {
         }
 
         Ok(headers)
+    }
+
+    pub fn is_pnpm_11(&self, version: impl AsRef<VersionSpec>) -> bool {
+        let version_11 = Version::parse("11.0.0-rc.0").unwrap();
+
+        // matches!(self, PackageManager::Pnpm)
+        //     && match version.as_ref() {
+        //         UnresolvedVersionSpec::Semantic(ver) => ver.0 >= version_11,
+        //         UnresolvedVersionSpec::Req(req) => req.matches(&version_11),
+        //         UnresolvedVersionSpec::ReqAny(reqs) => {
+        //             reqs.iter().any(|req| req.matches(&version_11))
+        //         }
+        //         _ => false,
+        //     }
+
+        matches!(self, PackageManager::Pnpm)
+            && match version.as_ref() {
+                VersionSpec::Semantic(ver) => ver.0 >= version_11,
+                _ => false,
+            }
     }
 
     pub fn is_yarn_classic(&self, version: impl AsRef<UnresolvedVersionSpec>) -> bool {
