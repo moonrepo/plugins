@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed project reference syncing to remove old references without `./` prefix before adding the new prefixed one.
+
 ## 1.1.2
 
 #### 🚀 Updates

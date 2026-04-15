@@ -186,6 +186,11 @@ impl TsConfigJson {
             );
         }
 
+        // Remove previous matching reference
+        if let Ok(suffix) = reference.path.path.strip_prefix("./") {
+            references.retain(|r| r.path.path != suffix);
+        }
+
         // Add and sort the references
         references.push(reference);
 
