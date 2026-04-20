@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed this toolchain not depending on Python.
+
 ## 0.1.2
 
 #### 🚀 Updates

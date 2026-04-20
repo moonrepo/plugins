@@ -139,25 +139,6 @@ pub fn extend_task_script(
 }
 
 #[plugin_fn]
-pub fn define_requirements(
-    Json(input): Json<DefineRequirementsInput>,
-) -> FnResult<Json<DefineRequirementsOutput>> {
-    let config = parse_toolchain_config_schema::<PythonToolchainConfig>(input.toolchain_config)?;
-    let mut output = DefineRequirementsOutput::default();
-
-    if let Some(package_manager) = config.package_manager {
-        if matches!(package_manager, PythonPackageManager::UvPip) {
-            output.requires.push("unstable_uv".into());
-            output.requires.push("unstable_pip".into());
-        } else {
-            output.requires.push(format!("unstable_{package_manager}"));
-        }
-    }
-
-    Ok(Json(output))
-}
-
-#[plugin_fn]
 pub fn locate_dependencies_root(
     Json(input): Json<LocateDependenciesRootInput>,
 ) -> FnResult<Json<LocateDependenciesRootOutput>> {

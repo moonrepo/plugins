@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed this toolchain depending on pip/uv, when it should be reversed.
+
 ## 0.1.6
 
 #### 🐞 Fixes
