@@ -19,7 +19,7 @@ pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<Regi
         name: format!("cargo:{}", input.id),
         type_of: PluginType::CommandLine,
         inventory_options: ToolInventoryOptions {
-            scoped_backend_dir: !input.id.starts_with("cargo-"),
+            scoped_backend_dir: true,
             ..Default::default()
         },
         lock_options: ToolLockOptions {
@@ -98,13 +98,17 @@ pub fn native_install(
     command.cwd = Some(input.install_dir.clone());
     command.env.insert("PROTO_RUST_VERSION?".into(), "*".into());
 
+    if let Some(dir) = get_host_env_var("CARGO_TARGET_DIR")? {
+        command.env.insert("CARGO_TARGET_DIR".into(), dir);
+    }
+
     // What to install
     command.args.push(format!("{id}@{}", input.context.version));
 
-    if let Some(git) = &tool_config.git_url {
-        command.args.push("--git".into());
-        command.args.push(git.into());
-    }
+    // if let Some(git) = &tool_config.git_url {
+    //     command.args.push("--git".into());
+    //     command.args.push(git.into());
+    // }
 
     if let Some(registry) = tool_config
         .registry
@@ -136,6 +140,7 @@ pub fn native_install(
         }
 
         if !tool_config.features.is_empty() {
+            command.args.push("--features".into());
             command.args.push(tool_config.features.join(","));
         }
 
@@ -169,6 +174,10 @@ pub fn locate_executables(
     let mut has_primary = false;
 
     for entry in fs::read_dir(input.install_dir.join("bin"))? {
+        if !entry.file_type()?.is_file() {
+            continue;
+        }
+
         let name = fs::file_name(entry.path());
         let mut config = ExecutableConfig::new(format!("bin/{name}"));
 
@@ -182,7 +191,7 @@ pub fn locate_executables(
             has_primary = true;
         }
 
-        output.exes.insert(name, config);
+        output.exes.insert(name.replace(".exe", ""), config);
     }
 
     if !has_primary

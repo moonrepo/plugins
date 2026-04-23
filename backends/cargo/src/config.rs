@@ -23,7 +23,7 @@ pub struct CargoToolConfig {
     pub features: Vec<String>,
 
     /// Custom Git URL to the package.
-    pub git_url: Option<String>,
+    // pub git_url: Option<String>,
 
     /// Disable the `default` feature of the package.
     pub no_default_features: bool,

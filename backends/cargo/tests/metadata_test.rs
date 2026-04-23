@@ -10,7 +10,7 @@ mod cargo_backend_metadata {
 
         let metadata = plugin
             .register_tool(RegisterToolInput {
-                id: "cargo-nextest".into(),
+                id: Id::raw("cargo-nextest"),
             })
             .await;
 
@@ -28,7 +28,10 @@ mod cargo_backend_metadata {
         let plugin = sandbox.create_plugin("cargo-nextest").await;
 
         let metadata = plugin
-            .register_backend(RegisterBackendInput::default())
+            .register_backend(RegisterBackendInput {
+                id: Id::raw("cargo"),
+                ..Default::default()
+            })
             .await;
 
         assert_eq!(metadata.backend_id, "cargo-nextest");
