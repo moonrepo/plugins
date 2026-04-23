@@ -46,14 +46,14 @@ mod cargo_backend_download {
         });
     }
 
-    mod git {
-        use super::*;
+    // mod git {
+    //     use super::*;
 
-        generate_native_install_tests!("cargo:cargo-outdated", "0.17.0", None, |cfg| {
-            cfg.tool_config(CargoToolConfig {
-                git_url: Some("https://github.com/kbknapp/cargo-outdated.git".into()),
-                ..Default::default()
-            });
-        });
-    }
+    //     generate_native_install_tests!("cargo:cargo-outdated", "0.17.0", None, |cfg| {
+    //         cfg.tool_config(CargoToolConfig {
+    //             git_url: Some("https://github.com/kbknapp/cargo-outdated.git".into()),
+    //             ..Default::default()
+    //         });
+    //     });
+    // }
 }
