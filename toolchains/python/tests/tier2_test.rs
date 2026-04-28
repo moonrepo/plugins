@@ -163,7 +163,7 @@ dependencies = ["internal-lib"]
         }
     }
 
-    mod extend_task_command {
+    mod extend_command {
         use super::*;
 
         #[tokio::test(flavor = "multi_thread")]
@@ -172,9 +172,10 @@ dependencies = ["internal-lib"]
             let plugin = sandbox.create_toolchain("python").await;
 
             let output = plugin
-                .extend_task_command(ExtendTaskCommandInput {
+                .extend_command(ExtendCommandInput {
                     command: "python".into(),
                     toolchain_config: json!({}),
+                    current_dir: plugin.plugin.to_virtual_path(sandbox.path()),
                     ..Default::default()
                 })
                 .await;
@@ -190,9 +191,10 @@ dependencies = ["internal-lib"]
             let plugin = sandbox.create_toolchain("python").await;
 
             let output = plugin
-                .extend_task_command(ExtendTaskCommandInput {
+                .extend_command(ExtendCommandInput {
                     command: "python".into(),
                     toolchain_config: json!({}),
+                    current_dir: plugin.plugin.to_virtual_path(sandbox.path()),
                     ..Default::default()
                 })
                 .await;
@@ -214,15 +216,12 @@ dependencies = ["internal-lib"]
             let plugin = sandbox.create_toolchain("python").await;
 
             let output = plugin
-                .extend_task_command(ExtendTaskCommandInput {
-                    context: MoonContext {
-                        working_dir: plugin
-                            .plugin
-                            .to_virtual_path(sandbox.path().join("sub/dir")),
-                        ..plugin.create_context()
-                    },
+                .extend_command(ExtendCommandInput {
                     command: "python".into(),
                     toolchain_config: json!({}),
+                    current_dir: plugin
+                        .plugin
+                        .to_virtual_path(sandbox.path().join("sub/dir")),
                     ..Default::default()
                 })
                 .await;
@@ -244,111 +243,12 @@ dependencies = ["internal-lib"]
             let plugin = sandbox.create_toolchain("python").await;
 
             let output = plugin
-                .extend_task_command(ExtendTaskCommandInput {
+                .extend_command(ExtendCommandInput {
                     command: "python".into(),
                     toolchain_config: json!({
                         "venvName": ".virtual-env"
                     }),
-                    ..Default::default()
-                })
-                .await;
-
-            assert_eq!(
-                output.paths,
-                vec![
-                    sandbox.path().join(".virtual-env/Scripts"),
-                    sandbox.path().join(".virtual-env/bin")
-                ]
-            );
-        }
-    }
-
-    mod extend_task_script {
-        use super::*;
-
-        #[tokio::test(flavor = "multi_thread")]
-        async fn doesnt_add_venv_paths_if_no_dir() {
-            let sandbox = create_empty_moon_sandbox();
-            let plugin = sandbox.create_toolchain("python").await;
-
-            let output = plugin
-                .extend_task_script(ExtendTaskScriptInput {
-                    script: "python".into(),
-                    toolchain_config: json!({}),
-                    ..Default::default()
-                })
-                .await;
-
-            assert!(output.paths.is_empty());
-        }
-
-        #[tokio::test(flavor = "multi_thread")]
-        async fn adds_venv_paths_if_dir_exists() {
-            let sandbox = create_empty_moon_sandbox();
-            sandbox.create_file(".venv/file", "");
-
-            let plugin = sandbox.create_toolchain("python").await;
-
-            let output = plugin
-                .extend_task_script(ExtendTaskScriptInput {
-                    script: "python".into(),
-                    toolchain_config: json!({}),
-                    ..Default::default()
-                })
-                .await;
-
-            assert_eq!(
-                output.paths,
-                vec![
-                    sandbox.path().join(".venv/Scripts"),
-                    sandbox.path().join(".venv/bin")
-                ]
-            );
-        }
-
-        #[tokio::test(flavor = "multi_thread")]
-        async fn adds_venv_paths_traversing_upwards() {
-            let sandbox = create_empty_moon_sandbox();
-            sandbox.create_file(".venv/file", "");
-
-            let plugin = sandbox.create_toolchain("python").await;
-
-            let output = plugin
-                .extend_task_script(ExtendTaskScriptInput {
-                    context: MoonContext {
-                        working_dir: plugin
-                            .plugin
-                            .to_virtual_path(sandbox.path().join("sub/dir")),
-                        ..plugin.create_context()
-                    },
-                    script: "python".into(),
-                    toolchain_config: json!({}),
-                    ..Default::default()
-                })
-                .await;
-
-            assert_eq!(
-                output.paths,
-                vec![
-                    sandbox.path().join(".venv/Scripts"),
-                    sandbox.path().join(".venv/bin")
-                ]
-            );
-        }
-
-        #[tokio::test(flavor = "multi_thread")]
-        async fn adds_venv_paths_with_custom_name() {
-            let sandbox = create_empty_moon_sandbox();
-            sandbox.create_file(".virtual-env/file", "");
-
-            let plugin = sandbox.create_toolchain("python").await;
-
-            let output = plugin
-                .extend_task_script(ExtendTaskScriptInput {
-                    script: "python".into(),
-                    toolchain_config: json!({
-                        "venvName": ".virtual-env"
-                    }),
+                    current_dir: plugin.plugin.to_virtual_path(sandbox.path()),
                     ..Default::default()
                 })
                 .await;

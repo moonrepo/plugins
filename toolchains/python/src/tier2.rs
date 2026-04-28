@@ -124,38 +124,6 @@ pub fn extend_command(
 }
 
 #[plugin_fn]
-pub fn extend_task_command(
-    Json(input): Json<ExtendTaskCommandInput>,
-) -> FnResult<Json<ExtendTaskCommandOutput>> {
-    let config = parse_toolchain_config_schema::<PythonToolchainConfig>(input.toolchain_config)?;
-    let mut output = ExtendTaskCommandOutput::default();
-
-    gather_shared_paths(
-        &config,
-        &input.context.get_project_root(&input.project),
-        &mut output.paths,
-    )?;
-
-    Ok(Json(output))
-}
-
-#[plugin_fn]
-pub fn extend_task_script(
-    Json(input): Json<ExtendTaskScriptInput>,
-) -> FnResult<Json<ExtendTaskScriptOutput>> {
-    let config = parse_toolchain_config_schema::<PythonToolchainConfig>(input.toolchain_config)?;
-    let mut output = ExtendTaskScriptOutput::default();
-
-    gather_shared_paths(
-        &config,
-        &input.context.get_project_root(&input.project),
-        &mut output.paths,
-    )?;
-
-    Ok(Json(output))
-}
-
-#[plugin_fn]
 pub fn locate_dependencies_root(
     Json(input): Json<LocateDependenciesRootInput>,
 ) -> FnResult<Json<LocateDependenciesRootOutput>> {
