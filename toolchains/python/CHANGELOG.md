@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed an issue where the wrong arguments were passed to `uv sync` depending on whether proto is managing the Python version.
+
 ## 0.1.7
 
 #### 🐞 Fixes

@@ -814,6 +814,53 @@ dependencies = ["internal-lib"]
 
             // 3) Now compare with a clean expected ExecCommand (no PATH)
             let expected = ExecCommand::new(
+                ExecCommandInput::new("uv", ["sync", "--no-progress"])
+                    .cwd(plugin.plugin.to_virtual_path(sandbox.path())),
+            );
+
+            assert_eq!(actual, expected);
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_uv_with_version() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(".venv/bin/activate", "");
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let output = plugin
+                .install_dependencies(InstallDependenciesInput {
+                    context: MoonContext {
+                        working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
+                        ..Default::default()
+                    },
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "packageManager": "uv",
+                        "version": "1.2.3"
+                    }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            let mut actual = output.install_command.unwrap();
+
+            // 1) Assert that PATH was injected (and optionally that it contains .venv)
+            if let Some(path_val) = actual.command.env.get("PATH") {
+                assert!(path_val.contains(".venv/Scripts") || path_val.contains(".venv/bin"));
+            } else {
+                panic!("Expected PATH to be injected for venv activation");
+            }
+
+            // 2) Remove PATH so the rest can be compared deterministically
+            actual.command.env.remove("PATH");
+
+            // 3) Now compare with a clean expected ExecCommand (no PATH)
+            let expected = ExecCommand::new(
                 ExecCommandInput::new(
                     "uv",
                     [
@@ -927,8 +974,6 @@ dependencies = ["internal-lib"]
                         "foo".into(),
                         "--package".into(),
                         "bar".into(),
-                        "--no-managed-python".into(),
-                        "--no-python-downloads".into(),
                         "--no-progress".into(),
                     ],
                     stream: true,
@@ -1401,7 +1446,7 @@ dependencies = ["internal-lib"]
             assert_eq!(
                 output.commands,
                 vec![ExecCommand::new(
-                    ExecCommandInput::new("uv", ["venv", ".virtual-env"])
+                    ExecCommandInput::new("uv", ["venv", ".virtual-env", "--no-progress"])
                         .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                 )]
             );
@@ -1492,8 +1537,47 @@ dependencies = ["internal-lib"]
             assert_eq!(
                 output.commands,
                 vec![ExecCommand::new(
-                    ExecCommandInput::new("uv", ["venv", ".venv"])
+                    ExecCommandInput::new("uv", ["venv", ".venv", "--no-progress"])
                         .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_uv_with_version() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "packageManager": "uv",
+                        "version": "1.2.3"
+                    }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.commands,
+                vec![ExecCommand::new(
+                    ExecCommandInput::new(
+                        "uv",
+                        [
+                            "venv",
+                            ".venv",
+                            "--no-managed-python",
+                            "--no-python-downloads",
+                            "--no-progress"
+                        ]
+                    )
+                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                 )]
             );
         }
@@ -1589,7 +1673,7 @@ dependencies = ["internal-lib"]
             assert_eq!(
                 output.commands,
                 vec![ExecCommand::new(
-                    ExecCommandInput::new("uv", ["venv", ".venv"])
+                    ExecCommandInput::new("uv", ["venv", ".venv", "--no-progress"])
                         .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                 )]
             );
