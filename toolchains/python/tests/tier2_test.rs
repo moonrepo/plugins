@@ -507,19 +507,7 @@ dependencies = ["internal-lib"]
                 })
                 .await;
 
-            let mut actual = output.install_command.unwrap();
-
-            // 1) Assert that PATH was injected (and optionally that it contains .venv)
-            if let Some(path_val) = actual.command.env.get("PATH") {
-                assert!(path_val.contains(".venv/Scripts") || path_val.contains(".venv/bin"));
-            } else {
-                panic!("Expected PATH to be injected for venv activation");
-            }
-
-            // 2) Remove PATH so the rest can be compared deterministically
-            actual.command.env.remove("PATH");
-
-            // 3) Now compare with a clean expected ExecCommand (no PATH)
+            let actual = output.install_command.unwrap();
             let expected = ExecCommand::new(
                 ExecCommandInput::new("python", ["-m", "pip", "install"])
                     .cwd(plugin.plugin.to_virtual_path(sandbox.path())),
@@ -557,19 +545,7 @@ dependencies = ["internal-lib"]
                 })
                 .await;
 
-            let mut actual = output.install_command.unwrap();
-
-            // 1) Assert that PATH was injected (and optionally that it contains .venv)
-            if let Some(path_val) = actual.command.env.get("PATH") {
-                assert!(path_val.contains(".venv/Scripts") || path_val.contains(".venv/bin"));
-            } else {
-                panic!("Expected PATH to be injected for venv activation");
-            }
-
-            // 2) Remove PATH so the rest can be compared deterministically
-            actual.command.env.remove("PATH");
-
-            // 3) Now compare with a clean expected ExecCommand (no PATH)
+            let actual = output.install_command.unwrap();
             let expected = ExecCommand::new(
                 ExecCommandInput::new("python", ["-m", "pip", "install", "-a", "b", "--c"])
                     .cwd(plugin.plugin.to_virtual_path(sandbox.path())),
@@ -605,19 +581,7 @@ dependencies = ["internal-lib"]
                 })
                 .await;
 
-            let mut actual = output.install_command.unwrap();
-
-            // 1) Assert that PATH was injected (and optionally that it contains .venv)
-            if let Some(path_val) = actual.command.env.get("PATH") {
-                assert!(path_val.contains(".venv/Scripts") || path_val.contains(".venv/bin"));
-            } else {
-                panic!("Expected PATH to be injected for venv activation");
-            }
-
-            // 2) Remove PATH so the rest can be compared deterministically
-            actual.command.env.remove("PATH");
-
-            // 3) Now compare with a clean expected ExecCommand (no PATH)
+            let actual = output.install_command.unwrap();
             let expected = ExecCommand::new(
                 ExecCommandInput::new("python", ["-m", "pip", "install", "-r", "requirements.txt"])
                     .cwd(plugin.plugin.to_virtual_path(sandbox.path())),
@@ -654,19 +618,7 @@ dependencies = ["internal-lib"]
                 })
                 .await;
 
-            let mut actual = output.install_command.unwrap();
-
-            // 1) Assert that PATH was injected (and optionally that it contains .venv)
-            if let Some(path_val) = actual.command.env.get("PATH") {
-                assert!(path_val.contains(".venv/Scripts") || path_val.contains(".venv/bin"));
-            } else {
-                panic!("Expected PATH to be injected for venv activation");
-            }
-
-            // 2) Remove PATH so the rest can be compared deterministically
-            actual.command.env.remove("PATH");
-
-            // 3) Now compare with a clean expected ExecCommand (no PATH)
+            let actual = output.install_command.unwrap();
             let expected = ExecCommand::new(
                 ExecCommandInput::new("python", ["-m", "pip", "install", "-c", "constraints.txt"])
                     .cwd(plugin.plugin.to_virtual_path(sandbox.path())),
@@ -700,19 +652,7 @@ dependencies = ["internal-lib"]
                 })
                 .await;
 
-            let mut actual = output.install_command.unwrap();
-
-            // 1) Assert that PATH was injected (and optionally that it contains .venv)
-            if let Some(path_val) = actual.command.env.get("PATH") {
-                assert!(path_val.contains(".venv/Scripts") || path_val.contains(".venv/bin"));
-            } else {
-                panic!("Expected PATH to be injected for venv activation");
-            }
-
-            // 2) Remove PATH so the rest can be compared deterministically
-            actual.command.env.remove("PATH");
-
-            // 3) Now compare with a clean expected ExecCommand (no PATH)
+            let actual = output.install_command.unwrap();
             let expected = ExecCommand::new(
                 ExecCommandInput::new("uv", ["sync", "--no-progress"])
                     .cwd(plugin.plugin.to_virtual_path(sandbox.path())),
@@ -747,19 +687,7 @@ dependencies = ["internal-lib"]
                 })
                 .await;
 
-            let mut actual = output.install_command.unwrap();
-
-            // 1) Assert that PATH was injected (and optionally that it contains .venv)
-            if let Some(path_val) = actual.command.env.get("PATH") {
-                assert!(path_val.contains(".venv/Scripts") || path_val.contains(".venv/bin"));
-            } else {
-                panic!("Expected PATH to be injected for venv activation");
-            }
-
-            // 2) Remove PATH so the rest can be compared deterministically
-            actual.command.env.remove("PATH");
-
-            // 3) Now compare with a clean expected ExecCommand (no PATH)
+            let actual = output.install_command.unwrap();
             let expected = ExecCommand::new(
                 ExecCommandInput::new(
                     "uv",
@@ -805,19 +733,7 @@ dependencies = ["internal-lib"]
                 })
                 .await;
 
-            let mut actual = output.install_command.unwrap();
-
-            // 1) Assert that PATH was injected (and optionally that it contains .venv)
-            if let Some(path_val) = actual.command.env.get("PATH") {
-                assert!(path_val.contains(".venv/Scripts") || path_val.contains(".venv/bin"));
-            } else {
-                panic!("Expected PATH to be injected for venv activation");
-            }
-
-            // 2) Remove PATH so the rest can be compared deterministically
-            actual.command.env.remove("PATH");
-
-            // 3) Now compare with a clean expected ExecCommand (no PATH)
+            let actual = output.install_command.unwrap();
             let expected = ExecCommand::new(
                 ExecCommandInput::new("uv", ["sync", "-a", "b", "--c"])
                     .cwd(plugin.plugin.to_virtual_path(sandbox.path())),
@@ -852,19 +768,7 @@ dependencies = ["internal-lib"]
                 })
                 .await;
 
-            let mut actual = output.install_command.unwrap();
-
-            // 1) Assert that PATH was injected (and optionally that it contains .venv)
-            if let Some(path_val) = actual.command.env.get("PATH") {
-                assert!(path_val.contains(".venv/Scripts") || path_val.contains(".venv/bin"));
-            } else {
-                panic!("Expected PATH to be injected for venv activation");
-            }
-
-            // 2) Remove PATH so the rest can be compared deterministically
-            actual.command.env.remove("PATH");
-
-            // 3) Now compare with a clean expected ExecCommand (no PATH)
+            let actual = output.install_command.unwrap();
             let expected = ExecCommand {
                 command: ExecCommandInput {
                     command: "uv".into(),
@@ -911,19 +815,7 @@ dependencies = ["internal-lib"]
                 })
                 .await;
 
-            let mut actual = output.install_command.unwrap();
-
-            // 1) Assert that PATH was injected (and optionally that it contains .venv)
-            if let Some(path_val) = actual.command.env.get("PATH") {
-                assert!(path_val.contains(".venv/Scripts") || path_val.contains(".venv/bin"));
-            } else {
-                panic!("Expected PATH to be injected for venv activation");
-            }
-
-            // 2) Remove PATH so the rest can be compared deterministically
-            actual.command.env.remove("PATH");
-
-            // 3) Now compare with a clean expected ExecCommand (no PATH)
+            let actual = output.install_command.unwrap();
             let expected = ExecCommand {
                 command: ExecCommandInput {
                     command: "uv".into(),
@@ -963,19 +855,8 @@ dependencies = ["internal-lib"]
                     ..Default::default()
                 })
                 .await;
-            let mut actual = output.install_command.unwrap();
 
-            // 1) Assert that PATH was injected (and optionally that it contains .venv)
-            if let Some(path_val) = actual.command.env.get("PATH") {
-                assert!(path_val.contains(".venv/Scripts") || path_val.contains(".venv/bin"));
-            } else {
-                panic!("Expected PATH to be injected for venv activation");
-            }
-
-            // 2) Remove PATH so the rest can be compared deterministically
-            actual.command.env.remove("PATH");
-
-            // 3) Now compare with a clean expected ExecCommand (no PATH)
+            let actual = output.install_command.unwrap();
             let expected = ExecCommand::new(
                 ExecCommandInput::new("uv", ["pip", "install", "-a", "b", "--c"])
                     .cwd(plugin.plugin.to_virtual_path(sandbox.path())),
@@ -1009,19 +890,8 @@ dependencies = ["internal-lib"]
                     ..Default::default()
                 })
                 .await;
-            let mut actual = output.install_command.unwrap();
 
-            // 1) Assert that PATH was injected (and optionally that it contains .venv)
-            if let Some(path_val) = actual.command.env.get("PATH") {
-                assert!(path_val.contains(".venv/Scripts") || path_val.contains(".venv/bin"));
-            } else {
-                panic!("Expected PATH to be injected for venv activation");
-            }
-
-            // 2) Remove PATH so the rest can be compared deterministically
-            actual.command.env.remove("PATH");
-
-            // 3) Now compare with a clean expected ExecCommand (no PATH)
+            let actual = output.install_command.unwrap();
             let expected = ExecCommand::new(
                 ExecCommandInput::new(
                     "uv",
@@ -1038,30 +908,6 @@ dependencies = ["internal-lib"]
             );
 
             assert_eq!(actual, expected);
-        }
-
-        // We don't assert the full PATH value (OS/host-dependent), just that it is present.
-        #[tokio::test(flavor = "multi_thread")]
-        async fn activates_venv_paths_for_uvpip_when_venv_exists() {
-            let sandbox = create_empty_moon_sandbox();
-            // Ensure a .venv folder exists so activation code runs.
-            sandbox.create_file(".venv/file", "");
-            let plugin = sandbox.create_toolchain("python").await;
-            let output = plugin
-                .install_dependencies(InstallDependenciesInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
-                    project: Some(ProjectFragment {
-                        id: Id::raw("workspace"),
-                        source: ".".into(),
-                        ..Default::default()
-                    }),
-                    toolchain_config: json!({ "packageManager": "uv-pip" }),
-                    ..Default::default()
-                })
-                .await;
-            let cmd = output.install_command.unwrap();
-            assert_eq!(cmd.command.command, "uv");
-            assert!(cmd.command.env.contains_key("PATH"));
         }
     }
 

@@ -4,8 +4,8 @@ use crate::pyproject_toml::{PyProjectToml, PyProjectTomlWithTools, normalize_dis
 use extism_pdk::*;
 use moon_config::DependencyScope;
 use moon_pdk::{
-    get_host_env_var, get_host_environment, load_project_toolchain_config, load_toolchain_config,
-    locate_root, locate_root_many, locate_root_many_with_check, parse_toolchain_config_schema,
+    load_project_toolchain_config, load_toolchain_config, locate_root, locate_root_many,
+    locate_root_many_with_check, parse_toolchain_config_schema,
 };
 use moon_pdk_api::*;
 use pep508_rs::Requirement;
@@ -252,39 +252,6 @@ pub fn install_dependencies(
     }
 
     command.cwd = Some(input.root.clone());
-
-    // Activate the venv by modifying PATH
-    let mut activation_paths: Vec<PathBuf> = Vec::new();
-
-    if let Some(project) = &input.project {
-        gather_shared_paths(
-            &config,
-            &input.context.get_project_root(project),
-            &mut activation_paths,
-        )?;
-    }
-
-    let host = get_host_environment()?;
-    let sep = if host.os.is_windows() { ';' } else { ':' };
-
-    let mut prefix = String::new();
-    for p in activation_paths {
-        if !prefix.is_empty() {
-            prefix.push(sep);
-        }
-        prefix.push_str(&p.to_string_lossy());
-    }
-
-    let path = get_host_env_var("PATH")?.unwrap_or_default();
-
-    command.env.insert(
-        "PATH".into(),
-        if prefix.is_empty() {
-            path
-        } else {
-            format!("{prefix}{sep}{path}")
-        },
-    );
 
     output.install_command = Some(command.into());
 

@@ -5,6 +5,7 @@
 #### 🐞 Fixes
 
 - Fixed an issue where the wrong arguments were passed to `uv sync` depending on whether proto is managing the Python version.
+- Fixed an issue where venv paths were not available to commands ran through the toolchain, like `uv sync`.
 
 ## 0.1.7
 
