@@ -3994,7 +3994,7 @@ dependencies = [
 
 [[package]]
 name = "python_toolchain"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "extism-pdk",
  "moon_common",
