@@ -4,8 +4,8 @@ use crate::pyproject_toml::{PyProjectToml, PyProjectTomlWithTools, normalize_dis
 use extism_pdk::*;
 use moon_config::DependencyScope;
 use moon_pdk::{
-    get_host_env_var, get_host_environment, load_project_toolchain_config, load_toolchain_config,
-    locate_root, locate_root_many, locate_root_many_with_check, parse_toolchain_config_schema,
+    load_project_toolchain_config, load_toolchain_config, locate_root, locate_root_many,
+    locate_root_many_with_check, parse_toolchain_config_schema,
 };
 use moon_pdk_api::*;
 use pep508_rs::Requirement;
@@ -98,13 +98,10 @@ pub fn extend_project_graph(
 
 fn gather_shared_paths(
     config: &PythonToolchainConfig,
-    context: &MoonContext,
-    project: &ProjectFragment,
+    current_dir: &VirtualPath,
     paths: &mut Vec<PathBuf>,
 ) -> AnyResult<()> {
-    let current_dir = context.get_project_root(project);
-
-    if let Some(venv_parent) = locate_root(&current_dir, &config.venv_name)
+    if let Some(venv_parent) = locate_root(current_dir, &config.venv_name)
         && let Some(venv_root) = venv_parent.join(&config.venv_name).real_path()
     {
         paths.push(venv_root.join("Scripts"));
@@ -115,25 +112,13 @@ fn gather_shared_paths(
 }
 
 #[plugin_fn]
-pub fn extend_task_command(
-    Json(input): Json<ExtendTaskCommandInput>,
-) -> FnResult<Json<ExtendTaskCommandOutput>> {
+pub fn extend_command(
+    Json(input): Json<ExtendCommandInput>,
+) -> FnResult<Json<ExtendCommandOutput>> {
     let config = parse_toolchain_config_schema::<PythonToolchainConfig>(input.toolchain_config)?;
     let mut output = ExtendTaskCommandOutput::default();
 
-    gather_shared_paths(&config, &input.context, &input.project, &mut output.paths)?;
-
-    Ok(Json(output))
-}
-
-#[plugin_fn]
-pub fn extend_task_script(
-    Json(input): Json<ExtendTaskScriptInput>,
-) -> FnResult<Json<ExtendTaskScriptOutput>> {
-    let config = parse_toolchain_config_schema::<PythonToolchainConfig>(input.toolchain_config)?;
-    let mut output = ExtendTaskScriptOutput::default();
-
-    gather_shared_paths(&config, &input.context, &input.project, &mut output.paths)?;
+    gather_shared_paths(&config, &input.current_dir, &mut output.paths)?;
 
     Ok(Json(output))
 }
@@ -211,11 +196,6 @@ pub fn install_dependencies(
 
     let mut include_reqs_and_constraints = false;
     let mut package_manager_id = "pip";
-    let fallback_uv_args: Vec<String> = vec![
-        "--no-managed-python".into(),
-        "--no-python-downloads".into(),
-        "--no-progress".into(),
-    ];
 
     // Install
     let mut command = match package_manager {
@@ -266,41 +246,12 @@ pub fn install_dependencies(
     if package_manager_config.install_args.is_empty()
         && matches!(package_manager, PythonPackageManager::Uv)
     {
-        command.args.extend(fallback_uv_args);
+        command.args.extend(get_uv_fallback_args(&config));
     } else {
         command.args.extend(package_manager_config.install_args);
     }
 
     command.cwd = Some(input.root.clone());
-
-    // Activate the venv by modifying PATH
-    let mut activation_paths: Vec<PathBuf> = Vec::new();
-
-    if let Some(project) = &input.project {
-        gather_shared_paths(&config, &input.context, project, &mut activation_paths)?;
-    }
-
-    let host = get_host_environment()?;
-    let sep = if host.os.is_windows() { ';' } else { ':' };
-
-    let mut prefix = String::new();
-    for p in activation_paths {
-        if !prefix.is_empty() {
-            prefix.push(sep);
-        }
-        prefix.push_str(&p.to_string_lossy());
-    }
-
-    let path = get_host_env_var("PATH")?.unwrap_or_default();
-
-    command.env.insert(
-        "PATH".into(),
-        if prefix.is_empty() {
-            path
-        } else {
-            format!("{prefix}{sep}{path}")
-        },
-    );
 
     output.install_command = Some(command.into());
 
@@ -347,12 +298,6 @@ pub fn setup_environment(
         return Ok(Json(output));
     };
 
-    let fallback_uv_args: Vec<String> = vec![
-        "--no-managed-python".into(),
-        "--no-python-downloads".into(),
-        "--no-progress".into(),
-    ];
-
     let (mut command, package_manager_id) = match package_manager {
         PythonPackageManager::Pip => (
             ExecCommandInput::new("python", ["-m", "venv", &config.venv_name]),
@@ -370,13 +315,12 @@ pub fn setup_environment(
     };
 
     if package_manager_config.venv_args.is_empty()
-        && config.version.is_some()
         && matches!(
             package_manager,
             PythonPackageManager::Uv | PythonPackageManager::UvPip
         )
     {
-        command.args.extend(fallback_uv_args);
+        command.args.extend(get_uv_fallback_args(&config));
     } else {
         command.args.extend(package_manager_config.venv_args);
     }
@@ -386,4 +330,16 @@ pub fn setup_environment(
     output.commands.push(command.into());
 
     Ok(Json(output))
+}
+
+fn get_uv_fallback_args(config: &PythonToolchainConfig) -> Vec<String> {
+    let mut args = vec![];
+
+    if config.version.is_some() {
+        args.push("--no-managed-python".into());
+        args.push("--no-python-downloads".into());
+    }
+
+    args.push("--no-progress".into());
+    args
 }
