@@ -4751,6 +4751,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "scoop_backend"
+version = "0.1.0"
+dependencies = [
+ "backend_common",
+ "extism-pdk",
+ "proto_pdk",
+ "proto_pdk_test_utils",
+ "rustc-hash",
+ "schematic",
+ "serde",
+ "serde_json",
+ "starbase_sandbox",
+ "starbase_utils",
+ "tokio",
+]
+
+[[package]]
 name = "scopeguard"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
