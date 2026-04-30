@@ -128,6 +128,10 @@ pub fn locate_executables(
     let mut has_primary = false;
 
     for entry in fs::read_dir(input.install_dir.join("bin"))? {
+        if !entry.file_type()?.is_file() {
+            continue;
+        }
+
         let name = fs::file_name(entry.path());
         let mut config = ExecutableConfig::new(format!("bin/{name}"));
 
@@ -141,7 +145,7 @@ pub fn locate_executables(
             has_primary = true;
         }
 
-        output.exes.insert(name, config);
+        output.exes.insert(name.replace(".exe", ""), config);
     }
 
     if !has_primary && let Some(exe) = output.exes.values_mut().next() {
