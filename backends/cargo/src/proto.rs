@@ -174,7 +174,7 @@ pub fn locate_executables(
     let mut has_primary = false;
 
     for entry in fs::read_dir(input.install_dir.join("bin"))? {
-        if !entry.file_type()?.is_file() {
+        if !entry.path().is_file() {
             continue;
         }
 

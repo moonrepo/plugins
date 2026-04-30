@@ -4,7 +4,7 @@ use extism_pdk::*;
 use proto_pdk::*;
 use rustc_hash::FxHashMap;
 use schematic::SchemaBuilder;
-use starbase_utils::fs;
+use starbase_utils::{fs, json::JsonValue};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -115,11 +115,16 @@ pub fn native_install(
 pub fn locate_executables(
     Json(input): Json<LocateExecutablesInput>,
 ) -> FnResult<Json<LocateExecutablesOutput>> {
-    let id = get_plugin_id()?;
-    let package_name = match id.rfind('/') {
-        Some(index) => &id[index + 1..],
-        None => &id,
+    let package_name = get_plugin_id()?;
+    let package_name_without_scope = match package_name.rfind('/') {
+        Some(index) => &package_name[index + 1..],
+        None => &package_name,
     };
+    let package_path = input
+        .install_dir
+        .join("lib/node_modules")
+        .join(package_name.as_str())
+        .join("package.json");
 
     let mut output = LocateExecutablesOutput {
         exes_dirs: vec!["bin".into()],
@@ -127,27 +132,51 @@ pub fn locate_executables(
     };
     let mut has_primary = false;
 
-    for entry in fs::read_dir(input.install_dir.join("bin"))? {
-        if !entry.file_type()?.is_file() {
-            continue;
+    // If the package exists, extract the applicable bins from it
+    if package_path.exists() {
+        let package: JsonValue = starbase_utils::json::read_file(package_path)?;
+
+        if let Some(JsonValue::Object(bins)) = package.get("bin") {
+            let env = get_host_environment()?;
+
+            for (i, bin) in bins.keys().enumerate() {
+                let mut config = ExecutableConfig::new(env.os.get_exe_name(format!("bin/{bin}")));
+
+                if i == 0 {
+                    config.primary = true;
+                    has_primary = true;
+                }
+
+                output.exes.insert(bin.into(), config);
+            }
         }
-
-        let name = fs::file_name(entry.path());
-        let mut config = ExecutableConfig::new(format!("bin/{name}"));
-
-        // Without extension
-        if entry
-            .path()
-            .file_stem()
-            .is_some_and(|inner| inner == package_name)
-        {
-            config.primary = true;
-            has_primary = true;
-        }
-
-        output.exes.insert(name.replace(".exe", ""), config);
     }
 
+    // Otherwise, scan the file system
+    if output.exes.is_empty() {
+        for entry in fs::read_dir(input.install_dir.join("bin"))? {
+            if !entry.path().is_file() {
+                continue;
+            }
+
+            let name = fs::file_name(entry.path());
+            let mut config = ExecutableConfig::new(format!("bin/{name}"));
+
+            // Without extension
+            if entry
+                .path()
+                .file_stem()
+                .is_some_and(|inner| inner == package_name_without_scope)
+            {
+                config.primary = true;
+                has_primary = true;
+            }
+
+            output.exes.insert(name.replace(".exe", ""), config);
+        }
+    }
+
+    // This is dangerous but we need a primary!
     if !has_primary && let Some(exe) = output.exes.values_mut().next() {
         exe.primary = true;
     }
