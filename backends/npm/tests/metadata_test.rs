@@ -11,7 +11,7 @@ mod npm_backend_metadata {
 
         let metadata = plugin
             .register_tool(RegisterToolInput {
-                id: "typescript".into(),
+                id: Id::raw("typescript"),
             })
             .await;
 
@@ -28,7 +28,10 @@ mod npm_backend_metadata {
         let plugin = sandbox.create_plugin("typescript").await;
 
         let metadata = plugin
-            .register_backend(RegisterBackendInput::default())
+            .register_backend(RegisterBackendInput {
+                id: Id::raw("typescript"),
+                ..Default::default()
+            })
             .await;
 
         assert_eq!(metadata.backend_id, "typescript");
@@ -41,7 +44,7 @@ mod npm_backend_metadata {
 
         let metadata = plugin
             .register_tool(RegisterToolInput {
-                id: "typescript".into(),
+                id: Id::raw("typescript"),
             })
             .await;
 
@@ -59,7 +62,7 @@ mod npm_backend_metadata {
 
         let metadata = plugin
             .register_tool(RegisterToolInput {
-                id: "typescript".into(),
+                id: Id::raw("typescript"),
             })
             .await;
 
