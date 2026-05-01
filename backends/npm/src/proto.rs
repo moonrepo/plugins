@@ -115,6 +115,7 @@ pub fn native_install(
 pub fn locate_executables(
     Json(input): Json<LocateExecutablesInput>,
 ) -> FnResult<Json<LocateExecutablesOutput>> {
+    let mut output = LocateExecutablesOutput::default();
     let env = get_host_environment()?;
 
     let package_name = get_plugin_id()?;
@@ -123,18 +124,37 @@ pub fn locate_executables(
         None => &package_name,
     };
 
-    let package_path = input
+    let rel_package_path = format!(
+        "{}/{package_name}",
+        env.os.for_native("lib/node_modules", "node_modules")
+    );
+    let package_json_path = input
         .install_dir
-        .join(if env.os.is_windows() {
-            "node_modules"
-        } else {
-            "lib/node_modules"
-        })
-        .join(package_name.as_str());
-    let package_json_path = package_path.join("package.json");
+        .join(&rel_package_path)
+        .join("package.json");
 
-    let mut output = LocateExecutablesOutput::default();
-    let mut has_primary = false;
+    let create_exe_config = |bin_path: &str, primary: bool| {
+        let mut config = ExecutableConfig::new(format!(
+            "{rel_package_path}/{}",
+            bin_path.trim_start_matches("./")
+        ));
+
+        config.primary = primary;
+
+        if bin_path.ends_with(".js") || bin_path.ends_with(".cjs") || bin_path.ends_with(".mjs") {
+            config.parent_exe_name = Some("node".into());
+            config.no_bin = true;
+        } else if bin_path.ends_with(".ts")
+            || bin_path.ends_with(".cts")
+            || bin_path.ends_with(".mts")
+            || bin_path.ends_with(".tsx")
+        {
+            config.parent_exe_name = Some("tsx".into());
+            config.no_bin = true;
+        }
+
+        config
+    };
 
     // If the package exists, extract the applicable bins from it
     if package_json_path.exists() {
@@ -144,25 +164,17 @@ pub fn locate_executables(
             Some(JsonValue::Object(bins)) => {
                 for (i, (bin, bin_path)) in bins.iter().enumerate() {
                     if let JsonValue::String(bin_path) = bin_path {
-                        let mut config = ExecutableConfig::with_parent(bin_path, "node");
-
-                        if i == 0 {
-                            config.primary = true;
-                            has_primary = true;
-                        }
-
-                        output.exes.insert(bin.into(), config);
+                        output
+                            .exes
+                            .insert(bin.into(), create_exe_config(bin_path, i == 0));
                     }
                 }
             }
             Some(JsonValue::String(bin_path)) => {
-                let mut config = ExecutableConfig::with_parent(bin_path, "node");
-                config.primary = true;
-                has_primary = true;
-
-                output
-                    .exes
-                    .insert(package_name_without_scope.into(), config);
+                output.exes.insert(
+                    package_name_without_scope.into(),
+                    create_exe_config(bin_path, true),
+                );
             }
             _ => {}
         };
@@ -170,11 +182,13 @@ pub fn locate_executables(
 
     // Otherwise, scan the file system
     if output.exes.is_empty() {
-        for entry in fs::read_dir(if env.os.is_windows() {
+        let bin_dir = if env.os.is_windows() {
             input.install_dir.clone()
         } else {
             input.install_dir.join("bin")
-        })? {
+        };
+
+        for entry in fs::read_dir(bin_dir)? {
             // Windows contains `.cmd` and `.ps1` that we should avoid
             if !entry.path().is_file() || entry.path().extension().is_some() {
                 continue;
@@ -186,7 +200,6 @@ pub fn locate_executables(
 
             if name == package_name_without_scope {
                 config.primary = true;
-                has_primary = true;
             }
 
             output.exes.insert(name, config);
@@ -194,7 +207,9 @@ pub fn locate_executables(
     }
 
     // This is dangerous but we need a primary!
-    if !has_primary && let Some(exe) = output.exes.values_mut().next() {
+    if !output.exes.iter().any(|(_, cfg)| cfg.primary)
+        && let Some(exe) = output.exes.values_mut().next()
+    {
         exe.primary = true;
     }
 
