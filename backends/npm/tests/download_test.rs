@@ -26,7 +26,7 @@ mod npm_backend_download {
     }
 
     // With scope and package name doesn't match bin names
-     mod with_bun_scoped {
+    mod with_bun_scoped {
         use super::*;
 
         generate_native_install_tests!("npm:@moonrepo/cli", "2.0.0", None, |cfg| {
