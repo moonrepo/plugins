@@ -7,7 +7,7 @@
 This plugin is built-in to proto, but if you want to override it with an explicit version, add the following to `.prototools`.
 
 ```toml
-[plugins]
+[plugins.tools]
 deno = "https://github.com/moonrepo/plugins/releases/download/deno_tool-vX.Y.Z/deno_tool.wasm"
 ```
 

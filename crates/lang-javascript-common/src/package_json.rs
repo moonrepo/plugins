@@ -237,18 +237,18 @@ pub fn remove_dev_engine(
                     });
                     remove_kind = list.is_empty();
                 }
-                JsonValue::Object(object) => {
+                JsonValue::Object(object)
                     if object
                         .get("name")
                         .and_then(|n| n.as_str())
-                        .is_some_and(|n| n == name)
-                    {
-                        remove_kind = true;
-                        removed_version = object
-                            .remove("version")
-                            .and_then(|version| version.as_str().map(|version| version.to_owned()));
-                    }
+                        .is_some_and(|n| n == name) =>
+                {
+                    remove_kind = true;
+                    removed_version = object
+                        .remove("version")
+                        .and_then(|version| version.as_str().map(|version| version.to_owned()));
                 }
+
                 _ => {}
             };
         }

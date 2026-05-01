@@ -7,7 +7,7 @@
 This plugin is built-in to proto, but if you want to override it with an explicit version, add the following to `.prototools`.
 
 ```toml
-[plugins]
+[plugins.tools]
 bun = "https://github.com/moonrepo/plugins/releases/download/bun_tool-vX.Y.Z/bun_tool.wasm"
 ```
 

@@ -5,6 +5,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Default, Deserialize, Serialize, Schematic)]
 #[serde(default, deny_unknown_fields, rename_all = "kebab-case")]
 pub struct NpmBackendConfig {
-    /// Use `bun` for installing packages instead of `npm` and `node`.
+    /// Use `bun` for installing and executing packages instead of `npm` and `node`.
     pub bun: bool,
 }

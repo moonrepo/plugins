@@ -11,7 +11,7 @@ proto install npm|pnpm|yarn
 This plugin is built-in to proto, but if you want to override it with an explicit version, add the following to `.prototools`.
 
 ```toml
-[plugins]
+[plugins.tools]
 npm|pnpm|yarn = "https://github.com/moonrepo/plugins/releases/download/node_depman_tool-vX.Y.Z/node_depman_tool.wasm"
 ```
 

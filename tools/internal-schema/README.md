@@ -7,7 +7,7 @@ A WASM plugin that powers [proto](https://github.com/moonrepo/proto)'s [TOML plu
 This plugin is built-in to proto, but if you want to override it with an explicit version, add the following to `.prototools`.
 
 ```toml
-[plugins]
+[plugins.tools]
 internal-schema = "https://github.com/moonrepo/plugins/releases/download/schema_tool-vX.Y.Z/schema_tool.wasm"
 ```
 

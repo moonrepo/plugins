@@ -11,7 +11,7 @@ proto install poetry
 This plugin is built-in to proto, but if you want to override it with an explicit version, add the following to `.prototools`.
 
 ```toml
-[plugins]
+[plugins.tools]
 poetry = "https://github.com/moonrepo/plugins/releases/download/python_poetry_tool-vX.Y.Z/python_poetry_tool.wasm"
 ```
 

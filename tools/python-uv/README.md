@@ -11,7 +11,7 @@ proto install uv
 This plugin is built-in to proto, but if you want to override it with an explicit version, add the following to `.prototools`.
 
 ```toml
-[plugins]
+[plugins.tools]
 uv = "https://github.com/moonrepo/plugins/releases/download/python_uv_tool-vX.Y.Z/python_uv_tool.wasm"
 ```
 

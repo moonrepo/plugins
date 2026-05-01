@@ -11,7 +11,7 @@ proto install moon
 This plugin is built-in to proto, but if you want to override it with an explicit version, add the following to `.prototools`.
 
 ```toml
-[plugins]
+[plugins.tools]
 moon = "https://github.com/moonrepo/plugins/releases/download/moon_tool-vX.Y.Z/moon_tool.wasm"
 ```
 

@@ -11,7 +11,7 @@ proto install python
 This plugin is built-in to proto, but if you want to override it with an explicit version, add the following to `.prototools`.
 
 ```toml
-[plugins]
+[plugins.tools]
 python = "https://github.com/moonrepo/plugins/releases/download/python_tool-vX.Y.Z/python_tool.wasm"
 ```
 

@@ -11,7 +11,7 @@ proto install ruby
 This plugin is built-in to proto, but if you want to override it with an explicit version, add the following to `.prototools`.
 
 ```toml
-[plugins]
+[plugins.tools]
 ruby = "https://github.com/moonrepo/plugins/releases/download/ruby_tool-vX.Y.Z/ruby_tool.wasm"
 ```
 

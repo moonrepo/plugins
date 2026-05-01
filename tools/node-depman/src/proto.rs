@@ -216,52 +216,48 @@ pub fn resolve_version(
     let mut output = ResolveVersionOutput::default();
 
     match manager {
-        PackageManager::Npm => {
-            // When the alias "bundled" is provided, we should install the npm
-            // version that comes bundled with the current Node.js version.
-            if input.initial.is_alias("bundled") {
-                debug!("Received the bundled alias, attempting to find a version");
+        // When the alias "bundled" is provided, we should install the npm
+        // version that comes bundled with the current Node.js version.
+        PackageManager::Npm if input.initial.is_alias("bundled") => {
+            debug!("Received the bundled alias, attempting to find a version");
 
-                let response: Vec<NodeDistVersion> =
-                    fetch_json("https://nodejs.org/download/release/index.json")?;
-                let mut found_version = false;
+            let response: Vec<NodeDistVersion> =
+                fetch_json("https://nodejs.org/download/release/index.json")?;
+            let mut found_version = false;
 
-                // Infer from proto's environment variable
-                if let Some(node_version) = get_host_env_var("PROTO_NODE_VERSION")? {
-                    for node_release in &response {
-                        // Theirs starts with v, ours does not
-                        if node_release.version[1..] == node_version && node_release.npm.is_some() {
-                            output.version =
-                                Some(VersionSpec::parse(node_release.npm.as_ref().unwrap())?);
-                            found_version = true;
-                            break;
-                        }
+            // Infer from proto's environment variable
+            if let Some(node_version) = get_host_env_var("PROTO_NODE_VERSION")? {
+                for node_release in &response {
+                    // Theirs starts with v, ours does not
+                    if node_release.version[1..] == node_version && node_release.npm.is_some() {
+                        output.version =
+                            Some(VersionSpec::parse(node_release.npm.as_ref().unwrap())?);
+                        found_version = true;
+                        break;
                     }
                 }
+            }
 
-                // Otherwise call the current `node` binary and infer from that
-                if !found_version {
-                    let result = exec_captured("node", ["--version"])?;
-                    let node_version = result.stdout.trim();
+            // Otherwise call the current `node` binary and infer from that
+            if !found_version {
+                let result = exec_captured("node", ["--version"])?;
+                let node_version = result.stdout.trim();
 
-                    for node_release in &response {
-                        // Both start with v
-                        if node_release.version == node_version && node_release.npm.is_some() {
-                            output.version =
-                                Some(VersionSpec::parse(node_release.npm.as_ref().unwrap())?);
-                            found_version = true;
-                            break;
-                        }
+                for node_release in &response {
+                    // Both start with v
+                    if node_release.version == node_version && node_release.npm.is_some() {
+                        output.version =
+                            Some(VersionSpec::parse(node_release.npm.as_ref().unwrap())?);
+                        found_version = true;
+                        break;
                     }
                 }
+            }
 
-                if !found_version {
-                    debug!(
-                        "Could not find a bundled npm version for Node.js, falling back to latest"
-                    );
+            if !found_version {
+                debug!("Could not find a bundled npm version for Node.js, falling back to latest");
 
-                    output.candidate = Some(UnresolvedVersionSpec::Alias("latest".into()));
-                }
+                output.candidate = Some(UnresolvedVersionSpec::Alias("latest".into()));
             }
         }
 

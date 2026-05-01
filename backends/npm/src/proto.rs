@@ -116,6 +116,7 @@ pub fn locate_executables(
     Json(input): Json<LocateExecutablesInput>,
 ) -> FnResult<Json<LocateExecutablesOutput>> {
     let mut output = LocateExecutablesOutput::default();
+    let backend_config = get_backend_config::<NpmBackendConfig>()?;
 
     let package_name = get_plugin_id()?;
     let package_name_without_scope = match package_name.rfind('/') {
@@ -155,6 +156,10 @@ pub fn locate_executables(
         {
             config.parent_exe_name = Some("tsx".into());
             config.no_bin = true;
+        }
+
+        if config.parent_exe_name.is_some() && backend_config.bun {
+            config.parent_exe_name = Some("bun".into());
         }
 
         config

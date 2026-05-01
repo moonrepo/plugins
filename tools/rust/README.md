@@ -11,7 +11,7 @@ proto install rust
 This plugin is built-in to proto, but if you want to override it with an explicit version, add the following to `.prototools`.
 
 ```toml
-[plugins]
+[plugins.tools]
 rust = "https://github.com/moonrepo/plugins/releases/download/rust_tool-vX.Y.Z/rust_tool.wasm"
 ```
 
