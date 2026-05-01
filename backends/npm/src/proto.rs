@@ -115,64 +115,81 @@ pub fn native_install(
 pub fn locate_executables(
     Json(input): Json<LocateExecutablesInput>,
 ) -> FnResult<Json<LocateExecutablesOutput>> {
+    let env = get_host_environment()?;
+
     let package_name = get_plugin_id()?;
     let package_name_without_scope = match package_name.rfind('/') {
         Some(index) => &package_name[index + 1..],
         None => &package_name,
     };
+
     let package_path = input
         .install_dir
-        .join("lib/node_modules")
-        .join(package_name.as_str())
-        .join("package.json");
+        .join(if env.os.is_windows() {
+            "node_modules"
+        } else {
+            "lib/node_modules"
+        })
+        .join(package_name.as_str());
+    let package_json_path = package_path.join("package.json");
 
-    let mut output = LocateExecutablesOutput {
-        exes_dirs: vec!["bin".into()],
-        ..Default::default()
-    };
+    let mut output = LocateExecutablesOutput::default();
     let mut has_primary = false;
 
     // If the package exists, extract the applicable bins from it
-    if package_path.exists() {
-        let package: JsonValue = starbase_utils::json::read_file(package_path)?;
+    if package_json_path.exists() {
+        let package: JsonValue = starbase_utils::json::read_file(package_json_path)?;
 
-        if let Some(JsonValue::Object(bins)) = package.get("bin") {
-            let env = get_host_environment()?;
+        match package.get("bin") {
+            Some(JsonValue::Object(bins)) => {
+                for (i, (bin, bin_path)) in bins.iter().enumerate() {
+                    if let JsonValue::String(bin_path) = bin_path {
+                        let mut config = ExecutableConfig::with_parent(bin_path, "node");
 
-            for (i, bin) in bins.keys().enumerate() {
-                let mut config = ExecutableConfig::new(env.os.get_exe_name(format!("bin/{bin}")));
+                        if i == 0 {
+                            config.primary = true;
+                            has_primary = true;
+                        }
 
-                if i == 0 {
-                    config.primary = true;
-                    has_primary = true;
+                        output.exes.insert(bin.into(), config);
+                    }
                 }
-
-                output.exes.insert(bin.into(), config);
             }
-        }
+            Some(JsonValue::String(bin_path)) => {
+                let mut config = ExecutableConfig::with_parent(bin_path, "node");
+                config.primary = true;
+                has_primary = true;
+
+                output
+                    .exes
+                    .insert(package_name_without_scope.into(), config);
+            }
+            _ => {}
+        };
     }
 
     // Otherwise, scan the file system
     if output.exes.is_empty() {
-        for entry in fs::read_dir(input.install_dir.join("bin"))? {
-            if !entry.path().is_file() {
+        for entry in fs::read_dir(if env.os.is_windows() {
+            input.install_dir.clone()
+        } else {
+            input.install_dir.join("bin")
+        })? {
+            // Windows contains `.cmd` and `.ps1` that we should avoid
+            if !entry.path().is_file() || entry.path().extension().is_some() {
                 continue;
             }
 
             let name = fs::file_name(entry.path());
-            let mut config = ExecutableConfig::new(format!("bin/{name}"));
+            let mut config =
+                ExecutableConfig::new(env.os.for_native(&format!("bin/{name}"), &name));
 
-            // Without extension
-            if entry
-                .path()
-                .file_stem()
-                .is_some_and(|inner| inner == package_name_without_scope)
-            {
+            if name == package_name_without_scope {
                 config.primary = true;
                 has_primary = true;
             }
 
-            output.exes.insert(name.replace(".exe", ""), config);
+            output.exes.insert(name, config);
         }
     }
 

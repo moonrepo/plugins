@@ -8,6 +8,13 @@ version = "1.2.20"
 checksum = "sha256:404f5a6dd1f604b40eb3b156d4197bb8d398bb26e0ae4c8ac8e7aa490f7e235f"
 
 [[tools.moon]]
+os = "windows"
+arch = "x64"
+spec = "2.2.3"
+version = "2.2.3"
+checksum = "sha256:b164749dbbb2e856c329bea9f81b76a611f0382f44e8330eb165aafb99a70984"
+
+[[tools.moon]]
 os = "macos"
 arch = "arm64"
 spec = "latest"
@@ -20,3 +27,10 @@ arch = "arm64"
 spec = "24.0.0"
 version = "24.0.0"
 checksum = "sha256:2094ffe8d719e19a50105666828867730a43161dcd18f64a31e442fdce9f7b1d"
+
+[[tools.proto]]
+os = "windows"
+arch = "x64"
+spec = "0.56.4"
+version = "0.56.4"
+checksum = "sha256:de26671d5a4d11e7818c889afb16fd33513f4ef78e756ae8680551d603bf764f"
