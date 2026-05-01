@@ -3305,7 +3305,7 @@ checksum = "61807f77802ff30975e01f4f071c8ba10c022052f98b3294119f3e615d13e5be"
 
 [[package]]
 name = "npm_backend"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "backend_common",
  "extism-pdk",
