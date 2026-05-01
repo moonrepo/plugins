@@ -428,7 +428,7 @@ dependencies = [
 
 [[package]]
 name = "cargo_backend"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "backend_common",
  "extism-pdk",
