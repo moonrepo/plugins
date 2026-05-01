@@ -116,7 +116,6 @@ pub fn locate_executables(
     Json(input): Json<LocateExecutablesInput>,
 ) -> FnResult<Json<LocateExecutablesOutput>> {
     let mut output = LocateExecutablesOutput::default();
-    let env = get_host_environment()?;
 
     let package_name = get_plugin_id()?;
     let package_name_without_scope = match package_name.rfind('/') {
@@ -126,7 +125,12 @@ pub fn locate_executables(
 
     let rel_package_path = format!(
         "{}/{package_name}",
-        env.os.for_native("lib/node_modules", "node_modules")
+        // Differences between unix/windows and node/bun
+        if input.install_dir.join("lib").exists() {
+            "lib/node_modules"
+        } else {
+            "node_modules"
+        }
     );
     let package_json_path = input
         .install_dir
@@ -182,10 +186,11 @@ pub fn locate_executables(
 
     // Otherwise, scan the file system
     if output.exes.is_empty() {
-        let bin_dir = if env.os.is_windows() {
-            input.install_dir.clone()
-        } else {
+        // Differences between unix/windows and node/bun
+        let bin_dir = if input.install_dir.join("bin").exists() {
             input.install_dir.join("bin")
+        } else {
+            input.install_dir.clone()
         };
 
         for entry in fs::read_dir(bin_dir)? {
@@ -195,8 +200,13 @@ pub fn locate_executables(
             }
 
             let name = fs::file_name(entry.path());
-            let mut config =
-                ExecutableConfig::new(env.os.for_native(&format!("bin/{name}"), &name));
+            let mut config = ExecutableConfig::new(
+                entry
+                    .path()
+                    .strip_prefix(&input.install_dir)
+                    .unwrap()
+                    .to_string_lossy(),
+            );
 
             if name == package_name_without_scope {
                 config.primary = true;
@@ -212,6 +222,15 @@ pub fn locate_executables(
     {
         exe.primary = true;
     }
+
+    // Support activate flows
+    output
+        .exes_dirs
+        .push(if input.install_dir.join("bin").exists() {
+            "bin".into()
+        } else {
+            ".".into()
+        });
 
     Ok(Json(output))
 }
