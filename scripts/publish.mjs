@@ -6,7 +6,7 @@ import { join } from "node:path";
 import * as fs from "node:fs/promises";
 import * as readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
-import { getArgs, getPackages, execMoon } from "./utils.mjs";
+import { getArgs, getPackages, exec, execMoon } from "./utils.mjs";
 
 const args = getArgs();
 const packages = await getPackages(args);
@@ -28,6 +28,8 @@ rl.close();
 if (answer.toLowerCase() == "n") {
   process.exit(0);
 }
+
+const TARGET_DIR = process.env.CARGO_TARGET_DIR || join(process.cwd(), "target");
 
 for (let pkg of packages) {
   console.log(`Publishing ${styleText("cyan", pkg.name)}`);
@@ -53,6 +55,18 @@ for (let pkg of packages) {
   };
 
   await fs.writeFile(annosPath, JSON.stringify(annos));
+
+  await exec("oras", [
+    "push",
+    "--debug",
+    "--disable-path-validation",
+    "--annotation-file",
+    annosPath,
+    "--artifact-type",
+    "application/wasm",
+    `ghcr.io/moonrepo/${pkg.name}:${pkg.version}`,
+    join(TARGET_DIR, `wasm32-wasip1/release/${pkg.name}.wasm`),
+  ]);
 
   console.log();
 
