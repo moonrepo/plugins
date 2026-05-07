@@ -2,7 +2,11 @@
 name = "node_depman_toolchain"
 version = "1.0.3"
 edition = "2024"
+description = "Node.js dependency managers (npm, pnpm, yarn) toolchain WASM plugin for moon."
+authors = ["Miles Johnson"]
 license = "MIT"
+repository = "https://github.com/moonrepo/plugins"
+documentation = "https://github.com/moonrepo/plugins/tree/master/toolchains/node-depman"
 publish = false
 
 [package.metadata.release]

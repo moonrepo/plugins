@@ -2,7 +2,11 @@
 name = "unpack_extension"
 version = "1.0.2"
 edition = "2024"
+description = "moon extension WASM plugin for unpacking archive files (tar, zip, etc.)."
+authors = ["Miles Johnson"]
 license = "MIT"
+repository = "https://github.com/moonrepo/plugins"
+documentation = "https://github.com/moonrepo/plugins/tree/master/extensions/unpack"
 publish = false
 
 [lib]

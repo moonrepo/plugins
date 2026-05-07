@@ -7,6 +7,20 @@ spec = "1.2.20"
 version = "1.2.20"
 checksum = "sha256:404f5a6dd1f604b40eb3b156d4197bb8d398bb26e0ae4c8ac8e7aa490f7e235f"
 
+[[tools.go]]
+os = "macos"
+arch = "arm64"
+spec = "1.26.0"
+version = "1.26.0"
+checksum = "sha256:b1640525dfe68f066d56f200bef7bf4dce955a1a893bd061de6754c211431023"
+
+[[tools.moon]]
+os = "macos"
+arch = "arm64"
+spec = "2.2.3"
+version = "2.2.3"
+checksum = "sha256:3ed73eb6384346318922f7e695eb1dd3fbb4c0fa9dccf25782939a592c6377a6"
+
 [[tools.moon]]
 os = "windows"
 arch = "x64"
@@ -27,6 +41,11 @@ arch = "arm64"
 spec = "24.0.0"
 version = "24.0.0"
 checksum = "sha256:2094ffe8d719e19a50105666828867730a43161dcd18f64a31e442fdce9f7b1d"
+
+[[tools.npm]]
+spec = "10.0.0"
+version = "10.0.0"
+checksum = "sha256:550078a66a3bb1065bae29f047b25210fbc966b69d3d2a6aab74d0378e37916a"
 
 [[tools.proto]]
 os = "windows"

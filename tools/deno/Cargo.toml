@@ -2,7 +2,11 @@
 name = "deno_tool"
 version = "0.15.9"
 edition = "2024"
+description = "Deno WASM plugin for proto."
+authors = ["Miles Johnson"]
 license = "MIT"
+repository = "https://github.com/moonrepo/plugins"
+documentation = "https://github.com/moonrepo/plugins/tree/master/tools/deno"
 publish = false
 
 [package.metadata.release]

@@ -2,7 +2,11 @@
 name = "proto_tool"
 version = "0.5.6"
 edition = "2024"
+description = "Internal-only WASM plugin for managing proto itself."
+authors = ["Miles Johnson"]
 license = "MIT"
+repository = "https://github.com/moonrepo/plugins"
+documentation = "https://github.com/moonrepo/plugins/tree/master/tools/proto"
 publish = false
 
 [package.metadata.release]

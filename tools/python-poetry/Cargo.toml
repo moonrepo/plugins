@@ -2,7 +2,11 @@
 name = "python_poetry_tool"
 version = "0.1.6"
 edition = "2024"
+description = "Python Poetry WASM plugin for proto."
+authors = ["Miles Johnson"]
 license = "MIT"
+repository = "https://github.com/moonrepo/plugins"
+documentation = "https://github.com/moonrepo/plugins/tree/master/tools/python-poetry"
 publish = false
 
 [package.metadata.release]

@@ -2,7 +2,11 @@
 name = "node_depman_tool"
 version = "0.18.1"
 edition = "2024"
+description = "Node.js dependency managers (npm, pnpm, yarn) WASM plugin for proto."
+authors = ["Miles Johnson"]
 license = "MIT"
+repository = "https://github.com/moonrepo/plugins"
+documentation = "https://github.com/moonrepo/plugins/tree/master/tools/node-depman"
 publish = false
 
 [package.metadata.release]

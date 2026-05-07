@@ -2,6 +2,12 @@
 name = "asdf_backend"
 version = "0.3.3"
 edition = "2024"
+description = "asdf backend WASM plugin for proto, for installing tools via asdf plugins."
+authors = ["Miles Johnson"]
+license = "MIT"
+repository = "https://github.com/moonrepo/plugins"
+documentation = "https://github.com/moonrepo/plugins/tree/master/backends/asdf"
+publish = false
 
 [package.metadata.release]
 pre-release-replacements = [

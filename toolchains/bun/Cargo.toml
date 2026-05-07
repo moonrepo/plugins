@@ -2,7 +2,11 @@
 name = "bun_toolchain"
 version = "1.0.2"
 edition = "2024"
+description = "Bun toolchain WASM plugin for moon."
+authors = ["Miles Johnson"]
 license = "MIT"
+repository = "https://github.com/moonrepo/plugins"
+documentation = "https://github.com/moonrepo/plugins/tree/master/toolchains/bun"
 publish = false
 
 [package.metadata.release]

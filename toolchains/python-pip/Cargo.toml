@@ -2,7 +2,11 @@
 name = "python_pip_toolchain"
 version = "0.1.2"
 edition = "2024"
+description = "Python pip toolchain WASM plugin for moon."
+authors = ["Miles Johnson"]
 license = "MIT"
+repository = "https://github.com/moonrepo/plugins"
+documentation = "https://github.com/moonrepo/plugins/tree/master/toolchains/python-pip"
 publish = false
 
 [package.metadata.release]

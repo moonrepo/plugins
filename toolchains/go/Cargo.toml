@@ -2,7 +2,11 @@
 name = "go_toolchain"
 version = "1.2.0"
 edition = "2024"
+description = "Go toolchain WASM plugin for moon."
+authors = ["Miles Johnson"]
 license = "MIT"
+repository = "https://github.com/moonrepo/plugins"
+documentation = "https://github.com/moonrepo/plugins/tree/master/toolchains/go"
 publish = false
 
 [package.metadata.release]
