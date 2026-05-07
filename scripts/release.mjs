@@ -1,3 +1,5 @@
+// Build, tag, and release WASM plugins to GitHub
+
 // @ts-check
 import { styleText } from "node:util";
 import * as readline from "node:readline/promises";
@@ -16,7 +18,7 @@ const rl = readline.createInterface({ input, output });
 const answer = await rl.question(
   `Release (${styleText("yellow", args.bump)}) plugins ${packages
     .map((pkg) => styleText("cyan", pkg.name))
-    .join(", ")}? [Y/N] `
+    .join(", ")}? [Y/N] `,
 );
 
 rl.close();

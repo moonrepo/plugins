@@ -12,6 +12,7 @@ target/
 # moon
 .moon/cache
 .moon/docker
+annotations.json
 
 # AI / agents
 .claude/settings.local.json

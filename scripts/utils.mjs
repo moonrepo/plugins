@@ -79,32 +79,28 @@ export async function execCargo(args, opts) {
 }
 
 /**
+ * @param {string[]} args
+ * @param {import("node:child_process").SpawnOptions} [opts]
+ * @returns {Promise<string>}
+ */
+export async function execMoon(args, opts) {
+  return (await exec("moon", args, opts)).out;
+}
+
+/**
  * @param {{packages?: string[], exclude?: string[], type?: string}} args
- * @returns {Promise<{name: string, version: string, root: string}[]>}
+ * @returns {Promise<{name: string; version: string; root: string; license?: string; description?: string; repository?: string; documentation?: string; homepage?: string; authors?: string[]; }[]>}
  */
 export async function getPackages(args) {
   let packages = [];
   let metadata = JSON.parse(
-    await execCargo(
-      [
-        "metadata",
-        "--format-version",
-        "1",
-        "--no-deps",
-        "--no-default-features",
-      ],
-      {
-        stdio: "pipe",
-      }
-    )
+    await execCargo(["metadata", "--format-version", "1", "--no-deps", "--no-default-features"], {
+      stdio: "pipe",
+    }),
   );
 
   for (let pkg of metadata.packages) {
-    if (
-      args.packages &&
-      args.packages.length > 0 &&
-      !args.packages.includes(pkg.name)
-    ) {
+    if (args.packages && args.packages.length > 0 && !args.packages.includes(pkg.name)) {
       continue;
     }
 
@@ -112,6 +108,13 @@ export async function getPackages(args) {
       name: pkg.name,
       version: pkg.version,
       root: dirname(pkg.manifest_path),
+      // Metadata
+      license: pkg.license,
+      description: pkg.description,
+      repository: pkg.repository,
+      documentation: pkg.documentation,
+      homepage: pkg.homepage,
+      authors: pkg.authors,
     });
   }
 
@@ -121,6 +124,6 @@ export async function getPackages(args) {
 
   // Common crates are not plugins
   return packages.filter(
-    (pkg) => !pkg.name.includes("common") && !args.exclude?.includes(pkg.name)
+    (pkg) => !pkg.name.includes("common") && !args.exclude?.includes(pkg.name),
   );
 }
