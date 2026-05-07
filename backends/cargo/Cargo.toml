@@ -2,6 +2,12 @@
 name = "cargo_backend"
 version = "0.1.0"
 edition = "2024"
+description = "Cargo backend WASM plugin for proto, for installing CLIs from crates.io."
+authors = ["Miles Johnson"]
+license = "MIT"
+repository = "https://github.com/moonrepo/plugins"
+documentation = "https://github.com/moonrepo/plugins/tree/master/backends/cargo"
+publish = false
 
 [package.metadata.release]
 pre-release-replacements = [

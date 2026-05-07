@@ -2,7 +2,11 @@
 name = "node_tool"
 version = "0.17.9"
 edition = "2024"
+description = "Node.js WASM plugin for proto."
+authors = ["Miles Johnson"]
 license = "MIT"
+repository = "https://github.com/moonrepo/plugins"
+documentation = "https://github.com/moonrepo/plugins/tree/master/tools/node"
 publish = false
 
 [package.metadata.release]

@@ -2,7 +2,11 @@
 name = "migrate_turborepo_extension"
 version = "1.0.3"
 edition = "2024"
+description = "moon extension WASM plugin for migrating a Turborepo repository to moon."
+authors = ["Miles Johnson"]
 license = "MIT"
+repository = "https://github.com/moonrepo/plugins"
+documentation = "https://github.com/moonrepo/plugins/tree/master/extensions/migrate-turborepo"
 publish = false
 
 [lib]

@@ -2,7 +2,11 @@
 name = "system_toolchain"
 version = "1.0.2"
 edition = "2024"
+description = "System toolchain WASM plugin for moon, for running tasks against system-installed binaries."
+authors = ["Miles Johnson"]
 license = "MIT"
+repository = "https://github.com/moonrepo/plugins"
+documentation = "https://github.com/moonrepo/plugins/tree/master/toolchains/system"
 publish = false
 
 [package.metadata.release]

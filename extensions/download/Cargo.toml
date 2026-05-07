@@ -2,7 +2,11 @@
 name = "download_extension"
 version = "1.0.2"
 edition = "2024"
+description = "moon extension WASM plugin for downloading a file from a URL."
+authors = ["Miles Johnson"]
 license = "MIT"
+repository = "https://github.com/moonrepo/plugins"
+documentation = "https://github.com/moonrepo/plugins/tree/master/extensions/download"
 publish = false
 
 [lib]

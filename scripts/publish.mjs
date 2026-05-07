@@ -49,24 +49,24 @@ for (let pkg of packages) {
     "org.opencontainers.image.licenses": pkg.license || undefined,
     "org.opencontainers.image.source": pkg.repository || undefined,
     "org.opencontainers.image.documentation": pkg.documentation || undefined,
-    "org.opencontainers.image.url": pkg.homepage || undefined,
+    "org.opencontainers.image.url": pkg.homepage || pkg.repository || undefined,
     "org.opencontainers.image.authors":
       pkg.authors && pkg.authors.length > 0 ? pkg.authors.join(", ") : undefined,
   };
 
   await fs.writeFile(annosPath, JSON.stringify(annos));
 
-  await exec("oras", [
-    "push",
-    "--debug",
-    "--disable-path-validation",
-    "--annotation-file",
-    annosPath,
-    "--artifact-type",
-    "application/wasm",
-    `ghcr.io/moonrepo/${pkg.name}:${pkg.version}`,
-    join(TARGET_DIR, `wasm32-wasip1/release/${pkg.name}.wasm`),
-  ]);
+  // await exec("oras", [
+  //   "push",
+  //   "--debug",
+  //   "--disable-path-validation",
+  //   "--annotation-file",
+  //   annosPath,
+  //   "--artifact-type",
+  //   "application/wasm",
+  //   `ghcr.io/moonrepo/${pkg.name}:${pkg.version}`,
+  //   join(TARGET_DIR, `wasm32-wasip1/release/${pkg.name}.wasm`),
+  // ]);
 
   console.log();
 

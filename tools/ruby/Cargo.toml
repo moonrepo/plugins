@@ -2,7 +2,11 @@
 name = "ruby_tool"
 version = "0.2.7"
 edition = "2024"
+description = "Ruby WASM plugin for proto."
+authors = ["Miles Johnson"]
 license = "MIT"
+repository = "https://github.com/moonrepo/plugins"
+documentation = "https://github.com/moonrepo/plugins/tree/master/tools/ruby"
 publish = false
 
 [package.metadata.release]

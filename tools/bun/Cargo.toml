@@ -2,7 +2,11 @@
 name = "bun_tool"
 version = "0.16.8"
 edition = "2024"
+description = "Bun WASM plugin for proto."
+authors = ["Miles Johnson"]
 license = "MIT"
+repository = "https://github.com/moonrepo/plugins"
+documentation = "https://github.com/moonrepo/plugins/tree/master/tools/bun"
 publish = false
 
 [package.metadata.release]

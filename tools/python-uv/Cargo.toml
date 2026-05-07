@@ -2,7 +2,11 @@
 name = "python_uv_tool"
 version = "0.3.2"
 edition = "2024"
+description = "Python uv WASM plugin for proto."
+authors = ["Miles Johnson"]
 license = "MIT"
+repository = "https://github.com/moonrepo/plugins"
+documentation = "https://github.com/moonrepo/plugins/tree/master/tools/python-uv"
 publish = false
 
 [package.metadata.release]

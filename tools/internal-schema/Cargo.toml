@@ -2,7 +2,11 @@
 name = "schema_tool"
 version = "0.17.8"
 edition = "2024"
+description = "Schema-based WASM plugin for proto, powering the TOML plugin pattern."
+authors = ["Miles Johnson"]
 license = "MIT"
+repository = "https://github.com/moonrepo/plugins"
+documentation = "https://github.com/moonrepo/plugins/tree/master/tools/internal-schema"
 publish = false
 
 [package.metadata.release]
