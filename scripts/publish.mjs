@@ -3,6 +3,7 @@
 // @ts-check
 import { styleText } from "node:util";
 import { join } from "node:path";
+import { existsSync } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
@@ -37,12 +38,14 @@ for (let pkg of packages) {
   await execMoon(["run", `${pkg.name}:build`]);
 
   // Build OCI annotations
+  // https://docs.github.com/en/packages/learn-github-packages/connecting-a-repository-to-a-package
   const annosPath = join(pkg.root, "annotations.json");
   const annos = {
     "moonrepo.runtime":
       pkg.name.endsWith("toolchain") || pkg.name.endsWith("extension") ? "moon" : "proto",
     "moonrepo.plugin.type": pkg.name.split("_")[1],
     "moonrepo.plugin.format": "wasm",
+    "org.opencontainers.image.vendor": "moonrepo",
     "org.opencontainers.image.version": pkg.version,
     "org.opencontainers.image.title": pkg.name,
     "org.opencontainers.image.description": pkg.description || undefined,
@@ -54,19 +57,34 @@ for (let pkg of packages) {
       pkg.authors && pkg.authors.length > 0 ? pkg.authors.join(", ") : undefined,
   };
 
-  await fs.writeFile(annosPath, JSON.stringify(annos));
+  await fs.writeFile(
+    annosPath,
+    JSON.stringify({
+      $manifest: annos,
+    }),
+  );
 
-  // await exec("oras", [
-  //   "push",
-  //   "--debug",
-  //   "--disable-path-validation",
-  //   "--annotation-file",
-  //   annosPath,
-  //   "--artifact-type",
-  //   "application/wasm",
-  //   `ghcr.io/moonrepo/${pkg.name}:${pkg.version}`,
-  //   join(TARGET_DIR, `wasm32-wasip1/release/${pkg.name}.wasm`),
-  // ]);
+  // Push to registry with multiple layers
+  const wasmFile = join(TARGET_DIR, `wasm32-wasip1/release/${pkg.name}.wasm`);
+  const readmeFile = join(pkg.root, "README.md");
+
+  const args = [
+    "push",
+    "--debug",
+    "--disable-path-validation",
+    "--annotation-file",
+    annosPath,
+    "--artifact-type",
+    "application/wasm",
+    `ghcr.io/moonrepo/${pkg.name}:${pkg.version}`,
+    `${wasmFile}:application/wasm`,
+  ];
+
+  if (existsSync(readmeFile)) {
+    args.push(`${readmeFile}:text/markdown`);
+  }
+
+  await exec("oras", args);
 
   console.log();
 
