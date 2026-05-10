@@ -76,7 +76,7 @@ for (let pkg of packages) {
     annosPath,
     "--artifact-type",
     "application/wasm",
-    `ghcr.io/moonrepo/${pkg.name}:${pkg.version}`,
+    `ghcr.io/moonrepo/${pkg.name}:${pkg.version},latest`,
     `${wasmFile}:application/wasm`,
   ];
 
