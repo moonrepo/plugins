@@ -26,7 +26,7 @@ jobs:
       - id: build
         uses: moonrepo/build-wasm-plugin@v0
         with:
-          publish: true
+          publish: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
