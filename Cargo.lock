@@ -1447,6 +1447,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "example_tool"
+version = "0.0.0"
+dependencies = [
+ "extism-pdk",
+ "proto_pdk",
+ "serde",
+ "tool_common",
+]
+
+[[package]]
 name = "extension_common"
 version = "0.1.1"
 dependencies = [
