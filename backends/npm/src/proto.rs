@@ -178,8 +178,6 @@ pub fn locate_executables(
     if package_json_path.exists() {
         let package: JsonValue = starbase_utils::json::read_file(package_json_path)?;
 
-        extism_pdk::debug!("{package:?}");
-
         match package.get("bin") {
             Some(JsonValue::Object(bins)) => {
                 for (i, (bin, bin_path)) in bins.iter().enumerate() {
