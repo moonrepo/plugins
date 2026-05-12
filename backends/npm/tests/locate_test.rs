@@ -32,7 +32,7 @@ mod npm_backend_locate {
                 Some(PathBuf::from("node_modules/typescript/bin/tsc"))
             );
             assert!(tsc.primary);
-            assert_eq!(tsc.parent_exe_name, None);
+            assert_eq!(tsc.parent_exe_name, Some("node".into()));
 
             let tsserver = output.exes.get("tsserver").unwrap();
             assert_eq!(
@@ -40,6 +40,7 @@ mod npm_backend_locate {
                 Some(PathBuf::from("node_modules/typescript/bin/tsserver"))
             );
             assert!(!tsserver.primary);
+            assert_eq!(tsc.parent_exe_name, Some("node".into()));
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -122,7 +123,7 @@ mod npm_backend_locate {
         }
 
         #[tokio::test(flavor = "multi_thread")]
-        async fn no_parent_for_extensionless_bin() {
+        async fn includes_parent_for_extensionless_bin() {
             let sandbox = create_empty_proto_sandbox();
             sandbox.create_file(
                 "node_modules/typescript/package.json",
@@ -133,8 +134,8 @@ mod npm_backend_locate {
             let output = plugin.locate_executables(locate_input(&sandbox)).await;
 
             let tsc = output.exes.get("tsc").unwrap();
-            assert_eq!(tsc.parent_exe_name, None);
-            assert!(!tsc.no_bin);
+            assert_eq!(tsc.parent_exe_name, Some("node".into()));
+            assert!(tsc.no_bin);
         }
 
         #[tokio::test(flavor = "multi_thread")]

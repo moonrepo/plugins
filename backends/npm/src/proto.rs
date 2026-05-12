@@ -146,16 +146,25 @@ pub fn locate_executables(
 
         config.primary = primary;
 
-        if bin_path.ends_with(".js") || bin_path.ends_with(".cjs") || bin_path.ends_with(".mjs") {
-            config.parent_exe_name = Some("node".into());
-            config.no_bin = true;
-        } else if bin_path.ends_with(".ts")
-            || bin_path.ends_with(".cts")
-            || bin_path.ends_with(".mts")
-            || bin_path.ends_with(".tsx")
+        match config
+            .exe_path
+            .as_ref()
+            .unwrap()
+            .extension()
+            .and_then(|ext| ext.to_str())
         {
-            config.parent_exe_name = Some("tsx".into());
-            config.no_bin = true;
+            None | Some("js" | "cjs" | "mjs") => {
+                config.parent_exe_name = Some("node".into());
+                config.no_bin = true;
+            }
+            Some("ts" | "cts" | "mts" | "tsx") => {
+                config.parent_exe_name = Some("tsx".into());
+                config.no_bin = true;
+            }
+            _ => {
+                // Assume other files are not JS,
+                // but something like Bash scripts
+            }
         }
 
         if config.parent_exe_name.is_some() && backend_config.bun {
@@ -168,6 +177,8 @@ pub fn locate_executables(
     // If the package exists, extract the applicable bins from it
     if package_json_path.exists() {
         let package: JsonValue = starbase_utils::json::read_file(package_json_path)?;
+
+        extism_pdk::debug!("{package:?}");
 
         match package.get("bin") {
             Some(JsonValue::Object(bins)) => {
