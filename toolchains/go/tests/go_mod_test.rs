@@ -98,4 +98,28 @@ mod go_mod {
         )
         .unwrap();
     }
+
+    #[test]
+    fn parses_with_ignore_directive() {
+        let content = r#"
+module github.com/org/repo
+
+go 1.24.0
+
+ignore ./node_modules
+
+ignore (
+	./dist
+	./build
+)
+
+require example.com/thing v1.2.3
+"#;
+
+        let go_mod = parse_go_mod(content).unwrap();
+
+        assert_eq!(go_mod.module, "github.com/org/repo");
+        assert_eq!(go_mod.go.unwrap(), "1.24.0");
+        assert_eq!(go_mod.require.len(), 1);
+    }
 }

@@ -48,6 +48,13 @@ version = "10.0.0"
 checksum = "sha256:550078a66a3bb1065bae29f047b25210fbc966b69d3d2a6aab74d0378e37916a"
 
 [[tools.proto]]
+os = "macos"
+arch = "arm64"
+spec = "0.56.4"
+version = "0.56.4"
+checksum = "sha256:28ac2b3fb905aa692496eaf6f507c5cd79454b28d2e039c984677a3bd40a47bc"
+
+[[tools.proto]]
 os = "windows"
 arch = "x64"
 spec = "0.56.4"
