@@ -1,6 +1,6 @@
 [package]
 name = "python_toolchain"
-version = "0.1.8"
+version = "0.1.9"
 edition = "2024"
 description = "Python toolchain WASM plugin for moon."
 authors = ["Miles Johnson"]
