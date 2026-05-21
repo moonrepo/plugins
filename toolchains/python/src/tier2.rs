@@ -325,6 +325,14 @@ pub fn setup_environment(
         command.args.extend(package_manager_config.venv_args);
     }
 
+    // If the venv already exists, and `--clear` is not passed (the same for all managers),
+    // then we can just avoid the overhead of initializing the venv again
+    if !command.args.iter().any(|arg| arg == "--clear")
+        && input.root.join(&config.venv_name).exists()
+    {
+        return Ok(Json(output));
+    }
+
     command.cwd = Some(input.root.clone());
 
     output.commands.push(command.into());
