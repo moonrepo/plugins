@@ -1458,5 +1458,174 @@ dependencies = ["internal-lib"]
                 )]
             );
         }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn skips_setup_if_venv_already_exists() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(".venv/pyvenv.cfg", "");
+
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "packageManager": "uv"
+                    }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.commands.is_empty());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn skips_setup_if_venv_already_exists_with_pip() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(".venv/pyvenv.cfg", "");
+
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "packageManager": "pip"
+                    }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.commands.is_empty());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn skips_setup_if_venv_already_exists_with_uvpip() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(".venv/pyvenv.cfg", "");
+
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "packageManager": "uv-pip"
+                    }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.commands.is_empty());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn skips_setup_if_custom_venv_already_exists() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(".virtual-env/pyvenv.cfg", "");
+
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "packageManager": "uv",
+                        "venvName": ".virtual-env"
+                    }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.commands.is_empty());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn does_not_skip_setup_if_clear_arg_is_passed() {
+            let mut sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(".venv/pyvenv.cfg", "");
+
+            sandbox
+                .host_funcs
+                .mock_load_toolchain_config(|_, _| json!({ "venvArgs": ["--clear"]}));
+
+            let plugin = sandbox.create_toolchain("python").await;
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "packageManager": "uv"
+                    }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.commands,
+                vec![ExecCommand::new(
+                    ExecCommandInput::new("uv", ["venv", ".venv", "--clear"])
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn does_not_skip_setup_if_clear_arg_is_passed_with_pip() {
+            let mut sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(".venv/pyvenv.cfg", "");
+
+            sandbox
+                .host_funcs
+                .mock_load_toolchain_config(|_, _| json!({ "venvArgs": ["--clear"]}));
+
+            let plugin = sandbox.create_toolchain("python").await;
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "packageManager": "pip"
+                    }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.commands,
+                vec![ExecCommand::new(
+                    ExecCommandInput::new("python", ["-m", "venv", ".venv", "--clear"])
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )]
+            );
+        }
     }
 }

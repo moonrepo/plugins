@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Updated venv commands to be skipped during environment setup if the directory already exists. Pass `--clear` to force re-initializing.
+
 ## 0.1.8
 
 #### 🐞 Fixes
