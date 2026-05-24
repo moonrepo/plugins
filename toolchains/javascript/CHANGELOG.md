@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added support for [Deno v2.8](https://deno.com/blog/v2.8):
+  - Will use `deno ci` for installs in CI when `deno.lock` exists and the
+    configured Deno version is >= v2.8.
+  - Will pass `--prod` to `deno install` for production installs when the
+    configured Deno version is >= v2.8.
+  - Will resolve `catalog:` references in `package.json` files using
+    catalogs declared in a root `deno.json`.
+
 ## 1.0.8
 
 #### 🐞 Fixes

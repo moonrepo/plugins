@@ -1,7 +1,10 @@
 use super::parse_version_spec;
+use crate::config::CatalogsMap;
 use deno_lockfile::LockfileContent;
 use moon_pdk::{AnyResult, VirtualPath};
 use moon_pdk_api::{LockDependency, ParseLockOutput};
+use nodejs_package_json::VersionProtocol;
+use rustc_hash::FxHashMap;
 use serde::Deserialize;
 use starbase_utils::json::{self, JsonValue};
 use std::collections::BTreeMap;
@@ -60,6 +63,8 @@ fn parse_name_and_version(value: &str) -> (&str, &str) {
 #[derive(Default, Deserialize)]
 #[serde(default)]
 pub struct DenoJson {
+    pub catalog: Option<FxHashMap<String, VersionProtocol>>,
+    pub catalogs: Option<FxHashMap<String, FxHashMap<String, VersionProtocol>>>,
     pub tasks: BTreeMap<String, DenoJsonTask>,
     #[serde(alias = "workspaces")]
     pub workspace: Option<DenoJsonWorkspace>,
@@ -78,20 +83,70 @@ impl DenoJson {
             Default::default()
         })
     }
+
+    pub fn extract_catalogs(&self) -> Option<CatalogsMap> {
+        let mut catalogs: CatalogsMap = FxHashMap::default();
+
+        let mut add_catalog = |name: &str, map: &FxHashMap<String, VersionProtocol>| {
+            let entry = catalogs.entry(name.to_owned()).or_default();
+
+            for (pkg, version) in map {
+                entry.insert(pkg.to_owned(), version.to_owned());
+            }
+        };
+
+        if let Some(map) = &self.catalog {
+            add_catalog("__default__", map);
+        }
+
+        if let Some(data) = &self.catalogs {
+            for (name, map) in data {
+                add_catalog(name, map);
+            }
+        }
+
+        if let Some(DenoJsonWorkspace::Config {
+            catalog, catalogs, ..
+        }) = &self.workspace
+        {
+            if let Some(map) = catalog {
+                add_catalog("__default__", map);
+            }
+
+            if let Some(data) = catalogs {
+                for (name, map) in data {
+                    add_catalog(name, map);
+                }
+            }
+        }
+
+        if catalogs.is_empty() {
+            return None;
+        }
+
+        Some(catalogs)
+    }
 }
 
 #[derive(Deserialize)]
 #[serde(untagged)]
 pub enum DenoJsonWorkspace {
     Members(Vec<String>),
-    Config { members: Vec<String> },
+    Config {
+        #[serde(default)]
+        members: Vec<String>,
+        #[serde(default)]
+        catalog: Option<FxHashMap<String, VersionProtocol>>,
+        #[serde(default)]
+        catalogs: Option<FxHashMap<String, FxHashMap<String, VersionProtocol>>>,
+    },
 }
 
 impl DenoJsonWorkspace {
     pub fn get_members(&self) -> &[String] {
         match self {
             Self::Members(members) => members,
-            Self::Config { members } => members,
+            Self::Config { members, .. } => members,
         }
     }
 }

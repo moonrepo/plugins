@@ -246,9 +246,10 @@ fn extract_workspace_members_and_catalogs(
     // Package manager specific files
     match package_manager {
         JavaScriptPackageManager::Deno => {
-            members = DenoJson::load_from(root)?
-                .workspace
-                .map(|ws| ws.get_members().to_vec());
+            let deno = DenoJson::load_from(root)?;
+
+            catalogs = deno.extract_catalogs();
+            members = deno.workspace.map(|ws| ws.get_members().to_vec());
         }
         JavaScriptPackageManager::Pnpm => {
             let workspace_file = root.join("pnpm-workspace.yaml");
@@ -398,16 +399,31 @@ pub fn install_dependencies(
             cmd
         }
         JavaScriptPackageManager::Deno => {
-            ExecCommandInput::new("deno", ["install"])
+            let is_v280 = package_manager_config.version_satisfies(">=2.8.0");
 
-            // if input.production {
-            //     cmd.args.push("--production".into());
-            // }
+            // `deno ci` was introduced in v2.8: errors if `deno.lock`
+            // is missing, removes `node_modules`, runs install --frozen.
+            // https://deno.com/blog/v2.8
+            let use_ci = env.ci && input.root.join("deno.lock").exists() && is_v280;
+
+            let mut cmd = if use_ci {
+                ExecCommandInput::new("deno", ["ci"])
+            } else {
+                ExecCommandInput::new("deno", ["install"])
+            };
+
+            // `--prod` was introduced in v2.8 to skip dev dependencies
+            // and type packages for production deployments.
+            if input.production && !use_ci && is_v280 {
+                cmd.args.push("--prod".into());
+            }
 
             // for package_name in input.packages {
             //     cmd.args.push("--filter".into());
             //     cmd.args.push(package_name);
             // }
+
+            cmd
         }
         JavaScriptPackageManager::Npm => {
             let mut cmd = ExecCommandInput::new(
