@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added Deno v2.8 catalogs support.
+
 ## 1.0.3
 
 #### 🚀 Updates
