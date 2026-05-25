@@ -978,7 +978,12 @@ mod javascript_toolchain_tier2 {
 
             #[tokio::test(flavor = "multi_thread")]
             async fn focused_commands() {
-                let sandbox = create_empty_moon_sandbox();
+                let mut sandbox = create_empty_moon_sandbox();
+
+                sandbox
+                    .host_funcs
+                    .mock_load_toolchain_config(|_, _| json!({ "version": "2.8.0" }));
+
                 let plugin = sandbox.create_toolchain("javascript").await;
 
                 let output = plugin
@@ -994,15 +999,140 @@ mod javascript_toolchain_tier2 {
                     })
                     .await;
 
-                // Does not support focusing!
+                // Does not support focusing; `--prod` available on v2.8+.
                 assert_eq!(
                     output.install_command.unwrap(),
                     ExecCommand::new(
-                        ExecCommandInput::new("deno", ["install",])
+                        ExecCommandInput::new("deno", ["install", "--prod"])
                             .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                     )
                 );
                 assert!(output.dedupe_command.is_none());
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn skips_prod_flag_on_older_versions() {
+                let mut sandbox = create_empty_moon_sandbox();
+
+                sandbox
+                    .host_funcs
+                    .mock_load_toolchain_config(|_, _| json!({ "version": "2.7.0" }));
+
+                let plugin = sandbox.create_toolchain("javascript").await;
+
+                let output = plugin
+                    .install_dependencies(InstallDependenciesInput {
+                        root: VirtualPath::Real(sandbox.path().into()),
+                        toolchain_config: json!({
+                            "packageManager": "deno",
+                        }),
+                        production: true,
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert_eq!(
+                    output.install_command.unwrap(),
+                    ExecCommand::new(
+                        ExecCommandInput::new("deno", ["install"])
+                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
+                );
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn switches_to_ci_in_ci() {
+                let mut sandbox = create_empty_moon_sandbox();
+
+                sandbox
+                    .host_funcs
+                    .mock_load_toolchain_config(|_, _| json!({ "version": "2.8.0" }));
+
+                let plugin = sandbox
+                    .create_toolchain_with_config("javascript", |cfg| {
+                        cfg.host_environment(HostEnvironment {
+                            ci: true,
+                            ..Default::default()
+                        });
+                    })
+                    .await;
+
+                // No lockfile — stays as `deno install`
+                let output = plugin
+                    .install_dependencies(InstallDependenciesInput {
+                        root: VirtualPath::Real(sandbox.path().into()),
+                        toolchain_config: json!({
+                            "packageManager": "deno",
+                        }),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert_eq!(
+                    output.install_command.unwrap(),
+                    ExecCommand::new(
+                        ExecCommandInput::new("deno", ["install"])
+                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
+                );
+
+                sandbox.create_file("deno.lock", "{}");
+
+                let output = plugin
+                    .install_dependencies(InstallDependenciesInput {
+                        root: VirtualPath::Real(sandbox.path().into()),
+                        toolchain_config: json!({
+                            "packageManager": "deno",
+                        }),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert_eq!(
+                    output.install_command.unwrap(),
+                    ExecCommand::new(
+                        ExecCommandInput::new("deno", ["ci"])
+                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
+                );
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn skips_ci_on_older_versions() {
+                let mut sandbox = create_empty_moon_sandbox();
+
+                sandbox
+                    .host_funcs
+                    .mock_load_toolchain_config(|_, _| json!({ "version": "2.7.0" }));
+
+                let plugin = sandbox
+                    .create_toolchain_with_config("javascript", |cfg| {
+                        cfg.host_environment(HostEnvironment {
+                            ci: true,
+                            ..Default::default()
+                        });
+                    })
+                    .await;
+
+                sandbox.create_file("deno.lock", "{}");
+
+                let output = plugin
+                    .install_dependencies(InstallDependenciesInput {
+                        root: VirtualPath::Real(sandbox.path().into()),
+                        toolchain_config: json!({
+                            "packageManager": "deno",
+                        }),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert_eq!(
+                    output.install_command.unwrap(),
+                    ExecCommand::new(
+                        ExecCommandInput::new("deno", ["install"])
+                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
+                );
             }
 
             #[tokio::test(flavor = "multi_thread")]
@@ -1761,6 +1891,47 @@ mod javascript_toolchain_tier2 {
                     starting_dir: VirtualPath::Real(sandbox.path().join("package")),
                     toolchain_config: json!({
                         "packageManager": "yarn"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            let output = plugin
+                .parse_manifest(ParseManifestInput {
+                    path: VirtualPath::Real(sandbox.path().join("package/package.json")),
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.dependencies,
+                BTreeMap::from_iter([
+                    (
+                        "react".into(),
+                        ManifestDependency::Version(UnresolvedVersionSpec::parse(">=19").unwrap())
+                    ),
+                    (
+                        "react-legacy".into(),
+                        ManifestDependency::Version(
+                            UnresolvedVersionSpec::parse("^18.1.0").unwrap()
+                        ),
+                    )
+                ])
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_catalogs_deno() {
+            let sandbox = create_moon_sandbox("catalogs");
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            // This must be ran to extract the catalogs
+            plugin
+                .locate_dependencies_root(LocateDependenciesRootInput {
+                    starting_dir: VirtualPath::Real(sandbox.path().join("package")),
+                    toolchain_config: json!({
+                        "packageManager": "deno"
                     }),
                     ..Default::default()
                 })

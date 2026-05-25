@@ -104,6 +104,8 @@ pub fn parse_manifest(
             } else {
                 config.reference = Some(specifier.into());
             }
+        } else if specifier.starts_with("catalog:") {
+            config.reference = Some(specifier.into());
         }
 
         output
