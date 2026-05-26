@@ -1943,7 +1943,7 @@ version = "1.2.0"
 dependencies = [
  "extism-pdk",
  "go_tool",
- "gomod-parser2",
+ "gomod-parser",
  "moon_common",
  "moon_config",
  "moon_pdk",
@@ -1959,12 +1959,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "gomod-parser2"
-version = "0.4.2"
+name = "gomod-parser"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4bc233fbc11d750f71a45d4721fc73b545a60bb1ef1452d692c542de657d39c6"
+checksum = "45499f1bb8073c7a3912a60ff0d17b68a8a905d53e59e9332b3e253055e6008c"
 dependencies = [
- "winnow 0.7.15",
+ "winnow 1.0.1",
 ]
 
 [[package]]
@@ -7243,9 +7243,6 @@ name = "winnow"
 version = "0.7.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "df79d97927682d2fd8adb29682d1140b343be4ac0f08fd68b7765d9c059d3945"
-dependencies = [
- "memchr",
-]
 
 [[package]]
 name = "winnow"

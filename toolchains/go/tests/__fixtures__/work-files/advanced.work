@@ -21,3 +21,10 @@ replace (
 )
 
 use f
+
+ignore ./node_modules
+
+ignore (
+	./dist
+	./build
+)

@@ -23,6 +23,7 @@ impl GoWork {
         let mut work = Self::default();
         let mut in_use_block = false;
         let mut in_replace_block = false;
+        let mut in_ignore_block = false;
 
         for mut line in content.as_ref().lines() {
             if line.starts_with("//") {
@@ -37,16 +38,20 @@ impl GoWork {
                 continue;
             }
 
-            // use (), replace ()
+            // use (), replace (), ignore ()
             if line.starts_with("use (") {
                 in_use_block = true;
             } else if line.starts_with("replace (") {
                 in_replace_block = true;
+            } else if line.starts_with("ignore (") {
+                in_ignore_block = true;
             } else if line.trim() == ")" {
                 if in_use_block {
                     in_use_block = false;
                 } else if in_replace_block {
                     in_replace_block = false;
+                } else if in_ignore_block {
+                    in_ignore_block = false;
                 }
             }
 
@@ -59,6 +64,11 @@ impl GoWork {
             // replace <path>
             if !in_replace_block && line.starts_with("replace ") {
                 // Ignore for now!
+                continue;
+            }
+
+            // ignore <path>
+            if !in_ignore_block && line.starts_with("ignore ") {
                 continue;
             }
 

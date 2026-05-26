@@ -49,4 +49,27 @@ mod go_work {
         )
         .unwrap();
     }
+
+    #[test]
+    fn parses_with_ignore_directive() {
+        let content = r#"
+go 1.24.0
+
+use ./a
+
+ignore ./node_modules
+
+ignore (
+	./dist
+	./build
+)
+
+use ./b
+"#;
+
+        let go_work = GoWork::parse(content).unwrap();
+
+        assert_eq!(go_work.version.unwrap(), "1.24.0");
+        assert_eq!(go_work.modules, vec!["a", "b"]);
+    }
 }
