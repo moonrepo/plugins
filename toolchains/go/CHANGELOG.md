@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added support for Go v1.24 `ignore` in `go.mod` and `go.work`.
+
 ## 1.2.0
 
 #### 🚀 Updates
