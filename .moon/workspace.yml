@@ -46,6 +46,8 @@ pipeline:
 experiments:
   asyncAffectedTracking: true
   asyncGraphBuilding: true
+  nativeFileHashing: true
+  casOutputsCache: true
 
 unstable_daemon: true
 
