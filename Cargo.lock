@@ -83,7 +83,7 @@ dependencies = [
  "schematic",
  "serde",
  "starbase_sandbox",
- "starbase_utils 0.13.6",
+ "starbase_utils",
  "tokio",
 ]
 
@@ -263,7 +263,7 @@ dependencies = [
  "schematic",
  "serde",
  "starbase_sandbox",
- "starbase_utils 0.13.6",
+ "starbase_utils",
  "tokio",
  "tool_common",
 ]
@@ -282,7 +282,7 @@ dependencies = [
  "serde",
  "serde_json",
  "starbase_sandbox",
- "starbase_utils 0.13.6",
+ "starbase_utils",
  "tokio",
  "toolchain_common",
 ]
@@ -447,7 +447,7 @@ dependencies = [
  "schematic",
  "serde",
  "starbase_sandbox",
- "starbase_utils 0.13.6",
+ "starbase_utils",
  "tokio",
 ]
 
@@ -1198,7 +1198,7 @@ dependencies = [
  "serde",
  "serde_json",
  "starbase_sandbox",
- "starbase_utils 0.13.6",
+ "starbase_utils",
  "tokio",
  "toolchain_common",
 ]
@@ -1517,7 +1517,7 @@ dependencies = [
  "moon_pdk",
  "rustc-hash",
  "serde",
- "starbase_utils 0.13.6",
+ "starbase_utils",
 ]
 
 [[package]]
@@ -2003,7 +2003,7 @@ dependencies = [
  "serde",
  "serde_json",
  "starbase_sandbox",
- "starbase_utils 0.13.6",
+ "starbase_utils",
  "tokio",
  "toolchain_common",
 ]
@@ -2601,7 +2601,7 @@ dependencies = [
  "serde_json",
  "shell-words",
  "starbase_sandbox",
- "starbase_utils 0.13.6",
+ "starbase_utils",
  "tokio",
  "toolchain_common",
  "yarn-lock-parser",
@@ -2761,7 +2761,7 @@ dependencies = [
  "proto_pdk_api",
  "serde",
  "serde_json",
- "starbase_utils 0.13.6",
+ "starbase_utils",
 ]
 
 [[package]]
@@ -3015,7 +3015,7 @@ dependencies = [
  "serde",
  "serde_json",
  "starbase_sandbox",
- "starbase_utils 0.13.6",
+ "starbase_utils",
  "tokio",
 ]
 
@@ -3034,7 +3034,7 @@ dependencies = [
  "rustc-hash",
  "serde",
  "starbase_sandbox",
- "starbase_utils 0.13.6",
+ "starbase_utils",
  "tokio",
 ]
 
@@ -3141,7 +3141,7 @@ dependencies = [
  "moon_config",
  "moon_feature_flags",
  "serde",
- "starbase_utils 0.13.6",
+ "starbase_utils",
  "thiserror 2.0.18",
 ]
 
@@ -3243,7 +3243,7 @@ dependencies = [
  "moon_target",
  "rustc-hash",
  "serde",
- "starbase_utils 0.13.6",
+ "starbase_utils",
 ]
 
 [[package]]
@@ -3293,7 +3293,7 @@ dependencies = [
  "serde",
  "serde_json",
  "starbase_sandbox",
- "starbase_utils 0.13.6",
+ "starbase_utils",
  "tokio",
  "tool_common",
 ]
@@ -3312,7 +3312,7 @@ dependencies = [
  "serde",
  "serde_json",
  "starbase_sandbox",
- "starbase_utils 0.13.6",
+ "starbase_utils",
  "tokio",
  "toolchain_common",
 ]
@@ -3330,7 +3330,7 @@ dependencies = [
  "serde",
  "serial_test",
  "starbase_sandbox",
- "starbase_utils 0.13.6",
+ "starbase_utils",
  "tokio",
  "tool_common",
 ]
@@ -3350,16 +3350,16 @@ dependencies = [
  "serde",
  "serde_json",
  "starbase_sandbox",
- "starbase_utils 0.13.6",
+ "starbase_utils",
  "tokio",
  "toolchain_common",
 ]
 
 [[package]]
 name = "nodejs_package_json"
-version = "0.4.8"
+version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "528410cc6fbceada85fe0b75b08a1ff4f3b6b0c5afabf62d79873bcc1dec72f9"
+checksum = "9c87ccf239f2f9d82f1efe31340ae1229c50a0e46ddd4d57a2518a25476061cd"
 dependencies = [
  "indexmap",
  "regex",
@@ -3416,7 +3416,7 @@ dependencies = [
  "schematic",
  "serde",
  "starbase_sandbox",
- "starbase_utils 0.13.6",
+ "starbase_utils",
  "tokio",
 ]
 
@@ -3996,7 +3996,7 @@ dependencies = [
  "starbase_console",
  "starbase_shell",
  "starbase_styles",
- "starbase_utils 0.13.6",
+ "starbase_utils",
  "system_env",
  "thiserror 2.0.18",
  "tokio",
@@ -4038,7 +4038,7 @@ dependencies = [
  "starbase_console",
  "starbase_shell",
  "starbase_styles",
- "starbase_utils 0.13.6",
+ "starbase_utils",
  "system_env",
  "thiserror 2.0.18",
  "tokio",
@@ -4189,7 +4189,7 @@ dependencies = [
  "proto_pdk_test_utils 0.45.1",
  "serde",
  "starbase_sandbox",
- "starbase_utils 0.13.6",
+ "starbase_utils",
  "tokio",
  "tool_common",
 ]
@@ -4226,7 +4226,7 @@ dependencies = [
  "serde",
  "serde_json",
  "starbase_sandbox",
- "starbase_utils 0.13.6",
+ "starbase_utils",
  "tokio",
  "toolchain_common",
 ]
@@ -4713,7 +4713,7 @@ dependencies = [
  "proto_pdk_test_utils 0.45.1",
  "serde",
  "starbase_sandbox",
- "starbase_utils 0.13.6",
+ "starbase_utils",
  "tokio",
  "toml 1.1.2+spec-1.1.0",
  "tool_common",
@@ -4738,7 +4738,7 @@ dependencies = [
  "serde",
  "serde_json",
  "starbase_sandbox",
- "starbase_utils 0.13.6",
+ "starbase_utils",
  "tokio",
  "toolchain_common",
 ]
@@ -5456,7 +5456,7 @@ dependencies = [
  "miette 7.6.0",
  "rustc-hash",
  "starbase_styles",
- "starbase_utils 0.13.6",
+ "starbase_utils",
  "thiserror 2.0.18",
  "tracing",
  "zip",
@@ -5504,7 +5504,7 @@ dependencies = [
  "insta",
  "predicates",
  "pretty_assertions",
- "starbase_utils 0.13.6",
+ "starbase_utils",
 ]
 
 [[package]]
@@ -5532,21 +5532,6 @@ dependencies = [
  "owo-colors",
  "relative-path",
  "supports-color",
-]
-
-[[package]]
-name = "starbase_utils"
-version = "0.12.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "34fea0f809a215e4ee5ef128fc8874d97b1f359bca71d6d11e76d47cb137153a"
-dependencies = [
- "dirs",
- "json-strip-comments",
- "serde",
- "serde_json",
- "starbase_styles",
- "thiserror 2.0.18",
- "tracing",
 ]
 
 [[package]]
@@ -6170,7 +6155,7 @@ dependencies = [
  "serde",
  "serde_json",
  "starbase_sandbox",
- "starbase_utils 0.13.6",
+ "starbase_utils",
  "tokio",
  "toolchain_common",
  "typescript_tsconfig_json",
@@ -6178,9 +6163,9 @@ dependencies = [
 
 [[package]]
 name = "typescript_tsconfig_json"
-version = "0.5.5"
+version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d95a47989b7f30683abeaa59bfa764553a0420d63cf9dd451091d16d7498fcc9"
+checksum = "8eec7dc0b921430e4159ccb548b220b6e2f987fec023de6e459f861fbc0cde75"
 dependencies = [
  "clean-path",
  "indexmap",
@@ -6188,7 +6173,6 @@ dependencies = [
  "rustc-hash",
  "serde",
  "serde_json",
- "starbase_utils 0.12.10",
 ]
 
 [[package]]
@@ -6246,7 +6230,7 @@ dependencies = [
  "moon_pdk_api",
  "moon_pdk_test_utils",
  "starbase_sandbox",
- "starbase_utils 0.13.6",
+ "starbase_utils",
  "tokio",
 ]
 
@@ -6451,7 +6435,7 @@ dependencies = [
  "starbase_archive",
  "starbase_shell",
  "starbase_styles",
- "starbase_utils 0.13.6",
+ "starbase_utils",
  "system_env",
  "thiserror 2.0.18",
  "tokio",
@@ -6491,7 +6475,7 @@ dependencies = [
  "starbase_archive",
  "starbase_shell",
  "starbase_styles",
- "starbase_utils 0.13.6",
+ "starbase_utils",
  "system_env",
  "thiserror 2.0.18",
  "tokio",
