@@ -8,10 +8,10 @@ expression: "std :: fs ::\nread_to_string(sandbox.path().join(\".proto/shims/reg
       "-m",
       "pip"
     ],
-    "parent": "python-test"
+    "context": "python-test"
   },
   "python": {
-    "alt_bin": true,
-    "parent": "python-test"
+    "alt_exe": true,
+    "context": "python-test"
   }
 }

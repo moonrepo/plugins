@@ -4,11 +4,11 @@ expression: "std :: fs ::\nread_to_string(sandbox.path().join(\".proto/shims/reg
 ---
 {
   "pnpm": {
-    "alt_bin": true,
-    "parent": "pnpm-test"
+    "alt_exe": true,
+    "context": "pnpm-test"
   },
   "pnpx": {
-    "alt_bin": true,
-    "parent": "pnpm-test"
+    "alt_exe": true,
+    "context": "pnpm-test"
   }
 }

@@ -4,11 +4,11 @@ expression: "std :: fs ::\nread_to_string(sandbox.path().join(\".proto/shims/reg
 ---
 {
   "yarn": {
-    "alt_bin": true,
-    "parent": "yarn-test"
+    "alt_exe": true,
+    "context": "yarn-test"
   },
   "yarnpkg": {
-    "alt_bin": true,
-    "parent": "yarn-test"
+    "alt_exe": true,
+    "context": "yarn-test"
   }
 }

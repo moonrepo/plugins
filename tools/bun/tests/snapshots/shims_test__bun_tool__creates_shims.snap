@@ -4,13 +4,13 @@ expression: "std :: fs ::\nread_to_string(sandbox.path().join(\".proto/shims/reg
 ---
 {
   "bun": {
-    "alt_bin": true,
-    "parent": "bun-test"
+    "alt_exe": true,
+    "context": "bun-test"
   },
   "bunx": {
     "before_args": [
       "x"
     ],
-    "parent": "bun-test"
+    "context": "bun-test"
   }
 }

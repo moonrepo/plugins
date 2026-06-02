@@ -4,7 +4,7 @@ expression: "std :: fs ::\nread_to_string(sandbox.path().join(\".proto/shims/reg
 ---
 {
   "moon": {
-    "alt_bin": true,
-    "parent": "moon-test"
+    "alt_exe": true,
+    "context": "moon-test"
   }
 }

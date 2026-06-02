@@ -4,15 +4,15 @@ expression: "std :: fs ::\nread_to_string(sandbox.path().join(\".proto/shims/reg
 ---
 {
   "node-gyp": {
-    "alt_bin": true,
-    "parent": "npm-test"
+    "alt_exe": true,
+    "context": "npm-test"
   },
   "npm": {
-    "alt_bin": true,
-    "parent": "npm-test"
+    "alt_exe": true,
+    "context": "npm-test"
   },
   "npx": {
-    "alt_bin": true,
-    "parent": "npm-test"
+    "alt_exe": true,
+    "context": "npm-test"
   }
 }
