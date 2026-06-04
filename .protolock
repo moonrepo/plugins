@@ -38,6 +38,13 @@ checksum = "sha256:fd82f0eb8e7d596a4cc5f57472752a613e7279e5fde69eb725823c7f63832
 [[tools.moon]]
 os = "macos"
 arch = "arm64"
+spec = "2.3.1"
+version = "2.3.1"
+checksum = "sha256:a49815c49a7c5ce599c08e894c41b52c3baa34faaff0f852f675c63adb6cc309"
+
+[[tools.moon]]
+os = "macos"
+arch = "arm64"
 spec = "latest"
 version = "2.2.3"
 checksum = "sha256:3ed73eb6384346318922f7e695eb1dd3fbb4c0fa9dccf25782939a592c6377a6"
