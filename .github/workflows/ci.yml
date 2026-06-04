@@ -97,11 +97,11 @@ jobs:
           cache: false # Runs out of disk space
           components: clippy, rustfmt
           targets: wasm32-wasip1
-      - run: moon ci --color --job ${{ matrix.job }} --job-total ${{ needs.plan.outputs.job-total }}
+      - run: moon ci --color --job ${{ matrix.job }} --job-total ${{ needs.plan.outputs.job-total }} --log trace
         # env:
         #   DEPOT_TOKEN: ${{ secrets.DEPOT_TOKEN }}
         #   MOON_DEBUG_REMOTE: true
-      - run: cat .moon/cache/daemon/server.log
+      - run: cat .moon/cache/daemon/server.log || true
         if: failure()
       - uses: moonrepo/run-report-action@v1
         if: success() || failure()
