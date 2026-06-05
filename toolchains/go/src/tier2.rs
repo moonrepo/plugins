@@ -13,15 +13,25 @@ use starbase_utils::fs;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-fn execute_go_list(dir: &VirtualPath, test: bool) -> AnyResult<Vec<ModuleDependency>> {
+fn execute_go_list(
+    dir: &VirtualPath,
+    packages: &[String],
+    test: bool,
+) -> AnyResult<Vec<ModuleDependency>> {
     let mut args = vec!["list", "-deps"];
 
     if test {
         args.push("-test");
     }
 
-    if dir.join("main.go").exists() {
-        args.push("main.go");
+    // Scan all packages recursively by default so that dependencies imported
+    // only from subdirectories (internal/, pkg/, ...) are also inferred.
+    if packages.is_empty() {
+        args.push("./...");
+    } else {
+        for package in packages {
+            args.push(package.as_str());
+        }
     }
 
     let result = exec(ExecCommandInput::pipe("go", args).cwd(dir.to_owned()))?;
@@ -88,15 +98,19 @@ pub fn extend_project_graph(
 
         if go_exists {
             if config.infer_relationships {
-                manifest
-                    .require
-                    .extend(execute_go_list(&project_root, false)?);
+                manifest.require.extend(execute_go_list(
+                    &project_root,
+                    &config.infer_relationships_packages,
+                    false,
+                )?);
             }
 
             if config.infer_relationships_from_tests {
-                manifest
-                    .require
-                    .extend(execute_go_list(&project_root, true)?);
+                manifest.require.extend(execute_go_list(
+                    &project_root,
+                    &config.infer_relationships_packages,
+                    true,
+                )?);
             }
         }
 

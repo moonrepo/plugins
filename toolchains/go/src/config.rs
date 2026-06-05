@@ -19,6 +19,11 @@ config_struct!(
         /// `go list --deps --test`.
         pub infer_relationships_from_tests: bool,
 
+        /// Package patterns passed to `go list --deps` when inferring relationships.
+        /// When empty, defaults to `./...` so all packages are scanned recursively.
+        /// Set to `["."]` to restrict inference to the root package only.
+        pub infer_relationships_packages: Vec<String>,
+
         /// Tidy modules when dependencies or `go.sum` changes by running `go mod tidy`.
         /// This setting is ignored when using Go workspaces.
         pub tidy_on_change: bool,

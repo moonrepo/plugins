@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Updated `go list --deps` relationship inference to scan all packages (`./...`) by default, so dependencies imported only from subdirectories (`internal/`, `pkg/`, ...) are now inferred.
+- Added an `inferRelationshipsPackages` setting to customize the package patterns passed to `go list --deps`.
+
 ## 1.3.0
 
 #### 🚀 Updates
