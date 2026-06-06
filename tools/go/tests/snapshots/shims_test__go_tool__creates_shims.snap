@@ -4,11 +4,11 @@ expression: "std :: fs ::\nread_to_string(sandbox.path().join(\".proto/shims/reg
 ---
 {
   "go": {
-    "alt_bin": true,
-    "parent": "go-test"
+    "alt_exe": true,
+    "context": "go-test"
   },
   "gofmt": {
-    "alt_bin": true,
-    "parent": "go-test"
+    "alt_exe": true,
+    "context": "go-test"
   }
 }

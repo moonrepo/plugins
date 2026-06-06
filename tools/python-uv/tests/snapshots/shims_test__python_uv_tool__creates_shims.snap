@@ -4,11 +4,11 @@ expression: "std :: fs ::\nread_to_string(sandbox.path().join(\".proto/shims/reg
 ---
 {
   "uv": {
-    "alt_bin": true,
-    "parent": "uv-test"
+    "alt_exe": true,
+    "context": "uv-test"
   },
   "uvx": {
-    "alt_bin": true,
-    "parent": "uv-test"
+    "alt_exe": true,
+    "context": "uv-test"
   }
 }

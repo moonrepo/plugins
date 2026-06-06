@@ -4,7 +4,7 @@ expression: "std :: fs ::\nread_to_string(sandbox.path().join(\".proto/shims/reg
 ---
 {
   "poetry": {
-    "alt_bin": true,
-    "parent": "poetry-test"
+    "alt_exe": true,
+    "context": "poetry-test"
   }
 }
