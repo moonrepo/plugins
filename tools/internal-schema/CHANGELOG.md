@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added `[platform.*.arch]` and `[platform.*.libc]` tables for platform-scoped `{arch}`/`{libc}` token overrides. Resolution order: platform map → global `[install.arch]`/`[install.libc]` → raw value. Identity overrides (mapping a value to itself) shadow the global map.
+
 ## 0.17.8
 
 #### 🚀 Updates
