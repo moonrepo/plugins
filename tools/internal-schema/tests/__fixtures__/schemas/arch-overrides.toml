@@ -15,6 +15,7 @@ download-url = "https://example.com/v{version}/{download_file}"
 
 [install.arch]
 aarch64 = "arm64"
+x86_64 = "amd64"
 
 [resolve]
 git-url = "https://github.com/example/tool"

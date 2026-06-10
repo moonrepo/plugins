@@ -456,8 +456,10 @@ mod schema_tool {
             );
         }
 
+        // A platform arch table that exists but lacks the host's key must fall
+        // through to the global map per-key, not disable it wholesale.
         #[tokio::test(flavor = "multi_thread")]
-        async fn unmapped_arch_passes_through_raw() {
+        async fn global_fallback_when_platform_map_lacks_key() {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_schema_plugin_with_config(
@@ -479,10 +481,10 @@ mod schema_tool {
                 })
                 .await;
 
-            assert_eq!(output.download_name.unwrap(), "tool-Linux-x86_64");
+            assert_eq!(output.download_name.unwrap(), "tool-Linux-amd64");
             assert_eq!(
                 output.download_url,
-                "https://example.com/v1.0.0/tool-Linux-x86_64"
+                "https://example.com/v1.0.0/tool-Linux-amd64"
             );
         }
 
