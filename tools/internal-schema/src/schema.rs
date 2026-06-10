@@ -6,6 +6,7 @@ use std::path::PathBuf;
 #[derive(Debug, Default, Deserialize)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct PlatformMapper {
+    pub arch: HashMap<HostArch, String>,
     pub archs: Vec<HostArch>,
     pub archive_prefix: Option<String>,
     pub checksum_file: Option<String>,
@@ -14,6 +15,7 @@ pub struct PlatformMapper {
     pub exes_dir: Option<PathBuf>,
     pub exes_dirs: Vec<PathBuf>,
     pub exe_path: Option<PathBuf>,
+    pub libc: HashMap<HostLibc, String>,
     #[deprecated]
     pub bin_path: Option<PathBuf>,
 }

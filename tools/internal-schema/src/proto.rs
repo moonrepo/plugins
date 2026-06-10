@@ -207,6 +207,7 @@ fn interpolate_tokens(
     value: &str,
     version: &VersionSpec,
     schema: &Schema,
+    platform: &PlatformMapper,
     env: &HostEnvironment,
 ) -> String {
     let arch = env.arch.to_rust_arch();
@@ -216,7 +217,11 @@ fn interpolate_tokens(
         .replace("{version}", &version.to_string())
         .replace(
             "{arch}",
-            schema.install.arch.get(&env.arch).unwrap_or(&arch),
+            platform
+                .arch
+                .get(&env.arch)
+                .or_else(|| schema.install.arch.get(&env.arch))
+                .unwrap_or(&arch),
         )
         .replace("{os}", &os);
 
@@ -226,7 +231,11 @@ fn interpolate_tokens(
 
         value = value.replace(
             "{libc}",
-            schema.install.libc.get(&env.libc).unwrap_or(&libc),
+            platform
+                .libc
+                .get(&env.libc)
+                .or_else(|| schema.install.libc.get(&env.libc))
+                .unwrap_or(&libc),
         );
     }
 
@@ -289,7 +298,8 @@ pub fn download_prebuilt(
     let version = &input.context.version;
     let is_canary = version.is_canary();
 
-    let download_file = interpolate_tokens(&platform.download_file, version, &schema, &env);
+    let download_file =
+        interpolate_tokens(&platform.download_file, version, &schema, platform, &env);
 
     let download_url = interpolate_tokens(
         if is_canary {
@@ -303,6 +313,7 @@ pub fn download_prebuilt(
         },
         version,
         &schema,
+        platform,
         &env,
     )
     .replace("{download_file}", &download_file);
@@ -311,6 +322,7 @@ pub fn download_prebuilt(
         platform.checksum_file.as_deref().unwrap_or("CHECKSUM.txt"),
         version,
         &schema,
+        platform,
         &env,
     );
 
@@ -325,13 +337,14 @@ pub fn download_prebuilt(
     };
 
     let checksum_url = checksum_url.map(|url| {
-        interpolate_tokens(url, version, &schema, &env).replace("{checksum_file}", &checksum_file)
+        interpolate_tokens(url, version, &schema, platform, &env)
+            .replace("{checksum_file}", &checksum_file)
     });
 
     let archive_prefix = platform
         .archive_prefix
         .as_ref()
-        .map(|prefix| interpolate_tokens(prefix, version, &schema, &env));
+        .map(|prefix| interpolate_tokens(prefix, version, &schema, platform, &env));
 
     Ok(Json(DownloadPrebuiltOutput {
         archive_prefix,
@@ -400,6 +413,7 @@ pub fn locate_executables(
                 exe_path.to_str().unwrap_or("<invalidpath>"),
                 &input.context.version,
                 &schema,
+                platform,
                 &env,
             )
             .into(),
