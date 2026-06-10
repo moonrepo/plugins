@@ -391,6 +391,135 @@ mod schema_tool {
         }
     }
 
+    mod platform_overrides {
+        use super::*;
+
+        // An identity override (platform value equals the raw arch) must still
+        // shadow the global remap, not be treated as absent.
+        #[tokio::test(flavor = "multi_thread")]
+        async fn platform_identity_override_beats_global_remap() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_schema_plugin_with_config(
+                    "arch-override-test",
+                    locate_fixture("schemas").join("arch-overrides.toml"),
+                    |config| {
+                        config.host(HostOS::Linux, HostArch::Arm64);
+                    },
+                )
+                .await;
+
+            let output = plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("1.0.0").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.download_name.unwrap(), "tool-Linux-aarch64");
+            assert_eq!(
+                output.download_url,
+                "https://example.com/v1.0.0/tool-Linux-aarch64"
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn global_remap_applies_when_platform_has_no_override() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_schema_plugin_with_config(
+                    "arch-override-test",
+                    locate_fixture("schemas").join("arch-overrides.toml"),
+                    |config| {
+                        config.host(HostOS::MacOS, HostArch::Arm64);
+                    },
+                )
+                .await;
+
+            let output = plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("1.0.0").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.download_name.unwrap(), "tool-Darwin-arm64");
+            assert_eq!(
+                output.download_url,
+                "https://example.com/v1.0.0/tool-Darwin-arm64"
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn unmapped_arch_passes_through_raw() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_schema_plugin_with_config(
+                    "arch-override-test",
+                    locate_fixture("schemas").join("arch-overrides.toml"),
+                    |config| {
+                        config.host(HostOS::Linux, HostArch::X64);
+                    },
+                )
+                .await;
+
+            let output = plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("1.0.0").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.download_name.unwrap(), "tool-Linux-x86_64");
+            assert_eq!(
+                output.download_url,
+                "https://example.com/v1.0.0/tool-Linux-x86_64"
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn platform_libc_override_beats_detected_libc() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_schema_plugin_with_config(
+                    "libc-override-test",
+                    locate_fixture("schemas").join("libc-overrides.toml"),
+                    |config| {
+                        config.host(HostOS::Linux, HostArch::X64);
+                    },
+                )
+                .await;
+
+            let output = plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("1.0.0").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.download_name.unwrap(),
+                "tool-x86_64-unknown-linux-musl"
+            );
+            assert_eq!(
+                output.download_url,
+                "https://example.com/v1.0.0/tool-x86_64-unknown-linux-musl"
+            );
+        }
+    }
+
     mod secondary {
         use super::*;
 

@@ -1,0 +1,14 @@
+name = "libc-override-test"
+type = "cli"
+
+[platform.linux]
+download-file = "tool-{arch}-unknown-linux-{libc}"
+
+[platform.linux.libc]
+gnu = "musl"
+
+[install]
+download-url = "https://example.com/v{version}/{download_file}"
+
+[resolve]
+git-url = "https://github.com/example/tool"

@@ -1,0 +1,20 @@
+name = "arch-override-test"
+type = "cli"
+
+[platform.linux]
+download-file = "tool-Linux-{arch}"
+
+[platform.linux.arch]
+aarch64 = "aarch64"
+
+[platform.macos]
+download-file = "tool-Darwin-{arch}"
+
+[install]
+download-url = "https://example.com/v{version}/{download_file}"
+
+[install.arch]
+aarch64 = "arm64"
+
+[resolve]
+git-url = "https://github.com/example/tool"
