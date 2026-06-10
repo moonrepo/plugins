@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed a `go.mod` parsing regression that failed to parse `tool ()`.
+
 ## 1.4.0
 
 #### 🚀 Updates
