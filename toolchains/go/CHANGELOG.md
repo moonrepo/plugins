@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed failing release process.
+- 
 ## 1.4.1
 
 #### 🐞 Fixes
