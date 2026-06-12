@@ -4695,6 +4695,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "ruby_toolchain"
+version = "0.1.0"
+dependencies = [
+ "extism-pdk",
+ "moon_common",
+ "moon_config",
+ "moon_pdk",
+ "moon_pdk_api",
+ "moon_pdk_test_utils",
+ "ruby_tool",
+ "schematic",
+ "serde",
+ "serde_json",
+ "starbase_sandbox",
+ "starbase_utils",
+ "tokio",
+ "toolchain_common",
+]
+
+[[package]]
 name = "rust-netrc"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
