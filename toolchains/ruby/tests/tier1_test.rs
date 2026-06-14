@@ -48,7 +48,6 @@ mod ruby_toolchain_tier1 {
                 .await;
 
             assert_eq!(output.default_settings.get("version").unwrap(), "3.3.5");
-            assert!(output.docs_url.is_some());
         }
 
         #[tokio::test(flavor = "multi_thread")]

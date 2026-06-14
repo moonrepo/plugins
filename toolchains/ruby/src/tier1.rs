@@ -45,7 +45,7 @@ pub fn register_toolchain(
             "rake".into(),
             "irb".into(),
         ],
-        vendor_dir_name: Some("vendor/bundle".into()),
+        vendor_dir_name: Some(crate::config::BUNDLE_PATH.into()),
     }))
 }
 
@@ -53,11 +53,7 @@ pub fn register_toolchain(
 pub fn initialize_toolchain(
     Json(input): Json<InitializeToolchainInput>,
 ) -> FnResult<Json<InitializeToolchainOutput>> {
-    let mut output = InitializeToolchainOutput {
-        config_url: Some("https://moonrepo.dev/docs/config/toolchain#ruby".into()),
-        docs_url: Some("https://moonrepo.dev/docs/guides/ruby".into()),
-        ..Default::default()
-    };
+    let mut output = InitializeToolchainOutput::default();
 
     // Bundler is the only dependency manager, so there's nothing to prompt for.
     // As a convenience, pre-fill the version from an existing `.ruby-version`
@@ -68,11 +64,7 @@ pub fn initialize_toolchain(
         && let Ok(contents) = fs::read_file(&version_file)
     {
         // `.ruby-version` may contain `3.3.5` or rbenv's `ruby-3.3.5` form.
-        let version = contents
-            .trim()
-            .strip_prefix("ruby-")
-            .unwrap_or_else(|| contents.trim())
-            .trim();
+        let version = contents.strip_prefix("ruby-").unwrap_or(&contents).trim();
 
         if !version.is_empty() {
             output

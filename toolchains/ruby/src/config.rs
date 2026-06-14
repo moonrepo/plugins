@@ -2,6 +2,8 @@ use moon_config::UnresolvedVersionSpec;
 use moon_pdk_api::config_struct;
 use schematic::{Config, ConfigEnum, derive_enum};
 
+pub const BUNDLE_PATH: &str = "vendor/bundle";
+
 derive_enum!(
     /// The available dependency managers for Ruby.
     ///
@@ -26,12 +28,11 @@ config_struct!(
         pub package_manager: RubyPackageManager,
 
         /// Where Bundler installs gems, relative to the dependency root.
-        /// Mirrors `bundle config set path`. Keeps installs project-local.
         #[setting(default = "vendor/bundle")]
         pub bundle_path: String,
 
         /// Extra arguments appended to `bundle install`.
-        pub bundler_args: Vec<String>,
+        pub bundler_install_args: Vec<String>,
 
         /// Run installs in frozen/deployment mode (CI-friendly).
         pub frozen: bool,

@@ -79,7 +79,7 @@ pub fn install_dependencies(
     let mut output = InstallDependenciesOutput::default();
 
     let mut command = ExecCommandInput::new("bundle", ["install"]);
-    command.args.extend(config.bundler_args);
+    command.args.extend(config.bundler_install_args);
     command.cwd = Some(input.root.clone());
 
     // Production installs exclude dev/test groups. We use `BUNDLE_WITHOUT`
@@ -217,11 +217,11 @@ pub fn extend_project_graph(
 ) -> FnResult<Json<ExtendProjectGraphOutput>> {
     let mut output = ExtendProjectGraphOutput::default();
 
-    // Map each project's (normalized) source directory to its id, so we can
-    // resolve a `path:` gem reference back to the project it points at.
+    // Map each project's source directory to its id, so we can resolve a
+    // `path:` gem reference back to the project it points at.
     let mut by_source: HashMap<PathBuf, Id> = HashMap::new();
     for (id, source) in &input.project_sources {
-        by_source.insert(normalize(Path::new(source)), id.clone());
+        by_source.insert(PathBuf::from(source), id.clone());
     }
 
     for (id, source) in &input.project_sources {
@@ -247,6 +247,8 @@ pub fn extend_project_graph(
                 continue;
             };
 
+            // The join still needs normalizing to fold the `../..` in the
+            // gem's relative path down to a workspace-relative source.
             let resolved = normalize(&Path::new(source).join(path));
 
             if let Some(dep_id) = by_source.get(&resolved)

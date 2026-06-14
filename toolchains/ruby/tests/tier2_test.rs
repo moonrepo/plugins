@@ -226,7 +226,7 @@ mod ruby_toolchain_tier2 {
             let output = plugin
                 .install_dependencies(InstallDependenciesInput {
                     root: VirtualPath::Real(sandbox.path().into()),
-                    toolchain_config: json!({ "bundlerArgs": ["--jobs", "4"] }),
+                    toolchain_config: json!({ "bundlerInstallArgs": ["--jobs", "4"] }),
                     ..Default::default()
                 })
                 .await;
