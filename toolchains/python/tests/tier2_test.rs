@@ -662,6 +662,41 @@ dependencies = ["internal-lib"]
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn supports_uv_production() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(".venv/bin/activate", "");
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let output = plugin
+                .install_dependencies(InstallDependenciesInput {
+                    context: MoonContext {
+                        working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
+                        ..Default::default()
+                    },
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "packageManager": "uv"
+                    }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
+                    }),
+                    production: true,
+                    ..Default::default()
+                })
+                .await;
+
+            let actual = output.install_command.unwrap();
+            let expected = ExecCommand::new(
+                ExecCommandInput::new("uv", ["sync", "--no-dev", "--no-progress"])
+                    .cwd(plugin.plugin.to_virtual_path(sandbox.path())),
+            );
+
+            assert_eq!(actual, expected);
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn supports_uv_with_version() {
             let sandbox = create_empty_moon_sandbox();
             sandbox.create_file(".venv/bin/activate", "");

@@ -214,6 +214,10 @@ pub fn install_dependencies(
                 cmd.args.push(package_name);
             }
 
+            if input.production {
+                cmd.args.push("--no-dev".into());
+            }
+
             cmd
         }
         PythonPackageManager::UvPip => {
