@@ -386,8 +386,11 @@ mod rust_toolchain_tier2 {
                 output.commands,
                 [
                     ExecCommand::new(
-                        ExecCommandInput::new("cargo", ["install", "cargo-binstall", "--force"],)
-                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                        ExecCommandInput::new(
+                            "cargo",
+                            ["install", "cargo-binstall", "--force", "--locked"],
+                        )
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                     )
                     .cache("cargo-binstall"),
                     ExecCommand::new(
@@ -434,8 +437,11 @@ mod rust_toolchain_tier2 {
                 output.commands,
                 [
                     ExecCommand::new(
-                        ExecCommandInput::new("cargo", ["install", "cargo-binstall", "--force"],)
-                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                        ExecCommandInput::new(
+                            "cargo",
+                            ["install", "cargo-binstall", "--force", "--locked"],
+                        )
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                     )
                     .cache("cargo-binstall"),
                     ExecCommand::new(
@@ -524,7 +530,7 @@ mod rust_toolchain_tier2 {
                     ExecCommand::new(
                         ExecCommandInput::new(
                             "cargo",
-                            ["install", "cargo-binstall@1.2.3", "--force"],
+                            ["install", "cargo-binstall@1.2.3", "--force", "--locked"],
                         )
                         .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                     )

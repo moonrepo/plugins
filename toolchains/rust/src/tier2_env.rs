@@ -80,7 +80,7 @@ pub fn setup_environment(
             output.commands.push(
                 create_command(
                     "cargo",
-                    vec!["install", &binstall_package, "--force"],
+                    vec!["install", &binstall_package, "--force", "--locked"],
                     &input.root,
                 )
                 .cache("cargo-binstall"),
