@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Updated `cargo-binstall` installation to use `--locked`.
+
 ## 1.0.5
 
 #### 🚀 Updates

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Updated `uv sync` to use `--no-dev` when installing production only dependencies.
+
 ## 0.1.9
 
 #### 🐞 Fixes
