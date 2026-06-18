@@ -2608,6 +2608,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "java_tool"
+version = "0.1.0"
+dependencies = [
+ "extism-pdk",
+ "proto_pdk",
+ "proto_pdk_test_utils 0.45.1",
+ "schematic",
+ "serde",
+ "starbase_sandbox",
+ "tokio",
+ "tool_common",
+]
+
+[[package]]
 name = "javascript_toolchain"
 version = "1.2.1"
 dependencies = [

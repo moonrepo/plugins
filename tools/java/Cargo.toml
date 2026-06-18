@@ -1,0 +1,34 @@
+[package]
+name = "java_tool"
+version = "0.1.0"
+edition = "2024"
+description = "Java WASM plugin for proto."
+authors = ["Miles Johnson"]
+license = "MIT"
+repository = "https://github.com/moonrepo/plugins"
+documentation = "https://github.com/moonrepo/plugins/tree/master/tools/java"
+publish = false
+
+[package.metadata.release]
+pre-release-replacements = [
+    { file = "./CHANGELOG.md", search = "Unreleased", replace = "{{version}}" },
+]
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+tool_common = { path = "../../crates/tool-common" }
+extism-pdk = { workspace = true }
+proto_pdk = { workspace = true }
+schematic = { workspace = true }
+serde = { workspace = true }
+
+[dev-dependencies]
+proto_pdk_test_utils = { workspace = true }
+starbase_sandbox = { workspace = true }
+tokio = { workspace = true }
+
+[features]
+default = ["wasm"]
+wasm = []
