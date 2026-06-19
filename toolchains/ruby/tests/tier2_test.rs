@@ -84,7 +84,7 @@ mod ruby_toolchain_tier2 {
                 output.commands,
                 vec![ExecCommand::new(
                     ExecCommandInput::new(
-                        "bundle",
+                        "bundler",
                         ["config", "set", "--local", "path", "vendor/bundle"]
                     )
                     .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
@@ -109,7 +109,7 @@ mod ruby_toolchain_tier2 {
                 output.commands,
                 vec![ExecCommand::new(
                     ExecCommandInput::new(
-                        "bundle",
+                        "bundler",
                         ["config", "set", "--local", "path", "vendor/gems"]
                     )
                     .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
@@ -135,14 +135,14 @@ mod ruby_toolchain_tier2 {
                 vec![
                     ExecCommand::new(
                         ExecCommandInput::new(
-                            "bundle",
+                            "bundler",
                             ["config", "set", "--local", "path", "vendor/bundle"]
                         )
                         .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                     ),
                     ExecCommand::new(
                         ExecCommandInput::new(
-                            "bundle",
+                            "bundler",
                             ["config", "set", "--local", "frozen", "true"]
                         )
                         .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
@@ -189,7 +189,7 @@ mod ruby_toolchain_tier2 {
             assert_eq!(
                 output.install_command.unwrap(),
                 ExecCommand::new(
-                    ExecCommandInput::new("bundle", ["install"])
+                    ExecCommandInput::new("bundler", ["install"])
                         .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                 )
             );
@@ -209,7 +209,7 @@ mod ruby_toolchain_tier2 {
                 })
                 .await;
 
-            let mut expected = ExecCommandInput::new("bundle", ["install"]);
+            let mut expected = ExecCommandInput::new("bundler", ["install"]);
             expected.cwd = Some(plugin.plugin.to_virtual_path(sandbox.path()));
             expected
                 .env
@@ -234,7 +234,7 @@ mod ruby_toolchain_tier2 {
             assert_eq!(
                 output.install_command.unwrap(),
                 ExecCommand::new(
-                    ExecCommandInput::new("bundle", ["install", "--jobs", "4"])
+                    ExecCommandInput::new("bundler", ["install", "--jobs", "4"])
                         .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                 )
             );
@@ -271,7 +271,9 @@ mod ruby_toolchain_tier2 {
                 .extend_command(ExtendCommandInput {
                     command: "rake".into(),
                     toolchain_config: json!({}),
-                    current_dir: plugin.plugin.to_virtual_path(sandbox.path().join("sub/dir")),
+                    current_dir: plugin
+                        .plugin
+                        .to_virtual_path(sandbox.path().join("sub/dir")),
                     ..Default::default()
                 })
                 .await;
@@ -320,20 +322,92 @@ BUNDLED WITH
             assert_eq!(rake.len(), 1);
             assert_eq!(rake[0].version, Some(VersionSpec::parse("13.0.6").unwrap()));
         }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn maps_sources_platforms_and_checksums() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "Gemfile.lock",
+                r#"PATH
+  remote: ../libs/billing
+  specs:
+    billing (0.1.0)
+
+GIT
+  remote: https://github.com/me/some_fork.git
+  revision: abc123def456
+  specs:
+    some_fork (1.2.0)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    nokogiri (1.16.0-x86_64-linux)
+    rake (13.0.6)
+
+PLATFORMS
+  x86_64-linux
+
+DEPENDENCIES
+  billing!
+  nokogiri
+  rake
+  some_fork!
+
+CHECKSUMS
+  rake (13.0.6) sha256=deadbeef
+
+BUNDLED WITH
+   2.5.6
+"#,
+            );
+            let plugin = sandbox.create_toolchain("ruby").await;
+
+            let output = plugin
+                .parse_lock(ParseLockInput {
+                    path: VirtualPath::Real(sandbox.path().join("Gemfile.lock")),
+                    ..Default::default()
+                })
+                .await;
+
+            let billing = output.dependencies.get("billing").unwrap();
+            assert_eq!(
+                billing[0].version,
+                Some(VersionSpec::parse("0.1.0").unwrap())
+            );
+            assert_eq!(billing[0].meta.as_deref(), Some("path:../libs/billing"));
+
+            let fork = output.dependencies.get("some_fork").unwrap();
+            assert_eq!(fork[0].meta.as_deref(), Some("abc123def456"));
+
+            let nokogiri = output.dependencies.get("nokogiri").unwrap();
+            assert_eq!(
+                nokogiri[0].version,
+                Some(VersionSpec::parse("1.16.0").unwrap())
+            );
+            assert_eq!(nokogiri[0].meta.as_deref(), Some("x86_64-linux"));
+
+            let rake = output.dependencies.get("rake").unwrap();
+            assert_eq!(rake[0].hash.as_deref(), Some("deadbeef"));
+        }
     }
 
     mod parse_manifest {
         use super::*;
 
         #[tokio::test(flavor = "multi_thread")]
-        async fn splits_runtime_and_dev_dependencies() {
+        async fn reports_only_local_path_gems() {
             let sandbox = create_empty_moon_sandbox();
             sandbox.create_file(
                 "Gemfile",
                 r#"source "https://rubygems.org"
 gem "rails", "7.1.3"
+gem "billing", path: "../libs/billing"
+group :ci do
+  gem "ci_support", path: "../libs/ci_support"
+end
 group :test do
-  gem "rspec"
+  gem "test_support", path: "../libs/test_support"
 end
 "#,
             );
@@ -346,9 +420,25 @@ end
                 })
                 .await;
 
-            assert!(output.dependencies.contains_key("rails"));
-            assert!(output.dev_dependencies.contains_key("rspec"));
-            assert!(!output.dependencies.contains_key("rspec"));
+            assert!(!output.dependencies.contains_key("rails"));
+            assert_eq!(
+                output.dependencies.get("billing"),
+                Some(&ManifestDependency::path(PathBuf::from("../libs/billing")))
+            );
+            // Unknown groups are not guessed as development by the manifest
+            // parser; only the conventional dev/test groups are collapsed here.
+            assert_eq!(
+                output.dependencies.get("ci_support"),
+                Some(&ManifestDependency::path(PathBuf::from(
+                    "../libs/ci_support"
+                )))
+            );
+            assert_eq!(
+                output.dev_dependencies.get("test_support"),
+                Some(&ManifestDependency::path(PathBuf::from(
+                    "../libs/test_support"
+                )))
+            );
         }
     }
 
@@ -375,6 +465,64 @@ end
                     id: Id::raw("billing"),
                     scope: DependencyScope::Production,
                     via: Some("path gem billing".into()),
+                }]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn resolves_parent_directory_path_gem_edges() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("spree/admin/Gemfile", r#"gem 'spree', path: '../'"#);
+            let plugin = sandbox.create_toolchain("ruby").await;
+
+            let mut input = ExtendProjectGraphInput::default();
+            input.project_sources.insert(Id::raw("spree"), "spree".into());
+            input
+                .project_sources
+                .insert(Id::raw("spree-admin"), "spree/admin".into());
+
+            let output = plugin.extend_project_graph(input).await;
+
+            assert_eq!(
+                output
+                    .extended_projects
+                    .get("spree-admin")
+                    .unwrap()
+                    .dependencies,
+                vec![ProjectDependency {
+                    id: Id::raw("spree"),
+                    scope: DependencyScope::Production,
+                    via: Some("path gem spree".into()),
+                }]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn applies_configured_non_production_groups() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "app/Gemfile",
+                r#"group :ci do
+  gem "fixtures", path: "../libs/fixtures"
+end"#,
+            );
+            let plugin = sandbox.create_toolchain("ruby").await;
+
+            let mut input = ExtendProjectGraphInput::default();
+            input.project_sources.insert(Id::raw("app"), "app".into());
+            input
+                .project_sources
+                .insert(Id::raw("fixtures"), "libs/fixtures".into());
+            input.toolchain_config = json!({ "productionWithoutGroups": ["ci"] });
+
+            let output = plugin.extend_project_graph(input).await;
+
+            assert_eq!(
+                output.extended_projects.get("app").unwrap().dependencies,
+                vec![ProjectDependency {
+                    id: Id::raw("fixtures"),
+                    scope: DependencyScope::Development,
+                    via: Some("path gem fixtures".into()),
                 }]
             );
         }

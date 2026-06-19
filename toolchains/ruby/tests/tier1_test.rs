@@ -22,7 +22,7 @@ mod ruby_toolchain_tier1 {
 
             assert_eq!(output.name, "Ruby");
             assert_eq!(output.language, Some(LanguageType::Ruby));
-            assert_eq!(output.vendor_dir_name.as_deref(), Some("vendor/bundle"));
+            assert!(output.vendor_dir_name.is_none());
             assert!(output.manifest_file_names.contains(&"Gemfile".to_string()));
             assert!(output.lock_file_names.contains(&"Gemfile.lock".to_string()));
             assert!(output.exe_names.contains(&"bundle".to_string()));

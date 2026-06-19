@@ -1,6 +1,5 @@
 pub mod config;
 pub mod gemfile;
-pub mod gemfile_lock;
 #[cfg(feature = "wasm")]
 mod tier1;
 #[cfg(feature = "wasm")]

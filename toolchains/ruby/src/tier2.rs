@@ -1,10 +1,10 @@
 use crate::config::RubyToolchainConfig;
-use crate::gemfile::{self, Scope};
-use crate::gemfile_lock::{self, SourceType};
+use crate::gemfile;
 use extism_pdk::*;
-use moon_config::{DependencyScope, UnresolvedVersionSpec, Version, VersionSpec};
-use moon_pdk::{locate_root_many, parse_toolchain_config_schema};
+use moon_config::{DependencyScope, VersionSpec};
+use moon_pdk::{locate_root_many, parse_toolchain_config_schema, plugin_err};
 use moon_pdk_api::*;
+use rubund::parser::{SourceType, parse_lockfile};
 use starbase_utils::fs;
 use std::collections::HashMap;
 use std::path::{Component, Path, PathBuf};
@@ -12,6 +12,7 @@ use std::path::{Component, Path, PathBuf};
 // Files that mark a Bundler dependency root, lockfiles first (most precise),
 // then manifests. Includes Bundler's alternative `gems.rb`/`gems.locked` names.
 const ROOT_FILES: [&str; 4] = ["Gemfile.lock", "gems.locked", "Gemfile", "gems.rb"];
+const DEFAULT_NON_PRODUCTION_GROUPS: [&str; 2] = ["development", "test"];
 
 #[plugin_fn]
 pub fn locate_dependencies_root(
@@ -47,7 +48,7 @@ pub fn setup_environment(
     // shared Ruby. Persisted via `bundle config` rather than the deprecated
     // `bundle install --path` flag.
     let mut path_cmd = ExecCommandInput::new(
-        "bundle",
+        "bundler",
         [
             "config",
             "set",
@@ -63,7 +64,7 @@ pub fn setup_environment(
     // mutate Gemfile.lock and errors if it's out of sync with the Gemfile.
     if config.frozen {
         let mut frozen_cmd =
-            ExecCommandInput::new("bundle", ["config", "set", "--local", "frozen", "true"]);
+            ExecCommandInput::new("bundler", ["config", "set", "--local", "frozen", "true"]);
         frozen_cmd.cwd = Some(input.root.clone());
         output.commands.push(frozen_cmd.into());
     }
@@ -78,7 +79,7 @@ pub fn install_dependencies(
     let config = parse_toolchain_config_schema::<RubyToolchainConfig>(input.toolchain_config)?;
     let mut output = InstallDependenciesOutput::default();
 
-    let mut command = ExecCommandInput::new("bundle", ["install"]);
+    let mut command = ExecCommandInput::new("bundler", ["install"]);
     command.args.extend(config.bundler_install_args);
     command.cwd = Some(input.root.clone());
 
@@ -126,36 +127,65 @@ pub fn extend_command(
 pub fn parse_lock(Json(input): Json<ParseLockInput>) -> FnResult<Json<ParseLockOutput>> {
     let mut output = ParseLockOutput::default();
     let content = fs::read_file(&input.path)?;
-    let lock = gemfile_lock::parse(&content)?;
+    let lock = parse_lockfile(&content);
+
+    if !content.trim().is_empty()
+        && lock.sources.is_empty()
+        && lock.specs.is_empty()
+        && lock.dependencies.is_empty()
+    {
+        return Err(plugin_err!(
+            "could not parse Gemfile.lock: no recognizable sections found"
+        ));
+    }
 
     for spec in lock.specs {
+        let (version, platform) = split_platform(spec.version);
         let mut dep = LockDependency {
-            version: VersionSpec::parse(&spec.version).ok(),
+            version: VersionSpec::parse(version).ok(),
             ..Default::default()
         };
 
         // Stash provenance in `meta`: platform, then git revision, then path.
-        if let Some(platform) = &spec.platform {
-            dep.meta = Some(platform.clone());
+        if let Some(platform) = platform {
+            dep.meta = Some(platform.to_string());
         } else if let Some(source) = lock.sources.get(spec.source_index) {
             match source.type_ {
-                SourceType::Git => dep.meta = source.revision.clone(),
-                SourceType::Path => dep.meta = Some(format!("path:{}", source.remote)),
+                SourceType::Git => dep.meta = source.revision.map(str::to_owned),
+                SourceType::Path => {
+                    let path = source.path.unwrap_or(source.remote);
+
+                    if !path.is_empty() {
+                        dep.meta = Some(format!("path:{path}"));
+                    }
+                }
                 SourceType::Gem => {}
             }
         }
 
-        if let Some(sha) = lock
-            .checksums
-            .get(&format!("{} {}", spec.name, spec.version))
-        {
-            dep.hash = Some(sha.clone());
+        if let Some((_, _, sha)) = lock.checksums.iter().find(|(name, checksum_version, _)| {
+            *name == spec.name && *checksum_version == spec.version
+        }) {
+            dep.hash = Some((*sha).to_string());
         }
 
-        output.dependencies.entry(spec.name).or_default().push(dep);
+        output
+            .dependencies
+            .entry(spec.name.to_string())
+            .or_default()
+            .push(dep);
     }
 
     Ok(Json(output))
+}
+
+/// Split a lockfile version token into (version, platform). Gem versions never
+/// contain `-`; in a spec line a trailing `-<platform>` denotes a native gem.
+fn split_platform(raw: &str) -> (&str, Option<&str>) {
+    match raw.split_once('-') {
+        Some((version, platform)) => (version, Some(platform)),
+        None => (raw, None),
+    }
 }
 
 #[plugin_fn]
@@ -163,51 +193,27 @@ pub fn parse_manifest(
     Json(input): Json<ParseManifestInput>,
 ) -> FnResult<Json<ParseManifestOutput>> {
     let mut output = ParseManifestOutput::default();
-    let content = fs::read_file(&input.path)?;
 
-    match input.path.file_name().and_then(|name| name.to_str()) {
-        Some("Gemfile") | Some("gems.rb") => {
-            for decl in gemfile::parse_gemfile(&content) {
-                insert_manifest_dep(&mut output, decl);
-            }
+    if matches!(
+        input.path.file_name().and_then(|name| name.to_str()),
+        Some("Gemfile" | "gems.rb")
+    ) {
+        let content = fs::read_file(&input.path)?;
+
+        for gem in gemfile::parse_path_gems(&content) {
+            insert_path_manifest_dep(&mut output, gem);
         }
-        Some(name) if name.ends_with(".gemspec") => {
-            let spec = gemfile::parse_gemspec(&content);
-
-            if let Some(version) = &spec.version {
-                output.version = Version::parse(version).ok();
-            }
-
-            for decl in spec.dependencies {
-                insert_manifest_dep(&mut output, decl);
-            }
-        }
-        _ => {}
-    };
+    }
 
     Ok(Json(output))
 }
 
-fn insert_manifest_dep(output: &mut ParseManifestOutput, decl: gemfile::GemDecl) {
-    let mut config = ManifestDependencyConfig::default();
+fn insert_path_manifest_dep(output: &mut ParseManifestOutput, gem: gemfile::PathGem) {
+    let dep = ManifestDependency::path(PathBuf::from(gem.path));
 
-    if let Some(path) = &decl.path {
-        config.path = Some(PathBuf::from(path));
-    }
-    if let Some(git) = &decl.git {
-        config.url = Some(git.clone());
-    }
-    if let Some(req) = &decl.requirement {
-        // Ruby's `~>` and friends often don't map to moon's spec syntax; keep
-        // it when parseable, otherwise the lockfile remains the source of truth.
-        config.version = UnresolvedVersionSpec::parse(req).ok();
-    }
-
-    let dep = ManifestDependency::Config(config);
-
-    match decl.scope {
-        Scope::Runtime => output.dependencies.insert(decl.name, dep),
-        Scope::Development => output.dev_dependencies.insert(decl.name, dep),
+    match groups_to_scope(&gem.groups, &DEFAULT_NON_PRODUCTION_GROUPS) {
+        DependencyScope::Development => output.dev_dependencies.insert(gem.name, dep),
+        _ => output.dependencies.insert(gem.name, dep),
     };
 }
 
@@ -215,6 +221,14 @@ fn insert_manifest_dep(output: &mut ParseManifestOutput, decl: gemfile::GemDecl)
 pub fn extend_project_graph(
     Json(input): Json<ExtendProjectGraphInput>,
 ) -> FnResult<Json<ExtendProjectGraphOutput>> {
+    let config = parse_toolchain_config_schema::<RubyToolchainConfig>(
+        if input.toolchain_config.is_null() {
+            serde_json::json!({})
+        } else {
+            input.toolchain_config.clone()
+        },
+    )?;
+    let non_production_groups = non_production_groups(&config);
     let mut output = ExtendProjectGraphOutput::default();
 
     // Map each project's source directory to its id, so we can resolve a
@@ -242,25 +256,18 @@ pub fn extend_project_graph(
 
         // Internal project relationships are expressed via `path:` gems, since
         // Bundler has no workspace concept.
-        for decl in gemfile::parse_gemfile(&content) {
-            let Some(path) = &decl.path else {
-                continue;
-            };
-
+        for gem in gemfile::parse_path_gems(&content) {
             // The join still needs normalizing to fold the `../..` in the
             // gem's relative path down to a workspace-relative source.
-            let resolved = normalize(&Path::new(source).join(path));
+            let resolved = normalize(&Path::new(source).join(&gem.path));
 
             if let Some(dep_id) = by_source.get(&resolved)
                 && dep_id != id
             {
                 project_output.dependencies.push(ProjectDependency {
                     id: dep_id.clone(),
-                    scope: match decl.scope {
-                        Scope::Development => DependencyScope::Development,
-                        Scope::Runtime => DependencyScope::Production,
-                    },
-                    via: Some(format!("path gem {}", decl.name)),
+                    scope: groups_to_scope(&gem.groups, &non_production_groups),
+                    via: Some(format!("path gem {}", gem.name)),
                 });
             }
         }
@@ -275,6 +282,29 @@ pub fn extend_project_graph(
     }
 
     Ok(Json(output))
+}
+
+fn non_production_groups(config: &RubyToolchainConfig) -> Vec<&str> {
+    if config.production_without_groups.is_empty() {
+        DEFAULT_NON_PRODUCTION_GROUPS.to_vec()
+    } else {
+        config
+            .production_without_groups
+            .iter()
+            .map(String::as_str)
+            .collect()
+    }
+}
+
+fn groups_to_scope(groups: &[String], non_production_groups: &[&str]) -> DependencyScope {
+    if groups
+        .iter()
+        .any(|group| non_production_groups.contains(&group.as_str()))
+    {
+        DependencyScope::Development
+    } else {
+        DependencyScope::Production
+    }
 }
 
 #[plugin_fn]

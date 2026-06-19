@@ -45,7 +45,9 @@ pub fn register_toolchain(
             "rake".into(),
             "irb".into(),
         ],
-        vendor_dir_name: Some(crate::config::BUNDLE_PATH.into()),
+        // `bundle_path` is configurable, but registration does not receive
+        // toolchain config, so reporting a static vendor dir would go stale.
+        vendor_dir_name: None,
     }))
 }
 

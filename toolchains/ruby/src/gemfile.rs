@@ -1,222 +1,249 @@
-//! Best-effort `Gemfile` / `*.gemspec` parser.
+//! Best-effort `Gemfile` path-gem scanner.
 //!
-//! A `Gemfile` is executable Ruby script, so this is a tolerant
-//! line scanner, not an interpreter: it recognizes the common declarative
-//! shapes and silently ignores anything dynamic (loops, conditionals, eval).
-//! `Gemfile.lock` remains the source of truth for correctness-sensitive data;
-//! this parse drives human-facing manifest info and the `path:`-gem project
-//! graph.
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Scope {
-    Runtime,
-    Development,
-}
+//! A `Gemfile` is executable Ruby script, so this intentionally does not try to
+//! parse dependencies in general. It only extracts literal `gem ..., path: ...`
+//! declarations so moon can infer project-to-project edges in Ruby monorepos.
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct GemDecl {
+pub struct PathGem {
     pub name: String,
-    pub requirement: Option<String>,
-    pub path: Option<String>,
-    pub git: Option<String>,
-    pub scope: Scope,
+    pub path: String,
+    pub groups: Vec<String>,
 }
 
-/// Parse `gem` declarations from a `Gemfile`, tracking `group` blocks so
-/// dev/test gems land in [`Scope::Development`].
-pub fn parse_gemfile(content: &str) -> Vec<GemDecl> {
-    let mut decls = vec![];
-    let mut group_stack: Vec<Scope> = vec![];
+/// Parse literal `path:` gem declarations from a `Gemfile`, preserving Bundler
+/// group names verbatim. The caller decides how to map groups onto moon scopes.
+pub fn parse_path_gems(content: &str) -> Vec<PathGem> {
+    let mut gems = vec![];
+    let mut block_stack: Vec<Vec<String>> = vec![];
 
     for line in content.lines() {
-        let line = strip_comment(line);
-        let line = line.trim();
+        let line = strip_comment(line).trim().to_owned();
         if line.is_empty() {
             continue;
         }
 
-        // `group :development, :test do` ... `end`
-        if let Some(rest) = line.strip_prefix("group ") {
-            if line.ends_with("do") {
-                group_stack.push(scope_from_groups(rest));
+        if line == "end" {
+            block_stack.pop();
+            continue;
+        }
+
+        if line.ends_with(" do") {
+            if let Some(groups) = parse_group_call(&line) {
+                block_stack.push(groups);
+            } else {
+                // Keep nested non-group blocks balanced so their `end` doesn't
+                // accidentally pop an enclosing group.
+                block_stack.push(vec![]);
             }
             continue;
         }
-        if line == "end" {
-            group_stack.pop();
+
+        if starts_ruby_block(&line) {
+            block_stack.push(vec![]);
             continue;
         }
 
-        if let Some(rest) = line.strip_prefix("gem ")
-            && let Some(decl) = parse_gem_line(rest, current_scope(&group_stack))
+        if let Some(args) = after_bare_call(&line, "gem")
+            && let Some(mut gem) = parse_gem_call(args)
         {
-            decls.push(decl);
+            for groups in &block_stack {
+                for group in groups {
+                    if !gem.groups.contains(group) {
+                        gem.groups.push(group.clone());
+                    }
+                }
+            }
+
+            gems.push(gem);
         }
     }
 
-    decls
+    gems
 }
 
-/// A parsed `*.gemspec`: the gem it provides plus its declared dependencies.
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-pub struct Gemspec {
-    pub name: Option<String>,
-    pub version: Option<String>,
-    pub dependencies: Vec<GemDecl>,
+fn parse_group_call(line: &str) -> Option<Vec<String>> {
+    let line = line.strip_suffix(" do")?.trim_end();
+    let args = after_bare_call(line, "group")?;
+    Some(parse_groups(args))
 }
 
-/// Parse the common `add_dependency` / `add_development_dependency` and
-/// `name`/`version` assignments from a `*.gemspec`.
-pub fn parse_gemspec(content: &str) -> Gemspec {
-    let mut spec = Gemspec::default();
-
-    for line in content.lines() {
-        let line = strip_comment(line);
-        let line = line.trim();
-
-        if let Some(rest) = after_assignment(line, "name") {
-            spec.name = Some(unquote(rest));
-        } else if let Some(rest) = after_assignment(line, "version") {
-            spec.version = Some(unquote(rest));
-        } else if let Some(args) = after_call(line, "add_development_dependency")
-            && let Some(decl) = parse_gem_line(args, Scope::Development)
-        {
-            spec.dependencies.push(decl);
-        } else if let Some(args) = after_call(line, "add_dependency")
-            .or_else(|| after_call(line, "add_runtime_dependency"))
-            && let Some(decl) = parse_gem_line(args, Scope::Runtime)
-        {
-            spec.dependencies.push(decl);
-        }
-    }
-
-    spec
-}
-
-fn current_scope(stack: &[Scope]) -> Scope {
-    // Any enclosing dev/test group makes the gem a dev dependency.
-    if stack.contains(&Scope::Development) {
-        Scope::Development
-    } else {
-        Scope::Runtime
-    }
-}
-
-fn scope_from_groups(s: &str) -> Scope {
-    if s.contains("development") || s.contains("test") {
-        Scope::Development
-    } else {
-        Scope::Runtime
-    }
-}
-
-/// Parse the argument list of a `gem`/`add_*` call (everything after the
-/// keyword), e.g. `"rails", "~> 7.1"` or `"x", path: "../x"`.
-fn parse_gem_line(args: &str, default_scope: Scope) -> Option<GemDecl> {
-    let mut name: Option<String> = None;
-    let mut requirements = vec![];
+fn parse_gem_call(args: &str) -> Option<PathGem> {
+    let mut name = None;
     let mut path = None;
-    let mut git = None;
-    let mut scope = default_scope;
+    let mut groups = vec![];
 
     for part in split_args(args) {
         let part = part.trim();
-        if part.is_empty() {
+
+        if name.is_none()
+            && let Some(value) = quoted(part)
+        {
+            name = Some(value.to_owned());
             continue;
         }
 
-        if let Some((key, val)) = split_option(part) {
-            let val = unquote(val.trim());
+        if let Some((key, value)) = split_option(part) {
             match key {
-                "path" => path = Some(val),
-                "git" | "github" => git = Some(val),
-                "group" => scope = scope_from_groups(&val),
-                _ => {} // require:, ref:, tag:, branch:, platforms: — ignored
-            }
-        } else if is_quoted(part) {
-            let value = unquote(part);
-            if name.is_none() {
-                name = Some(value);
-            } else {
-                requirements.push(value);
+                "path" => path = quoted(value.trim()).map(str::to_owned),
+                "group" | "groups" => {
+                    for group in parse_groups(value) {
+                        if !groups.contains(&group) {
+                            groups.push(group);
+                        }
+                    }
+                }
+                _ => {}
             }
         }
     }
 
-    let name = name?;
-    if name.is_empty() {
-        return None;
-    }
-
-    Some(GemDecl {
-        name,
-        requirement: (!requirements.is_empty()).then(|| requirements.join(", ")),
-        path,
-        git,
-        scope,
+    Some(PathGem {
+        name: name?,
+        path: path?,
+        groups,
     })
 }
 
-/// Split a comma-separated argument list. Naive (doesn't account for commas
-/// inside `[...]` arrays); acceptable for a best-effort scanner.
-fn split_args(args: &str) -> Vec<&str> {
-    args.split(',').collect()
+fn parse_groups(args: &str) -> Vec<String> {
+    let args = args.trim();
+    let args = args
+        .strip_prefix('[')
+        .and_then(|args| args.strip_suffix(']'))
+        .unwrap_or(args);
+
+    split_args(args)
+        .into_iter()
+        .filter_map(|part| group_name(part.trim()))
+        .collect()
 }
 
-/// Recognize a `key: value` option token, returning `(key, value)`. Requires
-/// the key to be a bare identifier so we don't mistake a quoted version
-/// requirement (which may contain `:`) for an option.
+fn group_name(value: &str) -> Option<String> {
+    let value = value.trim().trim_end_matches(" do").trim();
+
+    if let Some(symbol) = value.strip_prefix(':') {
+        let symbol = symbol.trim();
+        if !symbol.is_empty()
+            && symbol
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '_')
+        {
+            return Some(symbol.to_owned());
+        }
+    }
+
+    quoted(value).map(str::to_owned)
+}
+
+fn after_bare_call<'a>(line: &'a str, name: &str) -> Option<&'a str> {
+    let rest = line.strip_prefix(name)?;
+
+    if let Some(args) = rest.strip_prefix('(') {
+        return Some(args.trim_end_matches(')').trim());
+    }
+
+    let first = rest.chars().next()?;
+    first.is_whitespace().then(|| rest.trim())
+}
+
+/// Recognize `key: value` and `:key => value` option tokens.
 fn split_option(part: &str) -> Option<(&str, &str)> {
-    let (key, val) = part.split_once(':')?;
-    let key = key.trim();
-    if !key.is_empty() && key.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
-        Some((key, val))
-    } else {
-        None
+    if let Some((key, val)) = part.split_once(':') {
+        let key = key.trim();
+        if !key.is_empty() && key.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+            return Some((key, val.trim()));
+        }
     }
-}
 
-fn strip_comment(line: &str) -> &str {
-    match line.find('#') {
-        Some(idx) => &line[..idx],
-        None => line,
+    if let Some((key, val)) = part.split_once("=>") {
+        let key = key
+            .trim()
+            .trim_start_matches(':')
+            .trim_matches(|c| c == '\'' || c == '"');
+        if !key.is_empty() && key.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+            return Some((key, val.trim()));
+        }
     }
+
+    None
 }
 
-fn is_quoted(s: &str) -> bool {
-    let s = s.trim();
-    (s.starts_with('"') && s.ends_with('"') && s.len() >= 2)
-        || (s.starts_with('\'') && s.ends_with('\'') && s.len() >= 2)
-}
-
-fn unquote(s: &str) -> String {
-    s.trim().trim_matches(|c| c == '"' || c == '\'').to_string()
-}
-
-/// Return the value of `<target> = <value>` / `<recv>.<target> = <value>`.
-fn after_assignment<'a>(line: &'a str, target: &str) -> Option<&'a str> {
-    let (lhs, rhs) = line.split_once('=')?;
-    let lhs = lhs.trim();
-    let attr = lhs.rsplit('.').next().unwrap_or(lhs).trim();
-    (attr == target).then_some(rhs.trim())
-}
-
-/// Return the argument list of a `<recv>.<name>(<args>)` / `<recv>.<name> <args>` call.
-fn after_call<'a>(line: &'a str, name: &str) -> Option<&'a str> {
-    let idx = line.find(name)?;
-    // Ensure it's a call boundary (preceded by start or `.`/space).
-    let before_ok = line[..idx]
-        .chars()
-        .last()
-        .map(|c| c == '.' || c.is_whitespace())
-        .unwrap_or(true);
-    if !before_ok {
+fn quoted(value: &str) -> Option<&str> {
+    let value = value.trim();
+    if value.len() < 2 {
         return None;
     }
 
-    let rest = line[idx + name.len()..].trim_start();
-    let rest = rest.strip_prefix('(').unwrap_or(rest);
-    Some(rest.trim_end_matches(')').trim())
+    let quote = value.as_bytes()[0] as char;
+    if quote != '\'' && quote != '"' {
+        return None;
+    }
+
+    value
+        .strip_prefix(quote)
+        .and_then(|value| value.strip_suffix(quote))
+}
+
+fn strip_comment(line: &str) -> &str {
+    let mut quote = None;
+    let mut escaped = false;
+
+    for (idx, ch) in line.char_indices() {
+        if escaped {
+            escaped = false;
+            continue;
+        }
+
+        match (quote, ch) {
+            (Some(_), '\\') => escaped = true,
+            (Some(q), c) if c == q => quote = None,
+            (None, '\'' | '"') => quote = Some(ch),
+            (None, '#') => return &line[..idx],
+            _ => {}
+        }
+    }
+
+    line
+}
+
+fn starts_ruby_block(line: &str) -> bool {
+    [
+        "if ", "unless ", "case ", "begin", "while ", "until ", "for ",
+    ]
+    .iter()
+    .any(|prefix| line.starts_with(prefix))
+}
+
+fn split_args(args: &str) -> Vec<&str> {
+    let mut parts = vec![];
+    let mut quote = None;
+    let mut escaped = false;
+    let mut depth = 0u32;
+    let mut start = 0;
+
+    for (idx, ch) in args.char_indices() {
+        if escaped {
+            escaped = false;
+            continue;
+        }
+
+        match (quote, ch) {
+            (Some(_), '\\') => escaped = true,
+            (Some(q), c) if c == q => quote = None,
+            (Some(_), _) => {}
+            (None, '\'' | '"') => quote = Some(ch),
+            (None, '[' | '(' | '{') => depth += 1,
+            (None, ']' | ')' | '}') => depth = depth.saturating_sub(1),
+            (None, ',') if depth == 0 => {
+                parts.push(args[start..idx].trim());
+                start = idx + ch.len_utf8();
+            }
+            _ => {}
+        }
+    }
+
+    parts.push(args[start..].trim());
+    parts
 }
 
 #[cfg(test)]
@@ -224,109 +251,101 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parses_basic_gems_and_requirements() {
-        let decls = parse_gemfile(
+    fn captures_literal_path_gems() {
+        let gems = parse_path_gems(
             r#"
 source "https://rubygems.org"
-gem "rails", "~> 7.1"
-gem "pg"
-"#,
-        );
-
-        assert_eq!(decls.len(), 2);
-        assert_eq!(decls[0].name, "rails");
-        assert_eq!(decls[0].requirement.as_deref(), Some("~> 7.1"));
-        assert_eq!(decls[0].scope, Scope::Runtime);
-        assert_eq!(decls[1].name, "pg");
-        assert_eq!(decls[1].requirement, None);
-    }
-
-    #[test]
-    fn tracks_group_blocks_as_dev_scope() {
-        let decls = parse_gemfile(
-            r#"
 gem "rails"
-group :development, :test do
-  gem "rspec"
-end
-gem "puma"
-"#,
-        );
-
-        let rspec = decls.iter().find(|d| d.name == "rspec").unwrap();
-        assert_eq!(rspec.scope, Scope::Development);
-        // The group is popped at `end`; puma is back to runtime.
-        let puma = decls.iter().find(|d| d.name == "puma").unwrap();
-        assert_eq!(puma.scope, Scope::Runtime);
-    }
-
-    #[test]
-    fn handles_inline_group_option() {
-        let decls = parse_gemfile(r#"gem "rubocop", require: false, group: :development"#);
-        assert_eq!(decls[0].scope, Scope::Development);
-    }
-
-    #[test]
-    fn captures_path_and_git_sources() {
-        let decls = parse_gemfile(
-            r#"
 gem "billing", path: "../libs/billing"
-gem "some_fork", git: "https://github.com/me/some_fork.git", branch: "main"
+gem 'support', :path => '../libs/support'
 "#,
         );
 
-        let billing = decls.iter().find(|d| d.name == "billing").unwrap();
-        assert_eq!(billing.path.as_deref(), Some("../libs/billing"));
-
-        let fork = decls.iter().find(|d| d.name == "some_fork").unwrap();
-        assert_eq!(
-            fork.git.as_deref(),
-            Some("https://github.com/me/some_fork.git")
-        );
+        assert_eq!(gems.len(), 2);
+        assert_eq!(gems[0].name, "billing");
+        assert_eq!(gems[0].path, "../libs/billing");
+        assert_eq!(gems[1].name, "support");
+        assert_eq!(gems[1].path, "../libs/support");
     }
 
     #[test]
-    fn ignores_comments() {
-        let decls = parse_gemfile(
+    fn preserves_arbitrary_groups() {
+        let gems = parse_path_gems(
             r#"
-# gem "ignored"
-gem "real" # trailing comment
+group :ci, :assets do
+  gem "fixtures", path: "../libs/fixtures", groups: [:test, :docs]
+end
+gem "billing", path: "../libs/billing", group: :deploy
 "#,
         );
-        assert_eq!(decls.len(), 1);
-        assert_eq!(decls[0].name, "real");
+
+        assert_eq!(gems[0].groups, ["test", "docs", "ci", "assets"]);
+        assert_eq!(gems[1].groups, ["deploy"]);
     }
 
     #[test]
-    fn parses_gemspec_dependencies() {
-        let spec = parse_gemspec(
+    fn captures_groups_with_bundler_options() {
+        let gems = parse_path_gems(
             r#"
-Gem::Specification.new do |s|
-  s.name = "billing"
-  s.version = "0.1.0"
-  s.add_dependency "activesupport", ">= 7.0"
-  s.add_development_dependency "rspec"
+group :migrations, optional: true do
+  gem "migrations-core", path: "migrations/core"
 end
 "#,
         );
 
-        assert_eq!(spec.name.as_deref(), Some("billing"));
-        assert_eq!(spec.version.as_deref(), Some("0.1.0"));
-        assert_eq!(spec.dependencies.len(), 2);
+        assert_eq!(gems.len(), 1);
+        assert_eq!(gems[0].name, "migrations-core");
+        assert_eq!(gems[0].path, "migrations/core");
+        assert_eq!(gems[0].groups, ["migrations"]);
+    }
 
-        let active = spec
-            .dependencies
-            .iter()
-            .find(|d| d.name == "activesupport")
-            .unwrap();
-        assert_eq!(active.scope, Scope::Runtime);
-        assert_eq!(active.requirement.as_deref(), Some(">= 7.0"));
+    #[test]
+    fn captures_single_quoted_keyword_path_to_parent() {
+        let gems = parse_path_gems("gem 'spree', path: '../'");
 
-        let rspec = spec
-            .dependencies
-            .iter()
-            .find(|d| d.name == "rspec")
-            .unwrap();
-        assert_eq!(rspec.scope, Scope::Development);
+        assert_eq!(gems.len(), 1);
+        assert_eq!(gems[0].name, "spree");
+        assert_eq!(gems[0].path, "../");
+    }
+
+    #[test]
+    fn balances_non_group_blocks() {
+        let gems = parse_path_gems(
+            r#"
+group :test do
+  source "https://example.com" do
+    gem "fixtures", path: "../libs/fixtures"
+  end
+  gem "support", path: "../libs/support"
+end
+"#,
+        );
+
+        assert_eq!(gems[0].groups, ["test"]);
+        assert_eq!(gems[1].groups, ["test"]);
+    }
+
+    #[test]
+    fn ignores_dynamic_paths() {
+        let gems = parse_path_gems(
+            r#"
+gem "dynamic", path: File.expand_path("../libs/dynamic", __dir__)
+"#,
+        );
+
+        assert!(gems.is_empty());
+    }
+
+    #[test]
+    fn ignores_comments_outside_quotes() {
+        let gems = parse_path_gems(
+            r#"
+# gem "ignored", path: "../ignored"
+gem "real", path: "../libs/#real" # trailing comment
+"#,
+        );
+
+        assert_eq!(gems.len(), 1);
+        assert_eq!(gems[0].path, "../libs/#real");
     }
 }
