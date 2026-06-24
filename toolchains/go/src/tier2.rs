@@ -18,7 +18,12 @@ fn execute_go_list(
     packages: &[String],
     test: bool,
 ) -> AnyResult<Vec<ModuleDependency>> {
-    let mut args = vec!["list", "-deps"];
+    let mut args = vec![
+        "list",
+        "-deps",
+        "-f",
+        "{{if .Module}}{{.Module.Path}}{{end}}",
+    ];
 
     if test {
         args.push("-test");

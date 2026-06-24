@@ -264,6 +264,38 @@ mod go_toolchain_tier2 {
             }
 
             #[tokio::test(flavor = "multi_thread")]
+            async fn infers_relations_through_sibling_subpackage() {
+                let sandbox = create_moon_sandbox("projects-workspace");
+                let plugin = sandbox.create_toolchain("go").await;
+
+                let mut input = ExtendProjectGraphInput::default();
+                input.project_sources.insert(Id::raw("a"), "a".into());
+                input.project_sources.insert(Id::raw("e"), "e".into());
+                input.toolchain_config = json!({
+                    "inferRelationships": true
+                });
+
+                let output = plugin.extend_project_graph(input).await;
+
+                // `e` imports `example.com/org/a` only through the `a/pkg`
+                // subpackage, so the dependency is only inferred when
+                // `go list -deps` emits the owning module path via
+                // `-f {{if .Module}}{{.Module.Path}}{{end}}`.
+                assert_eq!(
+                    output.extended_projects.get(&Id::raw("e")),
+                    Some(&ExtendProjectOutput {
+                        alias: Some("example.com/org/e".into()),
+                        dependencies: vec![ProjectDependency {
+                            id: Id::raw("example.com/org/a"),
+                            scope: DependencyScope::Production,
+                            via: Some("module example.com/org/a".into()),
+                        }],
+                        ..Default::default()
+                    })
+                );
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
             async fn doesnt_infer_subpackage_relations_when_scoped_to_root() {
                 let sandbox = create_moon_sandbox("projects-workspace");
                 let plugin = sandbox.create_toolchain("go").await;
