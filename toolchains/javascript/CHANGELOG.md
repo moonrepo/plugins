@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added support for [Deno v2.9](https://deno.com/blog/v2.9):
+  - Will support other package manager lockfiles for seeding.
+
 ## 1.1.0
 
 #### 🚀 Updates

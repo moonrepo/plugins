@@ -310,6 +310,9 @@ pub fn locate_dependencies_root(
         return Ok(Json(output));
     };
 
+    let package_manager_config: SharedPackageManagerConfig =
+        load_toolchain_config(package_manager.to_string())?;
+
     let manifest_names = match package_manager {
         JavaScriptPackageManager::Deno => vec!["deno.json", "deno.jsonc", "package.json"],
         _ => vec!["package.json"],
@@ -323,7 +326,22 @@ pub fn locate_dependencies_root(
 
     let lock_names = match package_manager {
         JavaScriptPackageManager::Bun => vec!["bun.lock", "bun.lockb"],
-        JavaScriptPackageManager::Deno => vec!["deno.lock"],
+        JavaScriptPackageManager::Deno => {
+            // Deno v2.9 can seed deno.lock from existing Node package manager
+            // lockfiles, so treat them as valid dependency roots for migration
+            if package_manager_config.version_satisfies(">=2.9.0") {
+                vec![
+                    "deno.lock",
+                    "package-lock.json",
+                    "npm-shrinkwrap.json",
+                    "pnpm-lock.yaml",
+                    "yarn.lock",
+                    "bun.lock",
+                ]
+            } else {
+                vec!["deno.lock"]
+            }
+        }
         JavaScriptPackageManager::Npm => vec!["package-lock.json", "npm-shrinkwrap.json"],
         JavaScriptPackageManager::Pnpm => vec!["pnpm-lock.yaml"],
         JavaScriptPackageManager::Yarn => vec!["yarn.lock"],
