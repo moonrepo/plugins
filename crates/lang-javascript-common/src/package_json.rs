@@ -1,19 +1,11 @@
-use nodejs_package_json::{PackageJson, VersionProtocol};
 use proto_pdk_api::{AnyResult, VirtualPath};
 use starbase_utils::{
     fs,
     json::{self, JsonMap, JsonValue},
 };
 
-pub fn extract_valid_version_protocol(version_protocol: &VersionProtocol) -> Option<String> {
-    if matches!(
-        version_protocol,
-        VersionProtocol::Range(_) | VersionProtocol::Requirement(_) | VersionProtocol::Version(_)
-    ) {
-        Some(version_protocol.to_string())
-    } else {
-        None
-    }
+pub fn parse_package_json(content: &str) -> Option<JsonValue> {
+    json::parse::<JsonValue>(content).ok()
 }
 
 pub fn extract_version_from_text(content: &str) -> Option<&str> {
@@ -30,56 +22,51 @@ pub fn extract_version_from_text(content: &str) -> Option<&str> {
     None
 }
 
-pub fn extract_dev_engine_runtime_version(package_json: &PackageJson, key: &str) -> Option<String> {
-    if let Some(engines) = &package_json.dev_engines
-        && let Some(engine) = &engines.runtime
-    {
-        for item in engine.list() {
-            if item.name == key
-                && let Some(protocol) = &item.version
-                && let Some(version) = extract_valid_version_protocol(protocol)
-            {
-                return Some(version);
-            }
-        }
-    }
-
-    None
+pub fn extract_dev_engine_runtime_version(package_json: &JsonValue, key: &str) -> Option<String> {
+    extract_dev_engine_version(package_json, "runtime", key)
 }
 
 pub fn extract_dev_engine_package_manager_version(
-    package_json: &PackageJson,
+    package_json: &JsonValue,
     key: &str,
 ) -> Option<String> {
-    if let Some(engines) = &package_json.dev_engines
-        && let Some(engine) = &engines.package_manager
-    {
-        for item in engine.list() {
-            if item.name == key
-                && let Some(protocol) = &item.version
-                && let Some(version) = extract_valid_version_protocol(protocol)
-            {
-                return Some(version);
-            }
+    extract_dev_engine_version(package_json, "packageManager", key)
+}
+
+fn extract_dev_engine_version(package_json: &JsonValue, kind: &str, key: &str) -> Option<String> {
+    let engine = package_json.get("devEngines")?.get(kind)?;
+    let items = engine
+        .as_array()
+        .map(Vec::as_slice)
+        .unwrap_or_else(|| std::slice::from_ref(engine));
+
+    for item in items {
+        if item.get("name").and_then(JsonValue::as_str) == Some(key)
+            && let Some(version) = item.get("version").and_then(JsonValue::as_str)
+        {
+            return Some(version.to_owned());
         }
     }
 
     None
 }
 
-pub fn extract_engine_version(package_json: &PackageJson, key: &str) -> Option<String> {
-    if let Some(engines) = &package_json.engines {
-        return engines.get(key).and_then(extract_valid_version_protocol);
-    }
-
-    None
+pub fn extract_engine_version(package_json: &JsonValue, key: &str) -> Option<String> {
+    package_json
+        .get("engines")?
+        .get(key)?
+        .as_str()
+        .map(ToOwned::to_owned)
 }
 
 pub fn extract_package_manager_version<'a>(
-    package_json: &'a PackageJson,
+    package_json: &'a JsonValue,
     key: &str,
 ) -> Option<&'a str> {
-    if let Some(pm) = &package_json.package_manager {
+    if let Some(pm) = package_json
+        .get("packageManager")
+        .and_then(JsonValue::as_str)
+    {
         let mut parts = pm.split('@');
         let name = parts.next().unwrap_or_default();
 
@@ -103,22 +90,22 @@ pub fn extract_package_manager_version<'a>(
 }
 
 pub fn extract_volta_version(
-    package_json: &PackageJson,
+    package_json: &JsonValue,
     package_path: &VirtualPath,
     key: &str,
 ) -> AnyResult<Option<String>> {
-    if let Some(volta) = package_json.other_fields.get("volta") {
-        if let Some(json::JsonValue::String(inner)) = volta.get(key) {
+    if let Some(volta) = package_json.get("volta") {
+        if let Some(JsonValue::String(inner)) = volta.get(key) {
             return Ok(Some(inner.into()));
         }
 
-        if let Some(json::JsonValue::String(extends_from)) = volta.get("extends") {
+        if let Some(JsonValue::String(extends_from)) = volta.get("extends") {
             let extends_path = package_path.parent().unwrap().join(extends_from);
 
             if extends_path.exists() && extends_path.is_file() {
                 let content = fs::read_file(&extends_path)?;
 
-                if let Ok(other_package_json) = json::parse::<PackageJson>(&content) {
+                if let Some(other_package_json) = parse_package_json(&content) {
                     return extract_volta_version(&other_package_json, &extends_path, key);
                 }
             }

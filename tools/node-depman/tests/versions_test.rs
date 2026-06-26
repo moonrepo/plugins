@@ -272,6 +272,44 @@ mod node_depman_tool {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn parses_dev_engines_list() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox.create_plugin("pnpm-test").await;
+
+            assert_eq!(
+                plugin
+                    .parse_version_file(ParseVersionFileInput {
+                        content: r#"{ "devEngines": { "packageManager": [{ "name": "npm", "version": "1.2.3" }, { "name": "pnpm", "version": "4.5.6" }] } }"#.into(),
+                        file: "package.json".into(),
+                        ..Default::default()
+                    })
+                    .await,
+                ParseVersionFileOutput {
+                    version: Some(UnresolvedVersionSpec::parse("4.5.6").unwrap()),
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn parses_dev_engines_when_unrelated_node_engine_is_invalid() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox.create_plugin("pnpm-test").await;
+
+            assert_eq!(
+                plugin
+                    .parse_version_file(ParseVersionFileInput {
+                        content: r#"{ "engines": { "node": ">= nope" }, "devEngines": { "packageManager": { "name": "pnpm", "version": "1.2.3" } } }"#.into(),
+                        file: "package.json".into(),
+                        ..Default::default()
+                    })
+                    .await,
+                ParseVersionFileOutput {
+                    version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn parses_volta() {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox.create_plugin("pnpm-test").await;
