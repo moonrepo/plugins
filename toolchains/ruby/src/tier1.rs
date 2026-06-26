@@ -1,4 +1,4 @@
-use crate::config::RubyToolchainConfig;
+use crate::config::{BUNDLE_PATH, RubyToolchainConfig};
 use extism_pdk::*;
 use moon_config::LanguageType;
 use moon_pdk::parse_toolchain_config;
@@ -45,9 +45,7 @@ pub fn register_toolchain(
             "rake".into(),
             "irb".into(),
         ],
-        // `bundle_path` is configurable, but registration does not receive
-        // toolchain config, so reporting a static vendor dir would go stale.
-        vendor_dir_name: None,
+        vendor_dir_name: Some(BUNDLE_PATH.into()),
     }))
 }
 

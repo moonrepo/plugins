@@ -2,7 +2,7 @@ use crate::config::RubyToolchainConfig;
 use crate::gemfile;
 use extism_pdk::*;
 use moon_config::{DependencyScope, VersionSpec};
-use moon_pdk::{locate_root_many, parse_toolchain_config_schema, plugin_err};
+use moon_pdk::{locate_root_many, parse_toolchain_config_schema};
 use moon_pdk_api::*;
 use rubund::parser::{SourceType, parse_lockfile};
 use starbase_utils::fs;
@@ -87,15 +87,13 @@ pub fn install_dependencies(
     // (colon-separated) rather than the `--without` flag, which is removed in
     // modern Bundler.
     if input.production {
-        let groups = if config.production_without_groups.is_empty() {
-            vec!["development".to_string(), "test".to_string()]
+        let without = if config.production_without_groups.is_empty() {
+            DEFAULT_NON_PRODUCTION_GROUPS.join(":")
         } else {
-            config.production_without_groups
+            config.production_without_groups.join(":")
         };
 
-        command
-            .env
-            .insert("BUNDLE_WITHOUT".into(), groups.join(":"));
+        command.env.insert("BUNDLE_WITHOUT".into(), without);
     }
 
     // Bundler's resolver already produces a single flat gem set, so there is
@@ -134,9 +132,7 @@ pub fn parse_lock(Json(input): Json<ParseLockInput>) -> FnResult<Json<ParseLockO
         && lock.specs.is_empty()
         && lock.dependencies.is_empty()
     {
-        return Err(plugin_err!(
-            "could not parse Gemfile.lock: no recognizable sections found"
-        ));
+        return Ok(Json(output));
     }
 
     for spec in lock.specs {
@@ -221,13 +217,7 @@ fn insert_path_manifest_dep(output: &mut ParseManifestOutput, gem: gemfile::Path
 pub fn extend_project_graph(
     Json(input): Json<ExtendProjectGraphInput>,
 ) -> FnResult<Json<ExtendProjectGraphOutput>> {
-    let config = parse_toolchain_config_schema::<RubyToolchainConfig>(
-        if input.toolchain_config.is_null() {
-            serde_json::json!({})
-        } else {
-            input.toolchain_config.clone()
-        },
-    )?;
+    let config = parse_toolchain_config_schema::<RubyToolchainConfig>(input.toolchain_config)?;
     let non_production_groups = non_production_groups(&config);
     let mut output = ExtendProjectGraphOutput::default();
 

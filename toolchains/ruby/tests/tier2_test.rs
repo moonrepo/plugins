@@ -476,7 +476,9 @@ end
             let plugin = sandbox.create_toolchain("ruby").await;
 
             let mut input = ExtendProjectGraphInput::default();
-            input.project_sources.insert(Id::raw("spree"), "spree".into());
+            input
+                .project_sources
+                .insert(Id::raw("spree"), "spree".into());
             input
                 .project_sources
                 .insert(Id::raw("spree-admin"), "spree/admin".into());
