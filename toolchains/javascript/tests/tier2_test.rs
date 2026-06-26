@@ -550,6 +550,33 @@ mod javascript_toolchain_tier2 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn finds_package_with_node_lock_when_using_deno() {
+            let mut sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("package/package-lock.json", "{}");
+            sandbox.create_file("package/package.json", "{}");
+            sandbox.create_file("package/nested/app/package.json", "{}");
+
+            sandbox
+                .host_funcs
+                .mock_load_toolchain_config(|_, _| json!({ "version": "2.9.0" }));
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .locate_dependencies_root(LocateDependenciesRootInput {
+                    starting_dir: VirtualPath::Real(sandbox.path().join("package/nested/app")),
+                    toolchain_config: json!({
+                        "packageManager": "deno"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.members.is_none());
+            assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/package"));
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn finds_package_with_npm_lock() {
             let sandbox = create_moon_sandbox("locate");
             sandbox.create_file("package/package-lock.json", "");
