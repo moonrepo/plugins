@@ -1,6 +1,6 @@
 [package]
 name = "schema_tool"
-version = "0.17.8"
+version = "0.18.0"
 edition = "2024"
 description = "Schema-based WASM plugin for proto, powering the TOML plugin pattern."
 authors = ["Miles Johnson"]
