@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed `go list -deps` relationship inference not detecting sibling workspace modules imported via subpackages (e.g. `example.com/org/a/pkg`). The command now emits owning module paths using `-f {{if .Module}}{{.Module.Path}}{{end}}` instead of package paths.
+
 ## 1.4.2
 
 #### 🐞 Fixes
