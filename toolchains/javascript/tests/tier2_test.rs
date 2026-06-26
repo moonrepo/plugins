@@ -551,10 +551,14 @@ mod javascript_toolchain_tier2 {
 
         #[tokio::test(flavor = "multi_thread")]
         async fn finds_package_with_node_lock_when_using_deno() {
-            let sandbox = create_empty_moon_sandbox();
+            let mut sandbox = create_empty_moon_sandbox();
             sandbox.create_file("package/package-lock.json", "{}");
             sandbox.create_file("package/package.json", "{}");
             sandbox.create_file("package/nested/app/package.json", "{}");
+
+            sandbox
+                .host_funcs
+                .mock_load_toolchain_config(|_, _| json!({ "version": "2.9.0" }));
 
             let plugin = sandbox.create_toolchain("javascript").await;
 
