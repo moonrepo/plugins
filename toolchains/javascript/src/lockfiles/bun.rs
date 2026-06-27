@@ -1,5 +1,5 @@
-use super::parse_version_spec;
 use super::yarn::parse_yarn_lock_content;
+use super::{parse_name_and_version, parse_version_spec};
 use moon_pdk::{AnyResult, ExecCommandInput, VirtualPath, exec};
 use moon_pdk_api::{LockDependency, ParseLockOutput};
 use serde::Deserialize;
@@ -80,21 +80,21 @@ pub fn parse_bun_lock(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyRe
                 continue;
             }
             BunLockPackage::Dependency1(id, _unknown, _data, integrity) => {
-                let Some((name, version)) = parse_name_and_version(id) else {
+                let Some((name, version)) = parse_name_and_version(id, "") else {
                     continue;
                 };
 
                 (name, version, Some(integrity))
             }
             BunLockPackage::Dependency2(id, _data, integrity) => {
-                let Some((name, version)) = parse_name_and_version(id) else {
+                let Some((name, version)) = parse_name_and_version(id, "") else {
                     continue;
                 };
 
                 (name, version, Some(integrity))
             }
             BunLockPackage::Dependency3(id, _data) => {
-                let Some((name, version)) = parse_name_and_version(id) else {
+                let Some((name, version)) = parse_name_and_version(id, "") else {
                     continue;
                 };
 
@@ -120,12 +120,4 @@ pub fn parse_bun_lockb(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyR
     let content = exec(ExecCommandInput::pipe("bun", ["bun.lockb"]).cwd(path.parent().unwrap()))?;
 
     parse_yarn_lock_content(content.stdout.trim(), output)
-}
-
-fn parse_name_and_version(value: &str) -> Option<(&str, &str)> {
-    if value.contains("http://") || value.contains("https://") {
-        return None;
-    }
-
-    value.rsplit_once('@')
 }
