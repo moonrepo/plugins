@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed some issues around version parsing when parsing lockfiles.
+
 ## 1.2.0
 
 #### 🚀 Updates

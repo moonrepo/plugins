@@ -3357,9 +3357,9 @@ dependencies = [
 
 [[package]]
 name = "nodejs_package_json"
-version = "0.4.9"
+version = "0.4.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c87ccf239f2f9d82f1efe31340ae1229c50a0e46ddd4d57a2518a25476061cd"
+checksum = "50f8f74c73604b48a2b8491dce45aaca971279fa7095e4cac7783d9326912764"
 dependencies = [
  "indexmap",
  "regex",

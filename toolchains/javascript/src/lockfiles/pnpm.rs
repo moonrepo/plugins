@@ -1,4 +1,4 @@
-use super::parse_version_spec;
+use super::{parse_name_and_version, parse_version_spec};
 use crate::config::CatalogsMap;
 use moon_pdk::{AnyResult, VirtualPath};
 use moon_pdk_api::{LockDependency, ParseLockOutput};
@@ -21,7 +21,10 @@ pub fn parse_pnpm_lock_yaml(path: &VirtualPath, output: &mut ParseLockOutput) ->
     }
 
     for (name, package) in packages {
-        let (name, version) = parse_name_and_version(&name);
+        let Some((name, version)) = parse_name_and_version(&name, "(") else {
+            continue;
+        };
+
         let reso = package.resolution;
 
         output
@@ -37,24 +40,6 @@ pub fn parse_pnpm_lock_yaml(path: &VirtualPath, output: &mut ParseLockOutput) ->
     }
 
     Ok(())
-}
-
-fn parse_name_and_version(value: &str) -> (&str, &str) {
-    // Remove parents: @jest/core@29.7.0(@babel/types@7.26.10)
-    let value = match value.find('(') {
-        Some(index) => &value[0..index],
-        None => value,
-    };
-
-    // Split on @ but preserve scope: @jest/core@29.7.0
-    if let Some(index) = value.rfind('@')
-        && index != 0
-    {
-        return (&value[0..index], &value[index + 1..]);
-    }
-
-    // No version? Provide a fake value
-    (value, "0.0.0")
 }
 
 #[derive(Default, Deserialize)]

@@ -1,4 +1,4 @@
-use super::parse_version_spec;
+use super::{parse_name_and_version, parse_version_spec};
 use crate::config::CatalogsMap;
 use deno_lockfile::LockfileContent;
 use moon_pdk::{AnyResult, VirtualPath};
@@ -28,7 +28,9 @@ pub fn parse_deno_lock(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyR
     }
 
     for (key, value) in lockfile.packages.npm {
-        let (name, version) = parse_name_and_version(&key);
+        let Some((name, version)) = parse_name_and_version(&key, "_") else {
+            continue;
+        };
 
         output
             .dependencies
@@ -43,21 +45,6 @@ pub fn parse_deno_lock(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyR
     }
 
     Ok(())
-}
-
-fn parse_name_and_version(value: &str) -> (&str, &str) {
-    // Remove parents: @babel/preset-react@7.27.1_@babel+core@7.28.3
-    let value = value.split('_').next().unwrap();
-
-    // Split on @ but preserve scope: @babel/preset-react@7.27.1
-    if let Some(index) = value.rfind('@')
-        && index != 0
-    {
-        return (&value[0..index], &value[index + 1..]);
-    }
-
-    // No version? Provide a fake value
-    (value, "0.0.0")
 }
 
 #[derive(Default, Deserialize)]
