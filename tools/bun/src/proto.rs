@@ -3,9 +3,8 @@ use extism_pdk::*;
 use lang_javascript_common::{
     extract_dev_engine_package_manager_version, extract_dev_engine_runtime_version,
     extract_engine_version, extract_package_manager_version, extract_version_from_text,
-    extract_volta_version, insert_dev_engine_version, remove_dev_engine,
+    extract_volta_version, insert_dev_engine_version, parse_package_json, remove_dev_engine,
 };
-use nodejs_package_json::PackageJson;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
 use std::collections::HashMap;
@@ -58,7 +57,7 @@ pub fn parse_version_file(
     let mut version = None;
 
     if input.file == "package.json" {
-        if let Ok(package_json) = json::from_str::<PackageJson>(&input.content) {
+        if let Some(package_json) = parse_package_json(&input.content) {
             if let Some(constraint) = extract_dev_engine_runtime_version(&package_json, "bun") {
                 version = Some(UnresolvedVersionSpec::parse(constraint)?);
             } else if let Some(constraint) =

@@ -5,9 +5,8 @@ use extism_pdk::*;
 use lang_javascript_common::{
     NodeDistVersion, extract_dev_engine_package_manager_version, extract_engine_version,
     extract_package_manager_version, extract_volta_version, insert_dev_engine_version,
-    remove_dev_engine,
+    parse_package_json, remove_dev_engine,
 };
-use nodejs_package_json::PackageJson;
 use proto_pdk::*;
 use rustc_hash::FxHashMap;
 use schematic::SchemaBuilder;
@@ -66,7 +65,7 @@ pub fn parse_version_file(
     let mut version = None;
 
     if input.file == "package.json"
-        && let Ok(package_json) = json::from_str::<PackageJson>(&input.content)
+        && let Some(package_json) = parse_package_json(&input.content)
     {
         let manager_name = PackageManager::detect()?.to_string();
 
