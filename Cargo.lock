@@ -4195,6 +4195,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "python_poetry_toolchain"
+version = "0.0.1"
+dependencies = [
+ "extism-pdk",
+ "moon_config",
+ "moon_pdk_api",
+ "python_poetry_tool",
+ "schematic",
+ "serde",
+ "toolchain_common",
+]
+
+[[package]]
 name = "python_tool"
 version = "0.14.7"
 dependencies = [
