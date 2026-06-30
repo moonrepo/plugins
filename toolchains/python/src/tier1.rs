@@ -90,7 +90,7 @@ pub fn initialize_toolchain(
                 default_index: 0,
                 options: vec![
                     JsonValue::String("pip".into()),
-                    // JsonValue::String("poetry".into()),
+                    JsonValue::String("poetry".into()),
                     JsonValue::String("uv".into()),
                     JsonValue::String("uv-pip".into()),
                 ],
@@ -104,8 +104,8 @@ pub fn initialize_toolchain(
 fn detect_package_manager(root: &VirtualPath) -> AnyResult<Option<PythonPackageManager>> {
     if root.join("uv.toml").exists() || root.join("uv.lock").exists() {
         return Ok(Some(PythonPackageManager::Uv));
-    // } else if root.join("poetry.toml").exists() || root.join("poetry.lock").exists() {
-    //     return Ok(Some(PythonPackageManager::Poetry));
+    } else if root.join("poetry.toml").exists() || root.join("poetry.lock").exists() {
+        return Ok(Some(PythonPackageManager::Poetry));
     } else if root.join("Pipfile").exists()
         || root.join("Pipfile.lock").exists()
         || root.join("requirements.txt").exists()

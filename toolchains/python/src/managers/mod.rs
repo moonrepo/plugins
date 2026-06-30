@@ -1,7 +1,9 @@
 mod pip;
+mod poetry;
 mod uv;
 
 pub use pip::*;
+pub use poetry::*;
 pub use uv::*;
 
 use moon_config::VersionSpec;

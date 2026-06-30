@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added Poetry as a supported package manager.
+
 ## 0.1.10
 
 #### 🐞 Fixes

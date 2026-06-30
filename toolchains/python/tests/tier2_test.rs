@@ -372,6 +372,53 @@ dependencies = ["internal-lib"]
             }
         }
 
+        mod poetry {
+            use super::*;
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn finds_package_without_lock() {
+                let sandbox = create_empty_moon_sandbox();
+                sandbox.create_file("package/pyproject.toml", "");
+
+                let plugin = sandbox.create_toolchain("python").await;
+
+                let output = plugin
+                    .locate_dependencies_root(LocateDependenciesRootInput {
+                        starting_dir: VirtualPath::Real(sandbox.path().join("package/nested")),
+                        toolchain_config: json!({
+                            "packageManager": "poetry"
+                        }),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert!(output.members.is_none());
+                assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/package"));
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn finds_package_with_lock() {
+                let sandbox = create_empty_moon_sandbox();
+                sandbox.create_file("package/pyproject.toml", "");
+                sandbox.create_file("package/poetry.lock", "");
+
+                let plugin = sandbox.create_toolchain("python").await;
+
+                let output = plugin
+                    .locate_dependencies_root(LocateDependenciesRootInput {
+                        starting_dir: VirtualPath::Real(sandbox.path().join("package/nested")),
+                        toolchain_config: json!({
+                            "packageManager": "poetry"
+                        }),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert!(output.members.is_none());
+                assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/package"));
+            }
+        }
+
         mod uv {
             use super::*;
 
@@ -621,6 +668,110 @@ dependencies = ["internal-lib"]
             let actual = output.install_command.unwrap();
             let expected = ExecCommand::new(
                 ExecCommandInput::new("python", ["-m", "pip", "install", "-c", "constraints.txt"])
+                    .cwd(plugin.plugin.to_virtual_path(sandbox.path())),
+            );
+
+            assert_eq!(actual, expected);
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_poetry() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let output = plugin
+                .install_dependencies(InstallDependenciesInput {
+                    context: MoonContext {
+                        working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
+                        ..Default::default()
+                    },
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "packageManager": "poetry"
+                    }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            let actual = output.install_command.unwrap();
+            let expected = ExecCommand::new(
+                ExecCommandInput::new("poetry", ["install"])
+                    .cwd(plugin.plugin.to_virtual_path(sandbox.path())),
+            );
+
+            assert_eq!(actual, expected);
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_poetry_production() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let output = plugin
+                .install_dependencies(InstallDependenciesInput {
+                    context: MoonContext {
+                        working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
+                        ..Default::default()
+                    },
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "packageManager": "poetry"
+                    }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
+                    }),
+                    production: true,
+                    ..Default::default()
+                })
+                .await;
+
+            let actual = output.install_command.unwrap();
+            let expected = ExecCommand::new(
+                ExecCommandInput::new("poetry", ["install", "--only", "main"])
+                    .cwd(plugin.plugin.to_virtual_path(sandbox.path())),
+            );
+
+            assert_eq!(actual, expected);
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_poetry_with_custom_args() {
+            let mut sandbox = create_empty_moon_sandbox();
+
+            sandbox
+                .host_funcs
+                .mock_load_toolchain_config(|_, _| json!({ "installArgs": ["-a", "b", "--c"]}));
+
+            let plugin = sandbox.create_toolchain("python").await;
+            let output = plugin
+                .install_dependencies(InstallDependenciesInput {
+                    context: MoonContext {
+                        working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
+                        ..Default::default()
+                    },
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "packageManager": "poetry"
+                    }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            let actual = output.install_command.unwrap();
+            let expected = ExecCommand::new(
+                ExecCommandInput::new("poetry", ["install", "-a", "b", "--c"])
                     .cwd(plugin.plugin.to_virtual_path(sandbox.path())),
             );
 
@@ -1002,6 +1153,66 @@ dependencies = ["internal-lib"]
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn parses_poetry_lock() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "poetry.lock",
+                r#"
+[[package]]
+name = "attrs"
+version = "25.1.0"
+description = "Classes Without Boilerplate"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "attrs-25.1.0-py3-none-any.whl", hash = "sha256:c75a69e28a550a7e93789579c22aa26b0f5b83b75dc4e08fe092980051e1090a"},
+]
+
+[[package]]
+name = "cattrs"
+version = "24.1.2"
+description = "Composable complex class support"
+optional = false
+python-versions = ">=3.8"
+files = []
+"#,
+            );
+
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let output = plugin
+                .parse_lock(ParseLockInput {
+                    path: VirtualPath::Real(sandbox.path().join("poetry.lock")),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.dependencies,
+                BTreeMap::from_iter([
+                    (
+                        "attrs".into(),
+                        vec![LockDependency {
+                            hash: Some(
+                                "c75a69e28a550a7e93789579c22aa26b0f5b83b75dc4e08fe092980051e1090a"
+                                    .into()
+                            ),
+                            version: Some(VersionSpec::parse("25.1.0").unwrap()),
+                            ..Default::default()
+                        }]
+                    ),
+                    (
+                        "cattrs".into(),
+                        vec![LockDependency {
+                            version: Some(VersionSpec::parse("24.1.2").unwrap()),
+                            ..Default::default()
+                        }]
+                    ),
+                ])
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn parses_requirements_txt() {
             let sandbox = create_moon_sandbox("lockfiles");
             let plugin = sandbox.create_toolchain("python").await;
@@ -1195,6 +1406,29 @@ dependencies = ["internal-lib"]
                     root: VirtualPath::Real(sandbox.path().into()),
                     toolchain_config: json!({
                         "packageManager": null
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.commands.is_empty());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn does_nothing_for_poetry() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "packageManager": "poetry"
+                    }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
                     }),
                     ..Default::default()
                 })
