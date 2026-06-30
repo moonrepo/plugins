@@ -27,6 +27,21 @@ mod ruby_toolchain_tier1 {
             assert!(output.lock_file_names.contains(&"Gemfile.lock".to_string()));
             assert!(output.exe_names.contains(&"bundle".to_string()));
         }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn reports_configured_vendor_dir() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox
+                .create_toolchain_with_config("ruby", |config| {
+                    config.insert(
+                        "moon_toolchain_config",
+                        json!({ "bundlePath": "vendor/gems" }),
+                    );
+                })
+                .await;
+
+            assert_eq!(plugin.metadata.vendor_dir_name.unwrap(), "vendor/gems");
+        }
     }
 
     mod initialize_toolchain {

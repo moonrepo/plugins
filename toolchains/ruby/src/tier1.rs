@@ -1,7 +1,7 @@
-use crate::config::{BUNDLE_PATH, RubyToolchainConfig};
+use crate::config::RubyToolchainConfig;
 use extism_pdk::*;
 use moon_config::LanguageType;
-use moon_pdk::parse_toolchain_config;
+use moon_pdk::{get_toolchain_config, parse_toolchain_config};
 use moon_pdk_api::*;
 use schematic::SchemaBuilder;
 use starbase_utils::fs;
@@ -12,6 +12,7 @@ pub fn register_toolchain(
     Json(_): Json<RegisterToolchainInput>,
 ) -> FnResult<Json<RegisterToolchainOutput>> {
     enable_tracing();
+    let config = get_toolchain_config::<RubyToolchainConfig>()?;
 
     Ok(Json(RegisterToolchainOutput {
         name: "Ruby".into(),
@@ -45,7 +46,7 @@ pub fn register_toolchain(
             "rake".into(),
             "irb".into(),
         ],
-        vendor_dir_name: Some(BUNDLE_PATH.into()),
+        vendor_dir_name: Some(config.bundle_path),
     }))
 }
 
