@@ -1,6 +1,6 @@
 [package]
 name = "ruby_toolchain"
-version = "0.0.1"
+version = "0.1.0"
 edition = "2024"
 description = "Ruby toolchain WASM plugin for moon."
 authors = ["Alex Launi"]
