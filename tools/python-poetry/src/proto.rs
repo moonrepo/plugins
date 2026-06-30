@@ -2,6 +2,7 @@ use extism_pdk::*;
 use proto_pdk::*;
 use starbase_utils::fs;
 use std::collections::HashMap;
+use toml::Value;
 use tool_common::enable_tracing;
 
 #[host_fn]
@@ -31,9 +32,43 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
 #[plugin_fn]
 pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
     Ok(Json(DetectVersionOutput {
-        files: vec![".poetry-version".into()],
+        files: vec![".poetry-version".into(), "pyproject.toml".into()],
         ignore: vec![],
     }))
+}
+
+#[plugin_fn]
+pub fn parse_version_file(
+    Json(input): Json<ParseVersionFileInput>,
+) -> FnResult<Json<ParseVersionFileOutput>> {
+    let mut version = None;
+
+    // https://peps.python.org/pep-0440/#version-specifiers
+    fn parse_pep(version: &str) -> AnyResult<UnresolvedVersionSpec> {
+        Ok(UnresolvedVersionSpec::parse(
+            version
+                .replace("~=", "~")
+                .replace("===", "^")
+                .replace("==", "="),
+        )?)
+    }
+
+    if input.file == ".poetry-version" {
+        let content = input.content.trim();
+
+        if !content.is_empty() {
+            version = Some(UnresolvedVersionSpec::parse(content)?);
+        }
+    } else if input.file == "pyproject.toml"
+        && let Ok(project_toml) = toml::from_str::<Value>(&input.content)
+        && let Some(tool_field) = project_toml.get("tool")
+        && let Some(poetry_field) = tool_field.get("poetry")
+        && let Some(Value::String(constraint)) = poetry_field.get("requires-poetry")
+    {
+        version = Some(parse_pep(constraint)?);
+    }
+
+    Ok(Json(ParseVersionFileOutput { version }))
 }
 
 #[plugin_fn]

@@ -79,7 +79,7 @@ mod ruby_toolchain_tier1 {
                 })
                 .await;
 
-            assert!(output.default_settings.get("version").is_none());
+            assert!(!output.default_settings.contains_key("version"));
         }
     }
 

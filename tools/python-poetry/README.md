@@ -21,7 +21,7 @@ Poetry plugin does not support configuration.
 
 ## Hooks
 
-Poetry plugin does not support hooks.
+Poetry plugin configures Poetry's virtualenv settings after install.
 
 ## Contributing
 

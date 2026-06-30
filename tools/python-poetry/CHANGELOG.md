@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Will now detect a Poetry version from `tool.poetry.requires-poetry` in `pyproject.toml`.
+
 ## 0.1.6
 
 #### 🚀 Updates

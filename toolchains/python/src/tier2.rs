@@ -138,6 +138,7 @@ pub fn locate_dependencies_root(
         PythonPackageManager::Pip | PythonPackageManager::UvPip => {
             vec!["pyproject.toml", "requirements.in"]
         }
+        PythonPackageManager::Poetry => vec!["pyproject.toml"],
         PythonPackageManager::Uv => vec!["pyproject.toml"],
     };
 
@@ -145,6 +146,7 @@ pub fn locate_dependencies_root(
         PythonPackageManager::Pip | PythonPackageManager::UvPip => {
             vec!["pylock.toml", "requirements.txt"]
         }
+        PythonPackageManager::Poetry => vec!["poetry.lock"],
         PythonPackageManager::Uv => vec!["uv.lock"],
     };
 
@@ -203,6 +205,18 @@ pub fn install_dependencies(
             include_reqs_and_constraints = true;
 
             ExecCommandInput::new("python", ["-m", "pip", "install"])
+        }
+        PythonPackageManager::Poetry => {
+            package_manager_id = "poetry";
+
+            let mut cmd = ExecCommandInput::new("poetry", ["install"]);
+
+            if input.production {
+                cmd.args.push("--only".into());
+                cmd.args.push("main".into());
+            }
+
+            cmd
         }
         PythonPackageManager::Uv => {
             package_manager_id = "uv";
@@ -268,6 +282,7 @@ pub fn parse_lock(Json(input): Json<ParseLockInput>) -> FnResult<Json<ParseLockO
 
     match input.path.file_name().and_then(|name| name.to_str()) {
         Some("pylock.toml") => parse_pylock_toml(&input.path, &mut output)?,
+        Some("poetry.lock") => parse_poetry_lock(&input.path, &mut output)?,
         Some("requirements.txt") => parse_requirements_txt(&input.path, &mut output)?,
         Some("uv.lock") => parse_uv_lock(&input.path, &mut output)?,
         _ => {}
@@ -306,6 +321,10 @@ pub fn setup_environment(
         PythonPackageManager::Pip => (
             ExecCommandInput::new("python", ["-m", "venv", &config.venv_name]),
             "pip",
+        ),
+        PythonPackageManager::Poetry => (
+            ExecCommandInput::new("python", ["-m", "venv", &config.venv_name]),
+            "poetry",
         ),
         PythonPackageManager::Uv | PythonPackageManager::UvPip => (
             ExecCommandInput::new("uv", ["venv", &config.venv_name]),

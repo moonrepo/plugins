@@ -4191,7 +4191,21 @@ dependencies = [
  "starbase_sandbox",
  "starbase_utils",
  "tokio",
+ "toml 1.1.2+spec-1.1.0",
  "tool_common",
+]
+
+[[package]]
+name = "python_poetry_toolchain"
+version = "0.0.1"
+dependencies = [
+ "extism-pdk",
+ "moon_config",
+ "moon_pdk_api",
+ "python_poetry_tool",
+ "schematic",
+ "serde",
+ "toolchain_common",
 ]
 
 [[package]]

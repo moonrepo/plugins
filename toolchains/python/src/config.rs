@@ -8,7 +8,7 @@ derive_enum!(
     pub enum PythonPackageManager {
         #[default]
         Pip,
-        // Poetry,
+        Poetry,
         Uv,
         UvPip,
     }
