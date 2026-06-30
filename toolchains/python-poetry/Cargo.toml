@@ -1,6 +1,6 @@
 [package]
 name = "python_poetry_toolchain"
-version = "0.0.1"
+version = "0.1.0"
 edition = "2024"
 description = "Python Poetry toolchain WASM plugin for moon."
 authors = ["Miles Johnson"]
