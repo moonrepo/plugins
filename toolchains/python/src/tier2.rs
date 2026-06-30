@@ -322,9 +322,10 @@ pub fn setup_environment(
             ExecCommandInput::new("python", ["-m", "venv", &config.venv_name]),
             "pip",
         ),
-        PythonPackageManager::Poetry => {
-            return Ok(Json(output));
-        }
+        PythonPackageManager::Poetry => (
+            ExecCommandInput::new("python", ["-m", "venv", &config.venv_name]),
+            "poetry",
+        ),
         PythonPackageManager::Uv | PythonPackageManager::UvPip => (
             ExecCommandInput::new("uv", ["venv", &config.venv_name]),
             "uv",
