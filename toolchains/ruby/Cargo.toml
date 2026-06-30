@@ -1,0 +1,42 @@
+[package]
+name = "ruby_toolchain"
+version = "0.1.0"
+edition = "2024"
+description = "Ruby toolchain WASM plugin for moon."
+authors = ["Alex Launi"]
+license = "MIT"
+repository = "https://github.com/moonrepo/plugins"
+documentation = "https://github.com/moonrepo/plugins/tree/master/toolchains/ruby"
+publish = false
+
+[package.metadata.release]
+pre-release-replacements = [
+    { file = "./CHANGELOG.md", search = "Unreleased", replace = "{{version}}" },
+]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+toolchain_common = { path = "../../crates/toolchain-common" }
+ruby_tool = { path = "../../tools/ruby", default-features = false }
+extism-pdk = { workspace = true }
+moon_config = { workspace = true }
+moon_pdk = { workspace = true, features = ["schematic"] }
+moon_pdk_api = { workspace = true }
+rubund = "0.1.0"
+schematic = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+starbase_utils = { workspace = true }
+
+[dev-dependencies]
+moon_common = { workspace = true }
+moon_pdk_test_utils = { workspace = true }
+serde_json = { workspace = true }
+starbase_sandbox = { workspace = true }
+tokio = { workspace = true }
+
+[features]
+default = ["wasm"]
+wasm = ["ruby_tool/wasm"]

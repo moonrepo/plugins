@@ -4682,6 +4682,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "rubund"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "64f53e5272cd467a89ad1fa6d66273e3d720477d51875de84e2db7218e370896"
+
+[[package]]
 name = "ruby_tool"
 version = "0.2.7"
 dependencies = [
@@ -4692,6 +4698,27 @@ dependencies = [
  "starbase_sandbox",
  "tokio",
  "tool_common",
+]
+
+[[package]]
+name = "ruby_toolchain"
+version = "0.1.0"
+dependencies = [
+ "extism-pdk",
+ "moon_common",
+ "moon_config",
+ "moon_pdk",
+ "moon_pdk_api",
+ "moon_pdk_test_utils",
+ "rubund",
+ "ruby_tool",
+ "schematic",
+ "serde",
+ "serde_json",
+ "starbase_sandbox",
+ "starbase_utils",
+ "tokio",
+ "toolchain_common",
 ]
 
 [[package]]
