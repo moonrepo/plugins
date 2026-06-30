@@ -18,7 +18,7 @@ mod python_toolchain_tier1 {
                     context: MoonContext {
                         working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
                         ..Default::default()
-                    }
+                    },
                 })
                 .await;
 
@@ -47,7 +47,7 @@ mod python_toolchain_tier1 {
                     context: MoonContext {
                         working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
                         ..Default::default()
-                    }
+                    },
                 })
                 .await;
 

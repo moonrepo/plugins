@@ -1415,29 +1415,6 @@ files = []
         }
 
         #[tokio::test(flavor = "multi_thread")]
-        async fn does_nothing_for_poetry() {
-            let sandbox = create_empty_moon_sandbox();
-            let plugin = sandbox.create_toolchain("python").await;
-
-            let output = plugin
-                .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
-                    toolchain_config: json!({
-                        "packageManager": "poetry"
-                    }),
-                    project: Some(ProjectFragment {
-                        id: Id::raw("workspace"),
-                        source: ".".into(),
-                        ..Default::default()
-                    }),
-                    ..Default::default()
-                })
-                .await;
-
-            assert!(output.commands.is_empty());
-        }
-
-        #[tokio::test(flavor = "multi_thread")]
         async fn can_customize_dir_name() {
             let sandbox = create_empty_moon_sandbox();
             let plugin = sandbox.create_toolchain("python").await;
@@ -1510,6 +1487,68 @@ files = []
                     root: VirtualPath::Real(sandbox.path().into()),
                     toolchain_config: json!({
                         "packageManager": "pip"
+                    }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.commands,
+                vec![ExecCommand::new(
+                    ExecCommandInput::new("python", ["-m", "venv", ".venv", "--clear"])
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_poetry() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "packageManager": "poetry"
+                    }),
+                    project: Some(ProjectFragment {
+                        id: Id::raw("workspace"),
+                        source: ".".into(),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.commands,
+                vec![ExecCommand::new(
+                    ExecCommandInput::new("python", ["-m", "venv", ".venv"])
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_poetry_with_custom_args() {
+            let mut sandbox = create_empty_moon_sandbox();
+
+            sandbox
+                .host_funcs
+                .mock_load_toolchain_config(|_, _| json!({ "venvArgs": ["--clear"]}));
+
+            let plugin = sandbox.create_toolchain("python").await;
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::Real(sandbox.path().into()),
+                    toolchain_config: json!({
+                        "packageManager": "poetry"
                     }),
                     project: Some(ProjectFragment {
                         id: Id::raw("workspace"),
