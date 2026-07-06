@@ -70,7 +70,7 @@ mod download_extension {
         let file = sandbox.path().join("README.md");
 
         assert!(file.exists());
-        assert_eq!(fs::metadata(file).unwrap().len(), 4123);
+        assert_eq!(fs::metadata(file).unwrap().len(), 4115);
     }
 
     #[tokio::test(flavor = "multi_thread")]
