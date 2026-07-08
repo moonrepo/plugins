@@ -1,6 +1,6 @@
 [package]
 name = "go_toolchain"
-version = "1.4.3"
+version = "1.4.4"
 edition = "2024"
 description = "Go toolchain WASM plugin for moon."
 authors = ["Miles Johnson"]
