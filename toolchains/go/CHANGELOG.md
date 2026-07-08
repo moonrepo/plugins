@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed `go list -deps` running on non-Go projects.
+
 ## 1.4.3
 
 #### 🐞 Fixes

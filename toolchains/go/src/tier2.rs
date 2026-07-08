@@ -13,6 +13,13 @@ use starbase_utils::fs;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
+fn is_go_project(dir: &VirtualPath) -> bool {
+    dir.join("go.mod").exists()
+        || dir.join("go.sum").exists()
+        || dir.join("go.work").exists()
+        || dir.join("main.go").exists()
+}
+
 fn execute_go_list(
     dir: &VirtualPath,
     packages: &[String],
@@ -101,7 +108,7 @@ pub fn extend_project_graph(
             }
         };
 
-        if go_exists {
+        if go_exists && is_go_project(&project_root) {
             if config.infer_relationships {
                 manifest.require.extend(execute_go_list(
                     &project_root,
