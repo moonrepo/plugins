@@ -21,6 +21,7 @@ crate-type = ["cdylib", "lib"]
 tool_common = { path = "../../crates/tool-common" }
 extism-pdk = { workspace = true }
 proto_pdk = { workspace = true }
+proto_pdk_api = { workspace = true }
 schematic = { workspace = true }
 serde = { workspace = true }
 
