@@ -1,11 +1,11 @@
-use crate::config::{ArchiveType, Distribution, JavaToolConfig};
+use crate::config::{ArchiveType, Distribution, JavaToolConfig, PackageType};
 use crate::foojay::{FoojayPackage, fetch_package_info, fetch_packages};
 use crate::version::{from_java_version, to_java_version};
 use extism_pdk::*;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::str::FromStr;
 use tool_common::enable_tracing;
 
@@ -186,109 +186,41 @@ pub fn download_prebuilt(
 
 #[plugin_fn]
 pub fn locate_executables(
-    Json(input): Json<LocateExecutablesInput>,
+    Json(_input): Json<LocateExecutablesInput>,
 ) -> FnResult<Json<LocateExecutablesOutput>> {
     let env = get_host_environment()?;
     let config = get_tool_config::<JavaToolConfig>()?;
-    let install_dir = input
-        .install_dir
-        .real_path()
-        .unwrap_or_else(|| input.install_dir.to_path_buf());
-    let java_home = find_java_home(&install_dir, &env).unwrap_or_default();
-    let bin_dir = java_home.join("bin");
-    let java_exe = bin_dir.join(env.os.get_exe_name("java"));
-    let javac_exe = bin_dir.join(env.os.get_exe_name("javac"));
-    let jar_exe = bin_dir.join(env.os.get_exe_name("jar"));
-    let java_home_var = if java_home.as_os_str().is_empty() {
-        "$TOOL_DIR".to_owned()
+
+    // Liberica returns a flat folder structure, and does not use
+    // the macOS bundle folder structure like other distros
+    let bin_dir = if env.os.is_mac() && config.distribution != Distribution::Liberica {
+        "Contents/Home/bin"
     } else {
-        format!("$TOOL_DIR/{}", java_home.display())
+        "bin"
     };
-    let shim_env_vars = Some(HashMap::from_iter([("JAVA_HOME".into(), java_home_var)]));
 
     let mut exes = HashMap::from_iter([(
         "java".into(),
-        ExecutableConfig {
-            shim_env_vars: shim_env_vars.clone(),
-            ..ExecutableConfig::new_primary(java_exe.to_string_lossy())
-        },
+        ExecutableConfig::new_primary(format!("{bin_dir}/{}", env.os.get_exe_name("java"))),
     )]);
 
-    if config.image_type == "jdk" {
+    if config.package_type == PackageType::Jdk {
         exes.extend([
             (
                 "javac".into(),
-                ExecutableConfig {
-                    shim_env_vars: shim_env_vars.clone(),
-                    ..ExecutableConfig::new(javac_exe.to_string_lossy())
-                },
+                ExecutableConfig::new(format!("{bin_dir}/{}", env.os.get_exe_name("javac"))),
             ),
             (
                 "jar".into(),
-                ExecutableConfig {
-                    shim_env_vars,
-                    ..ExecutableConfig::new(jar_exe.to_string_lossy())
-                },
+                ExecutableConfig::new(format!("{bin_dir}/{}", env.os.get_exe_name("jar"))),
             ),
         ]);
     }
 
     Ok(Json(LocateExecutablesOutput {
         exes,
-        exes_dirs: vec![bin_dir],
+        exes_dirs: vec![PathBuf::from(bin_dir)],
         globals_lookup_dirs: vec!["$JAVA_HOME/bin".into()],
         ..LocateExecutablesOutput::default()
     }))
-}
-
-fn find_java_home(install_dir: &Path, env: &HostEnvironment) -> Option<PathBuf> {
-    let exe_name = env.os.get_exe_name("java");
-
-    for candidate in [
-        PathBuf::new(),
-        PathBuf::from("Contents/Home"),
-        PathBuf::from("Home"),
-    ] {
-        if install_dir
-            .join(&candidate)
-            .join("bin")
-            .join(&exe_name)
-            .exists()
-        {
-            return Some(candidate);
-        }
-    }
-
-    find_java_home_nested(install_dir, install_dir, &exe_name, 0)
-}
-
-fn find_java_home_nested(
-    root_dir: &Path,
-    current_dir: &Path,
-    exe_name: &str,
-    depth: usize,
-) -> Option<PathBuf> {
-    if depth > 4 {
-        return None;
-    }
-
-    let entries = std::fs::read_dir(current_dir).ok()?;
-
-    for entry in entries.flatten() {
-        let path = entry.path();
-
-        if !path.is_dir() {
-            continue;
-        }
-
-        if path.join("bin").join(exe_name).exists() {
-            return path.strip_prefix(root_dir).ok().map(PathBuf::from);
-        }
-
-        if let Some(home) = find_java_home_nested(root_dir, &path, exe_name, depth + 1) {
-            return Some(home);
-        }
-    }
-
-    None
 }
