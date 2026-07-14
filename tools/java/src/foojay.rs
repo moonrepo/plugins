@@ -27,14 +27,11 @@ pub struct FoojayPackage {
 
 impl FoojayPackage {
     pub fn is_supported_by_proto(&self) -> bool {
+        // foojay supports dmg/pkg as well, but they are not as
+        // compatible with proto as standard archives are
         if !matches!(
             self.archive_type,
-            ArchiveType::Dmg
-                | ArchiveType::Pkg
-                | ArchiveType::Tar
-                | ArchiveType::TarGz
-                | ArchiveType::TarZ
-                | ArchiveType::Zip
+            ArchiveType::Tar | ArchiveType::TarGz | ArchiveType::TarXz | ArchiveType::Zip
         ) {
             return false;
         }
@@ -61,11 +58,11 @@ pub fn fetch_packages(
     let mut url = format!(
         "{}/packages?latest=available&directly_downloadable=true&javafx_bundled=false&distro={}&architecture={}&package_type={}&operating_system={}&release_status={}",
         config.api_url.trim_end_matches('/'),
-        query_value(config.distribution.to_string()),
-        query_value(java_arch(env)?),
-        query_value(config.package_type.to_string()),
-        query_value(java_os(env)?),
-        query_value(config.release_type.to_string()),
+        config.distribution.to_query_param(),
+        java_arch(env)?,
+        config.package_type.to_string(),
+        java_os(env)?,
+        config.release_type.to_query_param(),
     );
 
     if let Some(version) = version {
@@ -122,7 +119,6 @@ fn query_value(value: impl AsRef<str>) -> String {
         .replace('%', "%25")
         .replace('+', "%2B")
         .replace(' ', "%20")
-        .replace('-', "_")
 }
 
 fn java_os(env: &HostEnvironment) -> AnyResult<&'static str> {

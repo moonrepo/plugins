@@ -1,5 +1,5 @@
-use crate::config::JavaToolConfig;
-use crate::foojay::{fetch_package_info, fetch_packages};
+use crate::config::{ArchiveType, Distribution, JavaToolConfig};
+use crate::foojay::{FoojayPackage, fetch_package_info, fetch_packages};
 use crate::version::{from_java_version, to_java_version};
 use extism_pdk::*;
 use proto_pdk::*;
@@ -9,14 +9,12 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use tool_common::enable_tracing;
 
-static NAME: &str = "Java";
-
 #[plugin_fn]
 pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {
     enable_tracing();
 
     Ok(Json(RegisterToolOutput {
-        name: NAME.into(),
+        name: "Java".into(),
         type_of: PluginType::Language,
         minimum_proto_version: Some(Version::new(0, 46, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
@@ -89,6 +87,24 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
     Ok(Json(LoadVersionsOutput::from(versions)?))
 }
 
+fn find_package(packages: &[FoojayPackage]) -> Option<&FoojayPackage> {
+    for archive in [
+        ArchiveType::TarGz,
+        ArchiveType::TarXz,
+        ArchiveType::Tar,
+        ArchiveType::Zip,
+    ] {
+        if let Some(package) = packages
+            .iter()
+            .find(|package| package.archive_type == archive)
+        {
+            return Some(package);
+        }
+    }
+
+    None
+}
+
 #[plugin_fn]
 pub fn download_prebuilt(
     Json(input): Json<DownloadPrebuiltInput>,
@@ -97,36 +113,58 @@ pub fn download_prebuilt(
 
     if version.is_canary() {
         return Err(plugin_err!(PluginError::UnsupportedCanary {
-            tool: NAME.into()
+            tool: "Java".into()
         }));
     }
 
     let env = get_host_environment()?;
     let config = get_tool_config::<JavaToolConfig>()?;
+    let full_version = version.to_string();
+    let short_version = to_java_version(version);
 
-    let package = if version.is_latest() {
-        fetch_packages(&env, &config, None)?.remove(0)
-    } else {
-        let full_version = version.to_string();
-        let short_version = to_java_version(version);
+    // Load all matching packages
+    let mut packages = fetch_packages(
+        &env,
+        &config,
+        if version.is_latest() {
+            None
+        } else {
+            Some(&short_version)
+        },
+    )?;
 
-        match fetch_packages(&env, &config, Some(&short_version))?
-            .into_iter()
-            .find(|package| {
-                package.java_version == full_version || package.java_version == short_version
-            }) {
-            Some(package) => package,
-            None => {
-                return Err(plugin_err!(
-                    "No Java package available for version <hash>{full_version}</hash> ({short_version}).",
-                ));
-            }
+    // For non-latest, filter the results to matching versions
+    if !version.is_latest() {
+        packages.retain(|package| {
+            package.java_version == full_version || package.java_version == short_version
+        });
+    }
+
+    // Find a package with our requested archive types
+    let package = match find_package(&packages) {
+        Some(package) => package,
+        None => {
+            return Err(plugin_err!(
+                "No Java package available for version <hash>{full_version}</hash>. Using parameters: <mutedlight>distribution={} package={} release={} os={} arch={}</mutedlight>",
+                config.distribution,
+                config.package_type,
+                config.release_type,
+                env.os,
+                env.arch
+            ));
         }
     };
 
+    // Then fetch download information
     let info = fetch_package_info(&config, &package.id)?;
 
     Ok(Json(DownloadPrebuiltOutput {
+        archive_prefix: Some(match config.distribution {
+            // Double nested on macos: openlogic-openjdk-x.x.x-mac-x64/jdk-x.x.x
+            Distribution::Openlogic if env.os.is_mac() => "*/*".into(),
+            // Nested in jdk dir: jdk-x.x.x
+            _ => "*".into(),
+        }),
         checksum: if info.is_checksum_supported_by_proto() {
             Some(Checksum::from_str(&format!(
                 "{}:{}",

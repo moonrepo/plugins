@@ -26,13 +26,13 @@ derive_enum!(
         LibericaNative,
         Mandrel,
         Microsoft,
-        #[serde(alias = "ojdk_build")]
-        OjdkBuild,
+        // #[serde(alias = "ojdk_build")]
+        // OjdkBuild,
         Openlogic,
         Oracle,
         #[serde(alias = "oracle_open_jdk")]
         OracleOpenJdk,
-        Redhat,
+        // Redhat,
         #[serde(alias = "sap_machine")]
         SapMachine,
         Semeru,
@@ -40,10 +40,16 @@ derive_enum!(
         Temurin,
         Trava,
         Zulu,
-        #[serde(alias = "zulu_prime")]
-        ZuluPrime,
+        // #[serde(alias = "zulu_prime")]
+        // ZuluPrime,
     }
 );
+
+impl Distribution {
+    pub fn to_query_param(&self) -> String {
+        self.to_string().replace('-', "_")
+    }
+}
 
 derive_enum!(
     #[derive(ConfigEnum, Default)]
@@ -60,8 +66,8 @@ derive_enum!(
         Tar,
         #[serde(alias = "tar.gz")]
         TarGz,
-        #[serde(alias = "tar.Z")]
-        TarZ,
+        #[serde(alias = "tar.Z", alias = "tar.xz")]
+        TarXz,
         Zip,
     }
 );
@@ -85,6 +91,15 @@ derive_enum!(
         EarlyAccess,
     }
 );
+
+impl ReleaseType {
+    pub fn to_query_param(&self) -> String {
+        match self {
+            Self::GeneralAvailability => "ga".into(),
+            Self::EarlyAccess => "ea".into(),
+        }
+    }
+}
 
 derive_enum!(
     #[derive(ConfigEnum, Default)]
