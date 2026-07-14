@@ -22,7 +22,7 @@ tool_common = { path = "../../crates/tool-common" }
 extism-pdk = { workspace = true }
 proto_pdk = { workspace = true }
 proto_pdk_api = { workspace = true }
-schematic = { workspace = true }
+schematic = { workspace = true, features = ["config", "env"] }
 serde = { workspace = true }
 
 [dev-dependencies]

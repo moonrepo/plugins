@@ -66,8 +66,10 @@ derive_enum!(
         Tar,
         #[serde(alias = "tar.gz")]
         TarGz,
-        #[serde(alias = "tar.Z", alias = "tar.xz")]
+        #[serde(alias = "tar.xz")]
         TarXz,
+        #[serde(alias = "tar.Z")]
+        TarZ,
         Zip,
     }
 );

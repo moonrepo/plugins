@@ -1,7 +1,7 @@
 use crate::config::{
     ArchiveType, Distribution, JavaToolConfig, LibcType, PackageType, ReleaseType,
 };
-use proto_pdk::{AnyResult, HostArch, HostEnvironment, HostLibc, HostOS, PluginError, fetch_json};
+use proto_pdk::{AnyResult, HostArch, HostEnvironment, HostOS, PluginError, fetch_json};
 use serde::Deserialize;
 
 #[derive(Debug, Default, Deserialize)]
@@ -31,7 +31,11 @@ impl FoojayPackage {
         // compatible with proto as standard archives are
         if !matches!(
             self.archive_type,
-            ArchiveType::Tar | ArchiveType::TarGz | ArchiveType::TarXz | ArchiveType::Zip
+            ArchiveType::Tar
+                | ArchiveType::TarGz
+                | ArchiveType::TarXz
+                | ArchiveType::TarZ
+                | ArchiveType::Zip
         ) {
             return false;
         }
@@ -56,7 +60,7 @@ pub fn fetch_packages(
     version: Option<&str>,
 ) -> AnyResult<Vec<FoojayPackage>> {
     let mut url = format!(
-        "{}/packages?latest=available&directly_downloadable=true&javafx_bundled=false&distro={}&architecture={}&package_type={}&operating_system={}&release_status={}",
+        "{}/packages?latest=available&directly_downloadable=true&javafx_bundled=false&archive_type=tar&archive_type=tar.gz&archive_type=tar.xz&archive_type=tar.Z&archive_type=zip&distro={}&architecture={}&package_type={}&operating_system={}&release_status={}",
         config.api_url.trim_end_matches('/'),
         config.distribution.to_query_param(),
         java_arch(env)?,
@@ -69,7 +73,14 @@ pub fn fetch_packages(
         url.push_str(&format!("&version={}", query_value(version)));
     }
 
-    let response: FoojayResponse<FoojayPackage> = fetch_json(url)?;
+    let response: FoojayResponse<FoojayPackage> = fetch_json(&url)?;
+
+    if response.result.is_empty() {
+        return Err(PluginError::Message(format!(
+            "No Java packages available (requested from <url>{url}</url>)."
+        ))
+        .into());
+    }
 
     Ok(response
         .result
@@ -123,13 +134,7 @@ fn query_value(value: impl AsRef<str>) -> String {
 
 fn java_os(env: &HostEnvironment) -> AnyResult<&'static str> {
     Ok(match env.os {
-        HostOS::Linux => {
-            if env.libc == HostLibc::Musl {
-                "linux_musl"
-            } else {
-                "linux"
-            }
-        }
+        HostOS::Linux => "linux",
         HostOS::MacOS => "macos",
         HostOS::Windows => "windows",
         _ => {

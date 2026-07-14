@@ -1,28 +1,57 @@
 use proto_pdk_api::VersionSpec;
 
 pub fn from_java_version(version: &str) -> String {
-    let (prefix, build) = if version.contains('+') {
-        version.split_once('+').unwrap()
-    } else {
-        (version, "")
-    };
+    let mut value = version;
+    let mut pre = None;
+    let mut build = None;
 
-    // Versions don't end in trailing ".0",
-    // so we must fix manually...
-    let suffix = match prefix.matches('.').count() {
-        1 => ".0",
-        0 => ".0.0",
-        _ => "",
-    };
-
-    let mut result = format!("{prefix}{suffix}");
-
-    if !build.is_empty() {
-        result.push('+');
-        result.push_str(build);
+    if let Some(i) = value.rfind('+') {
+        build = Some(&value[i + 1..]);
+        value = &value[0..i];
     }
 
-    result
+    if let Some(i) = value.find('-') {
+        pre = Some(&value[i + 1..]);
+        value = &value[0..i];
+    }
+
+    let mut parts = value.split('.');
+    let mut out = String::new();
+
+    // major
+    out.push_str(parts.next().expect("Expected a major version"));
+
+    // minor
+    out.push('.');
+    out.push_str(parts.next().unwrap_or("0"));
+
+    // patch
+    out.push('.');
+    out.push_str(parts.next().unwrap_or("0"));
+
+    // vendor
+    let vendor = parts.next();
+
+    // prerelease
+    if let Some(pre) = pre {
+        out.push('-');
+        out.push_str(pre);
+
+        if let Some(vendor) = vendor {
+            out.push_str(".v");
+            out.push_str(vendor);
+        }
+    } else if let Some(vendor) = vendor {
+        out.push_str("-v");
+        out.push_str(vendor);
+    }
+
+    if let Some(build) = build {
+        out.push('+');
+        out.push_str(build);
+    }
+
+    out
 }
 
 pub fn to_java_version(spec: &VersionSpec) -> String {
@@ -31,27 +60,43 @@ pub fn to_java_version(spec: &VersionSpec) -> String {
         VersionSpec::Alias(alias) => alias.to_string(),
         _ => {
             let version = spec.as_version().unwrap();
-            let mut next = version.major.to_string();
+            let mut out = version.major.to_string();
+            let mut full = false;
 
-            if version.minor > 0 {
-                next.push('.');
-                next.push_str(&version.minor.to_string());
+            if version.minor > 0 || version.patch > 0 {
+                out.push('.');
+                out.push_str(&version.minor.to_string());
 
                 if version.patch > 0 {
-                    next.push('.');
-                    next.push_str(&version.patch.to_string());
+                    out.push('.');
+                    out.push_str(&version.patch.to_string());
+                    full = true;
                 }
             }
 
             if !version.pre.is_empty() {
-                next = format!("{next}-{}", version.pre);
+                if let Some(vendor) = version.pre.strip_prefix("v") {
+                    if full {
+                        out.push('.');
+                        out.push_str(vendor);
+                    }
+                } else if let Some((pre, vendor)) = version.pre.split_once(".v") {
+                    if full {
+                        out.push('.');
+                        out.push_str(vendor);
+                    }
+
+                    out = format!("{out}-{pre}");
+                } else {
+                    out = format!("{out}-{}", version.pre);
+                }
             }
 
             if !version.build.is_empty() {
-                next = format!("{next}+{}", version.build);
+                out = format!("{out}+{}", version.build);
             }
 
-            next
+            out
         }
     }
 }
@@ -65,10 +110,22 @@ mod tests {
         assert_eq!(from_java_version("1"), "1.0.0");
         assert_eq!(from_java_version("1.2"), "1.2.0");
         assert_eq!(from_java_version("1.2.3"), "1.2.3");
+        assert_eq!(from_java_version("1.2.3.4"), "1.2.3-v4");
+
+        assert_eq!(from_java_version("1-ea"), "1.0.0-ea");
+        assert_eq!(from_java_version("1.2-ea"), "1.2.0-ea");
+        assert_eq!(from_java_version("1.2.3-ea"), "1.2.3-ea");
+        assert_eq!(from_java_version("1.2.3.4-ea"), "1.2.3-ea.v4");
 
         assert_eq!(from_java_version("1+1"), "1.0.0+1");
         assert_eq!(from_java_version("1.2+2"), "1.2.0+2");
         assert_eq!(from_java_version("1.2.3+3"), "1.2.3+3");
+        assert_eq!(from_java_version("1.2.3.4+4"), "1.2.3-v4+4");
+
+        assert_eq!(from_java_version("1-ea+1"), "1.0.0-ea+1");
+        assert_eq!(from_java_version("1.2-ea+2"), "1.2.0-ea+2");
+        assert_eq!(from_java_version("1.2.3-ea+3"), "1.2.3-ea+3");
+        assert_eq!(from_java_version("1.2.3.4-ea+4"), "1.2.3-ea.v4+4");
 
         // Shouldn't change
         assert_eq!(from_java_version("1.0.0"), "1.0.0");
@@ -79,12 +136,21 @@ mod tests {
     fn formats_to() {
         assert_eq!(to_java_version(&VersionSpec::parse("1.0.0").unwrap()), "1");
         assert_eq!(
+            to_java_version(&VersionSpec::parse("1.0.1").unwrap()),
+            "1.0.1"
+        );
+
+        assert_eq!(
             to_java_version(&VersionSpec::parse("1.2.0").unwrap()),
             "1.2"
         );
         assert_eq!(
             to_java_version(&VersionSpec::parse("1.2.3").unwrap()),
             "1.2.3"
+        );
+        assert_eq!(
+            to_java_version(&VersionSpec::parse("1.2.3-v4").unwrap()),
+            "1.2.3.4"
         );
 
         assert_eq!(
@@ -98,6 +164,27 @@ mod tests {
         assert_eq!(
             to_java_version(&VersionSpec::parse("1.2.3+3").unwrap()),
             "1.2.3+3"
+        );
+        assert_eq!(
+            to_java_version(&VersionSpec::parse("1.2.3-v4+4").unwrap()),
+            "1.2.3.4+4"
+        );
+
+        assert_eq!(
+            to_java_version(&VersionSpec::parse("1.0.0-ea+1").unwrap()),
+            "1-ea+1"
+        );
+        assert_eq!(
+            to_java_version(&VersionSpec::parse("1.2.0-ea+2").unwrap()),
+            "1.2-ea+2"
+        );
+        assert_eq!(
+            to_java_version(&VersionSpec::parse("1.2.3-ea+3").unwrap()),
+            "1.2.3-ea+3"
+        );
+        assert_eq!(
+            to_java_version(&VersionSpec::parse("1.2.3-ea.v4+4").unwrap()),
+            "1.2.3.4-ea+4"
         );
     }
 }

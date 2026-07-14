@@ -1,4 +1,4 @@
-use crate::config::{ArchiveType, Distribution, JavaToolConfig, PackageType};
+use crate::config::{ArchiveType, Distribution, JavaToolConfig, LibcType, PackageType};
 use crate::foojay::{FoojayPackage, fetch_package_info, fetch_packages};
 use crate::version::{from_java_version, to_java_version};
 use extism_pdk::*;
@@ -16,7 +16,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
     Ok(Json(RegisterToolOutput {
         name: "Java".into(),
         type_of: PluginType::Language,
-        minimum_proto_version: Some(Version::new(0, 46, 0)),
+        minimum_proto_version: Some(Version::new(0, 59, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         ..RegisterToolOutput::default()
     }))
@@ -87,16 +87,38 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
     Ok(Json(LoadVersionsOutput::from(versions)?))
 }
 
-fn find_package(packages: &[FoojayPackage]) -> Option<&FoojayPackage> {
+// https://github.com/foojayio/discoapi/issues/47
+fn is_compatible_libc(package: &FoojayPackage, env: &HostEnvironment) -> bool {
+    let base = if env.os.is_linux() {
+        if env.libc == HostLibc::Musl {
+            LibcType::Musl
+        } else {
+            LibcType::Glibc
+        }
+    } else if env.os.is_mac() {
+        LibcType::Libc
+    } else {
+        LibcType::CStdLib
+    };
+
+    package.lib_c_type.as_ref().is_none_or(|libc| *libc == base)
+}
+
+fn find_package<'a>(
+    packages: &'a [FoojayPackage],
+    env: &HostEnvironment,
+) -> Option<&'a FoojayPackage> {
     for archive in [
         ArchiveType::TarGz,
         ArchiveType::TarXz,
         ArchiveType::Tar,
         ArchiveType::Zip,
+        // Always last since its non-standard
+        ArchiveType::TarZ,
     ] {
         if let Some(package) = packages
             .iter()
-            .find(|package| package.archive_type == archive)
+            .find(|package| package.archive_type == archive && is_compatible_libc(package, env))
         {
             return Some(package);
         }
@@ -136,12 +158,14 @@ pub fn download_prebuilt(
     // For non-latest, filter the results to matching versions
     if !version.is_latest() {
         packages.retain(|package| {
-            package.java_version == full_version || package.java_version == short_version
+            package.java_version == full_version
+                || package.java_version == short_version
+                || from_java_version(&package.java_version) == full_version
         });
     }
 
     // Find a package with our requested archive types
-    let package = match find_package(&packages) {
+    let package = match find_package(&packages, &env) {
         Some(package) => package,
         None => {
             return Err(plugin_err!(
@@ -223,4 +247,26 @@ pub fn locate_executables(
         globals_lookup_dirs: vec!["$JAVA_HOME/bin".into()],
         ..LocateExecutablesOutput::default()
     }))
+}
+
+#[plugin_fn]
+pub fn activate_environment(
+    Json(input): Json<ActivateEnvironmentInput>,
+) -> FnResult<Json<ActivateEnvironmentOutput>> {
+    let mut output = ActivateEnvironmentOutput::default();
+
+    let home_dir_base = input.context.tool_dir;
+    let home_dir_macos = home_dir_base.join("Contents").join("Home");
+
+    let home_dir = if home_dir_macos.exists() {
+        home_dir_macos
+    } else {
+        home_dir_base
+    };
+
+    if let Some(home) = home_dir.real_path_string() {
+        output.env.insert("JAVA_HOME".into(), home);
+    }
+
+    Ok(Json(output))
 }
