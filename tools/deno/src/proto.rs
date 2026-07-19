@@ -97,9 +97,9 @@ pub fn build_instructions(
         ],
         requirements: vec![
             BuildRequirement::XcodeCommandLineTools,
-            BuildRequirement::GitVersion(VersionReq::parse(">=2.19.2")?),
+            BuildRequirement::GitVersion(Requirement::parse(">=2.19.2")?),
             BuildRequirement::CommandExistsOnPath("cargo".into()),
-            BuildRequirement::CommandVersion("python".into(), VersionReq::parse(">=3")?, None),
+            BuildRequirement::CommandVersion("python".into(), Requirement::parse(">=3")?, None),
         ],
         ..Default::default()
     };
@@ -200,7 +200,7 @@ pub fn download_prebuilt(
     };
 
     // Checksums were added/broken in v2 and were fixed in v2.0.1
-    let checksum_req = VersionReq::parse(">=2.0.1").unwrap();
+    let checksum_req = Requirement::parse(">=2.0.1").unwrap();
 
     Ok(Json(DownloadPrebuiltOutput {
         // Checksums were added in v2.0.1+ but were broken in v2.0.0

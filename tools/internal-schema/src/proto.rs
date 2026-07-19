@@ -248,8 +248,16 @@ fn interpolate_tokens(
         let day = format!("{:0>2}", v.patch);
         let major_minor = format!("{}.{}", v.major, v.minor); // Deprecated, remains for backwards compatibility
         let year_month = format!("{:0>4}-{:0>2}", v.major, v.minor); // Deprecated, remains for backwards compatibility
-        let pre = v.pre.to_string();
-        let build = v.build.to_string();
+        let pre = v
+            .prerelease
+            .as_ref()
+            .map(|pre| pre.to_string())
+            .unwrap_or_default();
+        let build = v
+            .build
+            .as_ref()
+            .map(|build| build.to_string())
+            .unwrap_or_default();
 
         value = value
             .replace("{versionMajor}", &major)

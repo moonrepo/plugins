@@ -5,6 +5,7 @@ use extism_pdk::*;
 use moon_pdk::parse_toolchain_config_schema;
 use moon_pdk_api::*;
 use node_depman_tool::PackageManager;
+use proto_pdk_api::UnresolvedVersionSpec;
 
 #[plugin_fn]
 pub fn define_requirements(
@@ -26,14 +27,17 @@ pub fn setup_environment(
     if manager == PackageManager::Yarn {
         let config = parse_toolchain_config_schema::<YarnToolchainConfig>(input.toolchain_config)?;
 
-        if let Some(version) = &config.version
-            && manager.is_yarn_berry(version)
-        {
-            for plugin in config.plugins {
-                output.commands.push(ExecCommand::new(
-                    ExecCommandInput::new("yarn", ["plugin", "import", &plugin])
-                        .cwd(input.root.clone()),
-                ));
+        // TODO fix once moon is on proto 0.59
+        if let Some(incompat_version) = &config.version {
+            let compat_version = UnresolvedVersionSpec::parse(incompat_version.to_string())?;
+
+            if manager.is_yarn_berry(&compat_version) {
+                for plugin in config.plugins {
+                    output.commands.push(ExecCommand::new(
+                        ExecCommandInput::new("yarn", ["plugin", "import", &plugin])
+                            .cwd(input.root.clone()),
+                    ));
+                }
             }
         }
     }
