@@ -187,13 +187,26 @@ pub fn load_versions(Json(_input): Json<LoadVersionsInput>) -> FnResult<Json<Loa
         Ok(())
     };
 
-    // Yarn is managed by 2 different packages, so we need to request versions from both of them!
+    // Yarn is managed by 3 different sources, so we need to request versions from all of them!
     if manager.is_yarn() {
+        // v1
         map_output(fetch_text(format!("{registry_url}/yarn/"))?, true)?;
+
+        // v2-5
         map_output(
             fetch_text(format!("{registry_url}/@yarnpkg/cli-dist/"))?,
             true,
         )?;
+
+        // v6+
+        let tags = load_git_tags("https://github.com/yarnpkg/zpm")?
+            .into_iter()
+            .filter_map(|tag| tag.strip_prefix('v').map(|tag| tag.to_owned()))
+            .collect::<Vec<_>>();
+
+        for tag in tags {
+            output.versions.push(VersionSpec::parse(tag)?);
+        }
     } else {
         map_output(
             fetch_text(format!("{registry_url}/{package_name}/"))?,
@@ -304,6 +317,58 @@ pub fn download_prebuilt(
         }));
     }
 
+    // Yarn v6 is Rust based and is NOT installed from the npm registry!
+    // https://v6.yarnpkg.com/getting-started
+    if manager == PackageManager::Yarn6 {
+        let env = get_host_environment()?;
+
+        let arch = match env.arch {
+            HostArch::Arm64 => "aarch64",
+            HostArch::X64 => "x86_64",
+            other => {
+                return Err(plugin_err!(PluginError::UnsupportedArch {
+                    tool: "yarn".into(),
+                    arch: other.to_string(),
+                }));
+            }
+        };
+
+        let os = match env.os {
+            HostOS::MacOS => "apple-darwin",
+            HostOS::Linux => "unknown-linux",
+            other => {
+                return Err(plugin_err!(PluginError::UnsupportedOS {
+                    tool: "yarn".into(),
+                    os: other.to_string(),
+                }));
+            }
+        };
+
+        let libc = if env.os.is_linux() {
+            if env.libc == HostLibc::Musl {
+                "-musl"
+            } else {
+                return Err(plugin_err!(PluginError::Message(
+                    "Only musl is supported.".into()
+                )));
+            }
+        } else {
+            ""
+        };
+
+        let filename = format!("yarn-{arch}-{os}{libc}.zip");
+
+        return Ok(Json(DownloadPrebuiltOutput {
+            archive_prefix: Some(filename.replace(".zip", "")),
+            download_url: format!(
+                "https://github.com/yarnpkg/zpm/releases/download/v{version}/{filename}"
+            ),
+            download_name: Some(filename),
+            ..Default::default()
+        }));
+    }
+
+    // Everything else is provided by the npm registry
     let package_name = manager.get_package_name();
 
     let package_without_scope = if let Some(index) = package_name.find('/') {
@@ -395,10 +460,14 @@ pub fn locate_executables(
             }
         }
         PackageManager::Yarn1 | PackageManager::Yarn2to5 | PackageManager::Yarn6 => {
-            primary = ExecutableConfig::new_primary("shims/yarn");
+            if manager == PackageManager::Yarn6 {
+                primary = ExecutableConfig::new_primary(env.os.get_exe_name("yarn-bin"));
+            } else {
+                primary = ExecutableConfig::new_primary("shims/yarn");
 
-            // yarnpkg
-            secondary.insert("yarnpkg".into(), ExecutableConfig::new("shims/yarn"));
+                // yarnpkg
+                secondary.insert("yarnpkg".into(), ExecutableConfig::new("shims/yarn"));
+            }
 
             // https://github.com/yarnpkg/yarn/blob/master/src/cli/commands/global.js#L84
             if env.os.is_windows() {
