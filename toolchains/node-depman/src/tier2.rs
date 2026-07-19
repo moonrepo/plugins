@@ -24,21 +24,21 @@ pub fn setup_environment(
     let mut output = SetupEnvironmentOutput::default();
 
     // Yarn plugins
-    if manager == PackageManager::Yarn {
+    if manager.is_yarn() {
         let config = parse_toolchain_config_schema::<YarnToolchainConfig>(input.toolchain_config)?;
 
         // TODO fix once moon is on proto 0.59
         if let Some(incompat_version) = &config.version {
-            let compat_version = UnresolvedVersionSpec::parse(incompat_version.to_string())?;
+            let _compat_version = UnresolvedVersionSpec::parse(incompat_version.to_string())?;
 
-            if manager.is_yarn_berry(&compat_version) {
-                for plugin in config.plugins {
-                    output.commands.push(ExecCommand::new(
-                        ExecCommandInput::new("yarn", ["plugin", "import", &plugin])
-                            .cwd(input.root.clone()),
-                    ));
-                }
+            // if manager.is_yarn_berry(&compat_version) {
+            for plugin in config.plugins {
+                output.commands.push(ExecCommand::new(
+                    ExecCommandInput::new("yarn", ["plugin", "import", &plugin])
+                        .cwd(input.root.clone()),
+                ));
             }
+            //}
         }
     }
 

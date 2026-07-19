@@ -21,7 +21,7 @@ pub fn register_toolchain(
             lock_file_names: vec!["package-lock.json".into(), "npm-shrinkwrap.json".into()],
             ..Default::default()
         },
-        PackageManager::Pnpm => RegisterToolchainOutput {
+        PackageManager::Pnpm | PackageManager::Pnpm11 => RegisterToolchainOutput {
             config_file_globs: vec![
                 ".npmrc".into(),
                 "pnpm-workspace.yaml".into(),
@@ -31,15 +31,17 @@ pub fn register_toolchain(
             lock_file_names: vec!["pnpm-lock.yaml".into()],
             ..Default::default()
         },
-        PackageManager::Yarn => RegisterToolchainOutput {
-            config_file_globs: vec![".npmrc".into(), ".yarnrc.*".into()],
-            exe_names: vec!["yarn".into(), "yarnpkg".into()],
-            lock_file_names: vec!["yarn.lock".into()],
-            ..Default::default()
-        },
+        PackageManager::Yarn1 | PackageManager::Yarn2to5 | PackageManager::Yarn6 => {
+            RegisterToolchainOutput {
+                config_file_globs: vec![".npmrc".into(), ".yarnrc.*".into()],
+                exe_names: vec!["yarn".into(), "yarnpkg".into()],
+                lock_file_names: vec!["yarn.lock".into()],
+                ..Default::default()
+            }
+        }
     };
 
-    output.name = manager.to_string();
+    output.name = manager.get_bin_name();
     output.plugin_version = env!("CARGO_PKG_VERSION").into();
     output.manifest_file_names.push("package.json".into());
     output.vendor_dir_name = Some("node_modules".into());
@@ -68,8 +70,12 @@ pub fn define_toolchain_config() -> FnResult<Json<DefineToolchainConfigOutput>> 
     Ok(Json(DefineToolchainConfigOutput {
         schema: match manager {
             PackageManager::Npm => SchemaBuilder::build_root::<NpmToolchainConfig>(),
-            PackageManager::Pnpm => SchemaBuilder::build_root::<PnpmToolchainConfig>(),
-            PackageManager::Yarn => SchemaBuilder::build_root::<YarnToolchainConfig>(),
+            PackageManager::Pnpm | PackageManager::Pnpm11 => {
+                SchemaBuilder::build_root::<PnpmToolchainConfig>()
+            }
+            PackageManager::Yarn1 | PackageManager::Yarn2to5 | PackageManager::Yarn6 => {
+                SchemaBuilder::build_root::<YarnToolchainConfig>()
+            }
         },
     }))
 }

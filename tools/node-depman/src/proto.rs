@@ -31,7 +31,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
     let manager = PackageManager::detect()?;
 
     Ok(Json(RegisterToolOutput {
-        name: manager.to_string(),
+        name: manager.get_bin_name(),
         type_of: PluginType::DependencyManager,
         lock_options: ToolLockOptions {
             ignore_os_arch: true,
@@ -68,7 +68,7 @@ pub fn parse_version_file(
     if input.file == "package.json"
         && let Ok(package_json) = json::from_str::<PackageJson>(&input.content)
     {
-        let manager_name = PackageManager::detect()?.to_string();
+        let manager_name = PackageManager::detect()?.get_bin_name();
 
         if let Some(constraint) =
             extract_dev_engine_package_manager_version(&package_json, &manager_name)
@@ -111,7 +111,7 @@ pub fn pin_version(Json(input): Json<PinVersionInput>) -> FnResult<Json<PinVersi
         insert_dev_engine_version(
             &mut package_json,
             "packageManager".into(),
-            manager.to_string(),
+            manager.get_bin_name(),
             input.version.to_string(),
         )?;
 
@@ -138,7 +138,7 @@ pub fn unpin_version(Json(input): Json<UnpinVersionInput>) -> FnResult<Json<Unpi
         if let Some(version) = remove_dev_engine(
             &mut package_json,
             "packageManager".into(),
-            manager.to_string(),
+            manager.get_bin_name(),
         )? {
             starbase_utils::json::write_file_with_config(&file, &package_json, true)?;
 
@@ -154,11 +154,11 @@ pub fn unpin_version(Json(input): Json<UnpinVersionInput>) -> FnResult<Json<Unpi
 }
 
 #[plugin_fn]
-pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
+pub fn load_versions(Json(_input): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
     let mut output = LoadVersionsOutput::default();
     let manager = PackageManager::detect()?;
     let registry_url = get_tool_config::<NodeDepmanToolConfig>()?.registry_url;
-    let package_name = manager.get_package_name(&input.initial);
+    let package_name = manager.get_package_name();
 
     let mut map_output = |res_text: String, is_yarn: bool| -> Result<(), Error> {
         let res = parse_registry_response(res_text, is_yarn)?;
@@ -188,7 +188,7 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
     };
 
     // Yarn is managed by 2 different packages, so we need to request versions from both of them!
-    if manager == PackageManager::Yarn {
+    if manager.is_yarn() {
         map_output(fetch_text(format!("{registry_url}/yarn/"))?, true)?;
         map_output(
             fetch_text(format!("{registry_url}/@yarnpkg/cli-dist/"))?,
@@ -261,7 +261,7 @@ pub fn resolve_version(
             }
         }
 
-        PackageManager::Yarn => {
+        PackageManager::Yarn1 | PackageManager::Yarn2to5 | PackageManager::Yarn6 => {
             if let UnresolvedVersionSpec::Alias(alias) = input.initial {
                 if alias == "berry" || alias == "latest" {
                     output.candidate = Some(UnresolvedVersionSpec::parse("~4")?);
@@ -278,7 +278,7 @@ pub fn resolve_version(
 }
 
 fn get_archive_prefix(manager: &PackageManager, spec: &VersionSpec) -> String {
-    if manager.is_yarn_classic(spec.to_unresolved_spec())
+    if manager == &PackageManager::Yarn1
         && let Some(version) = spec.as_version()
     {
         // Prefix changed to "package" in v1.22.20
@@ -296,15 +296,15 @@ pub fn download_prebuilt(
     Json(input): Json<DownloadPrebuiltInput>,
 ) -> FnResult<Json<DownloadPrebuiltOutput>> {
     let version = &input.context.version;
-    let manager = PackageManager::detect()?;
+    let manager = PackageManager::detect_from_version(version)?;
 
     if version.is_canary() {
         return Err(plugin_err!(PluginError::UnsupportedCanary {
-            tool: manager.to_string()
+            tool: manager.get_bin_name()
         }));
     }
 
-    let package_name = manager.get_package_name(version.to_unresolved_spec());
+    let package_name = manager.get_package_name();
 
     let package_without_scope = if let Some(index) = package_name.find('/') {
         &package_name[index + 1..]
@@ -335,12 +335,12 @@ pub fn locate_executables(
     Json(input): Json<LocateExecutablesInput>,
 ) -> FnResult<Json<LocateExecutablesOutput>> {
     let env = get_host_environment()?;
-    let manager = PackageManager::detect()?;
+    let manager = PackageManager::detect_from_version(&input.context.version)?;
     let mut secondary = FxHashMap::<String, ExecutableConfig>::default();
     let primary;
 
     if !input.install_dir.join("shims").exists() {
-        create_internal_shims(&env, &input.install_dir, &input.context.version, &manager)?;
+        create_internal_shims(&env, &input.install_dir, &manager)?;
     }
 
     // These are the directories that contain the executable binaries,
@@ -370,13 +370,13 @@ pub fn locate_executables(
             // https://github.com/npm/cli/blob/latest/workspaces/config/lib/index.js#L339
             globals_lookup_dirs.push("$TOOL_DIR/shims".into());
         }
-        PackageManager::Pnpm => {
+        PackageManager::Pnpm | PackageManager::Pnpm11 => {
             primary = ExecutableConfig::new_primary("shims/pnpm");
 
             // pnpx
             secondary.insert("pnpx".into(), ExecutableConfig::new("shims/pnpx"));
 
-            if manager.is_pnpm_11(&input.context.version) {
+            if manager == PackageManager::Pnpm11 {
                 secondary.insert("pn".into(), ExecutableConfig::new("shims/pn"));
                 secondary.insert("pnx".into(), ExecutableConfig::new("shims/pnx"));
             }
@@ -394,7 +394,7 @@ pub fn locate_executables(
                 globals_lookup_dirs.push("$HOME/.local/share/pnpm".into());
             }
         }
-        PackageManager::Yarn => {
+        PackageManager::Yarn1 | PackageManager::Yarn2to5 | PackageManager::Yarn6 => {
             primary = ExecutableConfig::new_primary("shims/yarn");
 
             // yarnpkg
@@ -420,7 +420,7 @@ pub fn locate_executables(
     // Always add this so that it's available for `get_global_dirs`
     globals_lookup_dirs.push("$PROTO_HOME/tools/node/globals/bin".into());
 
-    let mut exes = FxHashMap::from_iter([(manager.to_string(), primary)]);
+    let mut exes = FxHashMap::from_iter([(manager.get_bin_name(), primary)]);
     exes.extend(secondary);
 
     // Update the permissions of each executable since they are custom shims
@@ -467,7 +467,7 @@ pub fn activate_environment(
             .to_string();
 
         let env = get_host_environment()?;
-        let manager = PackageManager::detect()?;
+        let manager = PackageManager::detect_from_version(&input.context.version)?;
 
         match manager {
             // Unix will create a /bin directory when installing into the root,
@@ -485,7 +485,7 @@ pub fn activate_environment(
 
             // Pnpm has explicit support for the bin and root dirs,
             // which makes this super simple to handle.
-            PackageManager::Pnpm => {
+            PackageManager::Pnpm | PackageManager::Pnpm11 => {
                 output
                     .env
                     .insert("pnpm_config_global_dir".into(), globals_root_dir);
@@ -496,7 +496,7 @@ pub fn activate_environment(
 
             // Both Unix and Windows will create a /bin directory,
             // when installing into the root.
-            PackageManager::Yarn => {
+            PackageManager::Yarn1 | PackageManager::Yarn2to5 | PackageManager::Yarn6 => {
                 output.env.insert("PREFIX".into(), globals_root_dir);
             }
         };
@@ -529,7 +529,6 @@ fn create_internal_shim(
 fn create_internal_shims(
     env: &HostEnvironment,
     tool_dir: &VirtualPath,
-    version: &VersionSpec,
     package_manager: &PackageManager,
 ) -> AnyResult<()> {
     match package_manager {
@@ -537,16 +536,16 @@ fn create_internal_shims(
             create_internal_shim(env, tool_dir, "npm", "npm-cli.js")?;
             create_internal_shim(env, tool_dir, "npx", "npx-cli.js")?;
         }
-        PackageManager::Pnpm => {
+        PackageManager::Pnpm | PackageManager::Pnpm11 => {
             create_internal_shim(env, tool_dir, "pnpm", "pnpm.cjs")?;
             create_internal_shim(env, tool_dir, "pnpx", "pnpx.cjs")?;
 
-            if package_manager.is_pnpm_11(version) {
+            if package_manager == &PackageManager::Pnpm11 {
                 create_internal_shim(env, tool_dir, "pn", "pnpm.cjs")?;
                 create_internal_shim(env, tool_dir, "pnx", "pnpx.cjs")?;
             }
         }
-        PackageManager::Yarn => {
+        PackageManager::Yarn1 | PackageManager::Yarn2to5 | PackageManager::Yarn6 => {
             create_internal_shim(env, tool_dir, "yarn", "yarn.js")?;
         }
     };
