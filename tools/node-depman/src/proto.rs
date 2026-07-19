@@ -37,7 +37,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
             ignore_os_arch: true,
             ..Default::default()
         },
-        minimum_proto_version: Some(Version::new(0, 56, 0)),
+        minimum_proto_version: Some(Version::new(0, 59, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         requires: vec!["node".into()],
         ..RegisterToolOutput::default()

@@ -74,7 +74,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
             SchemaType::Language => PluginType::Language,
             SchemaType::VersionManager => PluginType::VersionManager,
         },
-        minimum_proto_version: Some(Version::new(0, 46, 0)),
+        minimum_proto_version: Some(Version::new(0, 59, 0)),
         default_version: schema.metadata.default_version,
         plugin_version: match schema.metadata.plugin_version {
             Some(version) => Some(version),
