@@ -74,7 +74,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
             SchemaType::Language => PluginType::Language,
             SchemaType::VersionManager => PluginType::VersionManager,
         },
-        minimum_proto_version: Some(Version::new(0, 46, 0)),
+        minimum_proto_version: Some(Version::new(0, 59, 0)),
         default_version: schema.metadata.default_version,
         plugin_version: match schema.metadata.plugin_version {
             Some(version) => Some(version),
@@ -248,8 +248,16 @@ fn interpolate_tokens(
         let day = format!("{:0>2}", v.patch);
         let major_minor = format!("{}.{}", v.major, v.minor); // Deprecated, remains for backwards compatibility
         let year_month = format!("{:0>4}-{:0>2}", v.major, v.minor); // Deprecated, remains for backwards compatibility
-        let pre = v.pre.to_string();
-        let build = v.build.to_string();
+        let pre = v
+            .prerelease
+            .as_ref()
+            .map(|pre| pre.to_string())
+            .unwrap_or_default();
+        let build = v
+            .build
+            .as_ref()
+            .map(|build| build.to_string())
+            .unwrap_or_default();
 
         value = value
             .replace("{versionMajor}", &major)

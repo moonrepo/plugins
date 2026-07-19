@@ -33,7 +33,7 @@ pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<Regi
         } else {
             vec!["node".into(), "npm".into()]
         },
-        minimum_proto_version: Some(Version::new(0, 53, 0)),
+        minimum_proto_version: Some(Version::new(0, 59, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         unstable: Switch::Toggle(true),
         ..RegisterToolOutput::default()

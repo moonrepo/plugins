@@ -25,7 +25,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
     Ok(Json(RegisterToolOutput {
         name: NAME.into(),
         type_of: PluginType::Language,
-        minimum_proto_version: Some(Version::new(0, 46, 0)),
+        minimum_proto_version: Some(Version::new(0, 59, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         self_upgrade_commands: vec!["upgrade".into()],
         ..RegisterToolOutput::default()
@@ -177,8 +177,7 @@ pub fn download_prebuilt(
     let has_windows_support = match &input.context.version {
         VersionSpec::Canary => true,
         VersionSpec::Alias(alias) => alias == "latest",
-        VersionSpec::Semantic(version) => version.major >= 1 && version.minor >= 1,
-        _ => false,
+        VersionSpec::Version(version) => version.major >= 1 && version.minor >= 1,
     };
 
     check_supported_os_and_arch(

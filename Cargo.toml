@@ -10,7 +10,6 @@ rustc-hash = "2.1.2"
 schematic = { version = "0.19.7", default-features = false, features = [
     "schema",
 ] }
-semver = "1.0.28"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = { version = "1.0.150", features = ["preserve_order"] }
 serial_test = "3.5.0"
@@ -42,9 +41,9 @@ moon_target = { version = "3.0.0" }
 # moon_target = { path = "../../moon/crates/target" }
 
 # proto
-proto_pdk = { version = "0.32.9" }
-proto_pdk_api = { version = "0.31.13" }
-proto_pdk_test_utils = { version = "0.45.1" }
+proto_pdk = { version = "0.33.0" }
+proto_pdk_api = { version = "0.32.0" }
+proto_pdk_test_utils = { version = "0.47.0" }
 # proto_pdk = { path = "../../proto/crates/pdk" }
 # proto_pdk_api = { path = "../../proto/crates/pdk-api" }
 # proto_pdk_test_utils = { path = "../../proto/crates/pdk-test-utils" }

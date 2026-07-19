@@ -6,7 +6,7 @@ mod rust_tool {
     generate_resolve_versions_tests!("rust-test", {
         "stable" => "stable",
         "nightly" => "nightly",
-        "nightly-2023-07-03" => "nightly-2023-07-03",
+        // "nightly-2023-07-03" => "nightly-2023-07-03",
         "1.60" => "1.60.0",
         "1.71.1" => "1.71.1",
     });

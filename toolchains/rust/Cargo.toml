@@ -28,7 +28,6 @@ moon_pdk = { workspace = true, features = ["schematic"] }
 moon_pdk_api = { workspace = true }
 rustc-hash = { workspace = true }
 schematic = { workspace = true, features = ["config"] }
-semver = { workspace = true }
 serde = { workspace = true }
 starbase_utils = { workspace = true, features = ["editor-config", "toml"] }
 

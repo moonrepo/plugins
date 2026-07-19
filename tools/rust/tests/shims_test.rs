@@ -10,6 +10,7 @@ mod rust_tool {
         let plugin = sandbox.create_plugin("rust-test").await;
 
         Linker::new(&plugin.tool, &ToolSpec::default())
+            .unwrap()
             .link_shims(false)
             .await
             .unwrap();

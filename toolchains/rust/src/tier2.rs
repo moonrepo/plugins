@@ -232,7 +232,7 @@ pub fn parse_lock(Json(input): Json<ParseLockInput>) -> FnResult<Json<ParseLockO
 
     for package in lock.packages {
         let mut dep = LockDependency {
-            version: Some(VersionSpec::Semantic(SemVer(package.version))),
+            version: VersionSpec::parse(package.version.to_string()).ok(),
             ..Default::default()
         };
 
