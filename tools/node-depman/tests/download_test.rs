@@ -336,7 +336,7 @@ mod node_depman_tool {
         }
     }
 
-    mod yarn {
+    mod yarn1 {
         use super::*;
 
         generate_download_install_tests!("yarn-test", "1.22.0");
@@ -509,7 +509,7 @@ mod node_depman_tool {
                 plugin
                     .download_prebuilt(DownloadPrebuiltInput {
                         context: PluginContext {
-                            version: VersionSpec::parse("9.0.0").unwrap(),
+                            version: VersionSpec::parse("4.5.0").unwrap(),
                             working_dir: VirtualPath::Real(sandbox.path().into()),
                             ..Default::default()
                         },
@@ -519,7 +519,7 @@ mod node_depman_tool {
                 DownloadPrebuiltOutput {
                     archive_prefix: Some("package".into()),
                     download_url:
-                        "https://registry.npmjs.org/@yarnpkg/cli-dist/-/cli-dist-9.0.0.tgz".into(),
+                        "https://registry.npmjs.org/@yarnpkg/cli-dist/-/cli-dist-4.5.0.tgz".into(),
                     http_headers: FxHashMap::from_iter([(
                         "Authorization".into(),
                         "Bearer abc123".into()
@@ -557,7 +557,7 @@ npmRegistries:
                 plugin
                     .download_prebuilt(DownloadPrebuiltInput {
                         context: PluginContext {
-                            version: VersionSpec::parse("9.0.0").unwrap(),
+                            version: VersionSpec::parse("4.5.0").unwrap(),
                             working_dir: VirtualPath::Real(sandbox.path().into()),
                             ..Default::default()
                         },
@@ -567,13 +567,298 @@ npmRegistries:
                 DownloadPrebuiltOutput {
                     archive_prefix: Some("package".into()),
                     download_url:
-                        "https://registry.yarnpkg.com/@yarnpkg/cli-dist/-/cli-dist-9.0.0.tgz".into(),
+                        "https://registry.yarnpkg.com/@yarnpkg/cli-dist/-/cli-dist-4.5.0.tgz".into(),
                     http_headers: FxHashMap::from_iter([(
                         "Authorization".into(),
                         "Bearer abc123".into()
                     )]),
                     ..Default::default()
                 }
+            );
+        }
+    }
+
+    mod yarn6 {
+        use super::*;
+
+        // Yarn >= 6 is Rust based and downloaded from GitHub releases,
+        // not the npm registry: https://github.com/yarnpkg/zpm
+
+        #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+        mod install {
+            use super::*;
+
+            generate_download_install_tests!("yarn-test", "6.0.0-rc.19");
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_prebuilt_macos_arm64() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("yarn-test", |config| {
+                    config.host(HostOS::MacOS, HostArch::Arm64);
+                })
+                .await;
+
+            assert_eq!(
+                plugin
+                    .download_prebuilt(DownloadPrebuiltInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("6.0.0-rc.19").unwrap(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .await,
+                DownloadPrebuiltOutput {
+                    archive_prefix: Some("yarn-aarch64-apple-darwin".into()),
+                    download_name: Some("yarn-aarch64-apple-darwin.zip".into()),
+                    download_url: "https://github.com/yarnpkg/zpm/releases/download/v6.0.0-rc.19/yarn-aarch64-apple-darwin.zip".into(),
+                    ..Default::default()
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_prebuilt_linux_arm64_musl() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("yarn-test", |config| {
+                    config.host_with(|host| {
+                        host.os = HostOS::Linux;
+                        host.arch = HostArch::Arm64;
+                        host.libc = HostLibc::Musl;
+                    });
+                })
+                .await;
+
+            assert_eq!(
+                plugin
+                    .download_prebuilt(DownloadPrebuiltInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("6.0.0-rc.19").unwrap(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .await,
+                DownloadPrebuiltOutput {
+                    archive_prefix: Some("yarn-aarch64-unknown-linux-musl".into()),
+                    download_name: Some("yarn-aarch64-unknown-linux-musl.zip".into()),
+                    download_url: "https://github.com/yarnpkg/zpm/releases/download/v6.0.0-rc.19/yarn-aarch64-unknown-linux-musl.zip".into(),
+                    ..Default::default()
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_prebuilt_linux_x64_musl() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("yarn-test", |config| {
+                    config.host_with(|host| {
+                        host.os = HostOS::Linux;
+                        host.arch = HostArch::X64;
+                        host.libc = HostLibc::Musl;
+                    });
+                })
+                .await;
+
+            assert_eq!(
+                plugin
+                    .download_prebuilt(DownloadPrebuiltInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("6.0.0-rc.19").unwrap(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .await,
+                DownloadPrebuiltOutput {
+                    archive_prefix: Some("yarn-x86_64-unknown-linux-musl".into()),
+                    download_name: Some("yarn-x86_64-unknown-linux-musl.zip".into()),
+                    download_url: "https://github.com/yarnpkg/zpm/releases/download/v6.0.0-rc.19/yarn-x86_64-unknown-linux-musl.zip".into(),
+                    ..Default::default()
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        #[should_panic(expected = "Only musl is supported.")]
+        async fn doesnt_support_linux_gnu() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("yarn-test", |config| {
+                    config.host_with(|host| {
+                        host.os = HostOS::Linux;
+                        host.arch = HostArch::X64;
+                        host.libc = HostLibc::Gnu;
+                    });
+                })
+                .await;
+
+            plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("6.0.0-rc.19").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await;
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        #[should_panic(expected = "unsupported OS windows.")]
+        async fn doesnt_support_windows() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("yarn-test", |config| {
+                    config.host(HostOS::Windows, HostArch::X64);
+                })
+                .await;
+
+            plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("6.0.0-rc.19").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await;
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_prebuilt_linux_x86_musl() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("yarn-test", |config| {
+                    config.host_with(|host| {
+                        host.os = HostOS::Linux;
+                        host.arch = HostArch::X86;
+                        host.libc = HostLibc::Musl;
+                    });
+                })
+                .await;
+
+            assert_eq!(
+                plugin
+                    .download_prebuilt(DownloadPrebuiltInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("6.0.0-rc.19").unwrap(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .await,
+                DownloadPrebuiltOutput {
+                    archive_prefix: Some("yarn-i686-unknown-linux-musl".into()),
+                    download_name: Some("yarn-i686-unknown-linux-musl.zip".into()),
+                    download_url: "https://github.com/yarnpkg/zpm/releases/download/v6.0.0-rc.19/yarn-i686-unknown-linux-musl.zip".into(),
+                    ..Default::default()
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        #[should_panic(expected = "unsupported architecture riscv64.")]
+        async fn doesnt_support_other_archs() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("yarn-test", |config| {
+                    config.host(HostOS::Linux, HostArch::Riscv64);
+                })
+                .await;
+
+            plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("6.0.0-rc.19").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await;
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        #[should_panic(expected = "yarn does not support canary/nightly versions.")]
+        async fn doesnt_support_canary() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("yarn-test", |config| {
+                    config.host(HostOS::MacOS, HostArch::Arm64);
+                })
+                .await;
+
+            plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("canary").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await;
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn locates_default_bin() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("yarn-test", |config| {
+                    config.host(HostOS::MacOS, HostArch::Arm64);
+                })
+                .await;
+
+            let exes = plugin
+                .locate_executables(LocateExecutablesInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("6.0.0-rc.19").unwrap(),
+                        ..Default::default()
+                    },
+                    install_dir: VirtualPath::Real(sandbox.path().into()),
+                })
+                .await
+                .exes;
+
+            assert_eq!(
+                exes.get("yarn").unwrap().exe_path,
+                Some("yarn-bin".into())
+            );
+
+            // The yarnpkg alias is not supported in v6
+            assert!(!exes.contains_key("yarnpkg"));
+
+            // No internal shims are created for the native binary
+            assert!(!sandbox.path().join("shims/yarn").exists());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn locates_default_bin_windows() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("yarn-test", |config| {
+                    config.host(HostOS::Windows, HostArch::X64);
+                })
+                .await;
+
+            let exes = plugin
+                .locate_executables(LocateExecutablesInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("6.0.0-rc.19").unwrap(),
+                        ..Default::default()
+                    },
+                    install_dir: VirtualPath::Real(sandbox.path().into()),
+                })
+                .await
+                .exes;
+
+            // The .exe extension must not be rewritten to .cmd
+            assert_eq!(
+                exes.get("yarn").unwrap().exe_path,
+                Some("yarn-bin.exe".into())
             );
         }
     }

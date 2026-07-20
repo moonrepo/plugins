@@ -31,10 +31,13 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
     let manager = PackageManager::detect()?;
 
     Ok(Json(RegisterToolOutput {
-        name: manager.to_string(),
+        name: manager.get_bin_name(),
         type_of: PluginType::DependencyManager,
         lock_options: ToolLockOptions {
-            ignore_os_arch: true,
+            // Yarn v6+ is downloaded as an os/arch specific binary, so
+            // lock records must be scoped to them. Everything else is a
+            // platform agnostic tarball from the npm registry.
+            ignore_os_arch: !manager.is_yarn(),
             ..Default::default()
         },
         minimum_proto_version: Some(Version::new(0, 59, 0)),
@@ -68,7 +71,7 @@ pub fn parse_version_file(
     if input.file == "package.json"
         && let Ok(package_json) = json::from_str::<PackageJson>(&input.content)
     {
-        let manager_name = PackageManager::detect()?.to_string();
+        let manager_name = PackageManager::detect()?.get_bin_name();
 
         if let Some(constraint) =
             extract_dev_engine_package_manager_version(&package_json, &manager_name)
@@ -111,7 +114,7 @@ pub fn pin_version(Json(input): Json<PinVersionInput>) -> FnResult<Json<PinVersi
         insert_dev_engine_version(
             &mut package_json,
             "packageManager".into(),
-            manager.to_string(),
+            manager.get_bin_name(),
             input.version.to_string(),
         )?;
 
@@ -138,7 +141,7 @@ pub fn unpin_version(Json(input): Json<UnpinVersionInput>) -> FnResult<Json<Unpi
         if let Some(version) = remove_dev_engine(
             &mut package_json,
             "packageManager".into(),
-            manager.to_string(),
+            manager.get_bin_name(),
         )? {
             starbase_utils::json::write_file_with_config(&file, &package_json, true)?;
 
@@ -154,11 +157,11 @@ pub fn unpin_version(Json(input): Json<UnpinVersionInput>) -> FnResult<Json<Unpi
 }
 
 #[plugin_fn]
-pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
+pub fn load_versions(Json(_input): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
     let mut output = LoadVersionsOutput::default();
     let manager = PackageManager::detect()?;
     let registry_url = get_tool_config::<NodeDepmanToolConfig>()?.registry_url;
-    let package_name = manager.get_package_name(&input.initial);
+    let package_name = manager.get_package_name();
 
     let mut map_output = |res_text: String, is_yarn: bool| -> Result<(), Error> {
         let res = parse_registry_response(res_text, is_yarn)?;
@@ -187,13 +190,26 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
         Ok(())
     };
 
-    // Yarn is managed by 2 different packages, so we need to request versions from both of them!
-    if manager == PackageManager::Yarn {
+    // Yarn is managed by 3 different sources, so we need to request versions from all of them!
+    if manager.is_yarn() {
+        // v1
         map_output(fetch_text(format!("{registry_url}/yarn/"))?, true)?;
+
+        // v2-5
         map_output(
             fetch_text(format!("{registry_url}/@yarnpkg/cli-dist/"))?,
             true,
         )?;
+
+        // v6+
+        let tags = load_git_tags("https://github.com/yarnpkg/zpm")?
+            .into_iter()
+            .filter_map(|tag| tag.strip_prefix('v').map(|tag| tag.to_owned()))
+            .collect::<Vec<_>>();
+
+        for tag in tags {
+            output.versions.push(VersionSpec::parse(tag)?);
+        }
     } else {
         map_output(
             fetch_text(format!("{registry_url}/{package_name}/"))?,
@@ -261,9 +277,15 @@ pub fn resolve_version(
             }
         }
 
-        PackageManager::Yarn => {
-            if let UnresolvedVersionSpec::Alias(alias) = input.initial {
-                if alias == "berry" || alias == "latest" {
+        PackageManager::Yarn1 | PackageManager::Yarn2to5 | PackageManager::Yarn6 => {
+            if input.initial == UnresolvedVersionSpec::Canary {
+                output.candidate = Some(UnresolvedVersionSpec::parse("^6.0.0-rc.0")?);
+            } else if let UnresolvedVersionSpec::Alias(alias) = input.initial {
+                if alias == "rust" || alias == "zpm" {
+                    // Only pre-releases exist for v6, and requirements
+                    // don't match them unless they contain a pre-release
+                    output.candidate = Some(UnresolvedVersionSpec::parse("^6.0.0-rc.0")?);
+                } else if alias == "berry" || alias == "latest" {
                     output.candidate = Some(UnresolvedVersionSpec::parse("~4")?);
                 } else if alias == "legacy" || alias == "classic" {
                     output.candidate = Some(UnresolvedVersionSpec::parse("~1")?);
@@ -278,7 +300,7 @@ pub fn resolve_version(
 }
 
 fn get_archive_prefix(manager: &PackageManager, spec: &VersionSpec) -> String {
-    if manager.is_yarn_classic(spec.to_unresolved_spec())
+    if manager == &PackageManager::Yarn1
         && let Some(version) = spec.as_version()
     {
         // Prefix changed to "package" in v1.22.20
@@ -296,15 +318,80 @@ pub fn download_prebuilt(
     Json(input): Json<DownloadPrebuiltInput>,
 ) -> FnResult<Json<DownloadPrebuiltOutput>> {
     let version = &input.context.version;
-    let manager = PackageManager::detect()?;
+    let manager = PackageManager::detect_from_version(version)?;
 
     if version.is_canary() {
         return Err(plugin_err!(PluginError::UnsupportedCanary {
-            tool: manager.to_string()
+            tool: manager.get_bin_name()
         }));
     }
 
-    let package_name = manager.get_package_name(version.to_unresolved_spec());
+    // Yarn v6 is Rust based and is NOT installed from the npm registry!
+    // https://v6.yarnpkg.com/getting-started
+    if manager == PackageManager::Yarn6 {
+        let env = get_host_environment()?;
+
+        let arch = match env.arch {
+            HostArch::Arm64 => "aarch64",
+            HostArch::X64 => "x86_64",
+            HostArch::X86 => "i686",
+            other => {
+                return Err(plugin_err!(PluginError::UnsupportedArch {
+                    tool: "yarn".into(),
+                    arch: other.to_string(),
+                }));
+            }
+        };
+
+        let os = match env.os {
+            HostOS::MacOS => "apple-darwin",
+            HostOS::Linux => "unknown-linux",
+            other => {
+                return Err(plugin_err!(PluginError::UnsupportedOS {
+                    tool: "yarn".into(),
+                    os: other.to_string(),
+                }));
+            }
+        };
+
+        let libc = if env.os.is_linux() {
+            if env.libc == HostLibc::Musl {
+                "-musl"
+            } else {
+                return Err(plugin_err!(PluginError::Message(
+                    "Only musl is supported.".into()
+                )));
+            }
+        } else {
+            ""
+        };
+
+        let filename = format!("yarn-{arch}-{os}{libc}.zip");
+
+        return Ok(Json(DownloadPrebuiltOutput {
+            archive_prefix: Some(filename.replace(".zip", "")),
+            download_url: format!(
+                "https://github.com/yarnpkg/zpm/releases/download/v{version}/{filename}"
+            ),
+            download_name: Some(filename),
+            ..Default::default()
+        }));
+    }
+
+    // Everything else is provided by the npm registry
+    let mut package_name = manager.get_package_name();
+
+    // Version 2.4.3 was published to the wrong package. It should
+    // have been published to `@yarnpkg/cli-dist` but was published
+    // to `yarn`. So... we need to manually fix it.
+    // https://www.npmjs.com/package/yarn?activeTab=versions
+    if manager == PackageManager::Yarn2to5
+        && version
+            .as_version()
+            .is_some_and(|inner| inner.major == 2 && inner.minor == 4 && inner.patch == 3)
+    {
+        package_name = "yarn".into();
+    }
 
     let package_without_scope = if let Some(index) = package_name.find('/') {
         &package_name[index + 1..]
@@ -335,12 +422,12 @@ pub fn locate_executables(
     Json(input): Json<LocateExecutablesInput>,
 ) -> FnResult<Json<LocateExecutablesOutput>> {
     let env = get_host_environment()?;
-    let manager = PackageManager::detect()?;
+    let manager = PackageManager::detect_from_version(&input.context.version)?;
     let mut secondary = FxHashMap::<String, ExecutableConfig>::default();
     let primary;
 
     if !input.install_dir.join("shims").exists() {
-        create_internal_shims(&env, &input.install_dir, &input.context.version, &manager)?;
+        create_internal_shims(&env, &input.install_dir, &manager)?;
     }
 
     // These are the directories that contain the executable binaries,
@@ -370,13 +457,13 @@ pub fn locate_executables(
             // https://github.com/npm/cli/blob/latest/workspaces/config/lib/index.js#L339
             globals_lookup_dirs.push("$TOOL_DIR/shims".into());
         }
-        PackageManager::Pnpm => {
+        PackageManager::Pnpm | PackageManager::Pnpm11 => {
             primary = ExecutableConfig::new_primary("shims/pnpm");
 
             // pnpx
             secondary.insert("pnpx".into(), ExecutableConfig::new("shims/pnpx"));
 
-            if manager.is_pnpm_11(&input.context.version) {
+            if manager == PackageManager::Pnpm11 {
                 secondary.insert("pn".into(), ExecutableConfig::new("shims/pn"));
                 secondary.insert("pnx".into(), ExecutableConfig::new("shims/pnx"));
             }
@@ -394,11 +481,15 @@ pub fn locate_executables(
                 globals_lookup_dirs.push("$HOME/.local/share/pnpm".into());
             }
         }
-        PackageManager::Yarn => {
-            primary = ExecutableConfig::new_primary("shims/yarn");
+        PackageManager::Yarn1 | PackageManager::Yarn2to5 | PackageManager::Yarn6 => {
+            if manager == PackageManager::Yarn6 {
+                primary = ExecutableConfig::new_primary(env.os.get_exe_name("yarn-bin"));
+            } else {
+                primary = ExecutableConfig::new_primary("shims/yarn");
 
-            // yarnpkg
-            secondary.insert("yarnpkg".into(), ExecutableConfig::new("shims/yarn"));
+                // yarnpkg
+                secondary.insert("yarnpkg".into(), ExecutableConfig::new("shims/yarn"));
+            }
 
             // https://github.com/yarnpkg/yarn/blob/master/src/cli/commands/global.js#L84
             if env.os.is_windows() {
@@ -420,7 +511,7 @@ pub fn locate_executables(
     // Always add this so that it's available for `get_global_dirs`
     globals_lookup_dirs.push("$PROTO_HOME/tools/node/globals/bin".into());
 
-    let mut exes = FxHashMap::from_iter([(manager.to_string(), primary)]);
+    let mut exes = FxHashMap::from_iter([(manager.get_bin_name(), primary)]);
     exes.extend(secondary);
 
     // Update the permissions of each executable since they are custom shims
@@ -431,8 +522,11 @@ pub fn locate_executables(
             config.update_perms = true;
         }
 
+        // Our internal shims are .cmd scripts on Windows, but native
+        // executables (yarn v6) must keep their .exe extension
         if env.os.is_windows()
             && let Some(exe_path) = &mut config.exe_path
+            && exe_path.extension().is_none_or(|ext| ext != "exe")
         {
             exe_path.set_extension("cmd");
         }
@@ -467,7 +561,7 @@ pub fn activate_environment(
             .to_string();
 
         let env = get_host_environment()?;
-        let manager = PackageManager::detect()?;
+        let manager = PackageManager::detect_from_version(&input.context.version)?;
 
         match manager {
             // Unix will create a /bin directory when installing into the root,
@@ -485,7 +579,7 @@ pub fn activate_environment(
 
             // Pnpm has explicit support for the bin and root dirs,
             // which makes this super simple to handle.
-            PackageManager::Pnpm => {
+            PackageManager::Pnpm | PackageManager::Pnpm11 => {
                 output
                     .env
                     .insert("pnpm_config_global_dir".into(), globals_root_dir);
@@ -496,7 +590,7 @@ pub fn activate_environment(
 
             // Both Unix and Windows will create a /bin directory,
             // when installing into the root.
-            PackageManager::Yarn => {
+            PackageManager::Yarn1 | PackageManager::Yarn2to5 | PackageManager::Yarn6 => {
                 output.env.insert("PREFIX".into(), globals_root_dir);
             }
         };
@@ -529,7 +623,6 @@ fn create_internal_shim(
 fn create_internal_shims(
     env: &HostEnvironment,
     tool_dir: &VirtualPath,
-    version: &VersionSpec,
     package_manager: &PackageManager,
 ) -> AnyResult<()> {
     match package_manager {
@@ -537,18 +630,20 @@ fn create_internal_shims(
             create_internal_shim(env, tool_dir, "npm", "npm-cli.js")?;
             create_internal_shim(env, tool_dir, "npx", "npx-cli.js")?;
         }
-        PackageManager::Pnpm => {
+        PackageManager::Pnpm | PackageManager::Pnpm11 => {
             create_internal_shim(env, tool_dir, "pnpm", "pnpm.cjs")?;
             create_internal_shim(env, tool_dir, "pnpx", "pnpx.cjs")?;
 
-            if package_manager.is_pnpm_11(version) {
+            if package_manager == &PackageManager::Pnpm11 {
                 create_internal_shim(env, tool_dir, "pn", "pnpm.cjs")?;
                 create_internal_shim(env, tool_dir, "pnx", "pnpx.cjs")?;
             }
         }
-        PackageManager::Yarn => {
+        PackageManager::Yarn1 | PackageManager::Yarn2to5 => {
             create_internal_shim(env, tool_dir, "yarn", "yarn.js")?;
         }
+        // Yarn v6+ is a native binary and requires no shims
+        PackageManager::Yarn6 => {}
     };
 
     Ok(())

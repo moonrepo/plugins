@@ -298,8 +298,31 @@ mod node_depman_tool {
             "1" => "1.22.22",
             "2" => "2.4.3",
             "3" => "3.8.7",
+            // v6+ comes from git tags instead of the npm registry
+            "6.0.0-rc.19" => "6.0.0-rc.19",
             // "berry" => "4.3.1",
         });
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn resolves_v6_aliases() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox.create_plugin("yarn-test").await;
+
+            for alias in ["rust", "zpm"] {
+                let mut spec = ToolSpec::parse(alias).unwrap();
+
+                flow::resolve::Resolver::new(&plugin.tool)
+                    .resolve_version(&mut spec, false)
+                    .await
+                    .unwrap();
+
+                assert_eq!(
+                    spec.get_resolved_version().as_version().unwrap().major,
+                    6,
+                    "for alias {alias}"
+                );
+            }
+        }
 
         #[tokio::test(flavor = "multi_thread")]
         async fn doesnt_parse_package_manager_if_diff_name() {

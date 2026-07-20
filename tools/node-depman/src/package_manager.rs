@@ -5,18 +5,20 @@ use crate::yarn_compat::*;
 use npmrc_config_rs::{
     Credentials, LoadOptions, NpmrcConfig, nerf_dart, registry::parse_registry_url,
 };
-use proto_pdk::{
-    AnyResult, UnresolvedVersionSpec, Version, VersionSpec, VirtualPath, get_plugin_id,
-};
+use proto_pdk::{AnyResult, VersionSpec, VirtualPath, get_plugin_id};
 use rustc_hash::FxHashMap;
 use starbase_utils::{fs::find_upwards, yaml};
-use std::fmt;
 
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum PackageManager {
     Npm,
+
     Pnpm,
-    Yarn,
+    Pnpm11,
+
+    Yarn1,
+    Yarn2to5,
+    Yarn6,
 }
 
 impl PackageManager {
@@ -24,34 +26,87 @@ impl PackageManager {
         let id = get_plugin_id()?;
 
         Ok(if id.to_lowercase().contains("yarn") {
-            PackageManager::Yarn
+            Self::Yarn1
         } else if id.to_lowercase().contains("pnpm") {
-            PackageManager::Pnpm
+            Self::Pnpm
         } else {
-            PackageManager::Npm
+            Self::Npm
         })
     }
 
-    pub fn get_package_name(&self, version: impl AsRef<UnresolvedVersionSpec>) -> String {
-        let version = version.as_ref();
+    pub fn detect_from_version(version: &VersionSpec) -> AnyResult<PackageManager> {
+        let mut manager = Self::detect()?;
 
-        if matches!(self, PackageManager::Yarn) {
-            if let UnresolvedVersionSpec::Version(inner) = &version {
-                // Version 2.4.3 was published to the wrong package. It should
-                // have been published to `@yarnpkg/cli-dist` but was published
-                // to `yarn`. So... we need to manually fix it.
-                // https://www.npmjs.com/package/yarn?activeTab=versions
-                if inner.major == 2 && inner.minor == 4 && inner.patch == 3 {
-                    return "yarn".into();
+        if manager == Self::Pnpm {
+            manager = match version {
+                VersionSpec::Canary => Self::Pnpm11,
+                VersionSpec::Alias(alias) => {
+                    if alias == "latest" {
+                        Self::Pnpm11
+                    } else {
+                        Self::Pnpm
+                    }
                 }
-            }
-
-            if self.is_yarn_berry(version) {
-                return "@yarnpkg/cli-dist".into();
-            }
+                VersionSpec::Version(version) => {
+                    if version.major >= 11 {
+                        Self::Pnpm11
+                    } else {
+                        Self::Pnpm
+                    }
+                }
+            };
+        } else if manager == Self::Yarn1 {
+            manager = match version {
+                VersionSpec::Canary => Self::Yarn6,
+                VersionSpec::Alias(alias) => {
+                    if alias == "classic" || alias == "legacy" {
+                        Self::Yarn1
+                    } else if alias == "rust" || alias == "zpm" {
+                        Self::Yarn6
+                    } else {
+                        Self::Yarn2to5
+                    }
+                }
+                VersionSpec::Version(version) => {
+                    if version.major >= 6 {
+                        Self::Yarn6
+                    } else if version.major >= 2 {
+                        Self::Yarn2to5
+                    } else {
+                        Self::Yarn1
+                    }
+                }
+            };
         }
 
-        self.to_string()
+        Ok(manager)
+    }
+
+    pub fn is_npm(&self) -> bool {
+        matches!(self, Self::Npm)
+    }
+
+    pub fn is_pnpm(&self) -> bool {
+        matches!(self, Self::Pnpm | Self::Pnpm11)
+    }
+
+    pub fn is_yarn(&self) -> bool {
+        matches!(self, Self::Yarn1 | Self::Yarn2to5 | Self::Yarn6)
+    }
+
+    pub fn get_bin_name(&self) -> String {
+        match self {
+            Self::Npm => "npm".into(),
+            Self::Pnpm | Self::Pnpm11 => "pnpm".into(),
+            Self::Yarn1 | Self::Yarn2to5 | Self::Yarn6 => "yarn".into(),
+        }
+    }
+
+    pub fn get_package_name(&self) -> String {
+        match self {
+            Self::Yarn2to5 => "@yarnpkg/cli-dist".into(),
+            _ => self.get_bin_name(),
+        }
     }
 
     pub fn get_http_headers(
@@ -63,7 +118,7 @@ impl PackageManager {
         let url = parse_registry_url(registry_url)?;
 
         let credentials = match self {
-            Self::Npm | Self::Pnpm => {
+            Self::Npm | Self::Pnpm | Self::Pnpm11 => {
                 let rc = NpmrcConfig::load_with_options(LoadOptions {
                     cwd: Some(working_dir.into()),
                     global_prefix: None,
@@ -75,7 +130,7 @@ impl PackageManager {
 
                 rc.credentials_for(&url)
             }
-            Self::Yarn => {
+            Self::Yarn1 | Self::Yarn2to5 | Self::Yarn6 => {
                 if let Some(rc_path) = find_upwards(".yarnrc.yml", working_dir) {
                     let mut rc: YarnRcYaml = yaml::read_file(rc_path)?;
                     let registry_shorthand = nerf_dart(&url);
@@ -131,55 +186,5 @@ impl PackageManager {
         }
 
         Ok(headers)
-    }
-
-    pub fn is_pnpm_11(&self, version: impl AsRef<VersionSpec>) -> bool {
-        let version_11 = Version::parse("11.0.0-rc.0").unwrap();
-
-        // matches!(self, PackageManager::Pnpm)
-        //     && match version.as_ref() {
-        //         UnresolvedVersionSpec::Semantic(ver) => ver.0 >= version_11,
-        //         UnresolvedVersionSpec::Req(req) => req.matches(&version_11),
-        //         UnresolvedVersionSpec::ReqAny(reqs) => {
-        //             reqs.iter().any(|req| req.matches(&version_11))
-        //         }
-        //         _ => false,
-        //     }
-
-        matches!(self, PackageManager::Pnpm)
-            && match version.as_ref() {
-                VersionSpec::Version(ver) => ver >= &version_11,
-                _ => false,
-            }
-    }
-
-    pub fn is_yarn_classic(&self, version: impl AsRef<UnresolvedVersionSpec>) -> bool {
-        matches!(self, PackageManager::Yarn)
-            && match version.as_ref() {
-                UnresolvedVersionSpec::Alias(alias) => alias == "legacy" || alias == "classic",
-                UnresolvedVersionSpec::Version(ver) => ver.major == 1,
-                UnresolvedVersionSpec::Requirement(req) => req.major == Some(1),
-                _ => false,
-            }
-    }
-
-    pub fn is_yarn_berry(&self, version: impl AsRef<UnresolvedVersionSpec>) -> bool {
-        matches!(self, PackageManager::Yarn)
-            && match version.as_ref() {
-                UnresolvedVersionSpec::Alias(alias) => alias == "berry" || alias == "latest",
-                UnresolvedVersionSpec::Version(ver) => ver.major > 1,
-                UnresolvedVersionSpec::Requirement(req) => req.major.is_some_and(|major| major > 1),
-                _ => false,
-            }
-    }
-}
-
-impl fmt::Display for PackageManager {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            PackageManager::Npm => write!(f, "npm"),
-            PackageManager::Pnpm => write!(f, "pnpm"),
-            PackageManager::Yarn => write!(f, "yarn"),
-        }
     }
 }
