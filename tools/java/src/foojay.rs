@@ -1,5 +1,6 @@
-use crate::config::{
-    ArchiveType, Distribution, JavaToolConfig, LibcType, PackageType, ReleaseType,
+use crate::{
+    config::{ArchiveType, Distribution, JavaToolConfig, LibcType, PackageType, ReleaseType},
+    java::JavaContext,
 };
 use proto_pdk::{AnyResult, HostArch, HostEnvironment, HostOS, PluginError, fetch_json};
 use serde::Deserialize;
@@ -57,20 +58,20 @@ impl FoojayPackage {
 pub fn fetch_packages(
     env: &HostEnvironment,
     config: &JavaToolConfig,
-    version: Option<&str>,
+    java: &JavaContext,
 ) -> AnyResult<Vec<FoojayPackage>> {
     let mut url = format!(
         "{}/packages?latest=available&directly_downloadable=true&javafx_bundled=false&archive_type=tar&archive_type=tar.gz&archive_type=tar.xz&archive_type=tar.Z&archive_type=zip&distro={}&architecture={}&package_type={}&operating_system={}&release_status={}",
         config.api_url.trim_end_matches('/'),
-        config.distribution.to_query_param(),
+        java.distribution.to_query_param(),
         java_arch(env)?,
-        config.package_type.to_string(),
+        java.package.to_string(),
         java_os(env)?,
         config.release_type.to_query_param(),
     );
 
-    if let Some(version) = version {
-        url.push_str(&format!("&version={}", query_value(version)));
+    if !java.spec.is_latest() {
+        url.push_str(&format!("&version={}", query_value(&java.short_version)));
     }
 
     let response: FoojayResponse<FoojayPackage> = fetch_json(&url)?;

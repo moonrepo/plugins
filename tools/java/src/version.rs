@@ -29,21 +29,9 @@ pub fn from_java_version(version: &str) -> String {
     out.push('.');
     out.push_str(parts.next().unwrap_or("0"));
 
-    // vendor
-    let vendor = parts.next();
-
-    // prerelease
     if let Some(pre) = pre {
         out.push('-');
         out.push_str(pre);
-
-        if let Some(vendor) = vendor {
-            out.push_str(".v");
-            out.push_str(vendor);
-        }
-    } else if let Some(vendor) = vendor {
-        out.push_str("-v");
-        out.push_str(vendor);
     }
 
     if let Some(build) = build {
@@ -51,7 +39,10 @@ pub fn from_java_version(version: &str) -> String {
         out.push_str(build);
     }
 
-    out
+    match parts.next() {
+        Some(vendor) => format!("{vendor}-{out}"),
+        None => out,
+    }
 }
 
 pub fn to_java_version(spec: &VersionSpec) -> String {
@@ -61,7 +52,6 @@ pub fn to_java_version(spec: &VersionSpec) -> String {
         _ => {
             let version = spec.as_version().unwrap();
             let mut out = version.major.to_string();
-            let mut full = false;
 
             if version.minor > 0 || version.patch > 0 {
                 out.push('.');
@@ -70,30 +60,15 @@ pub fn to_java_version(spec: &VersionSpec) -> String {
                 if version.patch > 0 {
                     out.push('.');
                     out.push_str(&version.patch.to_string());
-                    full = true;
                 }
             }
 
-            if !version.pre.is_empty() {
-                if let Some(vendor) = version.pre.strip_prefix("v") {
-                    if full {
-                        out.push('.');
-                        out.push_str(vendor);
-                    }
-                } else if let Some((pre, vendor)) = version.pre.split_once(".v") {
-                    if full {
-                        out.push('.');
-                        out.push_str(vendor);
-                    }
-
-                    out = format!("{out}-{pre}");
-                } else {
-                    out = format!("{out}-{}", version.pre);
-                }
+            if let Some(pre) = &version.prerelease {
+                out = format!("{out}-{pre}");
             }
 
-            if !version.build.is_empty() {
-                out = format!("{out}+{}", version.build);
+            if let Some(build) = &version.build {
+                out = format!("{out}+{build}");
             }
 
             out

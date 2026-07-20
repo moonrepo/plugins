@@ -1,6 +1,7 @@
 use crate::config::{ArchiveType, Distribution, JavaToolConfig, LibcType, PackageType};
 use crate::foojay::{FoojayPackage, fetch_package_info, fetch_packages};
-use crate::version::{from_java_version, to_java_version};
+use crate::java::JavaContext;
+use crate::version::from_java_version;
 use extism_pdk::*;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
@@ -75,11 +76,12 @@ pub fn parse_version_file(
 }
 
 #[plugin_fn]
-pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
+pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
     let env = get_host_environment()?;
     let config = get_tool_config::<JavaToolConfig>()?;
+    let java = JavaContext::detect_from_unresolved(&input.initial)?;
 
-    let versions = fetch_packages(&env, &config, None)?
+    let versions = fetch_packages(&env, &config, &java)?
         .into_iter()
         .map(|package| from_java_version(&package.java_version))
         .collect::<Vec<_>>();
@@ -131,9 +133,9 @@ fn find_package<'a>(
 pub fn download_prebuilt(
     Json(input): Json<DownloadPrebuiltInput>,
 ) -> FnResult<Json<DownloadPrebuiltOutput>> {
-    let version = &input.context.version;
+    let base_version = &input.context.version;
 
-    if version.is_canary() {
+    if base_version.is_canary() {
         return Err(plugin_err!(PluginError::UnsupportedCanary {
             tool: "Java".into()
         }));
@@ -141,26 +143,17 @@ pub fn download_prebuilt(
 
     let env = get_host_environment()?;
     let config = get_tool_config::<JavaToolConfig>()?;
-    let full_version = version.to_string();
-    let short_version = to_java_version(version);
+    let java = JavaContext::detect(base_version)?;
 
     // Load all matching packages
-    let mut packages = fetch_packages(
-        &env,
-        &config,
-        if version.is_latest() {
-            None
-        } else {
-            Some(&short_version)
-        },
-    )?;
+    let mut packages = fetch_packages(&env, &config, &java)?;
 
     // For non-latest, filter the results to matching versions
-    if !version.is_latest() {
+    if !java.spec.is_latest() {
         packages.retain(|package| {
-            package.java_version == full_version
-                || package.java_version == short_version
-                || from_java_version(&package.java_version) == full_version
+            package.java_version == java.full_version
+                || package.java_version == java.short_version
+                || from_java_version(&package.java_version) == java.full_version
         });
     }
 
@@ -169,9 +162,10 @@ pub fn download_prebuilt(
         Some(package) => package,
         None => {
             return Err(plugin_err!(
-                "No Java package available for version <hash>{full_version}</hash>. Using parameters: <mutedlight>distribution={} package={} release={} os={} arch={}</mutedlight>",
-                config.distribution,
-                config.package_type,
+                "No Java package available for version <hash>{}</hash>. Using parameters: <mutedlight>distribution={} package={} release={} os={} arch={}</mutedlight>",
+                java.full_version,
+                java.distribution,
+                java.package,
                 config.release_type,
                 env.os,
                 env.arch
@@ -183,7 +177,7 @@ pub fn download_prebuilt(
     let info = fetch_package_info(&config, &package.id)?;
 
     Ok(Json(DownloadPrebuiltOutput {
-        archive_prefix: Some(match config.distribution {
+        archive_prefix: Some(match java.distribution {
             // Double nested on macos: openlogic-openjdk-x.x.x-mac-x64/jdk-x.x.x
             Distribution::Openlogic if env.os.is_mac() => "*/*".into(),
             // Nested in jdk dir: jdk-x.x.x
@@ -210,14 +204,14 @@ pub fn download_prebuilt(
 
 #[plugin_fn]
 pub fn locate_executables(
-    Json(_input): Json<LocateExecutablesInput>,
+    Json(input): Json<LocateExecutablesInput>,
 ) -> FnResult<Json<LocateExecutablesOutput>> {
     let env = get_host_environment()?;
-    let config = get_tool_config::<JavaToolConfig>()?;
+    let java = JavaContext::detect(&input.context.version)?;
 
     // Liberica returns a flat folder structure, and does not use
     // the macOS bundle folder structure like other distros
-    let bin_dir = if env.os.is_mac() && config.distribution != Distribution::Liberica {
+    let bin_dir = if env.os.is_mac() && java.distribution != Distribution::Liberica {
         "Contents/Home/bin"
     } else {
         "bin"
@@ -228,7 +222,7 @@ pub fn locate_executables(
         ExecutableConfig::new_primary(format!("{bin_dir}/{}", env.os.get_exe_name("java"))),
     )]);
 
-    if config.package_type == PackageType::Jdk {
+    if java.package == PackageType::Jdk {
         exes.extend([
             (
                 "javac".into(),

@@ -1,3 +1,4 @@
+use proto_pdk::{AnyResult, get_plugin_id};
 // https://github.com/foojayio/discoapi
 use schematic::{ConfigEnum, derive_enum};
 
@@ -30,13 +31,13 @@ derive_enum!(
         // OjdkBuild,
         Openlogic,
         Oracle,
-        #[serde(alias = "oracle_open_jdk")]
+        #[default]
+        #[serde(alias = "oracle_open_jdk", alias = "openjdk")]
         OracleOpenJdk,
         // Redhat,
         #[serde(alias = "sap_machine")]
         SapMachine,
         Semeru,
-        #[default]
         Temurin,
         Trava,
         Zulu,
@@ -83,6 +84,14 @@ derive_enum!(
     }
 );
 
+impl PackageType {
+    pub fn detect() -> AnyResult<Self> {
+        let id = get_plugin_id()?;
+
+        Ok(if id == "jre" { Self::Jre } else { Self::Jdk })
+    }
+}
+
 derive_enum!(
     #[derive(ConfigEnum, Default)]
     pub enum ReleaseType {
@@ -119,8 +128,6 @@ derive_enum!(
 #[serde(default, deny_unknown_fields, rename_all = "kebab-case")]
 pub struct JavaToolConfig {
     pub api_url: String,
-    pub distribution: Distribution,
-    pub package_type: PackageType,
     pub release_type: ReleaseType,
 }
 
@@ -128,8 +135,6 @@ impl Default for JavaToolConfig {
     fn default() -> Self {
         Self {
             api_url: "https://api.foojay.io/disco/v3.0".into(),
-            distribution: Distribution::default(),
-            package_type: PackageType::default(),
             release_type: ReleaseType::default(),
         }
     }
