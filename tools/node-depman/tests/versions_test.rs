@@ -298,6 +298,8 @@ mod node_depman_tool {
             "1" => "1.22.22",
             "2" => "2.4.3",
             "3" => "3.8.7",
+            // v6+ comes from git tags instead of the npm registry
+            "6.0.0-rc.19" => "6.0.0-rc.19",
             // "berry" => "4.3.1",
         });
 

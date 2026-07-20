@@ -275,8 +275,12 @@ pub fn resolve_version(
         }
 
         PackageManager::Yarn1 | PackageManager::Yarn2to5 | PackageManager::Yarn6 => {
-            if let UnresolvedVersionSpec::Alias(alias) = input.initial {
-                if alias == "berry" || alias == "latest" {
+            if input.initial == UnresolvedVersionSpec::Canary {
+                output.candidate = Some(UnresolvedVersionSpec::parse("~6")?);
+            } else if let UnresolvedVersionSpec::Alias(alias) = input.initial {
+                if alias == "rust" || alias == "zpm" {
+                    output.candidate = Some(UnresolvedVersionSpec::parse("~6")?);
+                } else if alias == "berry" || alias == "latest" {
                     output.candidate = Some(UnresolvedVersionSpec::parse("~4")?);
                 } else if alias == "legacy" || alias == "classic" {
                     output.candidate = Some(UnresolvedVersionSpec::parse("~1")?);
@@ -369,7 +373,19 @@ pub fn download_prebuilt(
     }
 
     // Everything else is provided by the npm registry
-    let package_name = manager.get_package_name();
+    let mut package_name = manager.get_package_name();
+
+    // Version 2.4.3 was published to the wrong package. It should
+    // have been published to `@yarnpkg/cli-dist` but was published
+    // to `yarn`. So... we need to manually fix it.
+    // https://www.npmjs.com/package/yarn?activeTab=versions
+    if manager == PackageManager::Yarn2to5
+        && version
+            .as_version()
+            .is_some_and(|inner| inner.major == 2 && inner.minor == 4 && inner.patch == 3)
+    {
+        package_name = "yarn".into();
+    }
 
     let package_without_scope = if let Some(index) = package_name.find('/') {
         &package_name[index + 1..]

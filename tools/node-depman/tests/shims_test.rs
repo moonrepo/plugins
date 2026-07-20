@@ -11,7 +11,8 @@ mod node_depman_tool {
     mod pnpm {
         use super::*;
 
-        generate_shims_test!("pnpm-test", ["pnpm", "pnpx"]);
+        // The pn and pnx shims are created for pnpm >= 11 (the latest)
+        generate_shims_test!("pnpm-test", ["pnpm", "pnpx", "pn", "pnx"]);
     }
 
     mod yarn {
