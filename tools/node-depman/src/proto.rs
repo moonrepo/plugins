@@ -320,12 +320,6 @@ pub fn download_prebuilt(
     let version = &input.context.version;
     let manager = PackageManager::detect_from_version(version)?;
 
-    if version.is_canary() {
-        return Err(plugin_err!(PluginError::UnsupportedCanary {
-            tool: manager.get_bin_name()
-        }));
-    }
-
     // Yarn v6 is Rust based and is NOT installed from the npm registry!
     // https://v6.yarnpkg.com/getting-started
     if manager == PackageManager::Yarn6 {
@@ -375,6 +369,12 @@ pub fn download_prebuilt(
             ),
             download_name: Some(filename),
             ..Default::default()
+        }));
+    }
+
+    if version.is_canary() {
+        return Err(plugin_err!(PluginError::UnsupportedCanary {
+            tool: manager.get_bin_name()
         }));
     }
 

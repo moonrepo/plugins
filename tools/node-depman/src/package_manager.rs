@@ -9,7 +9,7 @@ use proto_pdk::{AnyResult, VersionSpec, VirtualPath, get_plugin_id};
 use rustc_hash::FxHashMap;
 use starbase_utils::{fs::find_upwards, yaml};
 
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum PackageManager {
     Npm,
 
