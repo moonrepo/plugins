@@ -5,6 +5,7 @@
 #### 🚀 Updates
 
 - Updated to support proto v0.59 release.
+- Added experimental support for yarn v6.
 
 ## 0.18.1
 
