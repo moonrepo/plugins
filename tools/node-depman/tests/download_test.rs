@@ -730,12 +730,44 @@ npmRegistries:
         }
 
         #[tokio::test(flavor = "multi_thread")]
-        #[should_panic(expected = "unsupported architecture x86.")]
+        async fn supports_prebuilt_linux_x86_musl() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("yarn-test", |config| {
+                    config.host_with(|host| {
+                        host.os = HostOS::Linux;
+                        host.arch = HostArch::X86;
+                        host.libc = HostLibc::Musl;
+                    });
+                })
+                .await;
+
+            assert_eq!(
+                plugin
+                    .download_prebuilt(DownloadPrebuiltInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("6.0.0-rc.19").unwrap(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .await,
+                DownloadPrebuiltOutput {
+                    archive_prefix: Some("yarn-i686-unknown-linux-musl".into()),
+                    download_name: Some("yarn-i686-unknown-linux-musl.zip".into()),
+                    download_url: "https://github.com/yarnpkg/zpm/releases/download/v6.0.0-rc.19/yarn-i686-unknown-linux-musl.zip".into(),
+                    ..Default::default()
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        #[should_panic(expected = "unsupported architecture riscv64.")]
         async fn doesnt_support_other_archs() {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("yarn-test", |config| {
-                    config.host(HostOS::Linux, HostArch::X86);
+                    config.host(HostOS::Linux, HostArch::Riscv64);
                 })
                 .await;
 
@@ -798,6 +830,36 @@ npmRegistries:
 
             // The yarnpkg alias is not supported in v6
             assert!(!exes.contains_key("yarnpkg"));
+
+            // No internal shims are created for the native binary
+            assert!(!sandbox.path().join("shims/yarn").exists());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn locates_default_bin_windows() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("yarn-test", |config| {
+                    config.host(HostOS::Windows, HostArch::X64);
+                })
+                .await;
+
+            let exes = plugin
+                .locate_executables(LocateExecutablesInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("6.0.0-rc.19").unwrap(),
+                        ..Default::default()
+                    },
+                    install_dir: VirtualPath::Real(sandbox.path().into()),
+                })
+                .await
+                .exes;
+
+            // The .exe extension must not be rewritten to .cmd
+            assert_eq!(
+                exes.get("yarn").unwrap().exe_path,
+                Some("yarn-bin.exe".into())
+            );
         }
     }
 }

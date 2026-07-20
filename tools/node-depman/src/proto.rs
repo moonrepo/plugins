@@ -34,7 +34,10 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
         name: manager.get_bin_name(),
         type_of: PluginType::DependencyManager,
         lock_options: ToolLockOptions {
-            ignore_os_arch: true,
+            // Yarn v6+ is downloaded as an os/arch specific binary, so
+            // lock records must be scoped to them. Everything else is a
+            // platform agnostic tarball from the npm registry.
+            ignore_os_arch: !manager.is_yarn(),
             ..Default::default()
         },
         minimum_proto_version: Some(Version::new(0, 59, 0)),
@@ -276,10 +279,12 @@ pub fn resolve_version(
 
         PackageManager::Yarn1 | PackageManager::Yarn2to5 | PackageManager::Yarn6 => {
             if input.initial == UnresolvedVersionSpec::Canary {
-                output.candidate = Some(UnresolvedVersionSpec::parse("~6")?);
+                output.candidate = Some(UnresolvedVersionSpec::parse("^6.0.0-rc.0")?);
             } else if let UnresolvedVersionSpec::Alias(alias) = input.initial {
                 if alias == "rust" || alias == "zpm" {
-                    output.candidate = Some(UnresolvedVersionSpec::parse("~6")?);
+                    // Only pre-releases exist for v6, and requirements
+                    // don't match them unless they contain a pre-release
+                    output.candidate = Some(UnresolvedVersionSpec::parse("^6.0.0-rc.0")?);
                 } else if alias == "berry" || alias == "latest" {
                     output.candidate = Some(UnresolvedVersionSpec::parse("~4")?);
                 } else if alias == "legacy" || alias == "classic" {
@@ -329,6 +334,7 @@ pub fn download_prebuilt(
         let arch = match env.arch {
             HostArch::Arm64 => "aarch64",
             HostArch::X64 => "x86_64",
+            HostArch::X86 => "i686",
             other => {
                 return Err(plugin_err!(PluginError::UnsupportedArch {
                     tool: "yarn".into(),
@@ -516,8 +522,11 @@ pub fn locate_executables(
             config.update_perms = true;
         }
 
+        // Our internal shims are .cmd scripts on Windows, but native
+        // executables (yarn v6) must keep their .exe extension
         if env.os.is_windows()
             && let Some(exe_path) = &mut config.exe_path
+            && exe_path.extension().is_none_or(|ext| ext != "exe")
         {
             exe_path.set_extension("cmd");
         }
@@ -630,9 +639,11 @@ fn create_internal_shims(
                 create_internal_shim(env, tool_dir, "pnx", "pnpx.cjs")?;
             }
         }
-        PackageManager::Yarn1 | PackageManager::Yarn2to5 | PackageManager::Yarn6 => {
+        PackageManager::Yarn1 | PackageManager::Yarn2to5 => {
             create_internal_shim(env, tool_dir, "yarn", "yarn.js")?;
         }
+        // Yarn v6+ is a native binary and requires no shims
+        PackageManager::Yarn6 => {}
     };
 
     Ok(())

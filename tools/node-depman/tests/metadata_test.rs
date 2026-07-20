@@ -18,6 +18,7 @@ mod node_depman_tool {
             let metadata = plugin.register_tool(create_metadata("npm-test")).await;
 
             assert_eq!(metadata.name, "npm");
+            assert!(metadata.lock_options.ignore_os_arch);
             assert_eq!(metadata.type_of, PluginType::DependencyManager);
             assert_eq!(
                 metadata.plugin_version.unwrap().to_string(),
@@ -37,6 +38,7 @@ mod node_depman_tool {
             let metadata = plugin.register_tool(create_metadata("pnpm-test")).await;
 
             assert_eq!(metadata.name, "pnpm");
+            assert!(metadata.lock_options.ignore_os_arch);
             assert_eq!(metadata.type_of, PluginType::DependencyManager);
             assert_eq!(
                 metadata.plugin_version.unwrap().to_string(),
@@ -56,6 +58,9 @@ mod node_depman_tool {
             let metadata = plugin.register_tool(create_metadata("yarn-test")).await;
 
             assert_eq!(metadata.name, "yarn");
+
+            // v6+ binaries are os/arch specific, so records must be scoped
+            assert!(!metadata.lock_options.ignore_os_arch);
             assert_eq!(metadata.type_of, PluginType::DependencyManager);
             assert_eq!(
                 metadata.plugin_version.unwrap().to_string(),
