@@ -16,6 +16,7 @@ projects:
   deno-tool: tools/deno
   example-tool: tools/example
   go-tool: tools/go
+  java-tool: tools/java
   moon-tool: tools/moon
   node-tool: tools/node
   node-depman-tool: tools/node-depman

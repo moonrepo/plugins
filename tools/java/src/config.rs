@@ -1,5 +1,6 @@
-use proto_pdk::{AnyResult, get_plugin_id};
 // https://github.com/foojayio/discoapi
+//
+use proto_pdk::{AnyResult, get_plugin_id};
 use schematic::{ConfigEnum, derive_enum};
 
 // Note: Our configuration (and proto itself) use lowercase for
@@ -50,7 +51,17 @@ pub enum Distribution {
 
 impl Distribution {
     pub fn to_query_param(&self) -> String {
-        self.to_string().replace('-', "_")
+        // These display as lowercase, but Foojay expects snake_case!
+        match self {
+            Distribution::AojOpenj9 => "aoj_openj9".into(),
+            Distribution::GraalvmCe8 => "graalvm_ce8".into(),
+            Distribution::GraalvmCe11 => "graalvm_ce11".into(),
+            Distribution::GraalvmCe16 => "graalvm_ce16".into(),
+            Distribution::LibericaNative => "liberica_native".into(),
+            Distribution::OpenJdk => "oracle_open_jdk".into(),
+            Distribution::SapMachine => "sap_machine".into(),
+            _ => self.to_string(),
+        }
     }
 }
 

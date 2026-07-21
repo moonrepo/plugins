@@ -41,15 +41,6 @@ impl FoojayPackage {
             return false;
         }
 
-        if self.operating_system == "linux"
-            && self
-                .lib_c_type
-                .as_ref()
-                .is_some_and(|libc| *libc == LibcType::CStdLib)
-        {
-            return false;
-        }
-
         true
     }
 }
@@ -104,7 +95,7 @@ pub fn fetch_packages(
     java: &JavaContext,
 ) -> AnyResult<Vec<FoojayPackage>> {
     let mut url = format!(
-        "{}/packages?latest=available&directly_downloadable=true&javafx_bundled=false&archive_type=tar&archive_type=tar.gz&archive_type=tar.xz&archive_type=tar.Z&archive_type=zip&distro={}&architecture={}&package_type={}&operating_system={}&release_status={}",
+        "{}/packages?latest=available&javafx_bundled=false&archive_type=tar&archive_type=tar.gz&archive_type=tar.xz&archive_type=tar.Z&archive_type=zip&distro={}&architecture={}&package_type={}&operating_system={}&release_status={}",
         config.api_url.trim_end_matches('/'),
         java.distribution.to_query_param(),
         java_arch(env)?,
@@ -155,7 +146,7 @@ impl FoojayPackageInfo {
 
 // https://github.com/foojayio/discoapi#endpoint-packages
 pub fn fetch_package_info(config: &JavaToolConfig, id: &str) -> AnyResult<FoojayPackageInfo> {
-    let url = format!("{}/ids/{id}", config.api_url.trim_end_matches('/'),);
+    let url = format!("{}/ids/{id}", config.api_url.trim_end_matches('/'));
     let mut response: FoojayResponse<FoojayPackageInfo> = fetch_json(&url)?;
 
     if response.result.len() != 1 {
@@ -264,22 +255,6 @@ mod tests {
             ] {
                 assert!(!create_package(archive_type, None).is_supported_by_proto());
             }
-        }
-
-        #[test]
-        fn doesnt_support_c_std_lib_on_linux() {
-            assert!(
-                !create_package(ArchiveType::TarGz, Some(LibcType::CStdLib))
-                    .is_supported_by_proto()
-            );
-        }
-
-        #[test]
-        fn supports_c_std_lib_on_other_os() {
-            let mut package = create_package(ArchiveType::Zip, Some(LibcType::CStdLib));
-            package.operating_system = "windows".into();
-
-            assert!(package.is_supported_by_proto());
         }
     }
 

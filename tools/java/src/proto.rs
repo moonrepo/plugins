@@ -11,15 +11,23 @@ use std::str::FromStr;
 use tool_common::enable_tracing;
 
 #[plugin_fn]
-pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {
+pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {
     enable_tracing();
 
     Ok(Json(RegisterToolOutput {
         name: "Java".into(),
         type_of: PluginType::Language,
+        inventory_options: ToolInventoryOptions {
+            override_dir_name: Some(if input.id == "jre" {
+                "jre".into()
+            } else {
+                "jdk".into()
+            }),
+            ..Default::default()
+        },
         minimum_proto_version: Some(Version::new(0, 59, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
-        ..RegisterToolOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -216,7 +224,7 @@ pub fn download_prebuilt(
         },
         download_name: Some(info.filename),
         download_url: info.direct_download_uri,
-        ..DownloadPrebuiltOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -257,7 +265,7 @@ pub fn locate_executables(
         exes,
         exes_dirs: vec![PathBuf::from(bin_dir)],
         globals_lookup_dirs: vec!["$JAVA_HOME/bin".into()],
-        ..LocateExecutablesOutput::default()
+        ..Default::default()
     }))
 }
 

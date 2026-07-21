@@ -20,15 +20,11 @@ java = "https://github.com/moonrepo/plugins/releases/download/java_tool-vX.Y.Z/j
 Java plugin can be configured with a `.prototools` file.
 
 - `api-url` (string) - The Foojay Disco API URL to load Java prebuilts from.
-- `vendor` (string) - The Java distribution vendor to install. Defaults to `temurin`.
-- `image-type` (string) - The Java image type to install. Defaults to `jdk`.
 - `release-type` (string) - The Java release type to load. Defaults to `ga`.
 
 ```toml
 [tools.java]
 api-url = "https://api.foojay.io/disco/v3.0"
-vendor = "temurin"
-image-type = "jdk"
 release-type = "ga"
 ```
 

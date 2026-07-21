@@ -1,7 +1,7 @@
 # Changelog
 
-## 0.1.0
+## Unreleased
 
 #### 🚀 Updates
 
-- Added initial Java prebuilt download support.
+- Added initial Java support.
