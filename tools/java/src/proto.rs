@@ -1,5 +1,5 @@
-use crate::config::{ArchiveType, Distribution, JavaToolConfig, LibcType, PackageType};
-use crate::foojay::{FoojayPackage, fetch_package_info, fetch_packages};
+use crate::config::{Distribution, JavaToolConfig, PackageType};
+use crate::foojay::{fetch_package_info, fetch_packages, find_package};
 use crate::java::JavaContext;
 use crate::version::from_java_version;
 use extism_pdk::*;
@@ -81,12 +81,42 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
     let config = get_tool_config::<JavaToolConfig>()?;
     let java = JavaContext::detect_from_unresolved(&input.initial)?;
 
+    // Scope each version with its distribution, as scoped requirements
+    // (created by `resolve_version`) only match versions of the same scope
     let versions = fetch_packages(&env, &config, &java)?
         .into_iter()
-        .map(|package| from_java_version(&package.java_version))
+        .map(|package| {
+            format!(
+                "{}-{}",
+                java.distribution,
+                from_java_version(&package.java_version)
+            )
+        })
         .collect::<Vec<_>>();
 
-    Ok(Json(LoadVersionsOutput::from(versions)?))
+    let mut output = LoadVersionsOutput::from(versions)?;
+
+    // Every Java version carries build metadata (21.0.11+10), which
+    // `from` excludes when computing the latest version, so compute
+    // it ourselves from the stable (non pre-release) versions
+    let latest = output
+        .versions
+        .iter()
+        .filter(|spec| {
+            spec.as_version()
+                .is_some_and(|version| version.prerelease.is_none())
+        })
+        .max()
+        .cloned();
+
+    if let Some(latest) = latest {
+        let latest = latest.to_unresolved_spec();
+
+        output.aliases.insert("latest".into(), latest.clone());
+        output.latest = Some(latest);
+    }
+
+    Ok(Json(output))
 }
 
 #[plugin_fn]
@@ -97,58 +127,24 @@ pub fn resolve_version(
     let mut initial = input.initial.clone();
 
     // If the version is missing a vendor, inject the default one,
-    // otherwise validate the vendor that is provided
+    // otherwise validate the vendor that is provided. Only requirements
+    // and versions support scopes, so aliases pass through untouched.
     match initial.get_scope() {
         Some(scope) => {
             Distribution::from_str(scope)?;
         }
-        None => {
+        None if matches!(
+            initial,
+            UnresolvedVersionSpec::Requirement(_) | UnresolvedVersionSpec::Version(_)
+        ) =>
+        {
             initial.set_scope(Distribution::default().to_string());
             output.candidate = Some(initial);
         }
+        None => {}
     }
 
     Ok(Json(output))
-}
-
-// https://github.com/foojayio/discoapi/issues/47
-fn is_compatible_libc(package: &FoojayPackage, env: &HostEnvironment) -> bool {
-    let base = if env.os.is_linux() {
-        if env.libc == HostLibc::Musl {
-            LibcType::Musl
-        } else {
-            LibcType::Glibc
-        }
-    } else if env.os.is_mac() {
-        LibcType::Libc
-    } else {
-        LibcType::CStdLib
-    };
-
-    package.lib_c_type.as_ref().is_none_or(|libc| *libc == base)
-}
-
-fn find_package<'a>(
-    packages: &'a [FoojayPackage],
-    env: &HostEnvironment,
-) -> Option<&'a FoojayPackage> {
-    for archive in [
-        ArchiveType::TarGz,
-        ArchiveType::TarXz,
-        ArchiveType::Tar,
-        ArchiveType::Zip,
-        // Always last since its non-standard
-        ArchiveType::TarZ,
-    ] {
-        if let Some(package) = packages
-            .iter()
-            .find(|package| package.archive_type == archive && is_compatible_libc(package, env))
-        {
-            return Some(package);
-        }
-    }
-
-    None
 }
 
 #[plugin_fn]

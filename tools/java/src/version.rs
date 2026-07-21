@@ -29,9 +29,25 @@ pub fn from_java_version(version: &str) -> String {
     out.push('.');
     out.push_str(parts.next().unwrap_or("0"));
 
-    if let Some(pre) = pre {
+    // A 4th "vendor" component (18.0.2.1) can't be represented in semver,
+    // and the scope position is reserved for the distribution, so encode
+    // it into the pre-release as `vN`. `to_java_version` decodes it back.
+    let vendor = parts.next();
+
+    if pre.is_some() || vendor.is_some() {
         out.push('-');
-        out.push_str(pre);
+
+        if let Some(pre) = pre {
+            out.push_str(pre);
+
+            if let Some(vendor) = vendor {
+                out.push_str(".v");
+                out.push_str(vendor);
+            }
+        } else if let Some(vendor) = vendor {
+            out.push('v');
+            out.push_str(vendor);
+        }
     }
 
     if let Some(build) = build {
@@ -39,10 +55,7 @@ pub fn from_java_version(version: &str) -> String {
         out.push_str(build);
     }
 
-    match parts.next() {
-        Some(vendor) => format!("{vendor}-{out}"),
-        None => out,
-    }
+    out
 }
 
 pub fn to_java_version(spec: &VersionSpec) -> String {
@@ -51,19 +64,44 @@ pub fn to_java_version(spec: &VersionSpec) -> String {
         VersionSpec::Alias(alias) => alias.to_string(),
         _ => {
             let version = spec.as_version().unwrap();
+
+            // Decode a `vN`-encoded 4th "vendor" component from the
+            // pre-release (see `from_java_version`)
+            fn is_digits(value: &str) -> bool {
+                !value.is_empty() && value.chars().all(|c| c.is_ascii_digit())
+            }
+
+            let (pre, vendor) = match &version.prerelease {
+                Some(pre) => match pre.split_once(".v") {
+                    Some((head, tail)) if is_digits(tail) => {
+                        (Some(head.to_owned()), Some(tail.to_owned()))
+                    }
+                    _ => match pre.strip_prefix('v') {
+                        Some(tail) if is_digits(tail) => (None, Some(tail.to_owned())),
+                        _ => (Some(pre.to_string()), None),
+                    },
+                },
+                None => (None, None),
+            };
+
             let mut out = version.major.to_string();
 
-            if version.minor > 0 || version.patch > 0 {
+            if version.minor > 0 || version.patch > 0 || vendor.is_some() {
                 out.push('.');
                 out.push_str(&version.minor.to_string());
 
-                if version.patch > 0 {
+                if version.patch > 0 || vendor.is_some() {
                     out.push('.');
                     out.push_str(&version.patch.to_string());
                 }
             }
 
-            if let Some(pre) = &version.prerelease {
+            if let Some(vendor) = vendor {
+                out.push('.');
+                out.push_str(&vendor);
+            }
+
+            if let Some(pre) = pre {
                 out = format!("{out}-{pre}");
             }
 
@@ -105,6 +143,11 @@ mod tests {
         // Shouldn't change
         assert_eq!(from_java_version("1.0.0"), "1.0.0");
         assert_eq!(from_java_version("1.0.0-alpha1"), "1.0.0-alpha1");
+
+        // Real-world versions
+        assert_eq!(from_java_version("21.0.11+10"), "21.0.11+10");
+        assert_eq!(from_java_version("8.0.492+9"), "8.0.492+9");
+        assert_eq!(from_java_version("18.0.2.1+1"), "18.0.2-v1+1");
     }
 
     #[test]
@@ -160,6 +203,16 @@ mod tests {
         assert_eq!(
             to_java_version(&VersionSpec::parse("1.2.3-ea.v4+4").unwrap()),
             "1.2.3.4-ea+4"
+        );
+
+        // Real-world round trips
+        assert_eq!(
+            to_java_version(&VersionSpec::parse(&from_java_version("18.0.2.1+1")).unwrap()),
+            "18.0.2.1+1"
+        );
+        assert_eq!(
+            to_java_version(&VersionSpec::parse(&from_java_version("21.0.11+10")).unwrap()),
+            "21.0.11+10"
         );
     }
 }

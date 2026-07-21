@@ -19,5 +19,7 @@ mod java_tool {
             metadata.plugin_version.unwrap().to_string(),
             env!("CARGO_PKG_VERSION")
         );
+        // Wildcard archive prefixes and tar.Z unpacking require proto v0.59
+        assert_eq!(metadata.minimum_proto_version, Some(Version::new(0, 59, 0)));
     }
 }
