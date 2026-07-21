@@ -89,6 +89,28 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
     Ok(Json(LoadVersionsOutput::from(versions)?))
 }
 
+#[plugin_fn]
+pub fn resolve_version(
+    Json(input): Json<ResolveVersionInput>,
+) -> FnResult<Json<ResolveVersionOutput>> {
+    let mut output = ResolveVersionOutput::default();
+    let mut initial = input.initial.clone();
+
+    // If the version is missing a vendor, inject the default one,
+    // otherwise validate the vendor that is provided
+    match initial.get_scope() {
+        Some(scope) => {
+            Distribution::from_str(scope)?;
+        }
+        None => {
+            initial.set_scope(Distribution::default().to_string());
+            output.candidate = Some(initial);
+        }
+    }
+
+    Ok(Json(output))
+}
+
 // https://github.com/foojayio/discoapi/issues/47
 fn is_compatible_libc(package: &FoojayPackage, env: &HostEnvironment) -> bool {
     let base = if env.os.is_linux() {

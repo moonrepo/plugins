@@ -65,7 +65,7 @@ pub fn fetch_packages(
         config.api_url.trim_end_matches('/'),
         java.distribution.to_query_param(),
         java_arch(env)?,
-        java.package.to_string(),
+        java.package,
         java_os(env)?,
         config.release_type.to_query_param(),
     );

@@ -2,49 +2,51 @@ use proto_pdk::{AnyResult, get_plugin_id};
 // https://github.com/foojayio/discoapi
 use schematic::{ConfigEnum, derive_enum};
 
-// Note: Our configuration (and proto itself) use kebab-case for
-// variant values, but Foojay uses snake_case. To support both
-// patterns, we default to kebab-case, and then use serde aliases
-// for any variants that require snake_case as well.
+// Note: Our configuration (and proto itself) use lowercase for
+// variant values (for community compatibility), but Foojay uses
+// snake_case. To support both patterns, we default to kebab-case,
+// and then use serde aliases for any variants that require
+// snake_case as well.
 
-derive_enum!(
-    #[derive(ConfigEnum, Default)]
-    pub enum Distribution {
-        Aoj,
-        #[serde(alias = "aoj_openj9")]
-        AojOpenj9,
-        Corretto,
-        Dragonwell,
-        #[serde(alias = "graalvm_ce8")]
-        GraalvmCe8,
-        #[serde(alias = "graalvm_ce11")]
-        GraalvmCe11,
-        #[serde(alias = "graalvm_ce16")]
-        GraalvmCe16,
-        Jetbrains,
-        Liberica,
-        #[serde(alias = "liberica_native")]
-        LibericaNative,
-        Mandrel,
-        Microsoft,
-        // #[serde(alias = "ojdk_build")]
-        // OjdkBuild,
-        Openlogic,
-        Oracle,
-        #[default]
-        #[serde(alias = "oracle_open_jdk", alias = "openjdk")]
-        OracleOpenJdk,
-        // Redhat,
-        #[serde(alias = "sap_machine")]
-        SapMachine,
-        Semeru,
-        Temurin,
-        Trava,
-        Zulu,
-        // #[serde(alias = "zulu_prime")]
-        // ZuluPrime,
-    }
-);
+#[derive(
+    Clone, ConfigEnum, Default, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize,
+)]
+#[serde(rename_all = "lowercase")]
+pub enum Distribution {
+    Aoj,
+    #[serde(alias = "aoj_openj9")]
+    AojOpenj9,
+    Corretto,
+    Dragonwell,
+    #[serde(alias = "graalvm_ce8")]
+    GraalvmCe8,
+    #[serde(alias = "graalvm_ce11")]
+    GraalvmCe11,
+    #[serde(alias = "graalvm_ce16")]
+    GraalvmCe16,
+    Jetbrains,
+    Liberica,
+    #[serde(alias = "liberica_native")]
+    LibericaNative,
+    Mandrel,
+    Microsoft,
+    // #[serde(alias = "ojdk_build")]
+    // OjdkBuild,
+    Openlogic,
+    #[default]
+    #[serde(alias = "oracle_open_jdk", alias = "open_jdk")]
+    OpenJdk,
+    Oracle,
+    // Redhat,
+    #[serde(alias = "sap_machine")]
+    SapMachine,
+    Semeru,
+    Temurin,
+    Trava,
+    Zulu,
+    // #[serde(alias = "zulu_prime")]
+    // ZuluPrime,
+}
 
 impl Distribution {
     pub fn to_query_param(&self) -> String {
