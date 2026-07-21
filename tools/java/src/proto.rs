@@ -27,6 +27,7 @@ pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<Regi
         },
         minimum_proto_version: Some(Version::new(0, 59, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
+        unstable: Switch::Toggle(true),
         ..Default::default()
     }))
 }
@@ -235,21 +236,21 @@ pub fn locate_executables(
     let env = get_host_environment()?;
     let java = JavaContext::detect(&input.context.version)?;
 
-    // Liberica returns a flat folder structure, and does not use
-    // the macOS bundle folder structure like other distros
-    let bin_dir = if env.os.is_mac() && java.distribution != Distribution::Liberica {
+    let home_dir = get_home_dir(&input.context.tool_dir);
+    let bin_dir = if home_dir.ends_with("Contents/Home") {
         "Contents/Home/bin"
     } else {
         "bin"
     };
 
-    let mut exes = HashMap::from_iter([(
-        "java".into(),
-        ExecutableConfig::new_primary(format!("{bin_dir}/{}", env.os.get_exe_name("java"))),
-    )]);
+    let mut exes = HashMap::default();
 
     if java.package == PackageType::Jdk {
         exes.extend([
+            (
+                "java".into(),
+                ExecutableConfig::new_primary(format!("{bin_dir}/{}", env.os.get_exe_name("java"))),
+            ),
             (
                 "javac".into(),
                 ExecutableConfig::new(format!("{bin_dir}/{}", env.os.get_exe_name("javac"))),
@@ -274,19 +275,21 @@ pub fn activate_environment(
     Json(input): Json<ActivateEnvironmentInput>,
 ) -> FnResult<Json<ActivateEnvironmentOutput>> {
     let mut output = ActivateEnvironmentOutput::default();
-
-    let home_dir_base = input.context.tool_dir;
-    let home_dir_macos = home_dir_base.join("Contents").join("Home");
-
-    let home_dir = if home_dir_macos.exists() {
-        home_dir_macos
-    } else {
-        home_dir_base
-    };
+    let home_dir = get_home_dir(&input.context.tool_dir);
 
     if let Some(home) = home_dir.real_path_string() {
         output.env.insert("JAVA_HOME".into(), home);
     }
 
     Ok(Json(output))
+}
+
+fn get_home_dir(base: &VirtualPath) -> VirtualPath {
+    let home_dir = base.join("Contents").join("Home");
+
+    if home_dir.exists() {
+        home_dir
+    } else {
+        base.to_owned()
+    }
 }
