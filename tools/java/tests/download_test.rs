@@ -118,7 +118,7 @@ mod java_tool {
                 .await;
 
             let output = plugin
-                .download_prebuilt(create_download_input("openjdk-21.0.2+13"))
+                .download_prebuilt(create_download_input("open-jdk-21.0.2+13"))
                 .await;
 
             assert_eq!(output.archive_prefix, Some("*".into()));
@@ -144,7 +144,7 @@ mod java_tool {
                 .await;
 
             let output = plugin
-                .download_prebuilt(create_download_input("openjdk-17.0.2+8"))
+                .download_prebuilt(create_download_input("open-jdk-17.0.2+8"))
                 .await;
 
             assert_eq!(output.archive_prefix, Some("*".into()));
@@ -235,7 +235,7 @@ mod java_tool {
                 .await;
 
             let output = plugin
-                .download_prebuilt(create_download_input("sapmachine-21.0.11"))
+                .download_prebuilt(create_download_input("sap-machine-21.0.11"))
                 .await;
 
             // The API lists the musl tar.gz before the glibc one,
@@ -276,7 +276,7 @@ mod java_tool {
                 .await;
 
             let output = plugin
-                .download_prebuilt(create_download_input("openlogic-25.0.3+9"))
+                .download_prebuilt(create_download_input("open-logic-25.0.3+9"))
                 .await;
 
             // macOS archives nest as <stem>/jdk-x.x.x.jdk/Contents/Home
@@ -297,7 +297,7 @@ mod java_tool {
                 .await;
 
             let output = plugin
-                .download_prebuilt(create_download_input("openlogic-25.0.3+9"))
+                .download_prebuilt(create_download_input("open-logic-25.0.3+9"))
                 .await;
 
             assert_eq!(output.archive_prefix, Some("*".into()));
@@ -401,15 +401,22 @@ mod java_tool {
         #[tokio::test(flavor = "multi_thread")]
         async fn locates_macos_bundle_bins() {
             let sandbox = create_empty_proto_sandbox();
+
+            // The bundle layout is detected from the installed files,
+            // so simulate an unpacked macOS archive
+            sandbox.create_file(".proto/tools/jdk/21.0.11/Contents/Home/bin/java", "");
+
             let plugin = sandbox
                 .create_plugin_with_config("java-test", |config| {
                     config.host(HostOS::MacOS, HostArch::Arm64);
                 })
                 .await;
 
-            let output = plugin
-                .locate_executables(create_locate_input("temurin-21.0.11+10"))
-                .await;
+            let mut input = create_locate_input("temurin-21.0.11+10");
+            input.context.tool_dir =
+                VirtualPath::Real(sandbox.path().join(".proto/tools/jdk/21.0.11"));
+
+            let output = plugin.locate_executables(input).await;
 
             assert_eq!(
                 output.exes.get("java").unwrap().exe_path,
@@ -419,7 +426,7 @@ mod java_tool {
         }
 
         #[tokio::test(flavor = "multi_thread")]
-        async fn locates_macos_flat_bins_for_liberica() {
+        async fn locates_flat_bins_without_bundle() {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("java-test", |config| {
@@ -427,11 +434,12 @@ mod java_tool {
                 })
                 .await;
 
+            // Some distributions (liberica) are flat on macOS, with no
+            // Contents/Home bundle, which is detected from the files
             let output = plugin
                 .locate_executables(create_locate_input("liberica-21.0.11+11"))
                 .await;
 
-            // Liberica macOS archives are flat, with no Contents/Home bundle
             assert_eq!(
                 output.exes.get("java").unwrap().exe_path,
                 Some("bin/java".into())

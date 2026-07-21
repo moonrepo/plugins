@@ -207,11 +207,11 @@ mod tests {
 
         // Real-world round trips
         assert_eq!(
-            to_java_version(&VersionSpec::parse(&from_java_version("18.0.2.1+1")).unwrap()),
+            to_java_version(&VersionSpec::parse(from_java_version("18.0.2.1+1")).unwrap()),
             "18.0.2.1+1"
         );
         assert_eq!(
-            to_java_version(&VersionSpec::parse(&from_java_version("21.0.11+10")).unwrap()),
+            to_java_version(&VersionSpec::parse(from_java_version("21.0.11+10")).unwrap()),
             "21.0.11+10"
         );
     }

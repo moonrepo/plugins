@@ -2600,6 +2600,7 @@ dependencies = [
  "proto_pdk_test_utils 0.47.0",
  "schematic",
  "serde",
+ "serde_json",
  "starbase_sandbox 0.11.1",
  "tokio",
  "tool_common",

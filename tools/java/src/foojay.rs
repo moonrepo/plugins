@@ -16,7 +16,8 @@ pub struct FoojayResponse<T> {
 pub struct FoojayPackage {
     pub architecture: String,
     pub archive_type: ArchiveType,
-    pub distribution: Distribution,
+    #[serde(deserialize_with = "lenient_distribution")]
+    pub distribution: Option<Distribution>,
     pub distribution_version: String,
     pub id: String,
     pub java_version: String,
@@ -26,8 +27,26 @@ pub struct FoojayPackage {
     pub release_status: ReleaseType,
 }
 
+// Map unsupported distros to `None` instead of failing the entire response deserialization
+fn lenient_distribution<'de, D>(deserializer: D) -> Result<Option<Distribution>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = String::deserialize(deserializer)?;
+
+    Ok(Distribution::deserialize(
+        serde::de::value::StrDeserializer::<serde::de::value::Error>::new(&value),
+    )
+    .ok())
+}
+
 impl FoojayPackage {
     pub fn is_supported_by_proto(&self) -> bool {
+        // Distributions not in our enum are not supported
+        if self.distribution.is_none() {
+            return false;
+        }
+
         // foojay supports dmg/pkg as well, but they are not as
         // compatible with proto as standard archives are
         if !matches!(
@@ -89,22 +108,30 @@ pub fn find_package<'a>(
 }
 
 // https://github.com/foojayio/discoapi#endpoint-packages
+
 pub fn fetch_packages(
     env: &HostEnvironment,
     config: &JavaToolConfig,
     java: &JavaContext,
 ) -> AnyResult<Vec<FoojayPackage>> {
     let mut url = format!(
-        "{}/packages?latest=available&javafx_bundled=false&archive_type=tar&archive_type=tar.gz&archive_type=tar.xz&archive_type=tar.Z&archive_type=zip&distro={}&architecture={}&package_type={}&operating_system={}&release_status={}",
+        "{}/packages?latest=available&javafx_bundled=false&archive_type=tar&archive_type=tar.gz&archive_type=tar.xz&archive_type=tar.Z&archive_type=zip&operating_system={}&architecture={}&package_type={}&release_status={}",
         config.api_url.trim_end_matches('/'),
-        java.distribution.to_query_param(),
+        java_os(env)?,
         java_arch(env)?,
         java.package,
-        java_os(env)?,
         config.release_type.to_query_param(),
     );
 
-    if !java.spec.is_latest() {
+    // Filter to the requested distribution when a scope was provided, and
+    // always when downloading a resolved version (the distribution is still
+    // known when unscoped, via the default), otherwise multiple distributions
+    // share identical java versions. Unscoped listings query all of them.
+    if java.scoped || java.spec.as_version().is_some() {
+        url.push_str(&format!("&distro={}", java.distribution.to_query_param()));
+    }
+
+    if java.spec.as_version().is_some() {
         url.push_str(&format!("&version={}", query_value(&java.short_version)));
     }
 
@@ -219,6 +246,7 @@ mod tests {
     fn create_package(archive_type: ArchiveType, lib_c_type: Option<LibcType>) -> FoojayPackage {
         FoojayPackage {
             archive_type,
+            distribution: Some(Distribution::default()),
             lib_c_type,
             operating_system: "linux".into(),
             ..FoojayPackage::default()
@@ -407,6 +435,92 @@ mod tests {
             let package = find_package(&packages, &env).unwrap();
 
             assert_eq!(package.lib_c_type, Some(LibcType::Musl));
+        }
+    }
+
+    mod deserialization {
+        use super::*;
+
+        fn parse_package(json: &str) -> FoojayPackage {
+            serde_json::from_str(json).unwrap()
+        }
+
+        #[test]
+        fn maps_known_distributions() {
+            assert_eq!(
+                parse_package(r#"{"distribution":"temurin"}"#).distribution,
+                Some(Distribution::Temurin)
+            );
+            assert_eq!(
+                parse_package(r#"{"distribution":"zulu"}"#).distribution,
+                Some(Distribution::Zulu)
+            );
+        }
+
+        #[test]
+        fn maps_foojay_snake_case_distributions() {
+            for (value, dist) in [
+                ("oracle_open_jdk", Distribution::OpenJdk),
+                ("sap_machine", Distribution::SapMachine),
+                ("liberica_native", Distribution::LibericaNative),
+                ("aoj_openj9", Distribution::AojOpenj9),
+                ("gluon_graalvm", Distribution::GluonGraalvm),
+                ("graalvm_community", Distribution::GraalvmCommunity),
+                ("graalvm_ce20", Distribution::GraalvmCe20),
+                ("ojdk_build", Distribution::OjdkBuild),
+                ("semeru_certified", Distribution::SemeruCertified),
+                ("zulu_prime", Distribution::ZuluPrime),
+            ] {
+                assert_eq!(
+                    parse_package(&format!(r#"{{"distribution":"{value}"}}"#)).distribution,
+                    Some(dist),
+                    "for {value}"
+                );
+            }
+        }
+
+        #[test]
+        fn unknown_distributions_become_none() {
+            for unknown in ["eliya", "not_a_real_distro"] {
+                assert_eq!(
+                    parse_package(&format!(r#"{{"distribution":"{unknown}"}}"#)).distribution,
+                    None,
+                    "for {unknown}"
+                );
+            }
+        }
+
+        #[test]
+        fn unknown_distributions_are_not_supported() {
+            let mut package = create_package(ArchiveType::TarGz, None);
+            package.distribution = None;
+
+            assert!(!package.is_supported_by_proto());
+        }
+
+        #[test]
+        fn response_with_unknown_distributions_still_deserializes() {
+            // Unscoped queries return every distribution that foojay
+            // tracks, including ones not in our enum, which must not
+            // fail the entire response
+            let response: FoojayResponse<FoojayPackage> = serde_json::from_str(
+                r#"{"result":[
+                    {"distribution":"temurin","archive_type":"tar.gz"},
+                    {"distribution":"eliya","archive_type":"tar.gz"},
+                    {"distribution":"zulu","archive_type":"zip"}
+                ]}"#,
+            )
+            .unwrap();
+
+            assert_eq!(response.result.len(), 3);
+            assert_eq!(
+                response
+                    .result
+                    .iter()
+                    .filter(|package| package.is_supported_by_proto())
+                    .count(),
+                2
+            );
         }
     }
 }

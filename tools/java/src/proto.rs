@@ -52,30 +52,45 @@ pub fn parse_version_file(
     Json(input): Json<ParseVersionFileInput>,
 ) -> FnResult<Json<ParseVersionFileOutput>> {
     let mut version = None;
+    let is_sdkman = input.file == ".sdkmanrc";
 
-    fn normalize_sdkman_version(value: &str) -> &str {
+    fn normalize_sdkman_version(value: &str) -> AnyResult<(Distribution, &str)> {
         let value = value.trim();
 
         if let Some((version, vendor)) = value.rsplit_once('-')
-            && vendor.chars().all(|c| c.is_ascii_alphabetic())
+            && vendor.chars().all(|c| c.is_ascii_alphanumeric())
         {
-            version
+            Ok((Distribution::from_value(vendor)?, version))
         } else {
-            value
+            Ok((Distribution::default(), value))
         }
     }
 
-    if input.file == ".sdkmanrc" || input.file == ".java-version" {
+    if is_sdkman || input.file == ".java-version" {
         for line in input.content.lines() {
             let line = line.trim();
 
-            if line.is_empty() || input.file == ".sdkmanrc" && !line.starts_with("java=") {
+            if line.is_empty() || is_sdkman && !line.starts_with("java=") {
                 continue;
             }
 
-            version = Some(UnresolvedVersionSpec::parse(normalize_sdkman_version(
-                line.strip_prefix("java=").unwrap_or(line),
-            ))?);
+            if is_sdkman {
+                let (dist, value) =
+                    normalize_sdkman_version(line.strip_prefix("java=").unwrap_or(line))?;
+
+                version = Some(UnresolvedVersionSpec::parse(format!("{dist}-{value}"))?);
+            } else {
+                // Lines may already contain a distribution scope (temurin-21),
+                // or be an alias (latest), so only inject the default scope
+                // into unscoped versions and requirements
+                let mut spec = UnresolvedVersionSpec::parse(line)?;
+
+                if spec.get_scope().is_none() {
+                    spec.set_scope(Distribution::default().to_string());
+                }
+
+                version = Some(spec);
+            }
 
             break;
         }
@@ -94,12 +109,11 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
     // (created by `resolve_version`) only match versions of the same scope
     let versions = fetch_packages(&env, &config, &java)?
         .into_iter()
-        .map(|package| {
-            format!(
-                "{}-{}",
-                java.distribution,
-                from_java_version(&package.java_version)
-            )
+        .filter_map(|package| {
+            package
+                .distribution
+                .as_ref()
+                .map(|dist| format!("{}-{}", dist, from_java_version(&package.java_version)))
         })
         .collect::<Vec<_>>();
 
@@ -140,7 +154,7 @@ pub fn resolve_version(
     // and versions support scopes, so aliases pass through untouched.
     match initial.get_scope() {
         Some(scope) => {
-            Distribution::from_str(scope)?;
+            Distribution::from_value(scope)?;
         }
         None if matches!(
             initial,
@@ -175,12 +189,15 @@ pub fn download_prebuilt(
     // Load all matching packages
     let mut packages = fetch_packages(&env, &config, &java)?;
 
-    // For non-latest, filter the results to matching versions
+    // For non-latest, filter the results to matching versions. Also gate on
+    // the distribution, as multiple distributions share identical java
+    // versions (temurin and zulu both publish 21.0.11+10, for example)
     if !java.spec.is_latest() {
         packages.retain(|package| {
-            package.java_version == java.full_version
-                || package.java_version == java.short_version
-                || from_java_version(&package.java_version) == java.full_version
+            package.distribution.as_ref() == Some(&java.distribution)
+                && (package.java_version == java.full_version
+                    || package.java_version == java.short_version
+                    || from_java_version(&package.java_version) == java.full_version)
         });
     }
 
@@ -206,7 +223,7 @@ pub fn download_prebuilt(
     Ok(Json(DownloadPrebuiltOutput {
         archive_prefix: Some(match java.distribution {
             // Double nested on macos: openlogic-openjdk-x.x.x-mac-x64/jdk-x.x.x
-            Distribution::Openlogic if env.os.is_mac() => "*/*".into(),
+            Distribution::OpenLogic if env.os.is_mac() => "*/*".into(),
             // Nested in jdk dir: jdk-x.x.x
             _ => "*".into(),
         }),

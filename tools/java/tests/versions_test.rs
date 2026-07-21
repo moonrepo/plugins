@@ -8,9 +8,9 @@ mod java_tool {
     // this macro share a plugin instance (and its version cache), so only
     // same-scoped versions may be used!
     generate_resolve_versions_tests!("java-test", {
-        "17" => "openjdk-17.0.2+8",
-        "19" => "openjdk-19.0.2+7",
-        "openjdk-21" => "openjdk-21.0.2+13",
+        "17" => "open-jdk-17.0.2+8",
+        "19" => "open-jdk-19.0.2+7",
+        "open-jdk-21" => "open-jdk-21.0.2+13",
     });
 
     #[tokio::test(flavor = "multi_thread")]
@@ -75,6 +75,28 @@ mod java_tool {
     }
 
     #[tokio::test(flavor = "multi_thread")]
+    async fn loads_all_distributions_when_unscoped() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("java-test").await;
+
+        let output = plugin.load_versions(LoadVersionsInput::default()).await;
+
+        let scopes = output
+            .versions
+            .iter()
+            .filter_map(|version| version.get_scope())
+            .collect::<std::collections::HashSet<_>>();
+
+        // Unscoped listings query every supported distribution
+        assert!(scopes.len() > 3);
+        assert!(scopes.contains("open-jdk"));
+        assert!(scopes.contains("temurin"));
+        assert!(scopes.contains("zulu"));
+        // Unknown foojay distributions must be skipped, not errors
+        assert!(!scopes.contains("eliya"));
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
     async fn sets_latest_alias() {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox.create_plugin("java-test").await;
@@ -100,7 +122,7 @@ mod java_tool {
 
         assert_eq!(
             output.candidate,
-            Some(UnresolvedVersionSpec::parse("openjdk-21").unwrap())
+            Some(UnresolvedVersionSpec::parse("open-jdk-21").unwrap())
         );
     }
 
@@ -161,9 +183,48 @@ mod java_tool {
             })
             .await;
 
+        // Unscoped versions receive the default distribution
         assert_eq!(
             output.version.unwrap(),
-            UnresolvedVersionSpec::parse("21.0.11").unwrap()
+            UnresolvedVersionSpec::parse("open-jdk-21.0.11").unwrap()
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn parse_java_version_file_keeps_existing_scope() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("java-test").await;
+
+        let output = plugin
+            .parse_version_file(ParseVersionFileInput {
+                content: "temurin-21\n".into(),
+                file: ".java-version".into(),
+                ..Default::default()
+            })
+            .await;
+
+        assert_eq!(
+            output.version.unwrap(),
+            UnresolvedVersionSpec::parse("temurin-21").unwrap()
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn parse_java_version_file_keeps_aliases() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("java-test").await;
+
+        let output = plugin
+            .parse_version_file(ParseVersionFileInput {
+                content: "latest\n".into(),
+                file: ".java-version".into(),
+                ..Default::default()
+            })
+            .await;
+
+        assert_eq!(
+            output.version.unwrap(),
+            UnresolvedVersionSpec::parse("latest").unwrap()
         );
     }
 
@@ -180,9 +241,80 @@ mod java_tool {
             })
             .await;
 
+        // SDKMAN vendor suffixes map to distribution scopes
         assert_eq!(
             output.version.unwrap(),
-            UnresolvedVersionSpec::parse("21.0.11").unwrap()
+            UnresolvedVersionSpec::parse("temurin-21.0.11").unwrap()
         );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn parse_sdkmanrc_vendor_suffixes() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("java-test").await;
+
+        for (vendor, dist) in [
+            ("tem", "temurin"),
+            ("zulu", "zulu"),
+            ("amzn", "corretto"),
+            ("librca", "liberica"),
+            ("ms", "microsoft"),
+            ("sem", "semeru"),
+            ("sapmchn", "sap-machine"),
+            ("nik", "liberica-native"),
+            ("graalce", "graalvm-community"),
+            ("graal", "graalvm"),
+            ("albba", "dragonwell"),
+            ("open", "open-jdk"),
+            ("oracle", "oracle"),
+        ] {
+            let output = plugin
+                .parse_version_file(ParseVersionFileInput {
+                    content: format!("java=21.0.11-{vendor}\n"),
+                    file: ".sdkmanrc".into(),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.version.unwrap(),
+                UnresolvedVersionSpec::parse(format!("{dist}-21.0.11")).unwrap(),
+                "for {vendor}"
+            );
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn parse_sdkmanrc_without_vendor() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("java-test").await;
+
+        let output = plugin
+            .parse_version_file(ParseVersionFileInput {
+                content: "java=21\n".into(),
+                file: ".sdkmanrc".into(),
+                ..Default::default()
+            })
+            .await;
+
+        assert_eq!(
+            output.version.unwrap(),
+            UnresolvedVersionSpec::parse("open-jdk-21").unwrap()
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    #[should_panic(expected = "foobar")]
+    async fn errors_unknown_sdkman_vendor() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("java-test").await;
+
+        plugin
+            .parse_version_file(ParseVersionFileInput {
+                content: "java=21.0.11-foobar\n".into(),
+                file: ".sdkmanrc".into(),
+                ..Default::default()
+            })
+            .await;
     }
 }
