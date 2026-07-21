@@ -17,7 +17,7 @@ derive_enum!(
     #[derive(ConfigEnum, Default)]
     pub enum Distribution {
         Aoj,
-        #[serde(alias = "aoj_openj9")]
+        #[serde(alias = "aoj_openj9", alias = "aojopenj9")]
         AojOpenj9,
         Bisheng,
         #[serde(alias = "amazon", alias = "amzn")]
@@ -25,21 +25,21 @@ derive_enum!(
         Debian,
         #[serde(alias = "dragon", alias = "alibaba", alias = "albba")]
         Dragonwell,
-        #[serde(alias = "gluon_graalvm")]
+        #[serde(alias = "gluon_graalvm", alias = "gluon")]
         GluonGraalvm,
         #[serde(alias = "graal")]
         Graalvm,
-        #[serde(alias = "graalvm_ce8")]
+        #[serde(alias = "graalvm_ce8", alias = "graalvmce8")]
         GraalvmCe8,
-        #[serde(alias = "graalvm_ce11")]
+        #[serde(alias = "graalvm_ce11", alias = "graalvmce11")]
         GraalvmCe11,
-        #[serde(alias = "graalvm_ce16")]
+        #[serde(alias = "graalvm_ce16", alias = "graalvmce16")]
         GraalvmCe16,
-        #[serde(alias = "graalvm_ce17")]
+        #[serde(alias = "graalvm_ce17", alias = "graalvmce17")]
         GraalvmCe17,
-        #[serde(alias = "graalvm_ce19")]
+        #[serde(alias = "graalvm_ce19", alias = "graalvmce19")]
         GraalvmCe19,
-        #[serde(alias = "graalvm_ce20")]
+        #[serde(alias = "graalvm_ce20", alias = "graalvmce20")]
         GraalvmCe20,
         #[serde(alias = "graalvm_community", alias = "graalce")]
         GraalvmCommunity,
@@ -53,16 +53,26 @@ derive_enum!(
         Mandrel,
         #[serde(alias = "ms")]
         Microsoft,
-        #[serde(alias = "ojdk_build")]
+        #[serde(alias = "ojdk_build", alias = "ojdkbuild")]
         OjdkBuild,
         #[serde(alias = "open_logic", alias = "openlogic")]
         OpenLogic,
         #[default]
-        #[serde(alias = "oracle_open_jdk", alias = "open_jdk", alias = "open")]
+        #[serde(
+            alias = "oracle_open_jdk",
+            alias = "open_jdk",
+            alias = "openjdk",
+            alias = "open"
+        )]
         OpenJdk,
         Oracle,
         Redhat,
-        #[serde(alias = "sap_machine", alias = "sapmchn", alias = "sap")]
+        #[serde(
+            alias = "sap_machine",
+            alias = "sapmachine",
+            alias = "sapmchn",
+            alias = "sap"
+        )]
         SapMachine,
         #[serde(alias = "sem")]
         Semeru,
@@ -72,7 +82,7 @@ derive_enum!(
         Temurin,
         Trava,
         Zulu,
-        #[serde(alias = "zulu_prime")]
+        #[serde(alias = "zulu_prime", alias = "zuluprime")]
         ZuluPrime,
     }
 );

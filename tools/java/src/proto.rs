@@ -122,12 +122,18 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
     // Every Java version carries build metadata (21.0.11+10), which
     // `from` excludes when computing the latest version, so compute
     // it ourselves from the stable (non pre-release) versions
+
     let latest = output
         .versions
         .iter()
         .filter(|spec| {
-            spec.as_version()
-                .is_some_and(|version| version.prerelease.is_none())
+            spec.get_scope()
+                .as_ref()
+                .and_then(|scope| Distribution::from_value(scope).ok())
+                .is_some_and(|scope| scope == java.distribution)
+                && spec
+                    .as_version()
+                    .is_some_and(|version| version.prerelease.is_none())
         })
         .max()
         .cloned();
