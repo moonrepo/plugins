@@ -1,6 +1,6 @@
 [package]
 name = "deno_tool"
-version = "0.15.9"
+version = "0.15.10"
 edition = "2024"
 description = "Deno WASM plugin for proto."
 authors = ["Miles Johnson"]
