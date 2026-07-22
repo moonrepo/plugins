@@ -5,7 +5,7 @@ use crate::version::from_java_version;
 use extism_pdk::*;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::str::FromStr;
 use tool_common::enable_tracing;
@@ -115,9 +115,9 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
                 .as_ref()
                 .map(|dist| format!("{}-{}", dist, from_java_version(&package.java_version)))
         })
-        .collect::<Vec<_>>();
+        .collect::<HashSet<_>>();
 
-    let mut output = LoadVersionsOutput::from(versions)?;
+    let mut output = LoadVersionsOutput::from(versions.into_iter().collect())?;
 
     // Every Java version carries build metadata (21.0.11+10), which
     // `from` excludes when computing the latest version, so compute
