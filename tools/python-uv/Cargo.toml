@@ -1,6 +1,6 @@
 [package]
 name = "python_uv_tool"
-version = "0.3.2"
+version = "0.3.3"
 edition = "2024"
 description = "Python uv WASM plugin for proto."
 authors = ["Miles Johnson"]
