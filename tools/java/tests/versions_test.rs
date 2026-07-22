@@ -8,23 +8,22 @@ mod java_tool {
     // this macro share a plugin instance (and its version cache), so only
     // same-scoped versions may be used!
     generate_resolve_versions_tests!("java-test", {
-        "17" => "open-jdk-17.0.2+8",
-        "19" => "open-jdk-19.0.2+7",
-        "open-jdk-21" => "open-jdk-21.0.2+13",
+        "17" => "openjdk-17.0.2+8",
+        "19" => "openjdk-19.0.2+7",
+        "openjdk-21" => "openjdk-21.0.2+13",
     });
 
     #[tokio::test(flavor = "multi_thread")]
     async fn resolves_vendor_scoped_versions() {
-        // Vendor scoped versions drift with quarterly CPU releases,
-        // and will need to be updated over time. Each case creates a
-        // fresh plugin, as the remote version cache is per-instance
-        // and the version list differs per distribution scope. The host
-        // is pinned since not all vendors ship all platforms (temurin 8
-        // has no macos-arm64 build, for example).
-        for (requested, expected) in [
-            ("temurin-8", "temurin-8.0.492+9"),
-            ("temurin-21", "temurin-21.0.11+10"),
-            ("zulu-11", "zulu-11.0.31+11"),
+        // Each case creates a fresh plugin, as the remote version cache is
+        // per-instance and the version list differs per distribution scope.
+        // The host is pinned since not all vendors ship all platforms
+        // (temurin 8 has no macos-arm64 build, for example). Assertions match
+        // on the scope and major only, since patch releases drift quarterly.
+        for (requested, prefix) in [
+            ("temurin-8", "temurin-8.0."),
+            ("temurin-21", "temurin-21.0."),
+            ("zulu-11", "zulu-11.0."),
         ] {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
@@ -39,7 +38,14 @@ mod java_tool {
                 .await
                 .unwrap();
 
-            assert_eq!(spec.get_resolved_version(), expected, "for {requested}");
+            let resolved = spec.get_resolved_version().to_string();
+
+            assert!(
+                resolved.starts_with(prefix),
+                "for {requested}: {resolved} does not start with {prefix}"
+            );
+            // Foojay java versions always carry build metadata
+            assert!(resolved.contains('+'), "for {requested}: {resolved}");
         }
     }
 
@@ -89,7 +95,7 @@ mod java_tool {
 
         // Unscoped listings query every supported distribution
         assert!(scopes.len() > 3);
-        assert!(scopes.contains("open-jdk"));
+        assert!(scopes.contains("openjdk"));
         assert!(scopes.contains("temurin"));
         assert!(scopes.contains("zulu"));
         // Unknown foojay distributions must be skipped, not errors
@@ -122,7 +128,7 @@ mod java_tool {
 
         assert_eq!(
             output.candidate,
-            Some(UnresolvedVersionSpec::parse("open-jdk-21").unwrap())
+            Some(UnresolvedVersionSpec::parse("openjdk-21").unwrap())
         );
     }
 
@@ -186,7 +192,7 @@ mod java_tool {
         // Unscoped versions receive the default distribution
         assert_eq!(
             output.version.unwrap(),
-            UnresolvedVersionSpec::parse("open-jdk-21.0.11").unwrap()
+            UnresolvedVersionSpec::parse("openjdk-21.0.11").unwrap()
         );
     }
 
@@ -265,7 +271,7 @@ mod java_tool {
             ("graalce", "graalvm-community"),
             ("graal", "graalvm"),
             ("albba", "dragonwell"),
-            ("open", "open-jdk"),
+            ("open", "openjdk"),
             ("oracle", "oracle"),
         ] {
             let output = plugin
@@ -299,7 +305,7 @@ mod java_tool {
 
         assert_eq!(
             output.version.unwrap(),
-            UnresolvedVersionSpec::parse("open-jdk-21").unwrap()
+            UnresolvedVersionSpec::parse("openjdk-21").unwrap()
         );
     }
 

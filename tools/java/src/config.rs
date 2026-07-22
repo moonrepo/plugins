@@ -1,8 +1,10 @@
 // https://github.com/foojayio/discoapi
 // https://sdkman.io/jdks/
 
-use proto_pdk::{AnyResult, get_plugin_id};
+use proto_pdk::{AnyResult, anyhow, get_plugin_id};
 use schematic::{ConfigEnum, derive_enum};
+use serde::{Deserialize, Deserializer, de};
+use std::fmt;
 
 // Note: Our configuration (and proto itself) use kebab-case for
 // variant values (for community compatibility), but Foojay uses
@@ -13,90 +15,88 @@ use schematic::{ConfigEnum, derive_enum};
 // Additionally, many of the serde aliases are to support SDKMAN!
 
 // https://github.com/foojayio/discoapi/blob/main/src/main/java/io/foojay/api/pkg/Distro.java
-derive_enum!(
-    #[derive(ConfigEnum, Default)]
-    pub enum Distribution {
-        Aoj,
-        #[serde(alias = "aoj_openj9", alias = "aojopenj9")]
-        AojOpenj9,
-        Bisheng,
-        #[serde(alias = "amazon", alias = "amzn")]
-        Corretto,
-        Debian,
-        #[serde(alias = "dragon", alias = "alibaba", alias = "albba")]
-        Dragonwell,
-        #[serde(alias = "gluon_graalvm", alias = "gluon")]
-        GluonGraalvm,
-        #[serde(alias = "graal")]
-        Graalvm,
-        #[serde(alias = "graalvm_ce8", alias = "graalvmce8")]
-        GraalvmCe8,
-        #[serde(alias = "graalvm_ce11", alias = "graalvmce11")]
-        GraalvmCe11,
-        #[serde(alias = "graalvm_ce16", alias = "graalvmce16")]
-        GraalvmCe16,
-        #[serde(alias = "graalvm_ce17", alias = "graalvmce17")]
-        GraalvmCe17,
-        #[serde(alias = "graalvm_ce19", alias = "graalvmce19")]
-        GraalvmCe19,
-        #[serde(alias = "graalvm_ce20", alias = "graalvmce20")]
-        GraalvmCe20,
-        #[serde(alias = "graalvm_community", alias = "graalce")]
-        GraalvmCommunity,
-        Jetbrains,
-        #[serde(alias = "tencent")]
-        Kona,
-        #[serde(alias = "librca")]
-        Liberica,
-        #[serde(alias = "liberica_native", alias = "nik")]
-        LibericaNative,
-        Mandrel,
-        #[serde(alias = "ms")]
-        Microsoft,
-        #[serde(alias = "ojdk_build", alias = "ojdkbuild")]
-        OjdkBuild,
-        #[serde(alias = "open_logic", alias = "openlogic")]
-        OpenLogic,
-        #[default]
-        #[serde(
-            alias = "oracle_open_jdk",
-            alias = "open_jdk",
-            alias = "openjdk",
-            alias = "open"
-        )]
-        OpenJdk,
-        Oracle,
-        Redhat,
-        #[serde(
-            alias = "sap_machine",
-            alias = "sapmachine",
-            alias = "sapmchn",
-            alias = "sap"
-        )]
-        SapMachine,
-        #[serde(alias = "sem")]
-        Semeru,
-        #[serde(alias = "semeru_certified")]
-        SemeruCertified,
-        #[serde(alias = "tem")]
-        Temurin,
-        Trava,
-        Zulu,
-        #[serde(alias = "zulu_prime", alias = "zuluprime")]
-        ZuluPrime,
-    }
-);
+#[derive(Clone, ConfigEnum, Default, Debug, Eq, PartialEq, serde::Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Distribution {
+    Aoj,
+    AojOpenj9,
+    Bisheng,
+    Corretto,
+    Debian,
+    Dragonwell,
+    GluonGraalvm,
+    Graalvm,
+    GraalvmCe8,
+    GraalvmCe11,
+    GraalvmCe16,
+    GraalvmCe17,
+    GraalvmCe19,
+    GraalvmCe20,
+    GraalvmCommunity,
+    Jetbrains,
+    Kona,
+    Liberica,
+    LibericaNative,
+    Mandrel,
+    Microsoft,
+    OjdkBuild,
+    OpenLogic,
+    #[default]
+    #[serde(rename = "openjdk")]
+    OpenJdk,
+    Oracle,
+    Redhat,
+    SapMachine,
+    Semeru,
+    SemeruCertified,
+    Temurin,
+    Trava,
+    Zulu,
+    ZuluPrime,
+}
 
 impl Distribution {
-    /// Parse from a string, including every serde alias. The generated
-    /// `FromStr` only honors the first alias of each variant, while the
-    /// serde deserializer honors them all (foojay and SDKMAN values).
-    pub fn from_value(value: &str) -> AnyResult<Self> {
-        use serde::Deserialize;
+    pub fn parse(value: &str) -> AnyResult<Self> {
+        let value = value.to_lowercase();
 
-        Ok(Self::deserialize(serde::de::value::StrDeserializer::<
-            serde::de::value::Error,
-        >::new(value))?)
+        for var in Self::variants() {
+            // Support SDKMAN and other shorthands!
+            let matched = match var {
+                Self::Corretto => value == "amazon" || value == "amzn",
+                Self::Dragonwell => value == "dragon" || value == "alibaba" || value == "albba",
+                Self::GluonGraalvm => value == "gluon",
+                Self::Graalvm => value == "graal",
+                Self::GraalvmCommunity => value == "graalce",
+                Self::Kona => value == "tencent",
+                Self::Liberica => value == "librca",
+                Self::LibericaNative => value == "nik",
+                Self::Microsoft => value == "msoft" || value == "ms",
+                Self::OpenJdk => {
+                    value == "oracle_open_jdk"
+                        || value == "open-jdk"
+                        || value == "open_jdk"
+                        || value == "open"
+                }
+                Self::SapMachine => value == "sapmchn" || value == "sap",
+                Self::Semeru => value == "sem",
+                Self::Temurin => value == "tem",
+                _ => false,
+            };
+
+            if matched {
+                return Ok(var);
+            }
+
+            let kebab_case = var.to_string().to_lowercase();
+            let snake_case = kebab_case.replace('-', "_");
+            let no_case = kebab_case.replace('-', "");
+
+            if value == kebab_case || value == snake_case || value == no_case {
+                return Ok(var);
+            }
+        }
+
+        Err(anyhow!("Unknown distribution vendor {value}"))
     }
 
     pub fn to_query_param(&self) -> String {
@@ -105,6 +105,33 @@ impl Distribution {
             Distribution::OpenJdk => "oracle_open_jdk".into(),
             _ => self.to_string().replace('-', "_"),
         }
+    }
+}
+
+// We need a custom deserializer to support all the different values/aliases/etc
+impl<'de> Deserialize<'de> for Distribution {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = Distribution;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a string representing a vendor distribution")
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<Distribution, E>
+            where
+                E: de::Error,
+            {
+                Distribution::parse(value).map_err(|error| de::Error::custom(error.to_string()))
+            }
+        }
+
+        deserializer.deserialize_str(Visitor)
     }
 }
 
@@ -192,6 +219,145 @@ impl Default for JavaToolConfig {
         Self {
             api_url: "https://api.foojay.io/disco/v3.0".into(),
             release_type: ReleaseType::default(),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    mod distribution {
+        use super::*;
+
+        #[test]
+        fn parses_canonical_kebab_case() {
+            assert_eq!(
+                Distribution::parse("temurin").unwrap(),
+                Distribution::Temurin
+            );
+            assert_eq!(
+                Distribution::parse("openjdk").unwrap(),
+                Distribution::OpenJdk
+            );
+            assert_eq!(
+                Distribution::parse("sap-machine").unwrap(),
+                Distribution::SapMachine
+            );
+            assert_eq!(
+                Distribution::parse("liberica-native").unwrap(),
+                Distribution::LibericaNative
+            );
+            assert_eq!(
+                Distribution::parse("graalvm-community").unwrap(),
+                Distribution::GraalvmCommunity
+            );
+            assert_eq!(
+                Distribution::parse("open-logic").unwrap(),
+                Distribution::OpenLogic
+            );
+        }
+
+        #[test]
+        fn parses_foojay_snake_case() {
+            assert_eq!(
+                Distribution::parse("sap_machine").unwrap(),
+                Distribution::SapMachine
+            );
+            assert_eq!(
+                Distribution::parse("liberica_native").unwrap(),
+                Distribution::LibericaNative
+            );
+            assert_eq!(
+                Distribution::parse("graalvm_community").unwrap(),
+                Distribution::GraalvmCommunity
+            );
+            assert_eq!(
+                Distribution::parse("aoj_openj9").unwrap(),
+                Distribution::AojOpenj9
+            );
+        }
+
+        #[test]
+        fn parses_concatenated_no_case() {
+            assert_eq!(
+                Distribution::parse("sapmachine").unwrap(),
+                Distribution::SapMachine
+            );
+            assert_eq!(
+                Distribution::parse("libericanative").unwrap(),
+                Distribution::LibericaNative
+            );
+            assert_eq!(
+                Distribution::parse("openlogic").unwrap(),
+                Distribution::OpenLogic
+            );
+        }
+
+        #[test]
+        fn parses_sdkman_shorthands() {
+            for (value, dist) in [
+                ("tem", Distribution::Temurin),
+                ("amzn", Distribution::Corretto),
+                ("amazon", Distribution::Corretto),
+                ("librca", Distribution::Liberica),
+                ("nik", Distribution::LibericaNative),
+                ("ms", Distribution::Microsoft),
+                ("msoft", Distribution::Microsoft),
+                ("sem", Distribution::Semeru),
+                ("sapmchn", Distribution::SapMachine),
+                ("sap", Distribution::SapMachine),
+                ("graalce", Distribution::GraalvmCommunity),
+                ("graal", Distribution::Graalvm),
+                ("gluon", Distribution::GluonGraalvm),
+                ("dragon", Distribution::Dragonwell),
+                ("alibaba", Distribution::Dragonwell),
+                ("albba", Distribution::Dragonwell),
+                ("tencent", Distribution::Kona),
+                ("open", Distribution::OpenJdk),
+                ("oracle_open_jdk", Distribution::OpenJdk),
+            ] {
+                assert_eq!(Distribution::parse(value).unwrap(), dist, "for {value}");
+            }
+        }
+
+        #[test]
+        fn parses_case_insensitively() {
+            assert_eq!(
+                Distribution::parse("TEMURIN").unwrap(),
+                Distribution::Temurin
+            );
+            assert_eq!(Distribution::parse("Zulu").unwrap(), Distribution::Zulu);
+            assert_eq!(
+                Distribution::parse("SAP_MACHINE").unwrap(),
+                Distribution::SapMachine
+            );
+            assert_eq!(Distribution::parse("TEM").unwrap(), Distribution::Temurin);
+        }
+
+        #[test]
+        fn defaults_to_openjdk() {
+            assert_eq!(Distribution::default(), Distribution::OpenJdk);
+        }
+
+        #[test]
+        fn errors_on_unknown() {
+            assert!(Distribution::parse("foobar").is_err());
+            assert!(Distribution::parse("eliya").is_err());
+        }
+
+        #[test]
+        fn query_param_uses_foojay_spelling() {
+            // Most map by replacing dashes with underscores
+            assert_eq!(Distribution::Temurin.to_query_param(), "temurin");
+            assert_eq!(Distribution::SapMachine.to_query_param(), "sap_machine");
+            assert_eq!(
+                Distribution::LibericaNative.to_query_param(),
+                "liberica_native"
+            );
+            // But these two are special cased for foojay
+            assert_eq!(Distribution::OpenJdk.to_query_param(), "oracle_open_jdk");
+            assert_eq!(Distribution::OpenLogic.to_query_param(), "openlogic");
         }
     }
 }

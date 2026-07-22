@@ -22,7 +22,7 @@ impl JavaContext {
 
         if let VersionSpec::Version(version) = &base_spec {
             if let Some(scope) = &version.scope {
-                distribution = Distribution::from_value(scope)?;
+                distribution = Distribution::parse(scope)?;
                 scoped = true;
 
                 let mut version = version.to_owned();
@@ -53,13 +53,13 @@ impl JavaContext {
         match base_spec {
             UnresolvedVersionSpec::Requirement(req) => {
                 if let Some(scope) = &req.scope {
-                    distribution = Distribution::from_value(scope)?;
+                    distribution = Distribution::parse(scope)?;
                     scoped = true;
                 }
             }
             UnresolvedVersionSpec::Version(version) => {
                 if let Some(scope) = &version.scope {
-                    distribution = Distribution::from_value(scope)?;
+                    distribution = Distribution::parse(scope)?;
                     scoped = true;
                 }
             }

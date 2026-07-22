@@ -60,7 +60,7 @@ pub fn parse_version_file(
         if let Some((version, vendor)) = value.rsplit_once('-')
             && vendor.chars().all(|c| c.is_ascii_alphanumeric())
         {
-            Ok((Distribution::from_value(vendor)?, version))
+            Ok((Distribution::parse(vendor)?, version))
         } else {
             Ok((Distribution::default(), value))
         }
@@ -129,7 +129,7 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
         .filter(|spec| {
             spec.get_scope()
                 .as_ref()
-                .and_then(|scope| Distribution::from_value(scope).ok())
+                .and_then(|scope| Distribution::parse(scope).ok())
                 .is_some_and(|scope| scope == java.distribution)
                 && spec
                     .as_version()
@@ -160,7 +160,7 @@ pub fn resolve_version(
     // and versions support scopes, so aliases pass through untouched.
     match initial.get_scope() {
         Some(scope) => {
-            Distribution::from_value(scope)?;
+            Distribution::parse(scope)?;
         }
         None if matches!(
             initial,
@@ -266,14 +266,15 @@ pub fn locate_executables(
         "bin"
     };
 
-    let mut exes = HashMap::default();
+    // Both the JDK and JRE provide the java runtime
+    let mut exes = HashMap::from_iter([(
+        "java".into(),
+        ExecutableConfig::new_primary(format!("{bin_dir}/{}", env.os.get_exe_name("java"))),
+    )]);
 
+    // While development tools only exist in the JDK
     if java.package == PackageType::Jdk {
         exes.extend([
-            (
-                "java".into(),
-                ExecutableConfig::new_primary(format!("{bin_dir}/{}", env.os.get_exe_name("java"))),
-            ),
             (
                 "javac".into(),
                 ExecutableConfig::new(format!("{bin_dir}/{}", env.os.get_exe_name("javac"))),

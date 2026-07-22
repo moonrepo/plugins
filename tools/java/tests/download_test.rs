@@ -118,7 +118,7 @@ mod java_tool {
                 .await;
 
             let output = plugin
-                .download_prebuilt(create_download_input("open-jdk-21.0.2+13"))
+                .download_prebuilt(create_download_input("openjdk-21.0.2+13"))
                 .await;
 
             assert_eq!(output.archive_prefix, Some("*".into()));
@@ -144,7 +144,7 @@ mod java_tool {
                 .await;
 
             let output = plugin
-                .download_prebuilt(create_download_input("open-jdk-17.0.2+8"))
+                .download_prebuilt(create_download_input("openjdk-17.0.2+8"))
                 .await;
 
             assert_eq!(output.archive_prefix, Some("*".into()));
@@ -167,15 +167,29 @@ mod java_tool {
                 })
                 .await;
 
+            // Resolve the current latest 21, as patch releases drift quarterly
+            let mut spec = ToolSpec::parse("zulu-21").unwrap();
+            flow::resolve::Resolver::new(&plugin.tool)
+                .resolve_version(&mut spec, false)
+                .await
+                .unwrap();
+
             let output = plugin
-                .download_prebuilt(create_download_input("zulu-21.0.11+10"))
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: spec.get_resolved_version(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
                 .await;
 
             let name = output.download_name.unwrap();
 
             // zulu also publishes zips for linux, so tar.gz must win
             assert!(name.starts_with("zulu"));
-            assert!(name.contains("-ca-jdk21.0.11-linux_x64"));
+            assert!(name.contains("-ca-jdk21."));
+            assert!(name.contains("-linux_x64"));
             assert!(name.ends_with(".tar.gz"));
             assert!(
                 output
@@ -214,14 +228,26 @@ mod java_tool {
                 })
                 .await;
 
+            // Resolve the current latest 21, as patch releases drift quarterly
+            let mut spec = ToolSpec::parse("corretto-21").unwrap();
+            flow::resolve::Resolver::new(&plugin.tool)
+                .resolve_version(&mut spec, false)
+                .await
+                .unwrap();
+
             let output = plugin
-                .download_prebuilt(create_download_input("corretto-21.0.11"))
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: spec.get_resolved_version(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
                 .await;
 
             let name = output.download_name.unwrap();
 
-            // The corretto revision (4th/5th components) may be respun
-            assert!(name.starts_with("amazon-corretto-21.0.11."));
+            assert!(name.starts_with("amazon-corretto-21."));
             assert!(name.ends_with("-linux-x64.tar.gz"));
         }
 
