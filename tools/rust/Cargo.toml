@@ -1,6 +1,6 @@
 [package]
 name = "rust_tool"
-version = "0.13.8"
+version = "0.13.9"
 edition = "2024"
 description = "Rust WASM plugin for proto."
 authors = ["Miles Johnson"]
