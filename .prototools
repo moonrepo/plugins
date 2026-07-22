@@ -16,6 +16,7 @@ unstable-lockfile = true
 # deno-test = "file://./target/wasm32-wasip1/release/deno_tool.wasm"
 # go-test = "file://./target/wasm32-wasip1/release/go_tool.wasm"
 # internal-schema = "file://./target/wasm32-wasip1/release/schema_tool.wasm"
+# java-test = "file://./target/wasm32-wasip1/release/java_tool.wasm"
 # moon-test = "file://./target/wasm32-wasip1/release/moon_tool.wasm"
 # node-test = "file://./target/wasm32-wasip1/release/node_tool.wasm"
 # npm-test = "file://./target/wasm32-wasip1/release/node_depman_tool.wasm"

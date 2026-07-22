@@ -1,0 +1,18 @@
+---
+source: tools/java/tests/shims_test.rs
+expression: "std :: fs ::\nread_to_string(sandbox.path().join(\".proto/shims/registry.json\")).unwrap()"
+---
+{
+  "jar": {
+    "alt_exe": true,
+    "context": "java-test"
+  },
+  "java": {
+    "alt_exe": true,
+    "context": "java-test"
+  },
+  "javac": {
+    "alt_exe": true,
+    "context": "java-test"
+  }
+}
