@@ -115,7 +115,7 @@ pub fn fetch_packages(
     java: &JavaContext,
 ) -> AnyResult<Vec<FoojayPackage>> {
     let mut url = format!(
-        "{}/packages?latest=available&javafx_bundled=false&archive_type=tar&archive_type=tar.gz&archive_type=tar.xz&archive_type=tar.Z&archive_type=zip&operating_system={}&architecture={}&package_type={}&release_status={}",
+        "{}/packages?javafx_bundled=false&archive_type=tar&archive_type=tar.gz&archive_type=tar.xz&archive_type=tar.Z&archive_type=zip&operating_system={}&architecture={}&package_type={}&release_status={}",
         config.api_url.trim_end_matches('/'),
         java_os(env)?,
         java_arch(env)?,
