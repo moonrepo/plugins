@@ -4731,7 +4731,7 @@ checksum = "64f53e5272cd467a89ad1fa6d66273e3d720477d51875de84e2db7218e370896"
 
 [[package]]
 name = "ruby_tool"
-version = "0.2.7"
+version = "0.2.8"
 dependencies = [
  "extism-pdk",
  "proto_pdk",
