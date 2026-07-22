@@ -1,6 +1,6 @@
 [package]
 name = "go_tool"
-version = "0.16.6"
+version = "0.16.7"
 edition = "2024"
 description = "Go WASM plugin for proto."
 authors = ["Miles Johnson"]
