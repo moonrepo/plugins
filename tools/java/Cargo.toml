@@ -1,6 +1,6 @@
 [package]
 name = "java_tool"
-version = "0.0.1"
+version = "0.1.0"
 edition = "2024"
 description = "Java (JDK/JRE) WASM plugin for proto."
 authors = ["Miles Johnson"]
