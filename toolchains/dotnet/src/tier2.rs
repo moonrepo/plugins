@@ -152,8 +152,8 @@ pub fn parse_manifest(
         .unwrap_or_else(|| input.context.workspace_root.clone());
 
     // `parse_manifest` carries no toolchain config, so an explicit
-    // `dotnetRoot` cannot be honored here; the env var and the guarded
-    // `~/.dotnet` fallback still apply.
+    // `dotnetRoot` cannot be honored here (nor `msbuildProperties`); the env
+    // var and the guarded `~/.dotnet` fallback still apply.
     let eval_env = build_eval_env(
         &DotnetToolchainConfig::default(),
         manifest_dir,
@@ -289,12 +289,16 @@ pub fn hash_task_contents(
     //      per project here (the batch already evaluated them all at once);
     //   3. evaluating this project alone.
     let cache_key = format!("eval-packages:{}", input.project.id);
+    let config = parse_toolchain_config::<DotnetToolchainConfig>(input.toolchain_config)?;
 
     let packages: BTreeMap<String, String> = if let Some(cached) = var::get::<String>(&cache_key)? {
         serde_json::from_str(&cached)?
-    } else if let Some(cached) =
-        read_eval_cache(workspace_root, input.project.id.as_str(), &project_root)
-    {
+    } else if let Some(cached) = read_eval_cache(
+        workspace_root,
+        input.project.id.as_str(),
+        &project_root,
+        &config.msbuild_properties,
+    ) {
         var::set(&cache_key, serde_json::to_string(&cached)?)?;
 
         cached
@@ -304,7 +308,6 @@ pub fn hash_task_contents(
         let env = get_host_environment()?;
 
         if command_exists(&env, "dotnet") {
-            let config = parse_toolchain_config::<DotnetToolchainConfig>(input.toolchain_config)?;
             let eval_env = build_eval_env(&config, project_root.clone(), workspace_root)?;
 
             evaluated_all = true;
@@ -349,6 +352,7 @@ pub fn hash_task_contents(
                 workspace_root,
                 input.project.id.as_str(),
                 &project_root,
+                &config.msbuild_properties,
                 packages.clone(),
             );
         }

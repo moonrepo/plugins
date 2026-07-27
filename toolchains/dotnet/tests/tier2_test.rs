@@ -423,6 +423,42 @@ mod dotnet_toolchain_tier2 {
             assert_eq!(cond.dependencies[0].id, Id::raw("deep"));
         }
 
+        /// The counterpart to the test above: same fixture, same gated
+        /// reference, but evaluated under a `msbuildProperties` value that
+        /// makes the condition false. Asserts the setting actually reaches
+        /// MSBuild and changes the graph, rather than only that it renders
+        /// into `-p:` arguments.
+        #[tokio::test(flavor = "multi_thread")]
+        async fn msbuild_properties_are_applied_to_the_evaluation() {
+            let sandbox = create_moon_sandbox("matrix");
+            let plugin = sandbox.create_toolchain("dotnet").await;
+
+            let mut input = ExtendProjectGraphInput::default();
+            input
+                .project_sources
+                .insert(Id::raw("deep"), "nested/deep".into());
+            input.project_sources.insert(Id::raw("cond"), "cond".into());
+            input.toolchain_config = json!({
+                "inferDependencies": true,
+                // Cond.csproj declares <EnableDeepRef>1</EnableDeepRef>. A
+                // command-line global property cannot be overridden by the
+                // project, so this wins and the gated reference drops out.
+                "msbuildProperties": { "EnableDeepRef": "0" },
+            });
+
+            let output = plugin.extend_project_graph(input).await;
+
+            let cond = &output.extended_projects[&Id::raw("cond")];
+            assert!(
+                cond.dependencies.is_empty(),
+                "expected the gated reference to be excluded, got {:?}",
+                cond.dependencies
+                    .iter()
+                    .map(|dep| dep.id.as_str())
+                    .collect::<Vec<_>>()
+            );
+        }
+
         #[tokio::test(flavor = "multi_thread")]
         async fn unsatisfiable_global_json_pin_fails_with_guidance() {
             let sandbox = create_moon_sandbox("projects");
@@ -1047,6 +1083,35 @@ mod dotnet_toolchain_tier2 {
             // contributes and a false one does not.
             assert_eq!(packages["ExtraPkg"].as_str().unwrap(), "3.0.0");
             assert!(!packages.contains_key("NeverPkg"));
+        }
+
+        /// `msbuildProperties` can change the evaluated *package* set, not just
+        /// the dependency graph — which is why the properties belong in the
+        /// eval-cache digest. This is that claim tested against a real
+        /// evaluation rather than only at the digest level.
+        #[tokio::test(flavor = "multi_thread")]
+        async fn msbuild_properties_change_the_evaluated_package_set() {
+            let sandbox = create_moon_sandbox("matrix");
+            let plugin = sandbox.create_toolchain("dotnet").await;
+
+            let output = plugin
+                .hash_task_contents(HashTaskContentsInput {
+                    project: fragment("cond", "cond"),
+                    toolchain_config: json!({
+                        "msbuildProperties": { "EnableDeepRef": "0" },
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            let packages = output.contents[0]["packages"].as_object().unwrap();
+
+            // ExtraPkg is gated on the same property as the ProjectReference.
+            assert!(!packages.contains_key("ExtraPkg"));
+
+            // Unconditional packages are unaffected, so this is the condition
+            // being re-evaluated rather than the set collapsing.
+            assert_eq!(packages["RootPkg"].as_str().unwrap(), "1.0.0");
         }
 
         #[tokio::test(flavor = "multi_thread")]

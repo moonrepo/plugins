@@ -89,8 +89,11 @@ fn push_framed(buffer: &mut String, file: &VirtualPath) {
 }
 
 /// Digest of everything that can change a project's evaluated package set:
-/// its project files, plus every config file from the project directory up to
-/// the workspace root.
+/// its project files, every config file from the project directory up to the
+/// workspace root, plus the configured `msbuildProperties` — a conditional
+/// `PackageReference` gated on such a property evaluates differently when the
+/// setting changes, so the properties must invalidate the cache like any file
+/// edit would.
 ///
 /// Two things are deliberately *not* captured. Custom `<Import>`s outside the
 /// `Directory.Build.*` conventions — the same caveat that already applies to
@@ -100,7 +103,11 @@ fn push_framed(buffer: &mut String, file: &VirtualPath) {
 /// before the cache *read* in `hash_task_contents`, and any asymmetry between
 /// the read and write keys turns the cache into a permanent miss — which is the
 /// per-project-evaluation cost this cache exists to avoid.
-fn eval_cache_digest(project_root: &VirtualPath, workspace_root: &VirtualPath) -> String {
+fn eval_cache_digest(
+    project_root: &VirtualPath,
+    workspace_root: &VirtualPath,
+    msbuild_properties: &BTreeMap<String, String>,
+) -> String {
     let mut buffer = String::new();
 
     for file in find_project_files(project_root) {
@@ -111,6 +118,16 @@ fn eval_cache_digest(project_root: &VirtualPath, workspace_root: &VirtualPath) -
         for file in find_config_files(&dir) {
             push_framed(&mut buffer, &file);
         }
+    }
+
+    // Framed like a file, under a name no real file can have (path separator).
+    for (name, value) in msbuild_properties {
+        buffer.push_str("msbuild-property/");
+        buffer.push_str(name);
+        buffer.push(':');
+        buffer.push_str(&value.len().to_string());
+        buffer.push(':');
+        buffer.push_str(value);
     }
 
     content_digest(&buffer)
@@ -125,12 +142,13 @@ pub fn write_eval_cache(
     workspace_root: &VirtualPath,
     project_id: &str,
     project_root: &VirtualPath,
+    msbuild_properties: &BTreeMap<String, String>,
     packages: BTreeMap<String, String>,
 ) {
     let file = eval_cache_file(workspace_root, project_id);
 
     let entry = EvalCacheEntry {
-        digest: eval_cache_digest(project_root, workspace_root),
+        digest: eval_cache_digest(project_root, workspace_root, msbuild_properties),
         packages,
     };
 
@@ -151,6 +169,7 @@ pub fn read_eval_cache(
     workspace_root: &VirtualPath,
     project_id: &str,
     project_root: &VirtualPath,
+    msbuild_properties: &BTreeMap<String, String>,
 ) -> Option<BTreeMap<String, String>> {
     let file = eval_cache_file(workspace_root, project_id);
 
@@ -160,7 +179,8 @@ pub fn read_eval_cache(
 
     let entry: EvalCacheEntry = serde_json::from_str(&fs::read_file(&file).ok()?).ok()?;
 
-    (entry.digest == eval_cache_digest(project_root, workspace_root)).then_some(entry.packages)
+    (entry.digest == eval_cache_digest(project_root, workspace_root, msbuild_properties))
+        .then_some(entry.packages)
 }
 
 #[cfg(test)]
@@ -180,11 +200,12 @@ mod tests {
 
         let sandbox = create_empty_sandbox();
         let root = VirtualPath::Real(sandbox.path().into());
+        let no_properties = BTreeMap::new();
 
         sandbox.create_file("Directory.Build.props", "<A/><B/>");
         sandbox.create_file("Directory.Packages.props", "");
 
-        let before = eval_cache_digest(&root, &root);
+        let before = eval_cache_digest(&root, &root, &no_properties);
 
         // A routine CPM migration: move the declaration to the other file.
         sandbox.create_file("Directory.Build.props", "<A/>");
@@ -192,8 +213,36 @@ mod tests {
 
         assert_ne!(
             before,
-            eval_cache_digest(&root, &root),
+            eval_cache_digest(&root, &root, &no_properties),
             "moving a declaration between config files must change the digest"
         );
+    }
+
+    #[test]
+    fn msbuild_properties_invalidate_the_digest() {
+        let sandbox = create_empty_sandbox();
+        let root = VirtualPath::Real(sandbox.path().into());
+
+        sandbox.create_file("Directory.Build.props", "<A/>");
+
+        let without = eval_cache_digest(&root, &root, &BTreeMap::new());
+        let with = eval_cache_digest(
+            &root,
+            &root,
+            &BTreeMap::from([("SkipApiClientGen".to_owned(), "true".to_owned())]),
+        );
+
+        // A conditional PackageReference gated on the property would evaluate
+        // differently, so a cached set from one configuration must never be
+        // served under the other.
+        assert_ne!(without, with);
+
+        let changed_value = eval_cache_digest(
+            &root,
+            &root,
+            &BTreeMap::from([("SkipApiClientGen".to_owned(), "false".to_owned())]),
+        );
+
+        assert_ne!(with, changed_value);
     }
 }

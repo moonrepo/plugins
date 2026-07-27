@@ -534,6 +534,7 @@ pub fn extend_project_graph(
                 &input.context.workspace_root,
                 id.as_str(),
                 &project_root,
+                &ctx.config.msbuild_properties,
                 result.packages,
             );
         }

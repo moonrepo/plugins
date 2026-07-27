@@ -21,3 +21,7 @@
   `$(SolutionDir)`, conditional references and Central Package Management all resolve the
   way the SDK resolves them. Every project in the workspace is evaluated in a single
   batched invocation, and the results are cached on disk for task hashing to reuse.
+- Evaluation accepts additional MSBuild properties through `msbuildProperties`, for
+  workspaces where a conditional reference or package should resolve the way the code is
+  actually built rather than under the SDK defaults. They apply to evaluation only, form
+  part of the evaluation cache key, and are never passed to inferred task commands.

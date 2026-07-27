@@ -299,4 +299,24 @@ https://aka.ms/dotnet/sdk-not-found";
             "/home/x/app.csproj"
         );
     }
+
+    #[test]
+    fn renders_msbuild_properties_as_p_args_in_deterministic_order() {
+        use std::collections::BTreeMap;
+
+        assert!(msbuild_property_args(&BTreeMap::new()).is_empty());
+
+        let args = msbuild_property_args(&BTreeMap::from([
+            ("SkipApiClientGen".to_owned(), "true".to_owned()),
+            ("Configuration".to_owned(), "Release".to_owned()),
+        ]));
+
+        // BTreeMap iteration is sorted, so the rendered order is stable across
+        // runs — evaluation commands must not differ between otherwise
+        // identical invocations.
+        assert_eq!(
+            args,
+            vec!["-p:Configuration=Release", "-p:SkipApiClientGen=true"]
+        );
+    }
 }

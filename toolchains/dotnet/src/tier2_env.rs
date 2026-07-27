@@ -227,6 +227,7 @@ pub fn build_eval_env(
         dotnet_root,
         dotnet_exe,
         cwd: Some(cwd),
+        msbuild_properties: config.msbuild_properties.clone(),
     })
 }
 

@@ -1,5 +1,6 @@
 use moon_pdk_api::config_struct;
 use schematic::{Config, Schematic};
+use std::collections::BTreeMap;
 
 /// The task names the plugin can infer.
 pub const INFERABLE_TASKS: &[&str] = &["build", "test", "run", "publish"];
@@ -121,6 +122,40 @@ config_struct!(
         /// (a leftover install there is otherwise skipped in favour of the
         /// `dotnet` on `PATH`). Set explicitly, it is never second-guessed.
         pub dotnet_root: Option<String>,
+
+        /// Additional MSBuild properties applied to every evaluation behind
+        /// dependency and task inference, passed as `-p:NAME=VALUE`.
+        ///
+        /// Use this when the graph must be evaluated the way the code is
+        /// actually deployed. The motivating case: conditional, codegen-only
+        /// `ProjectReference`s (`ReferenceOutputAssembly=false`, gated on a
+        /// property like `Condition="'$(SkipApiClientGen)' != 'true'"`) that a
+        /// production/Docker build disables. Without the property, evaluation
+        /// includes build-ordering edges the deployed build never compiles —
+        /// over-attributing affected projects, and doing so
+        /// platform-dependently when the condition involves globs.
+        ///
+        /// ```yaml
+        /// dotnet:
+        ///   msbuildProperties:
+        ///     SkipApiClientGen: 'true'
+        /// ```
+        ///
+        /// These are evaluation-time only, and the boundary is deliberate:
+        /// neither inferred task commands nor `dotnet restore` pass them, so
+        /// `moon run` builds stay exactly what the project defines. Two
+        /// consequences worth knowing:
+        ///
+        /// - Keep these consistent with how the code is actually built. Setting
+        ///   a property here that your real build does not set makes the graph
+        ///   describe a build nobody runs. Inferred `build` tasks pass
+        ///   `--no-dependencies`, so moon is the only thing ordering
+        ///   dependencies: dropping an edge here drops that ordering too.
+        /// - A `PackageReference` gated on one of these properties is resolved
+        ///   for hashing but not for restore, so the recorded package set can
+        ///   differ from what restore installs. Harmless when the properties
+        ///   match the build; a reason not to gate packages on them otherwise.
+        pub msbuild_properties: BTreeMap<String, String>,
     }
 );
 
@@ -137,6 +172,7 @@ mod tests {
         assert!(json.contains("inferTasks"));
         assert!(json.contains("restoreArgs"));
         assert!(json.contains("dotnetRoot"));
+        assert!(json.contains("msbuildProperties"));
 
         // `inferTasks` must stay a `bool | string[]` union. The derive produces
         // this from the untagged enum; asserting the shape means a change to the
@@ -158,6 +194,24 @@ mod tests {
         assert!(config.infer_tasks.any_enabled());
         assert!(config.restore_args.is_empty());
         assert!(config.dotnet_root.is_none());
+        assert!(config.msbuild_properties.is_empty());
+    }
+
+    #[test]
+    fn msbuild_properties_deserialize_from_camel_case() {
+        let config: DotnetToolchainConfig = serde_json::from_value(serde_json::json!({
+            "msbuildProperties": { "SkipApiClientGen": "true", "Answer": "42" }
+        }))
+        .unwrap();
+
+        assert_eq!(
+            config.msbuild_properties.get("SkipApiClientGen"),
+            Some(&"true".to_owned())
+        );
+        assert_eq!(
+            config.msbuild_properties.get("Answer"),
+            Some(&"42".to_owned())
+        );
     }
 
     #[test]

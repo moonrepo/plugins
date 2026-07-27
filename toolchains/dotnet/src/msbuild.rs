@@ -135,6 +135,22 @@ pub struct EvalEnv {
     /// projects. Leaving it unset would inherit moon's own working directory,
     /// making evaluation depend on where the user happened to run moon from.
     pub cwd: Option<moon_pdk_api::VirtualPath>,
+
+    /// Extra global properties for the evaluation, from the toolchain's
+    /// `msbuildProperties` setting, passed as `-p:NAME=VALUE`. Command-line
+    /// global properties propagate through the batched traversal's `<MSBuild>`
+    /// task into every child project, so batch and per-project evaluation see
+    /// identical values.
+    pub msbuild_properties: BTreeMap<String, String>,
+}
+
+/// Render `msbuildProperties` as MSBuild `-p:` arguments, in deterministic
+/// (BTreeMap) order.
+pub fn msbuild_property_args(properties: &BTreeMap<String, String>) -> Vec<String> {
+    properties
+        .iter()
+        .map(|(name, value)| format!("-p:{name}={value}"))
+        .collect()
 }
 
 /// Deepest directory that contains all of the given workspace-relative
@@ -396,12 +412,17 @@ pub fn detect_failed_projects(output: &str, project_paths: &[String]) -> Vec<Str
         .collect()
 }
 
-/// Apply the resolved SDK environment to an MSBuild invocation.
+/// Apply the resolved SDK environment (and any configured evaluation
+/// properties) to an MSBuild invocation.
 #[cfg(feature = "wasm")]
 fn with_eval_env(
     mut input: moon_pdk_api::ExecCommandInput,
     env: &EvalEnv,
 ) -> moon_pdk_api::ExecCommandInput {
+    input
+        .args
+        .extend(msbuild_property_args(&env.msbuild_properties));
+
     if let Some(root) = &env.dotnet_root {
         input.env.insert("DOTNET_ROOT".into(), root.clone());
         input
