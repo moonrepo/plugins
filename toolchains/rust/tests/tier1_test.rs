@@ -95,6 +95,30 @@ mod rust_toolchain_tier1 {
 
             assert!(output.copied_files.is_empty());
         }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn removes_empty_files_in_sources_phase() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("rust").await;
+            let output_dir = sandbox.path().join("out");
+
+            fs::create_dir_all(output_dir.join("src")).unwrap();
+            fs::write(output_dir.join("src/lib.rs"), "").unwrap();
+            fs::write(output_dir.join("src/main.rs"), "fn main() {}").unwrap();
+
+            plugin
+                .scaffold_docker(ScaffoldDockerInput {
+                    input_dir: VirtualPath::Real(sandbox.path().join("in")),
+                    output_dir: VirtualPath::Real(output_dir.clone()),
+                    phase: ScaffoldDockerPhase::Sources,
+                    project: Some(ProjectFragment::default()),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(!output_dir.join("src/lib.rs").exists());
+            assert!(output_dir.join("src/main.rs").exists());
+        }
     }
 
     mod prune_docker {

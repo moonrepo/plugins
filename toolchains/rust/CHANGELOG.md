@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed an issue where Docker scaffolding would leave behind empty `lib.rs` or `main.rs` files.
+
 ## 1.0.6
 
 #### 🐞 Fixes
