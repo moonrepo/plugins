@@ -5,6 +5,12 @@ use tool_common::enable_tracing;
 
 type PrebuiltReleases = BTreeMap<String, BTreeMap<String, String>>;
 
+#[derive(Debug, PartialEq)]
+struct PrebuiltAsset {
+    filename: String,
+    url: String,
+}
+
 #[host_fn]
 extern "ExtismHost" {
     fn exec_command(input: Json<ExecCommandInput>) -> Json<ExecCommandOutput>;
@@ -137,29 +143,66 @@ fn find_prebuilt_source(
     env: &HostEnvironment,
     version: &VersionSpec,
 ) -> AnyResult<Option<SourceLocation>> {
+    let version = version.to_string();
+
+    Ok(load_prebuilt_asset(env, &version)?.map(|asset| {
+        SourceLocation::Archive(ArchiveSource {
+            url: asset.url,
+            prefix: Some(format!("ruby-{version}")),
+        })
+    }))
+}
+
+#[plugin_fn]
+pub fn download_prebuilt(
+    Json(input): Json<DownloadPrebuiltInput>,
+) -> FnResult<Json<DownloadPrebuiltOutput>> {
+    let env = get_host_environment()?;
+    let version = input.context.version.to_string();
+
+    let Some(asset) = load_prebuilt_asset(&env, &version)? else {
+        return Err(plugin_err!(
+            "No pre-built available for Ruby <hash>{version}</hash> on <id>{}-{}</id>! Try building from source with <shell>--build</shell>.",
+            env.os,
+            env.arch,
+        ));
+    };
+
+    Ok(Json(create_download_output(asset, &version)))
+}
+
+fn load_prebuilt_asset(env: &HostEnvironment, version: &str) -> AnyResult<Option<PrebuiltAsset>> {
     let Some(platform) = get_prebuilt_platform(env) else {
         return Ok(None);
     };
 
-    let version = version.to_string();
     let releases: PrebuiltReleases = fetch_json(
         "https://raw.githubusercontent.com/moonrepo/plugins/master/tools/ruby/releases.json",
     )?;
 
-    Ok(select_prebuilt_source(&releases, platform, &version))
+    Ok(select_prebuilt_asset(&releases, platform, version))
 }
 
-fn select_prebuilt_source(
+fn select_prebuilt_asset(
     releases: &PrebuiltReleases,
     platform: &str,
     version: &str,
-) -> Option<SourceLocation> {
+) -> Option<PrebuiltAsset> {
     let filename = releases.get(version)?.get(platform)?;
 
-    Some(SourceLocation::Archive(ArchiveSource {
+    Some(PrebuiltAsset {
+        filename: filename.to_owned(),
         url: format!("https://github.com/jdx/ruby/releases/download/{version}/{filename}"),
-        prefix: Some(format!("ruby-{version}")),
-    }))
+    })
+}
+
+fn create_download_output(asset: PrebuiltAsset, version: &str) -> DownloadPrebuiltOutput {
+    DownloadPrebuiltOutput {
+        archive_prefix: Some(format!("ruby-{version}")),
+        download_name: Some(asset.filename),
+        download_url: asset.url,
+        ..DownloadPrebuiltOutput::default()
+    }
 }
 
 fn get_prebuilt_platform(env: &HostEnvironment) -> Option<&'static str> {
@@ -232,7 +275,7 @@ mod tests {
 
     #[test]
     fn selects_matching_release_asset() {
-        let source = select_prebuilt_source(
+        let asset = select_prebuilt_asset(
             &BTreeMap::from_iter([(
                 "3.4.9".into(),
                 BTreeMap::from_iter([(
@@ -245,29 +288,48 @@ mod tests {
         );
 
         assert_eq!(
-            source,
-            Some(SourceLocation::Archive(ArchiveSource {
+            asset,
+            Some(PrebuiltAsset {
+                filename: "ruby-3.4.9.arm64_linux.tar.gz".into(),
                 url: "https://github.com/jdx/ruby/releases/download/3.4.9/ruby-3.4.9.arm64_linux.tar.gz".into(),
-                prefix: Some("ruby-3.4.9".into()),
-            }))
+            })
         );
     }
 
     #[test]
     fn skips_release_without_matching_asset() {
-        let source = select_prebuilt_source(
+        let asset = select_prebuilt_asset(
             &BTreeMap::from_iter([("3.4.9".into(), BTreeMap::new())]),
             "macos",
             "3.4.9",
         );
 
-        assert_eq!(source, None);
+        assert_eq!(asset, None);
     }
 
     #[test]
     fn skips_missing_release() {
-        let source = select_prebuilt_source(&BTreeMap::new(), "macos", "3.1.0");
+        let asset = select_prebuilt_asset(&BTreeMap::new(), "macos", "3.1.0");
 
-        assert_eq!(source, None);
+        assert_eq!(asset, None);
+    }
+
+    #[test]
+    fn creates_download_output() {
+        assert_eq!(
+            create_download_output(
+                PrebuiltAsset {
+                    filename: "ruby-3.4.9.macos.tar.gz".into(),
+                    url: "https://example.com/ruby-3.4.9.macos.tar.gz".into(),
+                },
+                "3.4.9",
+            ),
+            DownloadPrebuiltOutput {
+                archive_prefix: Some("ruby-3.4.9".into()),
+                download_name: Some("ruby-3.4.9.macos.tar.gz".into()),
+                download_url: "https://example.com/ruby-3.4.9.macos.tar.gz".into(),
+                ..DownloadPrebuiltOutput::default()
+            }
+        );
     }
 }
