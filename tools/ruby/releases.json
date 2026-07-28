@@ -1,0 +1,227 @@
+{
+  "3.2.1": {
+    "arm64_linux": "ruby-3.2.1.arm64_linux.tar.gz",
+    "macos": "ruby-3.2.1.macos.tar.gz",
+    "x86_64_linux": "ruby-3.2.1.x86_64_linux.tar.gz"
+  },
+  "3.2.2": {
+    "arm64_linux": "ruby-3.2.2.arm64_linux.tar.gz",
+    "macos": "ruby-3.2.2.macos.tar.gz",
+    "x86_64_linux": "ruby-3.2.2.x86_64_linux.tar.gz"
+  },
+  "3.2.3": {
+    "arm64_linux": "ruby-3.2.3.arm64_linux.tar.gz",
+    "macos": "ruby-3.2.3.macos.tar.gz",
+    "x86_64_linux": "ruby-3.2.3.x86_64_linux.tar.gz"
+  },
+  "3.2.4": {
+    "arm64_linux": "ruby-3.2.4.arm64_linux.tar.gz",
+    "macos": "ruby-3.2.4.macos.tar.gz",
+    "x86_64_linux": "ruby-3.2.4.x86_64_linux.tar.gz"
+  },
+  "3.2.5": {
+    "arm64_linux": "ruby-3.2.5.arm64_linux.tar.gz",
+    "macos": "ruby-3.2.5.macos.tar.gz",
+    "x86_64_linux": "ruby-3.2.5.x86_64_linux.tar.gz"
+  },
+  "3.2.6": {
+    "arm64_linux": "ruby-3.2.6.arm64_linux.tar.gz",
+    "macos": "ruby-3.2.6.macos.tar.gz",
+    "x86_64_linux": "ruby-3.2.6.x86_64_linux.tar.gz"
+  },
+  "3.2.7": {
+    "arm64_linux": "ruby-3.2.7.arm64_linux.tar.gz",
+    "macos": "ruby-3.2.7.macos.tar.gz",
+    "x86_64_linux": "ruby-3.2.7.x86_64_linux.tar.gz"
+  },
+  "3.2.8": {
+    "arm64_linux": "ruby-3.2.8.arm64_linux.tar.gz",
+    "macos": "ruby-3.2.8.macos.tar.gz",
+    "x86_64_linux": "ruby-3.2.8.x86_64_linux.tar.gz"
+  },
+  "3.2.9": {
+    "arm64_linux": "ruby-3.2.9.arm64_linux.tar.gz",
+    "macos": "ruby-3.2.9.macos.tar.gz",
+    "x86_64_linux": "ruby-3.2.9.x86_64_linux.tar.gz"
+  },
+  "3.2.10": {
+    "arm64_linux": "ruby-3.2.10.arm64_linux.tar.gz",
+    "macos": "ruby-3.2.10.macos.tar.gz",
+    "x86_64_linux": "ruby-3.2.10.x86_64_linux.tar.gz"
+  },
+  "3.2.11": {
+    "arm64_linux": "ruby-3.2.11.arm64_linux.tar.gz",
+    "macos": "ruby-3.2.11.macos.tar.gz",
+    "x86_64_linux": "ruby-3.2.11.x86_64_linux.tar.gz"
+  },
+  "3.3.0": {
+    "arm64_linux": "ruby-3.3.0.arm64_linux.tar.gz",
+    "macos": "ruby-3.3.0.macos.tar.gz",
+    "x86_64_linux": "ruby-3.3.0.x86_64_linux.tar.gz"
+  },
+  "3.3.1": {
+    "arm64_linux": "ruby-3.3.1.arm64_linux.tar.gz",
+    "macos": "ruby-3.3.1.macos.tar.gz",
+    "x86_64_linux": "ruby-3.3.1.x86_64_linux.tar.gz"
+  },
+  "3.3.2": {
+    "arm64_linux": "ruby-3.3.2.arm64_linux.tar.gz",
+    "macos": "ruby-3.3.2.macos.tar.gz",
+    "x86_64_linux": "ruby-3.3.2.x86_64_linux.tar.gz"
+  },
+  "3.3.3": {
+    "arm64_linux": "ruby-3.3.3.arm64_linux.tar.gz",
+    "macos": "ruby-3.3.3.macos.tar.gz",
+    "x86_64_linux": "ruby-3.3.3.x86_64_linux.tar.gz"
+  },
+  "3.3.4": {
+    "arm64_linux": "ruby-3.3.4.arm64_linux.tar.gz",
+    "macos": "ruby-3.3.4.macos.tar.gz",
+    "x86_64_linux": "ruby-3.3.4.x86_64_linux.tar.gz"
+  },
+  "3.3.5": {
+    "arm64_linux": "ruby-3.3.5.arm64_linux.tar.gz",
+    "macos": "ruby-3.3.5.macos.tar.gz",
+    "x86_64_linux": "ruby-3.3.5.x86_64_linux.tar.gz"
+  },
+  "3.3.6": {
+    "arm64_linux": "ruby-3.3.6.arm64_linux.tar.gz",
+    "macos": "ruby-3.3.6.macos.tar.gz",
+    "x86_64_linux": "ruby-3.3.6.x86_64_linux.tar.gz"
+  },
+  "3.3.7": {
+    "arm64_linux": "ruby-3.3.7.arm64_linux.tar.gz",
+    "macos": "ruby-3.3.7.macos.tar.gz",
+    "x86_64_linux": "ruby-3.3.7.x86_64_linux.tar.gz"
+  },
+  "3.3.8": {
+    "arm64_linux": "ruby-3.3.8.arm64_linux.tar.gz",
+    "macos": "ruby-3.3.8.macos.tar.gz",
+    "x86_64_linux": "ruby-3.3.8.x86_64_linux.tar.gz"
+  },
+  "3.3.9": {
+    "arm64_linux": "ruby-3.3.9.arm64_linux.tar.gz",
+    "macos": "ruby-3.3.9.macos.tar.gz",
+    "x86_64_linux": "ruby-3.3.9.x86_64_linux.tar.gz"
+  },
+  "3.3.10": {
+    "arm64_linux": "ruby-3.3.10.arm64_linux.tar.gz",
+    "macos": "ruby-3.3.10.macos.tar.gz",
+    "x86_64_linux": "ruby-3.3.10.x86_64_linux.tar.gz"
+  },
+  "3.3.11": {
+    "arm64_linux": "ruby-3.3.11.arm64_linux.tar.gz",
+    "macos": "ruby-3.3.11.macos.tar.gz",
+    "x86_64_linux": "ruby-3.3.11.x86_64_linux.tar.gz"
+  },
+  "3.3.12": {
+    "arm64_linux": "ruby-3.3.12.arm64_linux.tar.gz",
+    "macos": "ruby-3.3.12.macos.tar.gz",
+    "x86_64_linux": "ruby-3.3.12.x86_64_linux.tar.gz"
+  },
+  "3.4.0": {
+    "arm64_linux": "ruby-3.4.0.arm64_linux.tar.gz",
+    "macos": "ruby-3.4.0.macos.tar.gz",
+    "x86_64_linux": "ruby-3.4.0.x86_64_linux.tar.gz"
+  },
+  "3.4.1": {
+    "arm64_linux": "ruby-3.4.1.arm64_linux.tar.gz",
+    "macos": "ruby-3.4.1.macos.tar.gz",
+    "x86_64_linux": "ruby-3.4.1.x86_64_linux.tar.gz"
+  },
+  "3.4.2": {
+    "arm64_linux": "ruby-3.4.2.arm64_linux.tar.gz",
+    "macos": "ruby-3.4.2.macos.tar.gz",
+    "x86_64_linux": "ruby-3.4.2.x86_64_linux.tar.gz"
+  },
+  "3.4.3": {
+    "arm64_linux": "ruby-3.4.3.arm64_linux.tar.gz",
+    "macos": "ruby-3.4.3.macos.tar.gz",
+    "x86_64_linux": "ruby-3.4.3.x86_64_linux.tar.gz"
+  },
+  "3.4.4": {
+    "arm64_linux": "ruby-3.4.4.arm64_linux.tar.gz",
+    "macos": "ruby-3.4.4.macos.tar.gz",
+    "x86_64_linux": "ruby-3.4.4.x86_64_linux.tar.gz"
+  },
+  "3.4.5": {
+    "arm64_linux": "ruby-3.4.5.arm64_linux.tar.gz",
+    "macos": "ruby-3.4.5.macos.tar.gz",
+    "x86_64_linux": "ruby-3.4.5.x86_64_linux.tar.gz"
+  },
+  "3.4.6": {
+    "arm64_linux": "ruby-3.4.6.arm64_linux.tar.gz",
+    "macos": "ruby-3.4.6.macos.tar.gz",
+    "x86_64_linux": "ruby-3.4.6.x86_64_linux.tar.gz"
+  },
+  "3.4.7": {
+    "arm64_linux": "ruby-3.4.7.arm64_linux.tar.gz",
+    "macos": "ruby-3.4.7.macos.tar.gz",
+    "x86_64_linux": "ruby-3.4.7.x86_64_linux.tar.gz"
+  },
+  "3.4.8": {
+    "arm64_linux": "ruby-3.4.8.arm64_linux.tar.gz",
+    "macos": "ruby-3.4.8.macos.tar.gz",
+    "x86_64_linux": "ruby-3.4.8.x86_64_linux.tar.gz"
+  },
+  "3.4.9": {
+    "arm64_linux": "ruby-3.4.9.arm64_linux.tar.gz",
+    "macos": "ruby-3.4.9.macos.tar.gz",
+    "x86_64_linux": "ruby-3.4.9.x86_64_linux.tar.gz"
+  },
+  "3.4.10": {
+    "arm64_linux": "ruby-3.4.10.arm64_linux.tar.gz",
+    "macos": "ruby-3.4.10.macos.tar.gz",
+    "x86_64_linux": "ruby-3.4.10.x86_64_linux.tar.gz"
+  },
+  "3.5.0-preview1": {
+    "arm64_linux": "ruby-3.5.0-preview1.arm64_linux.tar.gz",
+    "macos": "ruby-3.5.0-preview1.macos.tar.gz",
+    "x86_64_linux": "ruby-3.5.0-preview1.x86_64_linux.tar.gz"
+  },
+  "4.0.0": {
+    "arm64_linux": "ruby-4.0.0.arm64_linux.tar.gz",
+    "macos": "ruby-4.0.0.macos.tar.gz",
+    "x86_64_linux": "ruby-4.0.0.x86_64_linux.tar.gz"
+  },
+  "4.0.0-preview2": {
+    "arm64_linux": "ruby-4.0.0-preview2.arm64_linux.tar.gz",
+    "macos": "ruby-4.0.0-preview2.macos.tar.gz",
+    "x86_64_linux": "ruby-4.0.0-preview2.x86_64_linux.tar.gz"
+  },
+  "4.0.0-preview3": {
+    "arm64_linux": "ruby-4.0.0-preview3.arm64_linux.tar.gz",
+    "macos": "ruby-4.0.0-preview3.macos.tar.gz",
+    "x86_64_linux": "ruby-4.0.0-preview3.x86_64_linux.tar.gz"
+  },
+  "4.0.1": {
+    "arm64_linux": "ruby-4.0.1.arm64_linux.tar.gz",
+    "macos": "ruby-4.0.1.macos.tar.gz",
+    "x86_64_linux": "ruby-4.0.1.x86_64_linux.tar.gz"
+  },
+  "4.0.2": {
+    "arm64_linux": "ruby-4.0.2.arm64_linux.tar.gz",
+    "macos": "ruby-4.0.2.macos.tar.gz",
+    "x86_64_linux": "ruby-4.0.2.x86_64_linux.tar.gz"
+  },
+  "4.0.3": {
+    "arm64_linux": "ruby-4.0.3.arm64_linux.tar.gz",
+    "macos": "ruby-4.0.3.macos.tar.gz",
+    "x86_64_linux": "ruby-4.0.3.x86_64_linux.tar.gz"
+  },
+  "4.0.4": {
+    "arm64_linux": "ruby-4.0.4.arm64_linux.tar.gz",
+    "macos": "ruby-4.0.4.macos.tar.gz",
+    "x86_64_linux": "ruby-4.0.4.x86_64_linux.tar.gz"
+  },
+  "4.0.5": {
+    "arm64_linux": "ruby-4.0.5.arm64_linux.tar.gz",
+    "macos": "ruby-4.0.5.macos.tar.gz",
+    "x86_64_linux": "ruby-4.0.5.x86_64_linux.tar.gz"
+  },
+  "4.0.6": {
+    "arm64_linux": "ruby-4.0.6.arm64_linux.tar.gz",
+    "macos": "ruby-4.0.6.macos.tar.gz",
+    "x86_64_linux": "ruby-4.0.6.x86_64_linux.tar.gz"
+  }
+}

@@ -37,3 +37,9 @@ Test the plugins by running `proto` commands.
 proto install ruby-test
 proto versions ruby-test
 ```
+
+Update the cached list of portable Ruby binaries after jdx publishes new releases:
+
+```shell
+node scripts/generateRubyReleases.mjs
+```

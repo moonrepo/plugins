@@ -1,20 +1,9 @@
 use extism_pdk::*;
 use proto_pdk::*;
-use serde::Deserialize;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use tool_common::enable_tracing;
 
-#[derive(Deserialize)]
-struct GitHubAsset {
-    browser_download_url: String,
-    name: String,
-}
-
-#[derive(Deserialize)]
-struct GitHubRelease {
-    assets: Vec<GitHubAsset>,
-    tag_name: String,
-}
+type PrebuiltReleases = BTreeMap<String, BTreeMap<String, String>>;
 
 #[host_fn]
 extern "ExtismHost" {
@@ -153,45 +142,24 @@ fn find_prebuilt_source(
     };
 
     let version = version.to_string();
-    let filename = format!("ruby-{version}.{platform}.tar.gz");
-    const PAGE_SIZE: usize = 100;
-    let mut page = 1;
+    let releases: PrebuiltReleases = fetch_json(
+        "https://raw.githubusercontent.com/moonrepo/plugins/master/tools/ruby/releases.json",
+    )?;
 
-    loop {
-        let releases: Vec<GitHubRelease> = fetch_json(format!(
-            "https://api.github.com/repos/jdx/ruby/releases?per_page={PAGE_SIZE}&page={page}"
-        ))?;
-        let is_last_page = releases.len() < PAGE_SIZE;
-
-        if let Some(source) = select_prebuilt_source(releases, &filename, &version) {
-            return Ok(Some(source));
-        }
-
-        if is_last_page {
-            return Ok(None);
-        }
-
-        page += 1;
-    }
+    Ok(select_prebuilt_source(&releases, platform, &version))
 }
 
 fn select_prebuilt_source(
-    releases: Vec<GitHubRelease>,
-    filename: &str,
+    releases: &PrebuiltReleases,
+    platform: &str,
     version: &str,
 ) -> Option<SourceLocation> {
-    releases
-        .into_iter()
-        .find(|release| release.tag_name == version)?
-        .assets
-        .into_iter()
-        .find(|asset| asset.name == filename)
-        .map(|asset| {
-            SourceLocation::Archive(ArchiveSource {
-                url: asset.browser_download_url,
-                prefix: Some(format!("ruby-{version}")),
-            })
-        })
+    let filename = releases.get(version)?.get(platform)?;
+
+    Some(SourceLocation::Archive(ArchiveSource {
+        url: format!("https://github.com/jdx/ruby/releases/download/{version}/{filename}"),
+        prefix: Some(format!("ruby-{version}")),
+    }))
 }
 
 fn get_prebuilt_platform(env: &HostEnvironment) -> Option<&'static str> {
@@ -265,21 +233,21 @@ mod tests {
     #[test]
     fn selects_matching_release_asset() {
         let source = select_prebuilt_source(
-            vec![GitHubRelease {
-                assets: vec![GitHubAsset {
-                    browser_download_url: "https://example.com/ruby.tar.gz".into(),
-                    name: "ruby-3.4.9.arm64_linux.tar.gz".into(),
-                }],
-                tag_name: "3.4.9".into(),
-            }],
-            "ruby-3.4.9.arm64_linux.tar.gz",
+            &BTreeMap::from_iter([(
+                "3.4.9".into(),
+                BTreeMap::from_iter([(
+                    "arm64_linux".into(),
+                    "ruby-3.4.9.arm64_linux.tar.gz".into(),
+                )]),
+            )]),
+            "arm64_linux",
             "3.4.9",
         );
 
         assert_eq!(
             source,
             Some(SourceLocation::Archive(ArchiveSource {
-                url: "https://example.com/ruby.tar.gz".into(),
+                url: "https://github.com/jdx/ruby/releases/download/3.4.9/ruby-3.4.9.arm64_linux.tar.gz".into(),
                 prefix: Some("ruby-3.4.9".into()),
             }))
         );
@@ -288,11 +256,8 @@ mod tests {
     #[test]
     fn skips_release_without_matching_asset() {
         let source = select_prebuilt_source(
-            vec![GitHubRelease {
-                assets: vec![],
-                tag_name: "3.4.9".into(),
-            }],
-            "ruby-3.4.9.macos.tar.gz",
+            &BTreeMap::from_iter([("3.4.9".into(), BTreeMap::new())]),
+            "macos",
             "3.4.9",
         );
 
@@ -301,7 +266,7 @@ mod tests {
 
     #[test]
     fn skips_missing_release() {
-        let source = select_prebuilt_source(vec![], "ruby-3.1.0.macos.tar.gz", "3.1.0");
+        let source = select_prebuilt_source(&BTreeMap::new(), "macos", "3.1.0");
 
         assert_eq!(source, None);
     }
