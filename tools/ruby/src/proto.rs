@@ -1,7 +1,20 @@
 use extism_pdk::*;
 use proto_pdk::*;
+use serde::Deserialize;
 use std::collections::HashMap;
 use tool_common::enable_tracing;
+
+#[derive(Deserialize)]
+struct GitHubAsset {
+    browser_download_url: String,
+    name: String,
+}
+
+#[derive(Deserialize)]
+struct GitHubRelease {
+    assets: Vec<GitHubAsset>,
+    tag_name: String,
+}
 
 #[host_fn]
 extern "ExtismHost" {
@@ -68,6 +81,13 @@ pub fn build_instructions(
         return Err(PluginError::UnsupportedWindowsBuild.into());
     }
 
+    if let Some(source) = find_prebuilt_source(&env, &version)? {
+        return Ok(Json(BuildInstructionsOutput {
+            source: Some(source),
+            ..BuildInstructionsOutput::default()
+        }));
+    }
+
     let output = BuildInstructionsOutput {
         help_url: Some(
             "https://github.com/rbenv/ruby-build/wiki".into(),
@@ -124,6 +144,65 @@ pub fn build_instructions(
     Ok(Json(output))
 }
 
+fn find_prebuilt_source(
+    env: &HostEnvironment,
+    version: &VersionSpec,
+) -> AnyResult<Option<SourceLocation>> {
+    let Some(platform) = get_prebuilt_platform(env) else {
+        return Ok(None);
+    };
+
+    let version = version.to_string();
+    let filename = format!("ruby-{version}.{platform}.tar.gz");
+    const PAGE_SIZE: usize = 100;
+    let mut page = 1;
+
+    loop {
+        let releases: Vec<GitHubRelease> = fetch_json(format!(
+            "https://api.github.com/repos/jdx/ruby/releases?per_page={PAGE_SIZE}&page={page}"
+        ))?;
+        let is_last_page = releases.len() < PAGE_SIZE;
+
+        if let Some(source) = select_prebuilt_source(releases, &filename, &version) {
+            return Ok(Some(source));
+        }
+
+        if is_last_page {
+            return Ok(None);
+        }
+
+        page += 1;
+    }
+}
+
+fn select_prebuilt_source(
+    releases: Vec<GitHubRelease>,
+    filename: &str,
+    version: &str,
+) -> Option<SourceLocation> {
+    releases
+        .into_iter()
+        .find(|release| release.tag_name == version)?
+        .assets
+        .into_iter()
+        .find(|asset| asset.name == filename)
+        .map(|asset| {
+            SourceLocation::Archive(ArchiveSource {
+                url: asset.browser_download_url,
+                prefix: Some(format!("ruby-{version}")),
+            })
+        })
+}
+
+fn get_prebuilt_platform(env: &HostEnvironment) -> Option<&'static str> {
+    match (env.os, env.arch) {
+        (HostOS::Linux, HostArch::X64) => Some("x86_64_linux"),
+        (HostOS::Linux, HostArch::Arm64) => Some("arm64_linux"),
+        (HostOS::MacOS, HostArch::Arm64) => Some("macos"),
+        _ => None,
+    }
+}
+
 #[plugin_fn]
 pub fn locate_executables(
     Json(_): Json<LocateExecutablesInput>,
@@ -157,4 +236,73 @@ pub fn locate_executables(
         globals_lookup_dirs: vec![],
         ..LocateExecutablesOutput::default()
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn maps_jdx_supported_platforms() {
+        for (os, arch, expected) in [
+            (HostOS::Linux, HostArch::X64, Some("x86_64_linux")),
+            (HostOS::Linux, HostArch::Arm64, Some("arm64_linux")),
+            (HostOS::MacOS, HostArch::Arm64, Some("macos")),
+            (HostOS::MacOS, HostArch::X64, None),
+            (HostOS::Windows, HostArch::X64, None),
+        ] {
+            assert_eq!(
+                get_prebuilt_platform(&HostEnvironment {
+                    os,
+                    arch,
+                    ..HostEnvironment::default()
+                }),
+                expected
+            );
+        }
+    }
+
+    #[test]
+    fn selects_matching_release_asset() {
+        let source = select_prebuilt_source(
+            vec![GitHubRelease {
+                assets: vec![GitHubAsset {
+                    browser_download_url: "https://example.com/ruby.tar.gz".into(),
+                    name: "ruby-3.4.9.arm64_linux.tar.gz".into(),
+                }],
+                tag_name: "3.4.9".into(),
+            }],
+            "ruby-3.4.9.arm64_linux.tar.gz",
+            "3.4.9",
+        );
+
+        assert_eq!(
+            source,
+            Some(SourceLocation::Archive(ArchiveSource {
+                url: "https://example.com/ruby.tar.gz".into(),
+                prefix: Some("ruby-3.4.9".into()),
+            }))
+        );
+    }
+
+    #[test]
+    fn skips_release_without_matching_asset() {
+        let source = select_prebuilt_source(
+            vec![GitHubRelease {
+                assets: vec![],
+                tag_name: "3.4.9".into(),
+            }],
+            "ruby-3.4.9.macos.tar.gz",
+            "3.4.9",
+        );
+
+        assert_eq!(source, None);
+    }
+
+    #[test]
+    fn skips_missing_release() {
+        let source = select_prebuilt_source(vec![], "ruby-3.1.0.macos.tar.gz", "3.1.0");
+
+        assert_eq!(source, None);
+    }
 }
