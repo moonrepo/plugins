@@ -165,8 +165,12 @@ pub fn native_install(
         .lines()
         .any(|line| line.starts_with(&triple))
     {
-        // Ensure the bins exist and that this isn't just an empty folder
-        if input.install_dir.join("bin").exists() {
+        // Ensure the primary executable exists.
+        if input
+            .install_dir
+            .join(env.os.get_exe_name("bin/cargo"))
+            .exists()
+        {
             debug!("Target already installed in toolchain");
 
             do_install = false;
