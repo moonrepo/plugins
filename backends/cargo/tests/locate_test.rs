@@ -1,9 +1,9 @@
 use proto_pdk_test_utils::*;
 use std::path::PathBuf;
 
-fn locate_input(sandbox: &ProtoWasmSandbox) -> LocateExecutablesInput {
+fn locate_input(sandbox: &ProtoWasmSandbox, plugin: &WasmTestWrapper) -> LocateExecutablesInput {
     LocateExecutablesInput {
-        install_dir: VirtualPath::Real(sandbox.path().into()),
+        install_dir: plugin.tool.to_virtual_path(sandbox.path()),
         ..Default::default()
     }
 }
@@ -17,7 +17,9 @@ mod cargo_backend_locate {
         sandbox.create_file("bin/cargo-nextest", "");
 
         let plugin = sandbox.create_plugin("cargo:cargo-nextest").await;
-        let output = plugin.locate_executables(locate_input(&sandbox)).await;
+        let output = plugin
+            .locate_executables(locate_input(&sandbox, &plugin))
+            .await;
 
         let exe = output.exes.get("cargo-nextest").unwrap();
         assert_eq!(exe.exe_path, Some(PathBuf::from("bin/cargo-nextest")));
@@ -33,7 +35,9 @@ mod cargo_backend_locate {
         sandbox.create_file("bin/subdir/inner", "");
 
         let plugin = sandbox.create_plugin("cargo:cargo-nextest").await;
-        let output = plugin.locate_executables(locate_input(&sandbox)).await;
+        let output = plugin
+            .locate_executables(locate_input(&sandbox, &plugin))
+            .await;
 
         assert!(output.exes.contains_key("cargo-nextest"));
         assert!(!output.exes.contains_key("subdir"));
@@ -47,7 +51,9 @@ mod cargo_backend_locate {
         sandbox.create_file("bin/other", "");
 
         let plugin = sandbox.create_plugin("cargo:eza").await;
-        let output = plugin.locate_executables(locate_input(&sandbox)).await;
+        let output = plugin
+            .locate_executables(locate_input(&sandbox, &plugin))
+            .await;
 
         let eza = output.exes.get("eza").unwrap();
         assert!(eza.primary);
@@ -64,7 +70,9 @@ mod cargo_backend_locate {
         sandbox.create_file("bin/outdated", "");
 
         let plugin = sandbox.create_plugin("cargo:cargo-outdated").await;
-        let output = plugin.locate_executables(locate_input(&sandbox)).await;
+        let output = plugin
+            .locate_executables(locate_input(&sandbox, &plugin))
+            .await;
 
         let exe = output.exes.get("outdated").unwrap();
         assert!(exe.primary);
@@ -76,7 +84,9 @@ mod cargo_backend_locate {
         sandbox.create_file("bin/something-else", "");
 
         let plugin = sandbox.create_plugin("cargo:cargo-nextest").await;
-        let output = plugin.locate_executables(locate_input(&sandbox)).await;
+        let output = plugin
+            .locate_executables(locate_input(&sandbox, &plugin))
+            .await;
 
         assert_eq!(output.exes.values().filter(|cfg| cfg.primary).count(), 1);
     }
@@ -87,7 +97,9 @@ mod cargo_backend_locate {
         sandbox.create_file("bin/cargo-nextest.exe", "");
 
         let plugin = sandbox.create_plugin("cargo:cargo-nextest").await;
-        let output = plugin.locate_executables(locate_input(&sandbox)).await;
+        let output = plugin
+            .locate_executables(locate_input(&sandbox, &plugin))
+            .await;
 
         // Map key has `.exe` stripped, but exe_path retains it.
         let exe = output.exes.get("cargo-nextest").unwrap();

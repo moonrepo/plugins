@@ -16,11 +16,7 @@ mod node_depman_tool {
         use super::*;
 
         fn create_globals_dir() -> VirtualPath {
-            VirtualPath::Virtual {
-                path: PathBuf::from("/proto/tools/node/globals/bin"),
-                virtual_prefix: PathBuf::from("/proto"),
-                real_prefix: PathBuf::from("/.proto"),
-            }
+            VirtualPath::new("/proto/tools/node/globals/bin")
         }
 
         mod npm {

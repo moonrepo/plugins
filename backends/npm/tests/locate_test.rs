@@ -2,9 +2,9 @@ use npm_backend::NpmBackendConfig;
 use proto_pdk_test_utils::*;
 use std::path::PathBuf;
 
-fn locate_input(sandbox: &ProtoWasmSandbox) -> LocateExecutablesInput {
+fn locate_input(sandbox: &ProtoWasmSandbox, plugin: &WasmTestWrapper) -> LocateExecutablesInput {
     LocateExecutablesInput {
-        install_dir: VirtualPath::Real(sandbox.path().into()),
+        install_dir: plugin.tool.to_virtual_path(sandbox.path()),
         ..Default::default()
     }
 }
@@ -24,7 +24,9 @@ mod npm_backend_locate {
             );
 
             let plugin = sandbox.create_plugin("npm:typescript").await;
-            let output = plugin.locate_executables(locate_input(&sandbox)).await;
+            let output = plugin
+                .locate_executables(locate_input(&sandbox, &plugin))
+                .await;
 
             let tsc = output.exes.get("tsc").unwrap();
             assert_eq!(
@@ -52,7 +54,9 @@ mod npm_backend_locate {
             );
 
             let plugin = sandbox.create_plugin("npm:prettier").await;
-            let output = plugin.locate_executables(locate_input(&sandbox)).await;
+            let output = plugin
+                .locate_executables(locate_input(&sandbox, &plugin))
+                .await;
 
             let prettier = output.exes.get("prettier").unwrap();
             assert_eq!(
@@ -73,7 +77,9 @@ mod npm_backend_locate {
             );
 
             let plugin = sandbox.create_plugin("npm:@moonrepo/cli").await;
-            let output = plugin.locate_executables(locate_input(&sandbox)).await;
+            let output = plugin
+                .locate_executables(locate_input(&sandbox, &plugin))
+                .await;
 
             assert!(output.exes.contains_key("cli"));
             assert!(!output.exes.contains_key("@moonrepo/cli"));
@@ -95,7 +101,9 @@ mod npm_backend_locate {
             );
 
             let plugin = sandbox.create_plugin("npm:multi").await;
-            let output = plugin.locate_executables(locate_input(&sandbox)).await;
+            let output = plugin
+                .locate_executables(locate_input(&sandbox, &plugin))
+                .await;
 
             for name in ["a", "b", "c"] {
                 let cfg = output.exes.get(name).unwrap();
@@ -113,7 +121,9 @@ mod npm_backend_locate {
             );
 
             let plugin = sandbox.create_plugin("npm:multi").await;
-            let output = plugin.locate_executables(locate_input(&sandbox)).await;
+            let output = plugin
+                .locate_executables(locate_input(&sandbox, &plugin))
+                .await;
 
             for name in ["a", "b", "c", "d"] {
                 let cfg = output.exes.get(name).unwrap();
@@ -131,7 +141,9 @@ mod npm_backend_locate {
             );
 
             let plugin = sandbox.create_plugin("npm:typescript").await;
-            let output = plugin.locate_executables(locate_input(&sandbox)).await;
+            let output = plugin
+                .locate_executables(locate_input(&sandbox, &plugin))
+                .await;
 
             let tsc = output.exes.get("tsc").unwrap();
             assert_eq!(tsc.parent_exe_name, Some("node".into()));
@@ -145,7 +157,9 @@ mod npm_backend_locate {
             sandbox.create_file("bin/extra", "");
 
             let plugin = sandbox.create_plugin("npm:typescript").await;
-            let output = plugin.locate_executables(locate_input(&sandbox)).await;
+            let output = plugin
+                .locate_executables(locate_input(&sandbox, &plugin))
+                .await;
 
             let typescript = output.exes.get("typescript").unwrap();
             assert_eq!(typescript.exe_path, Some(PathBuf::from("bin/typescript")));
@@ -162,7 +176,9 @@ mod npm_backend_locate {
             sandbox.create_file("typescript", "");
 
             let plugin = sandbox.create_plugin("npm:typescript").await;
-            let output = plugin.locate_executables(locate_input(&sandbox)).await;
+            let output = plugin
+                .locate_executables(locate_input(&sandbox, &plugin))
+                .await;
 
             let typescript = output.exes.get("typescript").unwrap();
             assert_eq!(typescript.exe_path, Some(PathBuf::from("typescript")));
@@ -177,7 +193,9 @@ mod npm_backend_locate {
             sandbox.create_file("typescript.ps1", "");
 
             let plugin = sandbox.create_plugin("npm:typescript").await;
-            let output = plugin.locate_executables(locate_input(&sandbox)).await;
+            let output = plugin
+                .locate_executables(locate_input(&sandbox, &plugin))
+                .await;
 
             assert!(output.exes.contains_key("typescript"));
             assert!(!output.exes.contains_key("typescript.cmd"));
@@ -192,7 +210,9 @@ mod npm_backend_locate {
             sandbox.create_file("bin/bar", "");
 
             let plugin = sandbox.create_plugin("npm:typescript").await;
-            let output = plugin.locate_executables(locate_input(&sandbox)).await;
+            let output = plugin
+                .locate_executables(locate_input(&sandbox, &plugin))
+                .await;
 
             assert_eq!(output.exes.values().filter(|cfg| cfg.primary).count(), 1);
         }
@@ -207,7 +227,9 @@ mod npm_backend_locate {
             sandbox.create_file("bin/.keep", "");
 
             let plugin = sandbox.create_plugin("npm:typescript").await;
-            let output = plugin.locate_executables(locate_input(&sandbox)).await;
+            let output = plugin
+                .locate_executables(locate_input(&sandbox, &plugin))
+                .await;
 
             assert!(output.exes_dirs.contains(&PathBuf::from("bin")));
         }
@@ -221,7 +243,9 @@ mod npm_backend_locate {
             );
 
             let plugin = sandbox.create_plugin("npm:typescript").await;
-            let output = plugin.locate_executables(locate_input(&sandbox)).await;
+            let output = plugin
+                .locate_executables(locate_input(&sandbox, &plugin))
+                .await;
 
             assert!(output.exes_dirs.contains(&PathBuf::from(".")));
         }
@@ -243,7 +267,9 @@ mod npm_backend_locate {
                     cfg.backend_config(NpmBackendConfig { bun: true });
                 })
                 .await;
-            let output = plugin.locate_executables(locate_input(&sandbox)).await;
+            let output = plugin
+                .locate_executables(locate_input(&sandbox, &plugin))
+                .await;
 
             let tsc = output.exes.get("tsc").unwrap();
             assert_eq!(
@@ -266,7 +292,9 @@ mod npm_backend_locate {
                     cfg.backend_config(NpmBackendConfig { bun: true });
                 })
                 .await;
-            let output = plugin.locate_executables(locate_input(&sandbox)).await;
+            let output = plugin
+                .locate_executables(locate_input(&sandbox, &plugin))
+                .await;
 
             let cli = output.exes.get("cli").unwrap();
             assert_eq!(

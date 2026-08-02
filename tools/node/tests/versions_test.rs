@@ -200,7 +200,7 @@ mod node_tool {
             assert_eq!(
                 plugin
                     .pin_version(PinVersionInput {
-                        dir: VirtualPath::Real(sandbox.path().into()),
+                        dir: plugin.tool.to_virtual_path(sandbox.path()),
                         version: UnresolvedVersionSpec::parse(">=20").unwrap(),
                         ..Default::default()
                     })
@@ -225,7 +225,7 @@ mod node_tool {
             assert_eq!(
                 plugin
                     .pin_version(PinVersionInput {
-                        dir: VirtualPath::Real(sandbox.path().into()),
+                        dir: plugin.tool.to_virtual_path(sandbox.path()),
                         version: UnresolvedVersionSpec::parse(">=20").unwrap(),
                         ..Default::default()
                     })
@@ -264,7 +264,7 @@ mod node_tool {
             assert_eq!(
                 plugin
                     .pin_version(PinVersionInput {
-                        dir: VirtualPath::Real(sandbox.path().into()),
+                        dir: plugin.tool.to_virtual_path(sandbox.path()),
                         version: UnresolvedVersionSpec::parse(">=20").unwrap(),
                         ..Default::default()
                     })
@@ -303,7 +303,7 @@ mod node_tool {
             assert_eq!(
                 plugin
                     .pin_version(PinVersionInput {
-                        dir: VirtualPath::Real(sandbox.path().into()),
+                        dir: plugin.tool.to_virtual_path(sandbox.path()),
                         version: UnresolvedVersionSpec::parse(">=20").unwrap(),
                         ..Default::default()
                     })
@@ -334,7 +334,7 @@ mod node_tool {
             assert_eq!(
                 plugin
                     .unpin_version(UnpinVersionInput {
-                        dir: VirtualPath::Real(sandbox.path().into()),
+                        dir: plugin.tool.to_virtual_path(sandbox.path()),
                         ..Default::default()
                     })
                     .await,
@@ -367,7 +367,7 @@ mod node_tool {
             assert_eq!(
                 plugin
                     .unpin_version(UnpinVersionInput {
-                        dir: VirtualPath::Real(sandbox.path().into()),
+                        dir: plugin.tool.to_virtual_path(sandbox.path()),
                         ..Default::default()
                     })
                     .await,
@@ -412,7 +412,7 @@ mod node_tool {
             assert_eq!(
                 plugin
                     .unpin_version(UnpinVersionInput {
-                        dir: VirtualPath::Real(sandbox.path().into()),
+                        dir: plugin.tool.to_virtual_path(sandbox.path()),
                         ..Default::default()
                     })
                     .await,
@@ -451,7 +451,7 @@ mod node_tool {
             assert_eq!(
                 plugin
                     .unpin_version(UnpinVersionInput {
-                        dir: VirtualPath::Real(sandbox.path().into()),
+                        dir: plugin.tool.to_virtual_path(sandbox.path()),
                         ..Default::default()
                     })
                     .await,
