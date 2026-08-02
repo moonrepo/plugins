@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added support for installing portable Ruby binaries from `jdx/ruby` when available.
+
 ## 0.2.8
 
 #### 🚀 Updates
