@@ -5,13 +5,10 @@ use proto_pdk::*;
 use rustc_hash::FxHashMap;
 use schematic::SchemaBuilder;
 use starbase_utils::fs;
-use std::path::{Path, PathBuf};
 
 #[host_fn]
 extern "ExtismHost" {
     fn exec_command(input: Json<ExecCommandInput>) -> Json<ExecCommandOutput>;
-    fn from_virtual_path(path: String) -> String;
-    fn to_virtual_path(path: String) -> String;
     fn host_log(input: Json<HostLogInput>);
 }
 
@@ -40,20 +37,8 @@ fn cpu_cores() -> AnyResult<String> {
     Ok(value)
 }
 
-fn backend_root() -> AnyResult<PathBuf> {
-    if let Some(value) = var::get::<String>("backend_root")? {
-        return Ok(value.into());
-    }
-
-    let root = into_real_path("/proto/backends")?;
-
-    var::set("backend_root", root.to_str().unwrap())?;
-
-    Ok(root)
-}
-
 fn create_script_from_context(
-    virtual_script_path: &Path,
+    virtual_script_path: &VirtualPath,
     context: &PluginContext,
 ) -> AnyResult<ExecCommandInput> {
     create_script(
@@ -65,14 +50,14 @@ fn create_script_from_context(
 }
 
 fn create_script_from_unresolved_context(
-    virtual_script_path: &Path,
+    virtual_script_path: &VirtualPath,
     _context: &PluginUnresolvedContext,
 ) -> AnyResult<ExecCommandInput> {
     create_script(virtual_script_path, None, None, None)
 }
 
 fn create_script(
-    virtual_script_path: &Path,
+    virtual_script_path: &VirtualPath,
     version: Option<&VersionSpec>,
     tool_dir: Option<&VirtualPath>,
     temp_dir: Option<&VirtualPath>,
@@ -107,12 +92,10 @@ fn create_script(
 
     // Resolve the real path since this is executed in the console
     input.args.push(
-        match virtual_script_path.strip_prefix("/proto/backends") {
-            Ok(suffix) => backend_root()?.join(suffix),
-            Err(_) => into_real_path(virtual_script_path)?,
-        }
-        .to_string_lossy()
-        .to_string(),
+        virtual_script_path
+            .to_real_path()?
+            .expect("Invalid script path!")
+            .to_string(),
     );
 
     if let Some(version) = version {
@@ -124,16 +107,20 @@ fn create_script(
             .insert("ASDF_INSTALL_VERSION".into(), version.to_string());
     }
 
-    if let Some(dir) = tool_dir {
+    if let Some(dir) = tool_dir
+        && let Some(dir) = dir.to_real_path()?
+    {
         input
             .env
-            .insert("ASDF_INSTALL_PATH".into(), dir.real_path_string().unwrap());
+            .insert("ASDF_INSTALL_PATH".into(), dir.to_string());
     }
 
-    if let Some(dir) = temp_dir {
+    if let Some(dir) = temp_dir
+        && let Some(dir) = dir.to_real_path()?
+    {
         input
             .env
-            .insert("ASDF_DOWNLOAD_PATH".into(), dir.real_path_string().unwrap());
+            .insert("ASDF_DOWNLOAD_PATH".into(), dir.to_string());
     }
 
     Ok(input)
@@ -290,7 +277,13 @@ pub fn parse_version_file(
         // https://asdf-vm.com/plugins/create.html#bin-parse-legacy-file
         if script_path.exists() {
             let mut script = create_script_from_unresolved_context(&script_path, &input.context)?;
-            script.args.push(input.path.real_path_string().unwrap());
+            script.args.push(
+                input
+                    .path
+                    .to_real_path()?
+                    .expect("Invalid version file path!")
+                    .to_string(),
+            );
 
             let data = exec_script(script)?;
 

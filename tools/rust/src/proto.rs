@@ -134,7 +134,10 @@ pub fn native_install(
         }
 
         exec(ExecCommandInput {
-            command: script_path.real_path_string().unwrap(),
+            command: script_path
+                .to_real_path()?
+                .expect("Invalid script path!")
+                .to_string(),
             args: vec!["--default-toolchain".into(), "none".into(), "-y".into()],
             set_executable: true,
             stream: true,

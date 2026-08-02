@@ -118,7 +118,7 @@ pub fn build_instructions(
                         "./all.bash"
                     }
                     .into(),
-                    cwd: Some("src".into()),
+                    cwd: Some(input.install_dir.join("src")),
                     ..Default::default()
                 }
             })),

@@ -62,11 +62,13 @@ fn get_cargo_home(env: &HostEnvironment) -> Result<VirtualPath, Error> {
     let dir = env.home_dir.join(".cargo");
 
     match get_host_env_var("CARGO_HOME")? {
-        Some(value) => Ok(if value.is_empty() {
-            dir
-        } else {
-            into_virtual_path(value)?
-        }),
+        Some(value) => {
+            if value.is_empty() {
+                Ok(dir)
+            } else {
+                VirtualPath::create(value)
+            }
+        }
         None => Ok(dir),
     }
 }
@@ -121,9 +123,13 @@ pub fn native_install(
 
     // Where to install
     command.args.push("--root".into());
-    command
-        .args
-        .push(input.install_dir.real_path_string().unwrap());
+    command.args.push(
+        input
+            .install_dir
+            .to_real_path()?
+            .expect("Invalid install directory!")
+            .to_string(),
+    );
 
     // Other options
     if input.force {

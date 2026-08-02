@@ -3145,7 +3145,7 @@ dependencies = [
  "serde",
  "serde_json",
  "version_spec 0.10.3",
- "warpgate_api",
+ "warpgate_api 0.17.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -3185,7 +3185,7 @@ dependencies = [
  "rustc-hash",
  "schematic",
  "serde",
- "warpgate_pdk",
+ "warpgate_pdk 0.16.5 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -3204,7 +3204,7 @@ dependencies = [
  "schematic",
  "serde",
  "serde_json",
- "warpgate_api",
+ "warpgate_api 0.17.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -4017,7 +4017,7 @@ dependencies = [
  "oci-client 0.16.1",
  "once_cell",
  "proto_pdk_api 0.31.13",
- "proto_shim",
+ "proto_shim 0.8.2",
  "regex",
  "reqwest",
  "rustc-hash",
@@ -4033,7 +4033,7 @@ dependencies = [
  "starbase_shell",
  "starbase_styles",
  "starbase_utils 0.13.8",
- "system_env",
+ "system_env 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.19",
  "tokio",
  "toml_edit",
@@ -4046,9 +4046,7 @@ dependencies = [
 
 [[package]]
 name = "proto_core"
-version = "0.59.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a1838c7d0223c8403b5353869549e19996952a60e38079c8dcff7eb1d46a5d7"
+version = "0.59.1"
 dependencies = [
  "ai_env",
  "convert_case 0.11.0",
@@ -4061,7 +4059,7 @@ dependencies = [
  "oci-client 0.17.0",
  "once_cell",
  "proto_pdk_api 0.32.1",
- "proto_shim",
+ "proto_shim 0.8.3",
  "regex",
  "reqwest",
  "rustc-hash",
@@ -4075,7 +4073,7 @@ dependencies = [
  "starbase_shell",
  "starbase_styles",
  "starbase_utils 0.14.1",
- "system_env",
+ "system_env 0.10.0",
  "thiserror 2.0.19",
  "tokio",
  "toml_edit",
@@ -4089,14 +4087,12 @@ dependencies = [
 [[package]]
 name = "proto_pdk"
 version = "0.33.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0030c90652835da05c1839ebb5e7cb8995bfae776bf340f5869aff530a230ea"
 dependencies = [
  "extism-pdk",
  "proto_pdk_api 0.32.1",
  "rustc-hash",
  "serde",
- "warpgate_pdk",
+ "warpgate_pdk 0.16.5",
 ]
 
 [[package]]
@@ -4111,27 +4107,25 @@ dependencies = [
  "semver",
  "serde",
  "serde_json",
- "system_env",
+ "system_env 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.19",
  "version_spec 0.10.3",
- "warpgate_api",
+ "warpgate_api 0.17.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "proto_pdk_api"
 version = "0.32.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e00f08f99b3d05d81133b6ebb9077bc6e1b8a2718182892022d657e706161f4e"
 dependencies = [
  "derive_setters",
  "rustc-hash",
  "schematic",
  "serde",
  "serde_json",
- "system_env",
+ "system_env 0.10.0",
  "thiserror 2.0.19",
  "version_spec 0.11.2",
- "warpgate_api",
+ "warpgate_api 0.17.6",
 ]
 
 [[package]]
@@ -4152,11 +4146,9 @@ dependencies = [
 [[package]]
 name = "proto_pdk_test_utils"
 version = "0.47.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7ecdd0834f5d2b54ce06beb900b7ef1ae3cd34a2ac3c3146821beb636ab0b47"
 dependencies = [
  "extism",
- "proto_core 0.59.0",
+ "proto_core 0.59.1",
  "proto_pdk_api 0.32.1",
  "serde",
  "serde_json",
@@ -4169,6 +4161,14 @@ name = "proto_shim"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3296719b871c47a3e81b371353cf689a16bf40b8cb5e9a0f3603239218656634"
+dependencies = [
+ "dirs",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "proto_shim"
+version = "0.8.3"
 dependencies = [
  "dirs",
  "windows-sys 0.61.2",
@@ -5823,6 +5823,18 @@ dependencies = [
 [[package]]
 name = "system_env"
 version = "0.10.0"
+dependencies = [
+ "regex",
+ "schematic",
+ "serde",
+ "serde_json",
+ "shell-words",
+ "thiserror 2.0.19",
+]
+
+[[package]]
+name = "system_env"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a4d7bf944aae854a6a613b8af7a4d044def0fbbc763dcea7e1acf84e331d3527"
 dependencies = [
@@ -6531,8 +6543,6 @@ dependencies = [
 [[package]]
 name = "version_spec"
 version = "0.11.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59ac65298dc5c7987f1d13a20ee6b8bc1eff603b436acd0a4e84506f9c541af5"
 dependencies = [
  "compact_str 0.10.0",
  "human-sort",
@@ -6602,20 +6612,18 @@ dependencies = [
  "starbase_shell",
  "starbase_styles",
  "starbase_utils 0.13.8",
- "system_env",
+ "system_env 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.19",
  "tokio",
  "tracing",
  "ureq",
  "url",
- "warpgate_api",
+ "warpgate_api 0.17.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "warpgate"
 version = "0.34.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d48f4db46676d43f6f64e6256069fa8d2fd057cc24c0b6f36dace423676f8210"
 dependencies = [
  "async-trait",
  "compact_str 0.10.0",
@@ -6639,13 +6647,28 @@ dependencies = [
  "starbase_shell",
  "starbase_styles",
  "starbase_utils 0.14.1",
- "system_env",
+ "system_env 0.10.0",
  "thiserror 2.0.19",
  "tokio",
  "tracing",
  "ureq",
  "url",
- "warpgate_api",
+ "warpgate_api 0.17.6",
+]
+
+[[package]]
+name = "warpgate_api"
+version = "0.17.6"
+dependencies = [
+ "anyhow",
+ "derive_setters",
+ "rustc-hash",
+ "schematic",
+ "serde",
+ "serde_json",
+ "starbase_id",
+ "system_env 0.10.0",
+ "thiserror 2.0.19",
 ]
 
 [[package]]
@@ -6661,8 +6684,19 @@ dependencies = [
  "serde",
  "serde_json",
  "starbase_id",
- "system_env",
+ "system_env 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.19",
+]
+
+[[package]]
+name = "warpgate_pdk"
+version = "0.16.5"
+dependencies = [
+ "extism-pdk",
+ "serde",
+ "tracing",
+ "tracing-subscriber",
+ "warpgate_api 0.17.6",
 ]
 
 [[package]]
@@ -6673,9 +6707,7 @@ checksum = "c2897a95cca4ca14002c2407a365aa161a43fe4e4935d626c170e8c34552a22a"
 dependencies = [
  "extism-pdk",
  "serde",
- "tracing",
- "tracing-subscriber",
- "warpgate_api",
+ "warpgate_api 0.17.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

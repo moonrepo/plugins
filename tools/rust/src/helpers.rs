@@ -4,16 +4,17 @@ use proto_pdk::*;
 #[host_fn]
 extern "ExtismHost" {
     fn get_env_var(name: String) -> String;
-    fn to_virtual_path(input: String) -> String;
 }
 
 fn get_home_env(key: &str) -> Result<Option<VirtualPath>, Error> {
     match get_host_env_var(key)? {
-        Some(value) => Ok(if value.is_empty() {
-            None
-        } else {
-            into_virtual_path(value).ok()
-        }),
+        Some(value) => {
+            if value.is_empty() {
+                Ok(None)
+            } else {
+                VirtualPath::create(value).map(Some)
+            }
+        }
         None => Ok(None),
     }
 }

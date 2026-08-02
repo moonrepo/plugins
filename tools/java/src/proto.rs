@@ -301,8 +301,8 @@ pub fn activate_environment(
     let mut output = ActivateEnvironmentOutput::default();
     let home_dir = get_home_dir(&input.context.tool_dir);
 
-    if let Some(home) = home_dir.real_path_string() {
-        output.env.insert("JAVA_HOME".into(), home);
+    if let Some(home) = home_dir.to_real_path()? {
+        output.env.insert("JAVA_HOME".into(), home.to_string());
     }
 
     Ok(Json(output))
