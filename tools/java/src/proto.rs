@@ -107,7 +107,7 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
 
     // Scope each version with its distribution, as scoped requirements
     // (created by `resolve_version`) only match versions of the same scope
-    let versions = fetch_packages(&env, &config, &java)?
+    let versions = fetch_packages(env, &config, &java)?
         .into_iter()
         .filter_map(|package| {
             package
@@ -193,7 +193,7 @@ pub fn download_prebuilt(
     let java = JavaContext::detect(base_version)?;
 
     // Load all matching packages
-    let mut packages = fetch_packages(&env, &config, &java)?;
+    let mut packages = fetch_packages(env, &config, &java)?;
 
     // For non-latest, filter the results to matching versions. Also gate on
     // the distribution, as multiple distributions share identical java
@@ -208,7 +208,7 @@ pub fn download_prebuilt(
     }
 
     // Find a package with our requested archive types
-    let package = match find_package(&packages, &env) {
+    let package = match find_package(&packages, env) {
         Some(package) => package,
         None => {
             return Err(plugin_err!(

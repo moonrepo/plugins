@@ -30,7 +30,7 @@ pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<Regi
         minimum_proto_version: Some(Version::new(0, 59, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         unstable: Switch::Toggle(true),
-        ..RegisterToolOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -83,7 +83,7 @@ pub fn native_install(
     let tool_config = get_tool_config::<CargoToolConfig>()?;
 
     // Detect `cargo-binstall`
-    let binstall_path = get_cargo_home(&env)?
+    let binstall_path = get_cargo_home(env)?
         .join("bin")
         .join(env.os.get_exe_name("cargo-binstall"));
 

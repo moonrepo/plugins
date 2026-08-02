@@ -10,6 +10,6 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
         name: "Example".into(),
         type_of: PluginType::CommandLine,
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
-        ..RegisterToolOutput::default()
+        ..Default::default()
     }))
 }

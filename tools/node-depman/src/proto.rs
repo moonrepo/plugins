@@ -42,7 +42,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
         minimum_proto_version: Some(Version::new(0, 59, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         requires: vec!["node".into()],
-        ..RegisterToolOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -426,7 +426,7 @@ pub fn locate_executables(
     let primary;
 
     if !input.install_dir.join("shims").exists() {
-        create_internal_shims(&env, &input.install_dir, &manager)?;
+        create_internal_shims(env, &input.install_dir, &manager)?;
     }
 
     // These are the directories that contain the executable binaries,
@@ -534,7 +534,7 @@ pub fn locate_executables(
     Ok(Json(LocateExecutablesOutput {
         exes,
         globals_lookup_dirs,
-        ..LocateExecutablesOutput::default()
+        ..Default::default()
     }))
 }
 

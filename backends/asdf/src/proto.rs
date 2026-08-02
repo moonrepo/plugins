@@ -167,7 +167,7 @@ pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<Regi
         minimum_proto_version: Some(Version::new(0, 59, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         unstable: Switch::Toggle(true),
-        ..RegisterToolOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -207,7 +207,7 @@ pub fn register_backend(
         ],
         source: Some(SourceLocation::Git(GitSource {
             url: config.get_repo_url()?,
-            ..GitSource::default()
+            ..Default::default()
         })),
     }))
 }

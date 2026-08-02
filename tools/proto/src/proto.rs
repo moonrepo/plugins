@@ -18,7 +18,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
         minimum_proto_version: Some(Version::new(0, 59, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         self_upgrade_commands: vec!["up".into(), "upgrade".into()],
-        ..RegisterToolOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -47,7 +47,7 @@ pub fn build_instructions(
 
     check_supported_os_and_arch(
         "proto",
-        &env,
+        env,
         permutations! [
             HostOS::Linux => [HostArch::X64, HostArch::Arm64],
             HostOS::MacOS => [HostArch::X64, HostArch::Arm64],
@@ -103,7 +103,7 @@ pub fn download_prebuilt(
 
     check_supported_os_and_arch(
         "proto",
-        &env,
+        env,
         permutations! [
             HostOS::Linux => [HostArch::X64, HostArch::Arm64],
             HostOS::MacOS => [HostArch::X64, HostArch::Arm64],
@@ -139,7 +139,7 @@ pub fn download_prebuilt(
         checksum_name: Some(checksum_file),
         download_url: format!("{base_url}/{download_file}"),
         download_name: Some(download_file),
-        ..DownloadPrebuiltOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -159,6 +159,6 @@ pub fn locate_executables(
 
     Ok(Json(LocateExecutablesOutput {
         exes: HashMap::from_iter([("proto".into(), primary), ("proto-shim".into(), secondary)]),
-        ..LocateExecutablesOutput::default()
+        ..Default::default()
     }))
 }

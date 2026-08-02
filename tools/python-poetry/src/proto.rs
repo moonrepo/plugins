@@ -25,7 +25,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         requires: vec!["python".into()],
         self_upgrade_commands: vec!["self update".into()],
-        ..RegisterToolOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -130,7 +130,7 @@ pub fn native_install(
             ("POETRY_VERSION".into(), input.context.version.to_string()),
         ]),
         set_executable: true,
-        ..ExecCommandInput::default()
+        ..Default::default()
     })?;
 
     Ok(Json(NativeInstallOutput {
@@ -145,7 +145,7 @@ pub fn native_install(
             None
         },
         installed: result.exit_code == 0,
-        ..NativeInstallOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -182,6 +182,6 @@ pub fn locate_executables(
             "poetry".into(),
             ExecutableConfig::new_primary(env.os.get_exe_name("bin/poetry")),
         )]),
-        ..LocateExecutablesOutput::default()
+        ..Default::default()
     }))
 }

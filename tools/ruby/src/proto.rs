@@ -27,7 +27,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
         minimum_proto_version: Some(Version::new(0, 59, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         unstable: Switch::Message("Windows is currently not supported.".into()),
-        ..RegisterToolOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -76,10 +76,10 @@ pub fn build_instructions(
         return Err(PluginError::UnsupportedWindowsBuild.into());
     }
 
-    if let Some(source) = find_prebuilt_source(&env, &version)? {
+    if let Some(source) = find_prebuilt_source(env, &version)? {
         return Ok(Json(BuildInstructionsOutput {
             source: Some(source),
-            ..BuildInstructionsOutput::default()
+            ..Default::default()
         }));
     }
 
@@ -160,7 +160,7 @@ pub fn download_prebuilt(
     let env = get_host_environment()?;
     let version = input.context.version.to_string();
 
-    let Some(asset) = load_prebuilt_asset(&env, &version)? else {
+    let Some(asset) = load_prebuilt_asset(env, &version)? else {
         return Err(plugin_err!(
             "No pre-built available for Ruby <hash>{version}</hash> on <id>{}-{}</id>! Try building from source with <shell>--build</shell>.",
             env.os,
@@ -201,7 +201,7 @@ fn create_download_output(asset: PrebuiltAsset, version: &str) -> DownloadPrebui
         archive_prefix: Some(format!("ruby-{version}")),
         download_name: Some(asset.filename),
         download_url: asset.url,
-        ..DownloadPrebuiltOutput::default()
+        ..Default::default()
     }
 }
 
@@ -245,7 +245,7 @@ pub fn locate_executables(
         ]),
         exes_dirs: vec!["bin".into()],
         globals_lookup_dirs: vec![],
-        ..LocateExecutablesOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -266,7 +266,7 @@ mod tests {
                 get_prebuilt_platform(&HostEnvironment {
                     os,
                     arch,
-                    ..HostEnvironment::default()
+                    ..Default::default()
                 }),
                 expected
             );
@@ -328,7 +328,7 @@ mod tests {
                 archive_prefix: Some("ruby-3.4.9".into()),
                 download_name: Some("ruby-3.4.9.macos.tar.gz".into()),
                 download_url: "https://example.com/ruby-3.4.9.macos.tar.gz".into(),
-                ..DownloadPrebuiltOutput::default()
+                ..Default::default()
             }
         );
     }

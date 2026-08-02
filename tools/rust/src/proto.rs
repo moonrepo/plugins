@@ -29,8 +29,8 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
         type_of: PluginType::Language,
         default_version: Some(UnresolvedVersionSpec::Alias("stable".into())),
         inventory_options: ToolInventoryOptions {
-            override_dir: Some(get_toolchain_dir(&env)?),
-            version_suffix: Some(format!("-{}", get_target_triple(&env, NAME)?)),
+            override_dir: Some(get_toolchain_dir(env)?),
+            version_suffix: Some(format!("-{}", get_target_triple(env, NAME)?)),
             ..Default::default()
         },
         lock_options: ToolLockOptions {
@@ -39,7 +39,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
         },
         minimum_proto_version: Some(Version::new(0, 59, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
-        ..RegisterToolOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -112,7 +112,7 @@ pub fn native_install(
     let env = get_host_environment()?;
 
     // Install rustup if it does not exist
-    if !command_exists(&env, "rustup") {
+    if !command_exists(env, "rustup") {
         debug!("Installing <shell>rustup</shell>");
 
         let is_windows = env.os.is_windows();
@@ -141,13 +141,13 @@ pub fn native_install(
             args: vec!["--default-toolchain".into(), "none".into(), "-y".into()],
             set_executable: true,
             stream: true,
-            ..ExecCommandInput::default()
+            ..Default::default()
         })?;
 
         // Update PATH explicitly, since we can't "reload the shell"
         // on the host side. This is good enough since it's deterministic.
         add_host_paths([
-            get_cargo_home(&env)?.join("bin").to_string(),
+            get_cargo_home(env)?.join("bin").to_string(),
             "$HOME/.cargo/bin".to_string(),
         ])?;
     }
@@ -155,7 +155,7 @@ pub fn native_install(
     let version = &input.context.version;
     let channel = get_channel_from_version(version);
 
-    let triple = format!("{}-{}", channel, get_target_triple(&env, NAME)?);
+    let triple = format!("{}-{}", channel, get_target_triple(env, NAME)?);
 
     debug!("Installing target <id>{}</id> with rustup", triple);
 
@@ -189,7 +189,7 @@ pub fn native_install(
     // Always mark as installed so that binaries can be located!
     Ok(Json(NativeInstallOutput {
         installed: true,
-        ..NativeInstallOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -199,13 +199,13 @@ pub fn native_uninstall(
 ) -> FnResult<Json<NativeUninstallOutput>> {
     let env = get_host_environment()?;
     let channel = get_channel_from_version(&input.context.version);
-    let triple = format!("{}-{}", channel, get_target_triple(&env, NAME)?);
+    let triple = format!("{}-{}", channel, get_target_triple(env, NAME)?);
 
     exec_streamed("rustup", ["toolchain", "uninstall", &triple])?;
 
     Ok(Json(NativeUninstallOutput {
         uninstalled: true,
-        ..NativeUninstallOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -231,15 +231,14 @@ pub fn locate_executables(
             "$HOME/.cargo/bin".into(),
         ],
         globals_prefix: Some("cargo-".into()),
-        ..LocateExecutablesOutput::default()
     }))
 }
 
 #[plugin_fn]
 pub fn sync_manifest(Json(_): Json<SyncManifestInput>) -> FnResult<Json<SyncManifestOutput>> {
     let env = get_host_environment()?;
-    let triple = get_target_triple(&env, NAME)?;
-    let toolchain_dir = get_toolchain_dir(&env)?;
+    let triple = get_target_triple(env, NAME)?;
+    let toolchain_dir = get_toolchain_dir(env)?;
     let mut output = SyncManifestOutput::default();
     let mut versions = vec![];
 

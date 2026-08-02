@@ -46,9 +46,9 @@ mod tsconfig_json {
                     "es2020.symbol.wellknown",
                     "es2021.weakref",
                 ]),
-                ..CompilerOptions::default()
+                ..Default::default()
             }),
-            ..TsConfigJson::default()
+            ..Default::default()
         };
 
         let expected = serde_json::json!({
@@ -113,9 +113,9 @@ mod tsconfig_json {
                 module: Some(ModuleField::Es2015),
                 module_resolution: Some(ModuleResolutionField::Classic),
                 target: Some(TargetField::EsNext),
-                ..CompilerOptions::default()
+                ..Default::default()
             }),
-            ..TsConfigJson::default()
+            ..Default::default()
         };
 
         let actual_typed: TsConfigJson = serde_json::from_value(actual).unwrap();
@@ -205,7 +205,7 @@ mod tsconfig_json {
                         path: "../sibling".into(),
                         prepend: None,
                     }]),
-                    ..TsConfigJson::default()
+                    ..Default::default()
                 },
                 path: VirtualPath::Real(PathBuf::from("/base/tsconfig.json")),
                 ..Default::default()
@@ -232,7 +232,7 @@ mod tsconfig_json {
         fn includes_custom_config_name() {
             let mut tsc = TsConfigJsonContainer {
                 data: TsConfigJson {
-                    ..TsConfigJson::default()
+                    ..Default::default()
                 },
                 path: VirtualPath::Real(PathBuf::from("/base/tsconfig.json")),
                 ..Default::default()
@@ -262,7 +262,7 @@ mod tsconfig_json {
         fn forces_forward_slash() {
             let mut tsc = TsConfigJsonContainer {
                 data: TsConfigJson {
-                    ..TsConfigJson::default()
+                    ..Default::default()
                 },
                 path: VirtualPath::Real(PathBuf::from("C:\\base\\dir\\tsconfig.json")),
                 ..Default::default()
@@ -295,7 +295,7 @@ mod tsconfig_json {
                         path: "../sister".into(),
                         prepend: None,
                     }]),
-                    ..TsConfigJson::default()
+                    ..Default::default()
                 },
                 path: VirtualPath::Real(PathBuf::from("/base/tsconfig.json")),
                 ..Default::default()
@@ -336,7 +336,7 @@ mod tsconfig_json {
                         path: "../stale".into(),
                         prepend: None,
                     }]),
-                    ..TsConfigJson::default()
+                    ..Default::default()
                 },
                 path: VirtualPath::Real(PathBuf::from("/base/tsconfig.json")),
                 ..Default::default()
@@ -367,7 +367,7 @@ mod tsconfig_json {
                         path: "../stale".into(),
                         prepend: None,
                     }]),
-                    ..TsConfigJson::default()
+                    ..Default::default()
                 },
                 path: VirtualPath::Real(PathBuf::from("/base/tsconfig.json")),
                 ..Default::default()
@@ -422,9 +422,9 @@ mod tsconfig_json {
                 data: TsConfigJson {
                     compiler_options: Some(CompilerOptions {
                         out_dir: Some("./old".into()),
-                        ..CompilerOptions::default()
+                        ..Default::default()
                     }),
-                    ..TsConfigJson::default()
+                    ..Default::default()
                 },
                 ..Default::default()
             };

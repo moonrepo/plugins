@@ -26,7 +26,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
         type_of: PluginType::Language,
         minimum_proto_version: Some(Version::new(0, 59, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
-        ..RegisterToolOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -199,7 +199,7 @@ pub fn build_instructions(
 
     check_supported_os_and_arch(
         NAME,
-        &env,
+        env,
         permutations! [
             HostOS::Linux => [HostArch::X64, HostArch::Arm64, HostArch::Arm, HostArch::Powerpc64, HostArch::S390x],
             HostOS::MacOS => [HostArch::X64, HostArch::Arm64],
@@ -273,7 +273,7 @@ pub fn download_prebuilt(
 
     check_supported_os_and_arch(
         NAME,
-        &env,
+        env,
         permutations! [
             HostOS::Linux => [HostArch::X64, HostArch::Arm64, HostArch::Arm, HostArch::Powerpc64, HostArch::S390x],
             HostOS::MacOS => [HostArch::X64, HostArch::Arm64],
@@ -363,7 +363,7 @@ pub fn download_prebuilt(
             host.replace("{version}", &version.to_string())
                 .replace("{file}", "SHASUMS256.txt"),
         ),
-        ..DownloadPrebuiltOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -388,7 +388,7 @@ pub fn locate_executables(
             "bin".into()
         }],
         globals_lookup_dirs: vec!["$PROTO_HOME/tools/node/globals/bin".into()],
-        ..LocateExecutablesOutput::default()
+        ..Default::default()
     }))
 }
 

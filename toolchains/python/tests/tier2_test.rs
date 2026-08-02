@@ -968,9 +968,9 @@ dependencies = ["internal-lib"]
                     ],
                     stream: true,
                     cwd: Some(plugin.plugin.to_virtual_path(sandbox.path())),
-                    ..ExecCommandInput::default()
+                    ..Default::default()
                 },
-                ..ExecCommand::default()
+                ..Default::default()
             };
 
             assert_eq!(actual, expected);
@@ -1008,9 +1008,9 @@ dependencies = ["internal-lib"]
                     args: vec!["pip".into(), "install".into()],
                     cwd: Some(plugin.plugin.to_virtual_path(sandbox.path())),
                     stream: true,
-                    ..ExecCommandInput::default()
+                    ..Default::default()
                 },
-                ..ExecCommand::default()
+                ..Default::default()
             };
 
             assert_eq!(actual, expected);

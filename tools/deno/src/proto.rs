@@ -22,7 +22,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
         minimum_proto_version: Some(Version::new(0, 59, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         self_upgrade_commands: vec!["upgrade".into()],
-        ..RegisterToolOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -61,7 +61,7 @@ pub fn build_instructions(
 
     check_supported_os_and_arch(
         NAME,
-        &env,
+        env,
         permutations! [
             HostOS::Linux => [HostArch::X64, HostArch::Arm64],
             HostOS::MacOS => [HostArch::X64, HostArch::Arm64],
@@ -155,7 +155,7 @@ pub fn download_prebuilt(
 
     check_supported_os_and_arch(
         NAME,
-        &env,
+        env,
         permutations! [
             HostOS::Linux => [HostArch::X64, HostArch::Arm64],
             HostOS::MacOS => [HostArch::X64, HostArch::Arm64],
@@ -215,7 +215,7 @@ pub fn download_prebuilt(
         },
         download_url,
         download_name: Some(filename),
-        ..DownloadPrebuiltOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -235,6 +235,6 @@ pub fn locate_executables(
             "$DENO_HOME/bin".into(),
             "$HOME/.deno/bin".into(),
         ],
-        ..LocateExecutablesOutput::default()
+        ..Default::default()
     }))
 }

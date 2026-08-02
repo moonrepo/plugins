@@ -23,7 +23,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
         type_of: PluginType::Language,
         minimum_proto_version: Some(Version::new(0, 59, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
-        ..RegisterToolOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -173,7 +173,7 @@ pub fn download_prebuilt(
         ));
     };
 
-    let triple = get_target_triple(&env, NAME)?;
+    let triple = get_target_triple(env, NAME)?;
 
     let Some(release) = release_triples.get(&triple) else {
         return Err(plugin_err!(
@@ -200,7 +200,7 @@ pub fn download_prebuilt(
             None
         },
         download_url: format!("{url_prefix}/{}", release.file),
-        ..DownloadPrebuiltOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -240,11 +240,11 @@ pub fn locate_executables(
                 ExecutableConfig {
                     no_bin: true,
                     shim_before_args: Some(StringOrVec::Vec(vec!["-m".into(), "pip".into()])),
-                    ..ExecutableConfig::default()
+                    ..Default::default()
                 },
             ),
         ]),
         exes_dirs: vec![exes_dir.into()],
-        ..LocateExecutablesOutput::default()
+        ..Default::default()
     }))
 }

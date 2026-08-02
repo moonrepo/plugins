@@ -239,7 +239,7 @@ mod tests {
         HostEnvironment {
             os,
             libc,
-            ..HostEnvironment::default()
+            ..Default::default()
         }
     }
 
@@ -249,7 +249,7 @@ mod tests {
             distribution: Some(Distribution::default()),
             lib_c_type,
             operating_system: "linux".into(),
-            ..FoojayPackage::default()
+            ..Default::default()
         }
     }
 
