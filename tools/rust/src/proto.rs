@@ -148,6 +148,7 @@ pub fn native_install(
         // on the host side. This is good enough since it's deterministic.
         add_host_paths([
             get_cargo_home(env)?.join("bin").to_string(),
+            "$CARGO_HOME/bin".to_string(),
             "$HOME/.cargo/bin".to_string(),
         ])?;
     }

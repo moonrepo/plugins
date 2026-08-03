@@ -1,5 +1,5 @@
 #[cfg(feature = "wasm")]
-mod helpers;
+pub mod helpers;
 #[cfg(feature = "wasm")]
 mod proto;
 mod toolchain_toml;

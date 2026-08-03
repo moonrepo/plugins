@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Updated to use helpers from the `rust_tool`.
+
 ## 0.1.2
 
 #### 🚀 Updates

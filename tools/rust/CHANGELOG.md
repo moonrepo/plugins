@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed Cargo/Rustup home directory detection triggering an error.
+
 ## 0.13.10
 
 #### 🚀 Updates

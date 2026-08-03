@@ -2,6 +2,7 @@ use crate::config::{CargoBackendConfig, CargoToolConfig};
 use backend_common::enable_tracing;
 use extism_pdk::*;
 use proto_pdk::*;
+use rust_tool::helpers::get_cargo_home;
 use schematic::SchemaBuilder;
 use serde::Deserialize;
 use starbase_utils::fs;
@@ -56,21 +57,6 @@ pub fn define_backend_config() -> FnResult<Json<DefineBackendConfigOutput>> {
     Ok(Json(DefineBackendConfigOutput {
         schema: SchemaBuilder::build_root::<CargoBackendConfig>(),
     }))
-}
-
-fn get_cargo_home(env: &HostEnvironment) -> Result<VirtualPath, Error> {
-    let dir = env.home_dir.join(".cargo");
-
-    match get_host_env_var("CARGO_HOME")? {
-        Some(value) => {
-            if value.is_empty() {
-                Ok(dir)
-            } else {
-                VirtualPath::create(value)
-            }
-        }
-        None => Ok(dir),
-    }
 }
 
 #[plugin_fn]

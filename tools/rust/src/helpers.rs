@@ -12,7 +12,9 @@ fn get_home_env(key: &str) -> Result<Option<VirtualPath>, Error> {
             if value.is_empty() {
                 Ok(None)
             } else {
-                VirtualPath::create(value).map(Some)
+                // This may point to a path outside of our virtual paths,
+                // which is okay, but we shouldn't fail the entire plugin
+                Ok(VirtualPath::create(value).ok())
             }
         }
         None => Ok(None),

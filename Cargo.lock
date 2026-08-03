@@ -456,6 +456,7 @@ dependencies = [
  "extism-pdk",
  "proto_pdk",
  "proto_pdk_test_utils 0.48.0",
+ "rust_tool",
  "rustc-hash",
  "schematic",
  "serde",
