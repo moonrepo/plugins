@@ -2,7 +2,7 @@ use crate::{
     config::{Distribution, PackageType},
     version::to_java_version,
 };
-use proto_pdk::{AnyResult, UnresolvedVersionSpec, VersionSpec};
+use proto_pdk_api::{AnyResult, UnresolvedVersionSpec, VersionSpec};
 
 #[derive(Default)]
 pub struct JavaContext {
