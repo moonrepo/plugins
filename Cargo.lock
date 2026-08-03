@@ -1984,7 +1984,7 @@ dependencies = [
 
 [[package]]
 name = "go_tool"
-version = "0.16.7"
+version = "0.16.8"
 dependencies = [
  "extism-pdk",
  "proto_pdk",
