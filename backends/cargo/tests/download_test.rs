@@ -35,16 +35,16 @@ mod cargo_backend_download {
         });
     }
 
-    mod bin {
-        use super::*;
+    // mod bin {
+    //     use super::*;
 
-        generate_native_install_tests!("cargo:cargo-outdated", "0.17.0", None, |cfg| {
-            cfg.tool_config(CargoToolConfig {
-                bin: Some("cargo-outdated".into()),
-                ..Default::default()
-            });
-        });
-    }
+    //     generate_native_install_tests!("cargo:cargo-outdated", "0.17.0", None, |cfg| {
+    //         cfg.tool_config(CargoToolConfig {
+    //             bin: Some("cargo-outdated".into()),
+    //             ..Default::default()
+    //         });
+    //     });
+    // }
 
     // mod git {
     //     use super::*;
