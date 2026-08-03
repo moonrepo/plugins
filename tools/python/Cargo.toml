@@ -1,6 +1,6 @@
 [package]
 name = "python_tool"
-version = "0.14.8"
+version = "0.14.9"
 edition = "2024"
 description = "Python WASM plugin for proto."
 authors = ["Miles Johnson"]
