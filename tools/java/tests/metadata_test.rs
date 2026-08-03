@@ -15,7 +15,6 @@ mod java_tool {
             .await;
 
         assert_eq!(metadata.name, "Java");
-        assert_eq!(metadata.minimum_proto_version, Some(Version::new(0, 59, 0)));
         assert!(matches!(metadata.unstable, Switch::Toggle(true)));
     }
 

@@ -25,10 +25,10 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
     Ok(Json(RegisterToolOutput {
         name: NAME.into(),
         type_of: PluginType::Language,
-        minimum_proto_version: Some(Version::new(0, 59, 0)),
+        minimum_proto_version: Some(Version::new(0, 60, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         self_upgrade_commands: vec!["upgrade".into()],
-        ..RegisterToolOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -182,7 +182,7 @@ pub fn download_prebuilt(
 
     check_supported_os_and_arch(
         NAME,
-        &env,
+        env,
         if has_windows_support {
             permutations! [
                 HostOS::Linux => [HostArch::X64, HostArch::Arm64],
@@ -207,7 +207,7 @@ pub fn download_prebuilt(
 
     let mut avx2_suffix = "";
 
-    if env.arch == HostArch::X64 && env.os.is_linux() && command_exists(&env, "grep") {
+    if env.arch == HostArch::X64 && env.os.is_linux() && command_exists(env, "grep") {
         let output = exec_captured("grep", ["avx2", "/proc/cpuinfo"])?;
 
         if output.exit_code != 0 {
@@ -245,7 +245,7 @@ pub fn download_prebuilt(
                     .replace("{file}", "SHASUMS256.txt"),
             )
         },
-        ..DownloadPrebuiltOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -265,7 +265,7 @@ pub fn locate_executables(
         // so execute `bun x` instead (notice the space).
         shim_before_args: Some(StringOrVec::String("x".into())),
 
-        ..ExecutableConfig::default()
+        ..Default::default()
     };
 
     Ok(Json(LocateExecutablesOutput {
@@ -277,6 +277,6 @@ pub fn locate_executables(
             ("bunx".into(), bunx),
         ]),
         globals_lookup_dirs: vec!["$HOME/.bun/bin".into()],
-        ..LocateExecutablesOutput::default()
+        ..Default::default()
     }))
 }

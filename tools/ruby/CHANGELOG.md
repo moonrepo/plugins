@@ -5,6 +5,7 @@
 #### 🚀 Updates
 
 - Added support for installing portable Ruby binaries from `jdx/ruby` when available.
+- Updated to support proto v0.60 release.
 
 ## 0.2.8
 

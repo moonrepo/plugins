@@ -213,7 +213,7 @@ impl NxMigrator {
                                 args: Some(PartialTaskArgs::List(migrate_options_to_args(
                                     &config_options,
                                 ))),
-                                ..PartialTaskConfig::default()
+                                ..Default::default()
                             },
                         );
                     }
@@ -400,7 +400,7 @@ fn inject_args_into_task(nx_target: &NxTargetOptions, config: &mut PartialTaskCo
 fn migrate_noop_task(nx_target: &NxTargetOptions) -> AnyResult<PartialTaskConfig> {
     let mut config = PartialTaskConfig {
         command: Some(PartialTaskArgs::String("noop".into())),
-        ..PartialTaskConfig::default()
+        ..Default::default()
     };
 
     inject_args_into_task(nx_target, &mut config);
@@ -412,7 +412,7 @@ fn migrate_noop_task(nx_target: &NxTargetOptions) -> AnyResult<PartialTaskConfig
 fn migrate_run_commands_task(nx_target: &NxTargetOptions) -> AnyResult<PartialTaskConfig> {
     let mut config = PartialTaskConfig {
         toolchains: Some(OneOrMany::One(Id::raw("system"))),
-        ..PartialTaskConfig::default()
+        ..Default::default()
     };
 
     // https://nx.dev/nx-api/nx/executors/run-commands#options
@@ -510,7 +510,7 @@ fn migrate_task(
                 } else {
                     format!("{package} {target}")
                 })),
-                ..PartialTaskConfig::default()
+                ..Default::default()
             }
         }
     } else {

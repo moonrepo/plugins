@@ -42,7 +42,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
 
     let env = get_host_environment()?;
     let schema = get_schema()?;
-    let platform = get_platform(&schema, &env)?;
+    let platform = get_platform(&schema, env)?;
     let mut deprecations = schema.deprecations.clone();
 
     #[allow(deprecated)]
@@ -74,7 +74,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
             SchemaType::Language => PluginType::Language,
             SchemaType::VersionManager => PluginType::VersionManager,
         },
-        minimum_proto_version: Some(Version::new(0, 59, 0)),
+        minimum_proto_version: Some(Version::new(0, 60, 0)),
         default_version: schema.metadata.default_version,
         plugin_version: match schema.metadata.plugin_version {
             Some(version) => Some(version),
@@ -83,7 +83,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
         self_upgrade_commands: schema.metadata.self_upgrade_commands,
         deprecations,
         requires: schema.metadata.requires,
-        ..RegisterToolOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -293,12 +293,12 @@ pub fn download_prebuilt(
 ) -> FnResult<Json<DownloadPrebuiltOutput>> {
     let env = get_host_environment()?;
     let schema = get_schema()?;
-    let platform = get_platform(&schema, &env)?;
+    let platform = get_platform(&schema, env)?;
 
     if !platform.archs.is_empty() {
         check_supported_os_and_arch(
             &schema.name,
-            &env,
+            env,
             HashMap::from_iter([(env.os, platform.archs.clone())]),
         )?;
     }
@@ -307,7 +307,7 @@ pub fn download_prebuilt(
     let is_canary = version.is_canary();
 
     let download_file =
-        interpolate_tokens(&platform.download_file, version, &schema, platform, &env);
+        interpolate_tokens(&platform.download_file, version, &schema, platform, env);
 
     let download_url = interpolate_tokens(
         if is_canary {
@@ -322,7 +322,7 @@ pub fn download_prebuilt(
         version,
         &schema,
         platform,
-        &env,
+        env,
     )
     .replace("{download_file}", &download_file);
 
@@ -331,7 +331,7 @@ pub fn download_prebuilt(
         version,
         &schema,
         platform,
-        &env,
+        env,
     );
 
     let checksum_url = if is_canary {
@@ -345,14 +345,14 @@ pub fn download_prebuilt(
     };
 
     let checksum_url = checksum_url.map(|url| {
-        interpolate_tokens(url, version, &schema, platform, &env)
+        interpolate_tokens(url, version, &schema, platform, env)
             .replace("{checksum_file}", &checksum_file)
     });
 
     let archive_prefix = platform
         .archive_prefix
         .as_ref()
-        .map(|prefix| interpolate_tokens(prefix, version, &schema, platform, &env));
+        .map(|prefix| interpolate_tokens(prefix, version, &schema, platform, env));
 
     Ok(Json(DownloadPrebuiltOutput {
         archive_prefix,
@@ -361,7 +361,7 @@ pub fn download_prebuilt(
         checksum_public_key: schema.install.checksum_public_key,
         download_url,
         download_name: Some(download_file),
-        ..DownloadPrebuiltOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -387,7 +387,7 @@ pub fn locate_executables(
 ) -> FnResult<Json<LocateExecutablesOutput>> {
     let env = get_host_environment()?;
     let schema = get_schema()?;
-    let platform = get_platform(&schema, &env)?;
+    let platform = get_platform(&schema, env)?;
     let id = get_plugin_id()?;
 
     // On Windows, automatically add the `.exe` extension to all executables.
@@ -422,7 +422,7 @@ pub fn locate_executables(
                 &input.context.version,
                 &schema,
                 platform,
-                &env,
+                env,
             )
             .into(),
         );
@@ -505,6 +505,5 @@ pub fn locate_executables(
         },
         globals_lookup_dirs: schema.packages.globals_lookup_dirs,
         globals_prefix: schema.packages.globals_prefix,
-        ..Default::default()
     }))
 }

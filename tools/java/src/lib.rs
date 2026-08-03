@@ -1,4 +1,6 @@
-pub mod config;
+#[cfg(feature = "wasm")]
+mod config;
+#[cfg(feature = "wasm")]
 mod foojay;
 mod java;
 #[cfg(feature = "wasm")]

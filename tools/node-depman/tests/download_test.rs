@@ -58,7 +58,7 @@ mod node_depman_tool {
                             version: VersionSpec::parse("9.0.0").unwrap(),
                             ..Default::default()
                         },
-                        install_dir: VirtualPath::Real(sandbox.path().into()),
+                        install_dir: plugin.tool.to_virtual_path(sandbox.path()),
                     })
                     .await
                     .exes
@@ -116,7 +116,7 @@ mod node_depman_tool {
                     .download_prebuilt(DownloadPrebuiltInput {
                         context: PluginContext {
                             version: VersionSpec::parse("9.0.0").unwrap(),
-                            working_dir: VirtualPath::Real(sandbox.path().into()),
+                            working_dir: plugin.tool.to_virtual_path(sandbox.path()),
                             ..Default::default()
                         },
                         ..Default::default()
@@ -154,7 +154,7 @@ mod node_depman_tool {
                     .download_prebuilt(DownloadPrebuiltInput {
                         context: PluginContext {
                             version: VersionSpec::parse("9.0.0").unwrap(),
-                            working_dir: VirtualPath::Real(sandbox.path().into()),
+                            working_dir: plugin.tool.to_virtual_path(sandbox.path()),
                             ..Default::default()
                         },
                         ..Default::default()
@@ -221,7 +221,7 @@ mod node_depman_tool {
                             version: VersionSpec::parse("8.0.0").unwrap(),
                             ..Default::default()
                         },
-                        install_dir: VirtualPath::Real(sandbox.path().into()),
+                        install_dir: plugin.tool.to_virtual_path(sandbox.path()),
                     })
                     .await
                     .exes
@@ -279,7 +279,7 @@ mod node_depman_tool {
                     .download_prebuilt(DownloadPrebuiltInput {
                         context: PluginContext {
                             version: VersionSpec::parse("9.0.0").unwrap(),
-                            working_dir: VirtualPath::Real(sandbox.path().into()),
+                            working_dir: plugin.tool.to_virtual_path(sandbox.path()),
                             ..Default::default()
                         },
                         ..Default::default()
@@ -317,7 +317,7 @@ mod node_depman_tool {
                     .download_prebuilt(DownloadPrebuiltInput {
                         context: PluginContext {
                             version: VersionSpec::parse("9.0.0").unwrap(),
-                            working_dir: VirtualPath::Real(sandbox.path().into()),
+                            working_dir: plugin.tool.to_virtual_path(sandbox.path()),
                             ..Default::default()
                         },
                         ..Default::default()
@@ -384,7 +384,7 @@ mod node_depman_tool {
                             version: VersionSpec::parse("1.22.0").unwrap(),
                             ..Default::default()
                         },
-                        install_dir: VirtualPath::Real(sandbox.path().into()),
+                        install_dir: plugin.tool.to_virtual_path(sandbox.path()),
                     })
                     .await
                     .exes
@@ -483,7 +483,7 @@ mod node_depman_tool {
                             version: VersionSpec::parse("3.6.1").unwrap(),
                             ..Default::default()
                         },
-                        install_dir: VirtualPath::Real(sandbox.path().into()),
+                        install_dir: plugin.tool.to_virtual_path(sandbox.path()),
                     })
                     .await
                     .exes
@@ -510,7 +510,7 @@ mod node_depman_tool {
                     .download_prebuilt(DownloadPrebuiltInput {
                         context: PluginContext {
                             version: VersionSpec::parse("4.5.0").unwrap(),
-                            working_dir: VirtualPath::Real(sandbox.path().into()),
+                            working_dir: plugin.tool.to_virtual_path(sandbox.path()),
                             ..Default::default()
                         },
                         ..Default::default()
@@ -558,7 +558,7 @@ npmRegistries:
                     .download_prebuilt(DownloadPrebuiltInput {
                         context: PluginContext {
                             version: VersionSpec::parse("4.5.0").unwrap(),
-                            working_dir: VirtualPath::Real(sandbox.path().into()),
+                            working_dir: plugin.tool.to_virtual_path(sandbox.path()),
                             ..Default::default()
                         },
                         ..Default::default()
@@ -818,15 +818,12 @@ npmRegistries:
                         version: VersionSpec::parse("6.0.0-rc.19").unwrap(),
                         ..Default::default()
                     },
-                    install_dir: VirtualPath::Real(sandbox.path().into()),
+                    install_dir: plugin.tool.to_virtual_path(sandbox.path()),
                 })
                 .await
                 .exes;
 
-            assert_eq!(
-                exes.get("yarn").unwrap().exe_path,
-                Some("yarn-bin".into())
-            );
+            assert_eq!(exes.get("yarn").unwrap().exe_path, Some("yarn-bin".into()));
 
             // The yarnpkg alias is not supported in v6
             assert!(!exes.contains_key("yarnpkg"));
@@ -850,7 +847,7 @@ npmRegistries:
                         version: VersionSpec::parse("6.0.0-rc.19").unwrap(),
                         ..Default::default()
                     },
-                    install_dir: VirtualPath::Real(sandbox.path().into()),
+                    install_dir: plugin.tool.to_virtual_path(sandbox.path()),
                 })
                 .await
                 .exes;

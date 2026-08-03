@@ -33,10 +33,10 @@ pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<Regi
         } else {
             vec!["node".into(), "npm".into()]
         },
-        minimum_proto_version: Some(Version::new(0, 59, 0)),
+        minimum_proto_version: Some(Version::new(0, 60, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         unstable: Switch::Toggle(true),
-        ..RegisterToolOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -74,6 +74,11 @@ pub fn native_install(
         ..Default::default()
     };
 
+    let real_install_dir = input
+        .install_dir
+        .to_real_path()?
+        .expect("Invalid install directory!");
+
     if config.bun {
         command.command = "bun".into();
         command.args.push("--trust".into());
@@ -82,14 +87,14 @@ pub fn native_install(
         // These dirs match the node/npm structure
         command.env.insert(
             "BUN_INSTALL_BIN".into(),
-            input.install_dir.join("bin").real_path_string().unwrap(),
+            real_install_dir.join("bin").to_string(),
         );
         command.env.insert(
             "BUN_INSTALL_GLOBAL_DIR".into(),
-            input.install_dir.join("lib").real_path_string().unwrap(),
+            real_install_dir.join("lib").to_string(),
         );
     } else {
-        let install_dir = input.install_dir.real_path_string().unwrap();
+        let install_dir = real_install_dir.to_string();
 
         command.args.push("--prefix".into());
         command.args.push(install_dir.clone());

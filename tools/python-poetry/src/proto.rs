@@ -21,11 +21,11 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
             ignore_os_arch: true,
             ..Default::default()
         },
-        minimum_proto_version: Some(Version::new(0, 59, 0)),
+        minimum_proto_version: Some(Version::new(0, 60, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         requires: vec!["python".into()],
         self_upgrade_commands: vec!["self update".into()],
-        ..RegisterToolOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -111,19 +111,26 @@ pub fn native_install(
     let result = exec(ExecCommandInput {
         command: "python".into(),
         args: vec![
-            script_path.real_path_string().unwrap(),
+            script_path
+                .to_real_path()?
+                .expect("Invalid script path!")
+                .to_string(),
             "--force".into(),
             "--yes".into(),
         ],
         env: HashMap::from_iter([
             (
                 "POETRY_HOME".into(),
-                input.install_dir.real_path_string().unwrap(),
+                input
+                    .install_dir
+                    .to_real_path()?
+                    .expect("Invalid install directory!")
+                    .to_string(),
             ),
             ("POETRY_VERSION".into(), input.context.version.to_string()),
         ]),
         set_executable: true,
-        ..ExecCommandInput::default()
+        ..Default::default()
     })?;
 
     Ok(Json(NativeInstallOutput {
@@ -138,7 +145,7 @@ pub fn native_install(
             None
         },
         installed: result.exit_code == 0,
-        ..NativeInstallOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -175,6 +182,6 @@ pub fn locate_executables(
             "poetry".into(),
             ExecutableConfig::new_primary(env.os.get_exe_name("bin/poetry")),
         )]),
-        ..LocateExecutablesOutput::default()
+        ..Default::default()
     }))
 }

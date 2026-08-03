@@ -19,7 +19,9 @@ mod node_depman_tool {
                 .parse_version_file(ParseVersionFileInput {
                     content: r#"{ "volta": { "extends": "./a.json" } }"#.into(),
                     file: "package.json".into(),
-                    path: VirtualPath::Real(sandbox.path().join("package.json")),
+                    path: plugin
+                        .tool
+                        .to_virtual_path(sandbox.path().join("package.json")),
                     ..Default::default()
                 })
                 .await,
@@ -448,7 +450,7 @@ mod node_depman_tool {
             assert_eq!(
                 plugin
                     .pin_version(PinVersionInput {
-                        dir: VirtualPath::Real(sandbox.path().into()),
+                        dir: plugin.tool.to_virtual_path(sandbox.path()),
                         version: UnresolvedVersionSpec::parse(">=10").unwrap(),
                         ..Default::default()
                     })
@@ -473,7 +475,7 @@ mod node_depman_tool {
             assert_eq!(
                 plugin
                     .pin_version(PinVersionInput {
-                        dir: VirtualPath::Real(sandbox.path().into()),
+                        dir: plugin.tool.to_virtual_path(sandbox.path()),
                         version: UnresolvedVersionSpec::parse(">=10").unwrap(),
                         ..Default::default()
                     })
@@ -512,7 +514,7 @@ mod node_depman_tool {
             assert_eq!(
                 plugin
                     .pin_version(PinVersionInput {
-                        dir: VirtualPath::Real(sandbox.path().into()),
+                        dir: plugin.tool.to_virtual_path(sandbox.path()),
                         version: UnresolvedVersionSpec::parse(">=10").unwrap(),
                         ..Default::default()
                     })
@@ -551,7 +553,7 @@ mod node_depman_tool {
             assert_eq!(
                 plugin
                     .pin_version(PinVersionInput {
-                        dir: VirtualPath::Real(sandbox.path().into()),
+                        dir: plugin.tool.to_virtual_path(sandbox.path()),
                         version: UnresolvedVersionSpec::parse(">=10").unwrap(),
                         ..Default::default()
                     })
@@ -582,7 +584,7 @@ mod node_depman_tool {
             assert_eq!(
                 plugin
                     .unpin_version(UnpinVersionInput {
-                        dir: VirtualPath::Real(sandbox.path().into()),
+                        dir: plugin.tool.to_virtual_path(sandbox.path()),
                         ..Default::default()
                     })
                     .await,
@@ -615,7 +617,7 @@ mod node_depman_tool {
             assert_eq!(
                 plugin
                     .unpin_version(UnpinVersionInput {
-                        dir: VirtualPath::Real(sandbox.path().into()),
+                        dir: plugin.tool.to_virtual_path(sandbox.path()),
                         ..Default::default()
                     })
                     .await,
@@ -660,7 +662,7 @@ mod node_depman_tool {
             assert_eq!(
                 plugin
                     .unpin_version(UnpinVersionInput {
-                        dir: VirtualPath::Real(sandbox.path().into()),
+                        dir: plugin.tool.to_virtual_path(sandbox.path()),
                         ..Default::default()
                     })
                     .await,
@@ -699,7 +701,7 @@ mod node_depman_tool {
             assert_eq!(
                 plugin
                     .unpin_version(UnpinVersionInput {
-                        dir: VirtualPath::Real(sandbox.path().into()),
+                        dir: plugin.tool.to_virtual_path(sandbox.path()),
                         ..Default::default()
                     })
                     .await,

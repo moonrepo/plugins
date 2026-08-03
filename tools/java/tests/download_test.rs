@@ -439,8 +439,9 @@ mod java_tool {
                 .await;
 
             let mut input = create_locate_input("temurin-21.0.11+10");
-            input.context.tool_dir =
-                VirtualPath::Real(sandbox.path().join(".proto/tools/jdk/21.0.11"));
+            input.context.tool_dir = plugin
+                .tool
+                .to_virtual_path(sandbox.path().join(".proto/tools/jdk/21.0.11"));
 
             let output = plugin.locate_executables(input).await;
 

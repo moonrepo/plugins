@@ -16,10 +16,10 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
     Ok(Json(RegisterToolOutput {
         name: "uv".into(),
         type_of: PluginType::CommandLine,
-        minimum_proto_version: Some(Version::new(0, 59, 0)),
+        minimum_proto_version: Some(Version::new(0, 60, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         self_upgrade_commands: vec!["self upgrade".into()],
-        ..RegisterToolOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -80,7 +80,7 @@ pub fn download_prebuilt(
 
     check_supported_os_and_arch(
         "uv",
-        &env,
+        env,
         permutations! [
             HostOS::Linux => [HostArch::X64, HostArch::Arm64],
             HostOS::MacOS => [HostArch::X64, HostArch::Arm64],
@@ -119,7 +119,7 @@ pub fn download_prebuilt(
         checksum_name: Some(checksum_file),
         download_url: format!("{base_url}/{download_file}"),
         download_name: Some(download_file),
-        ..DownloadPrebuiltOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -147,6 +147,6 @@ pub fn locate_executables(
             "$XDG_DATA_HOME/../bin".into(),
             "$HOME/.local/bin".into(),
         ],
-        ..LocateExecutablesOutput::default()
+        ..Default::default()
     }))
 }

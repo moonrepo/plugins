@@ -20,9 +20,9 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
     Ok(Json(RegisterToolOutput {
         name: NAME.into(),
         type_of: PluginType::Language,
-        minimum_proto_version: Some(Version::new(0, 59, 0)),
+        minimum_proto_version: Some(Version::new(0, 60, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
-        ..RegisterToolOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -80,7 +80,7 @@ pub fn build_instructions(
 
     check_supported_os_and_arch(
         NAME,
-        &env,
+        env,
         permutations! [
             HostOS::Linux => [
                 HostArch::X64, HostArch::Arm64, HostArch::X86, HostArch::Arm, HostArch::S390x
@@ -118,7 +118,7 @@ pub fn build_instructions(
                         "./all.bash"
                     }
                     .into(),
-                    cwd: Some("src".into()),
+                    cwd: Some(input.install_dir.join("src")),
                     ..Default::default()
                 }
             })),
@@ -138,7 +138,7 @@ pub fn download_prebuilt(
 
     check_supported_os_and_arch(
         NAME,
-        &env,
+        env,
         permutations! [
             HostOS::Linux => [
                 HostArch::X64, HostArch::Arm64, HostArch::X86, HostArch::Arm, HostArch::S390x
@@ -193,7 +193,7 @@ pub fn download_prebuilt(
             .replace("{version}", &version)
             .replace("{file}", &filename),
         download_name: Some(filename),
-        ..DownloadPrebuiltOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -220,7 +220,7 @@ pub fn locate_executables(
             "$GOPATH/bin".into(),
             "$HOME/go/bin".into(),
         ],
-        ..LocateExecutablesOutput::default()
+        ..Default::default()
     }))
 }
 

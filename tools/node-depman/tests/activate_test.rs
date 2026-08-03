@@ -1,7 +1,6 @@
 use proto_pdk_api::ActivateEnvironmentInput;
 use proto_pdk_test_utils::*;
 use std::collections::HashMap;
-use std::path::PathBuf;
 
 #[derive(Debug, Default, serde::Deserialize, serde::Serialize)]
 #[serde(default, deny_unknown_fields, rename_all = "kebab-case")]
@@ -16,11 +15,7 @@ mod node_depman_tool {
         use super::*;
 
         fn create_globals_dir() -> VirtualPath {
-            VirtualPath::Virtual {
-                path: PathBuf::from("/proto/tools/node/globals/bin"),
-                virtual_prefix: PathBuf::from("/proto"),
-                real_prefix: PathBuf::from("/.proto"),
-            }
+            VirtualPath::new("/proto/tools/node/globals/bin")
         }
 
         mod npm {
@@ -73,7 +68,7 @@ mod node_depman_tool {
                 let result = plugin
                     .activate_environment(ActivateEnvironmentInput {
                         globals_dir: Some(create_globals_dir()),
-                        ..ActivateEnvironmentInput::default()
+                        ..Default::default()
                     })
                     .await;
 
@@ -81,11 +76,15 @@ mod node_depman_tool {
                     result.env,
                     HashMap::from_iter([(
                         "PREFIX".into(),
-                        if cfg!(windows) {
-                            "/.proto/tools/node/globals/bin".into()
-                        } else {
-                            "/.proto/tools/node/globals".into()
-                        }
+                        sandbox
+                            .path()
+                            .join(if cfg!(windows) {
+                                ".proto/tools/node/globals/bin"
+                            } else {
+                                ".proto/tools/node/globals"
+                            })
+                            .to_string_lossy()
+                            .to_string()
                     )])
                 );
             }
@@ -141,7 +140,7 @@ mod node_depman_tool {
                 let result = plugin
                     .activate_environment(ActivateEnvironmentInput {
                         globals_dir: Some(create_globals_dir()),
-                        ..ActivateEnvironmentInput::default()
+                        ..Default::default()
                     })
                     .await;
 
@@ -150,11 +149,19 @@ mod node_depman_tool {
                     HashMap::from_iter([
                         (
                             "pnpm_config_global_dir".into(),
-                            "/.proto/tools/node/globals".into()
+                            sandbox
+                                .path()
+                                .join(".proto/tools/node/globals")
+                                .to_string_lossy()
+                                .to_string()
                         ),
                         (
                             "pnpm_config_global_bin_dir".into(),
-                            "/.proto/tools/node/globals/bin".into()
+                            sandbox
+                                .path()
+                                .join(".proto/tools/node/globals/bin")
+                                .to_string_lossy()
+                                .to_string()
                         )
                     ])
                 );
@@ -211,13 +218,20 @@ mod node_depman_tool {
                 let result = plugin
                     .activate_environment(ActivateEnvironmentInput {
                         globals_dir: Some(create_globals_dir()),
-                        ..ActivateEnvironmentInput::default()
+                        ..Default::default()
                     })
                     .await;
 
                 assert_eq!(
                     result.env,
-                    HashMap::from_iter([("PREFIX".into(), "/.proto/tools/node/globals".into())])
+                    HashMap::from_iter([(
+                        "PREFIX".into(),
+                        sandbox
+                            .path()
+                            .join(".proto/tools/node/globals")
+                            .to_string_lossy()
+                            .to_string()
+                    )])
                 );
             }
         }

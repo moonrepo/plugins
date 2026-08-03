@@ -4,7 +4,6 @@ use extism_pdk::*;
 use proto_pdk::*;
 use schematic::Schematic;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 
 #[host_fn]
 extern "ExtismHost" {
@@ -43,14 +42,11 @@ impl AsdfToolConfig {
         self.get_shortname()
     }
 
-    pub fn get_backend_path(&self) -> AnyResult<PathBuf> {
-        Ok(PathBuf::from(format!(
-            "/proto/backends/asdf/{}",
-            self.get_backend_id()?
-        )))
+    pub fn get_backend_path(&self) -> AnyResult<VirtualPath> {
+        VirtualPath::create(format!("/proto/backends/asdf/{}", self.get_backend_id()?))
     }
 
-    pub fn get_script_path(&self, script: &str) -> AnyResult<PathBuf> {
+    pub fn get_script_path(&self, script: &str) -> AnyResult<VirtualPath> {
         self.get_backend_path()
             .map(|path| path.join("bin").join(script))
     }

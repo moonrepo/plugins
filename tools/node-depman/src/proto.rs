@@ -21,7 +21,6 @@ const CMD_SHIM_TEMPLATE: &str = include_str!("../templates/cmd-shim.cmd");
 extern "ExtismHost" {
     fn exec_command(input: Json<ExecCommandInput>) -> Json<ExecCommandOutput>;
     fn get_env_var(key: &str) -> String;
-    fn to_virtual_path(input: String) -> String;
 }
 
 #[plugin_fn]
@@ -40,10 +39,10 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
             ignore_os_arch: !manager.is_yarn(),
             ..Default::default()
         },
-        minimum_proto_version: Some(Version::new(0, 59, 0)),
+        minimum_proto_version: Some(Version::new(0, 60, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         requires: vec!["node".into()],
-        ..RegisterToolOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -427,7 +426,7 @@ pub fn locate_executables(
     let primary;
 
     if !input.install_dir.join("shims").exists() {
-        create_internal_shims(&env, &input.install_dir, &manager)?;
+        create_internal_shims(env, &input.install_dir, &manager)?;
     }
 
     // These are the directories that contain the executable binaries,
@@ -535,7 +534,7 @@ pub fn locate_executables(
     Ok(Json(LocateExecutablesOutput {
         exes,
         globals_lookup_dirs,
-        ..LocateExecutablesOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -548,17 +547,12 @@ pub fn activate_environment(
 
     if config.shared_globals_dir
         && let Some(globals_dir) = &input.globals_dir
+        && let Some(globals_dir) = globals_dir.to_real_path()?
     {
         // Includes trailing /bin folder
-        let globals_bin_dir = globals_dir.real_path_string().unwrap();
+        let globals_bin_dir = globals_dir.to_string();
         // Parent directory, doesn't include /bin folder
-        let globals_root_dir = globals_dir
-            .real_path()
-            .unwrap()
-            .parent()
-            .unwrap()
-            .to_string_lossy()
-            .to_string();
+        let globals_root_dir = globals_dir.parent().unwrap().to_string();
 
         let env = get_host_environment()?;
         let manager = PackageManager::detect_from_version(&input.context.version)?;
