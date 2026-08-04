@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed a Cargo features build issue.
+
 ## 0.1.3
 
 #### 🚀 Updates
