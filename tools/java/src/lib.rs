@@ -2,6 +2,7 @@
 mod config;
 #[cfg(feature = "wasm")]
 mod foojay;
+#[cfg(feature = "wasm")]
 mod java;
 #[cfg(feature = "wasm")]
 mod proto;
