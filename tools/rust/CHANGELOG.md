@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Updated to use helpers from the `lang_rust_common` crate.
+
 ## 0.13.11
 
 #### 🐞 Fixes

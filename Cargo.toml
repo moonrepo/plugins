@@ -19,7 +19,7 @@ starbase_utils = { version = "0.13.6", default-features = false, features = [
     "editor-config",
 ] }
 tokio = { version = "1.52.3", features = ["full"] }
-toml = { version = "1.1.2", default-features = false, features = [
+toml = { version = "1.1.4", default-features = false, features = [
     "parse",
     "serde",
 ] }
