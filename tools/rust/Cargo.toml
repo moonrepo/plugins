@@ -18,6 +18,7 @@ pre-release-replacements = [
 crate-type = ["cdylib", "lib"]
 
 [dependencies]
+lang_rust_common = { path = "../../crates/lang-rust-common" }
 tool_common = { path = "../../crates/tool-common" }
 extism-pdk = { workspace = true }
 proto_pdk = { workspace = true }
@@ -32,4 +33,4 @@ tokio = { workspace = true }
 
 [features]
 default = ["wasm"]
-wasm = []
+wasm = ["lang_rust_common/wasm"]

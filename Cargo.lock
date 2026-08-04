@@ -454,9 +454,9 @@ version = "0.1.4"
 dependencies = [
  "backend_common",
  "extism-pdk",
+ "lang_rust_common",
  "proto_pdk",
  "proto_pdk_test_utils 0.48.0",
- "rust_tool",
  "rustc-hash",
  "schematic",
  "serde",
@@ -2791,6 +2791,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "lang_rust_common"
+version = "0.1.0"
+dependencies = [
+ "extism-pdk",
+ "proto_pdk",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4245,7 +4253,7 @@ dependencies = [
  "starbase_sandbox 0.11.1",
  "starbase_utils 0.13.8",
  "tokio",
- "toml 1.1.3+spec-1.1.0",
+ "toml 1.1.4+spec-1.1.0",
  "tool_common",
 ]
 
@@ -4309,7 +4317,7 @@ dependencies = [
  "serde",
  "starbase_sandbox 0.11.1",
  "tokio",
- "toml 1.1.3+spec-1.1.0",
+ "toml 1.1.4+spec-1.1.0",
  "tool_common",
 ]
 
@@ -4779,13 +4787,14 @@ name = "rust_tool"
 version = "0.13.11"
 dependencies = [
  "extism-pdk",
+ "lang_rust_common",
  "proto_pdk",
  "proto_pdk_test_utils 0.48.0",
  "serde",
  "starbase_sandbox 0.11.1",
  "starbase_utils 0.13.8",
  "tokio",
- "toml 1.1.3+spec-1.1.0",
+ "toml 1.1.4+spec-1.1.0",
  "tool_common",
 ]
 
@@ -5051,7 +5060,7 @@ dependencies = [
  "serde_path_to_error",
  "starbase_styles",
  "thiserror 2.0.19",
- "toml 1.1.3+spec-1.1.0",
+ "toml 1.1.4+spec-1.1.0",
  "tracing",
 ]
 
@@ -5081,7 +5090,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_norway",
- "toml 1.1.3+spec-1.1.0",
+ "toml 1.1.4+spec-1.1.0",
  "url",
 ]
 
@@ -5660,7 +5669,7 @@ dependencies = [
  "starbase_styles",
  "thiserror 2.0.19",
  "tokio",
- "toml 1.1.3+spec-1.1.0",
+ "toml 1.1.4+spec-1.1.0",
  "tracing",
  "url",
  "wax",
@@ -5688,7 +5697,7 @@ dependencies = [
  "starbase_styles",
  "thiserror 2.0.19",
  "tokio",
- "toml 1.1.3+spec-1.1.0",
+ "toml 1.1.4+spec-1.1.0",
  "tracing",
  "url",
  "wax",
@@ -6086,9 +6095,9 @@ dependencies = [
 
 [[package]]
 name = "toml"
-version = "1.1.3+spec-1.1.0"
+version = "1.1.4+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "53c96ecdfa941c8fc4fcaed14f99ada8ebed502eef533015095a07e3301d4c3c"
+checksum = "3aace63f4bbcdfc2c965b059de67119c89c4017a70d633be6c104910f67056f5"
 dependencies = [
  "indexmap",
  "serde_core",
@@ -6132,9 +6141,9 @@ dependencies = [
 
 [[package]]
 name = "toml_parser"
-version = "1.1.2+spec-1.1.0"
+version = "1.1.3+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2abe9b86193656635d2411dc43050282ca48aa31c2451210f4202550afb7526"
+checksum = "1d38ac1cf9b95face32296c0a3ede1fdc270627c9d9c02a7274dd6d960dc4d56"
 dependencies = [
  "winnow 1.0.4",
 ]

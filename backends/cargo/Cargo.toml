@@ -19,7 +19,7 @@ crate-type = ["cdylib", "lib"]
 
 [dependencies]
 backend_common = { path = "../../crates/backend-common" }
-rust_tool = { path = "../../tools/rust", default-features = false }
+lang_rust_common = { path = "../../crates/lang-rust-common" }
 extism-pdk = { workspace = true }
 proto_pdk = { workspace = true }
 rustc-hash = { workspace = true }
@@ -34,4 +34,4 @@ tokio = { workspace = true }
 
 [features]
 default = ["wasm"]
-wasm = ["rust_tool/wasm"]
+wasm = ["lang_rust_common/wasm"]
