@@ -1,0 +1,14 @@
+[package]
+name = "lang_rust_common"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[dependencies]
+extism-pdk = { workspace = true }
+proto_pdk = { workspace = true }
+
+[features]
+default = []
+wasm = []

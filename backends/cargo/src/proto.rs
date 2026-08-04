@@ -1,8 +1,8 @@
 use crate::config::{CargoBackendConfig, CargoToolConfig};
 use backend_common::enable_tracing;
 use extism_pdk::*;
+use lang_rust_common::get_cargo_home;
 use proto_pdk::*;
-use rust_tool::helpers::get_cargo_home;
 use schematic::SchemaBuilder;
 use serde::Deserialize;
 use starbase_utils::fs;

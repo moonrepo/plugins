@@ -454,9 +454,9 @@ version = "0.1.4"
 dependencies = [
  "backend_common",
  "extism-pdk",
+ "lang_rust_common",
  "proto_pdk",
  "proto_pdk_test_utils 0.48.0",
- "rust_tool",
  "rustc-hash",
  "schematic",
  "serde",
@@ -2791,6 +2791,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "lang_rust_common"
+version = "0.1.0"
+dependencies = [
+ "extism-pdk",
+ "proto_pdk",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4779,6 +4787,7 @@ name = "rust_tool"
 version = "0.13.11"
 dependencies = [
  "extism-pdk",
+ "lang_rust_common",
  "proto_pdk",
  "proto_pdk_test_utils 0.48.0",
  "serde",
