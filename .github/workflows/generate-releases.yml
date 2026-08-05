@@ -1,0 +1,31 @@
+name: Generate releases
+
+permissions:
+  contents: write
+
+on:
+  schedule:
+    # Every 24 hours (avoid the top of the hour, as it's high load for GitHub)
+    - cron: "15 4 * * *"
+  workflow_dispatch:
+
+jobs:
+  generate:
+    name: Generate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: node ./scripts/generatePythonReleases.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: node ./scripts/generateRubyReleases.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Commit and push changes
+        uses: EndBug/add-and-commit@v10
+        with:
+          add: 'tools/python/releases.json tools/python/releases-v2.json tools/ruby/releases.json'
+          message: 'chore: Update tool releases [skip ci]'
