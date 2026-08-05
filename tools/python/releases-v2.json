@@ -600,68 +600,68 @@
   },
   "3.10.20": {
     "aarch64-apple-darwin": {
-      "file": "cpython-3.10.20+20260610-aarch64-apple-darwin-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.10.20+20260805-aarch64-apple-darwin-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "aarch64-unknown-linux-gnu": {
-      "file": "cpython-3.10.20+20260610-aarch64-unknown-linux-gnu-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.10.20+20260805-aarch64-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "aarch64-unknown-linux-musl": {
-      "file": "cpython-3.10.20+20260610-aarch64-unknown-linux-musl-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.10.20+20260805-aarch64-unknown-linux-musl-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "armv7-unknown-linux-gnueabi": {
-      "file": "cpython-3.10.20+20260610-armv7-unknown-linux-gnueabi-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.10.20+20260805-armv7-unknown-linux-gnueabi-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "armv7-unknown-linux-gnueabihf": {
-      "file": "cpython-3.10.20+20260610-armv7-unknown-linux-gnueabihf-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.10.20+20260805-armv7-unknown-linux-gnueabihf-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "i686-pc-windows-msvc": {
-      "file": "cpython-3.10.20+20260610-i686-pc-windows-msvc-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.10.20+20260805-i686-pc-windows-msvc-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "powerpc64le-unknown-linux-gnu": {
-      "file": "cpython-3.10.20+20260610-ppc64le-unknown-linux-gnu-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.10.20+20260805-ppc64le-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "riscv64gc-unknown-linux-gnu": {
-      "file": "cpython-3.10.20+20260610-riscv64-unknown-linux-gnu-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.10.20+20260805-riscv64-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "s390x-unknown-linux-gnu": {
-      "file": "cpython-3.10.20+20260610-s390x-unknown-linux-gnu-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.10.20+20260805-s390x-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "x86_64-apple-darwin": {
-      "file": "cpython-3.10.20+20260610-x86_64-apple-darwin-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.10.20+20260805-x86_64-apple-darwin-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "x86_64-pc-windows-msvc": {
-      "file": "cpython-3.10.20+20260610-x86_64-pc-windows-msvc-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.10.20+20260805-x86_64-pc-windows-msvc-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "x86_64-unknown-linux-gnu": {
-      "file": "cpython-3.10.20+20260610-x86_64-unknown-linux-gnu-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.10.20+20260805-x86_64-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "x86_64-unknown-linux-musl": {
-      "file": "cpython-3.10.20+20260610-x86_64-unknown-linux-musl-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.10.20+20260805-x86_64-unknown-linux-musl-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     }
   },
@@ -1328,73 +1328,73 @@
   },
   "3.11.15": {
     "aarch64-apple-darwin": {
-      "file": "cpython-3.11.15+20260610-aarch64-apple-darwin-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.11.15+20260805-aarch64-apple-darwin-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "aarch64-pc-windows-msvc": {
-      "file": "cpython-3.11.15+20260610-aarch64-pc-windows-msvc-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.11.15+20260805-aarch64-pc-windows-msvc-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "aarch64-unknown-linux-gnu": {
-      "file": "cpython-3.11.15+20260610-aarch64-unknown-linux-gnu-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.11.15+20260805-aarch64-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "aarch64-unknown-linux-musl": {
-      "file": "cpython-3.11.15+20260610-aarch64-unknown-linux-musl-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.11.15+20260805-aarch64-unknown-linux-musl-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "armv7-unknown-linux-gnueabi": {
-      "file": "cpython-3.11.15+20260610-armv7-unknown-linux-gnueabi-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.11.15+20260805-armv7-unknown-linux-gnueabi-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "armv7-unknown-linux-gnueabihf": {
-      "file": "cpython-3.11.15+20260610-armv7-unknown-linux-gnueabihf-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.11.15+20260805-armv7-unknown-linux-gnueabihf-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "i686-pc-windows-msvc": {
-      "file": "cpython-3.11.15+20260610-i686-pc-windows-msvc-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.11.15+20260805-i686-pc-windows-msvc-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "powerpc64le-unknown-linux-gnu": {
-      "file": "cpython-3.11.15+20260610-ppc64le-unknown-linux-gnu-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.11.15+20260805-ppc64le-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "riscv64gc-unknown-linux-gnu": {
-      "file": "cpython-3.11.15+20260610-riscv64-unknown-linux-gnu-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.11.15+20260805-riscv64-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "s390x-unknown-linux-gnu": {
-      "file": "cpython-3.11.15+20260610-s390x-unknown-linux-gnu-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.11.15+20260805-s390x-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "x86_64-apple-darwin": {
-      "file": "cpython-3.11.15+20260610-x86_64-apple-darwin-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.11.15+20260805-x86_64-apple-darwin-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "x86_64-pc-windows-msvc": {
-      "file": "cpython-3.11.15+20260610-x86_64-pc-windows-msvc-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.11.15+20260805-x86_64-pc-windows-msvc-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "x86_64-unknown-linux-gnu": {
-      "file": "cpython-3.11.15+20260610-x86_64-unknown-linux-gnu-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.11.15+20260805-x86_64-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "x86_64-unknown-linux-musl": {
-      "file": "cpython-3.11.15+20260610-x86_64-unknown-linux-musl-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.11.15+20260805-x86_64-unknown-linux-musl-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     }
   },
@@ -2049,73 +2049,73 @@
   },
   "3.12.13": {
     "aarch64-apple-darwin": {
-      "file": "cpython-3.12.13+20260610-aarch64-apple-darwin-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.12.13+20260805-aarch64-apple-darwin-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "aarch64-pc-windows-msvc": {
-      "file": "cpython-3.12.13+20260610-aarch64-pc-windows-msvc-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.12.13+20260805-aarch64-pc-windows-msvc-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "aarch64-unknown-linux-gnu": {
-      "file": "cpython-3.12.13+20260610-aarch64-unknown-linux-gnu-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.12.13+20260805-aarch64-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "aarch64-unknown-linux-musl": {
-      "file": "cpython-3.12.13+20260610-aarch64-unknown-linux-musl-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.12.13+20260805-aarch64-unknown-linux-musl-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "armv7-unknown-linux-gnueabi": {
-      "file": "cpython-3.12.13+20260610-armv7-unknown-linux-gnueabi-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.12.13+20260805-armv7-unknown-linux-gnueabi-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "armv7-unknown-linux-gnueabihf": {
-      "file": "cpython-3.12.13+20260610-armv7-unknown-linux-gnueabihf-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.12.13+20260805-armv7-unknown-linux-gnueabihf-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "i686-pc-windows-msvc": {
-      "file": "cpython-3.12.13+20260610-i686-pc-windows-msvc-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.12.13+20260805-i686-pc-windows-msvc-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "powerpc64le-unknown-linux-gnu": {
-      "file": "cpython-3.12.13+20260610-ppc64le-unknown-linux-gnu-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.12.13+20260805-ppc64le-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "riscv64gc-unknown-linux-gnu": {
-      "file": "cpython-3.12.13+20260610-riscv64-unknown-linux-gnu-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.12.13+20260805-riscv64-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "s390x-unknown-linux-gnu": {
-      "file": "cpython-3.12.13+20260610-s390x-unknown-linux-gnu-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.12.13+20260805-s390x-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "x86_64-apple-darwin": {
-      "file": "cpython-3.12.13+20260610-x86_64-apple-darwin-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.12.13+20260805-x86_64-apple-darwin-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "x86_64-pc-windows-msvc": {
-      "file": "cpython-3.12.13+20260610-x86_64-pc-windows-msvc-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.12.13+20260805-x86_64-pc-windows-msvc-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "x86_64-unknown-linux-gnu": {
-      "file": "cpython-3.12.13+20260610-x86_64-unknown-linux-gnu-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.12.13+20260805-x86_64-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "x86_64-unknown-linux-musl": {
-      "file": "cpython-3.12.13+20260610-x86_64-unknown-linux-musl-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.12.13+20260805-x86_64-unknown-linux-musl-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     }
   },
@@ -3098,73 +3098,73 @@
   },
   "3.13.14": {
     "aarch64-apple-darwin": {
-      "file": "cpython-3.13.14+20260610-aarch64-apple-darwin-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.13.14+20260805-aarch64-apple-darwin-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "aarch64-pc-windows-msvc": {
-      "file": "cpython-3.13.14+20260610-aarch64-pc-windows-msvc-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.13.14+20260805-aarch64-pc-windows-msvc-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "aarch64-unknown-linux-gnu": {
-      "file": "cpython-3.13.14+20260610-aarch64-unknown-linux-gnu-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.13.14+20260805-aarch64-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "aarch64-unknown-linux-musl": {
-      "file": "cpython-3.13.14+20260610-aarch64-unknown-linux-musl-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.13.14+20260805-aarch64-unknown-linux-musl-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "armv7-unknown-linux-gnueabi": {
-      "file": "cpython-3.13.14+20260610-armv7-unknown-linux-gnueabi-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.13.14+20260805-armv7-unknown-linux-gnueabi-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "armv7-unknown-linux-gnueabihf": {
-      "file": "cpython-3.13.14+20260610-armv7-unknown-linux-gnueabihf-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.13.14+20260805-armv7-unknown-linux-gnueabihf-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "i686-pc-windows-msvc": {
-      "file": "cpython-3.13.14+20260610-i686-pc-windows-msvc-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.13.14+20260805-i686-pc-windows-msvc-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "powerpc64le-unknown-linux-gnu": {
-      "file": "cpython-3.13.14+20260610-ppc64le-unknown-linux-gnu-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.13.14+20260805-ppc64le-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "riscv64gc-unknown-linux-gnu": {
-      "file": "cpython-3.13.14+20260610-riscv64-unknown-linux-gnu-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.13.14+20260805-riscv64-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "s390x-unknown-linux-gnu": {
-      "file": "cpython-3.13.14+20260610-s390x-unknown-linux-gnu-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.13.14+20260805-s390x-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "x86_64-apple-darwin": {
-      "file": "cpython-3.13.14+20260610-x86_64-apple-darwin-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.13.14+20260805-x86_64-apple-darwin-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "x86_64-pc-windows-msvc": {
-      "file": "cpython-3.13.14+20260610-x86_64-pc-windows-msvc-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.13.14+20260805-x86_64-pc-windows-msvc-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "x86_64-unknown-linux-gnu": {
-      "file": "cpython-3.13.14+20260610-x86_64-unknown-linux-gnu-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.13.14+20260805-x86_64-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     },
     "x86_64-unknown-linux-musl": {
-      "file": "cpython-3.13.14+20260610-x86_64-unknown-linux-musl-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.13.14+20260805-x86_64-unknown-linux-musl-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     }
   },
@@ -4954,73 +4954,145 @@
   },
   "3.14.6": {
     "aarch64-apple-darwin": {
-      "file": "cpython-3.14.6+20260610-aarch64-apple-darwin-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.14.6+20260804-aarch64-apple-darwin-install_only.tar.gz",
+      "release": "20260804",
       "sha": 1
     },
     "aarch64-pc-windows-msvc": {
-      "file": "cpython-3.14.6+20260610-aarch64-pc-windows-msvc-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.14.6+20260804-aarch64-pc-windows-msvc-install_only.tar.gz",
+      "release": "20260804",
       "sha": 1
     },
     "aarch64-unknown-linux-gnu": {
-      "file": "cpython-3.14.6+20260610-aarch64-unknown-linux-gnu-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.14.6+20260804-aarch64-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260804",
       "sha": 1
     },
     "aarch64-unknown-linux-musl": {
-      "file": "cpython-3.14.6+20260610-aarch64-unknown-linux-musl-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.14.6+20260804-aarch64-unknown-linux-musl-install_only.tar.gz",
+      "release": "20260804",
       "sha": 1
     },
     "armv7-unknown-linux-gnueabi": {
-      "file": "cpython-3.14.6+20260610-armv7-unknown-linux-gnueabi-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.14.6+20260804-armv7-unknown-linux-gnueabi-install_only.tar.gz",
+      "release": "20260804",
       "sha": 1
     },
     "armv7-unknown-linux-gnueabihf": {
-      "file": "cpython-3.14.6+20260610-armv7-unknown-linux-gnueabihf-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.14.6+20260804-armv7-unknown-linux-gnueabihf-install_only.tar.gz",
+      "release": "20260804",
       "sha": 1
     },
     "i686-pc-windows-msvc": {
-      "file": "cpython-3.14.6+20260610-i686-pc-windows-msvc-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.14.6+20260804-i686-pc-windows-msvc-install_only.tar.gz",
+      "release": "20260804",
       "sha": 1
     },
     "powerpc64le-unknown-linux-gnu": {
-      "file": "cpython-3.14.6+20260610-ppc64le-unknown-linux-gnu-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.14.6+20260804-ppc64le-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260804",
       "sha": 1
     },
     "riscv64gc-unknown-linux-gnu": {
-      "file": "cpython-3.14.6+20260610-riscv64-unknown-linux-gnu-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.14.6+20260804-riscv64-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260804",
       "sha": 1
     },
     "s390x-unknown-linux-gnu": {
-      "file": "cpython-3.14.6+20260610-s390x-unknown-linux-gnu-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.14.6+20260804-s390x-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260804",
       "sha": 1
     },
     "x86_64-apple-darwin": {
-      "file": "cpython-3.14.6+20260610-x86_64-apple-darwin-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.14.6+20260804-x86_64-apple-darwin-install_only.tar.gz",
+      "release": "20260804",
       "sha": 1
     },
     "x86_64-pc-windows-msvc": {
-      "file": "cpython-3.14.6+20260610-x86_64-pc-windows-msvc-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.14.6+20260804-x86_64-pc-windows-msvc-install_only.tar.gz",
+      "release": "20260804",
       "sha": 1
     },
     "x86_64-unknown-linux-gnu": {
-      "file": "cpython-3.14.6+20260610-x86_64-unknown-linux-gnu-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.14.6+20260804-x86_64-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260804",
       "sha": 1
     },
     "x86_64-unknown-linux-musl": {
-      "file": "cpython-3.14.6+20260610-x86_64-unknown-linux-musl-install_only.tar.gz",
-      "release": "20260610",
+      "file": "cpython-3.14.6+20260804-x86_64-unknown-linux-musl-install_only.tar.gz",
+      "release": "20260804",
+      "sha": 1
+    }
+  },
+  "3.14.7": {
+    "aarch64-apple-darwin": {
+      "file": "cpython-3.14.7+20260805-aarch64-apple-darwin-install_only.tar.gz",
+      "release": "20260805",
+      "sha": 1
+    },
+    "aarch64-pc-windows-msvc": {
+      "file": "cpython-3.14.7+20260805-aarch64-pc-windows-msvc-install_only.tar.gz",
+      "release": "20260805",
+      "sha": 1
+    },
+    "aarch64-unknown-linux-gnu": {
+      "file": "cpython-3.14.7+20260805-aarch64-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260805",
+      "sha": 1
+    },
+    "aarch64-unknown-linux-musl": {
+      "file": "cpython-3.14.7+20260805-aarch64-unknown-linux-musl-install_only.tar.gz",
+      "release": "20260805",
+      "sha": 1
+    },
+    "armv7-unknown-linux-gnueabi": {
+      "file": "cpython-3.14.7+20260805-armv7-unknown-linux-gnueabi-install_only.tar.gz",
+      "release": "20260805",
+      "sha": 1
+    },
+    "armv7-unknown-linux-gnueabihf": {
+      "file": "cpython-3.14.7+20260805-armv7-unknown-linux-gnueabihf-install_only.tar.gz",
+      "release": "20260805",
+      "sha": 1
+    },
+    "i686-pc-windows-msvc": {
+      "file": "cpython-3.14.7+20260805-i686-pc-windows-msvc-install_only.tar.gz",
+      "release": "20260805",
+      "sha": 1
+    },
+    "powerpc64le-unknown-linux-gnu": {
+      "file": "cpython-3.14.7+20260805-ppc64le-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260805",
+      "sha": 1
+    },
+    "riscv64gc-unknown-linux-gnu": {
+      "file": "cpython-3.14.7+20260805-riscv64-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260805",
+      "sha": 1
+    },
+    "s390x-unknown-linux-gnu": {
+      "file": "cpython-3.14.7+20260805-s390x-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260805",
+      "sha": 1
+    },
+    "x86_64-apple-darwin": {
+      "file": "cpython-3.14.7+20260805-x86_64-apple-darwin-install_only.tar.gz",
+      "release": "20260805",
+      "sha": 1
+    },
+    "x86_64-pc-windows-msvc": {
+      "file": "cpython-3.14.7+20260805-x86_64-pc-windows-msvc-install_only.tar.gz",
+      "release": "20260805",
+      "sha": 1
+    },
+    "x86_64-unknown-linux-gnu": {
+      "file": "cpython-3.14.7+20260805-x86_64-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260805",
+      "sha": 1
+    },
+    "x86_64-unknown-linux-musl": {
+      "file": "cpython-3.14.7+20260805-x86_64-unknown-linux-musl-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     }
   },
@@ -5741,6 +5813,222 @@
     "x86_64-unknown-linux-musl": {
       "file": "cpython-3.15.0b2+20260610-x86_64-unknown-linux-musl-install_only.tar.gz",
       "release": "20260610",
+      "sha": 1
+    }
+  },
+  "3.15.0-b.3": {
+    "aarch64-apple-darwin": {
+      "file": "cpython-3.15.0b3+20260623-aarch64-apple-darwin-install_only.tar.gz",
+      "release": "20260623",
+      "sha": 1
+    },
+    "aarch64-pc-windows-msvc": {
+      "file": "cpython-3.15.0b3+20260623-aarch64-pc-windows-msvc-install_only.tar.gz",
+      "release": "20260623",
+      "sha": 1
+    },
+    "aarch64-unknown-linux-gnu": {
+      "file": "cpython-3.15.0b3+20260623-aarch64-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260623",
+      "sha": 1
+    },
+    "aarch64-unknown-linux-musl": {
+      "file": "cpython-3.15.0b3+20260623-aarch64-unknown-linux-musl-install_only.tar.gz",
+      "release": "20260623",
+      "sha": 1
+    },
+    "armv7-unknown-linux-gnueabi": {
+      "file": "cpython-3.15.0b3+20260623-armv7-unknown-linux-gnueabi-install_only.tar.gz",
+      "release": "20260623",
+      "sha": 1
+    },
+    "armv7-unknown-linux-gnueabihf": {
+      "file": "cpython-3.15.0b3+20260623-armv7-unknown-linux-gnueabihf-install_only.tar.gz",
+      "release": "20260623",
+      "sha": 1
+    },
+    "i686-pc-windows-msvc": {
+      "file": "cpython-3.15.0b3+20260623-i686-pc-windows-msvc-install_only.tar.gz",
+      "release": "20260623",
+      "sha": 1
+    },
+    "powerpc64le-unknown-linux-gnu": {
+      "file": "cpython-3.15.0b3+20260623-ppc64le-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260623",
+      "sha": 1
+    },
+    "riscv64gc-unknown-linux-gnu": {
+      "file": "cpython-3.15.0b3+20260623-riscv64-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260623",
+      "sha": 1
+    },
+    "s390x-unknown-linux-gnu": {
+      "file": "cpython-3.15.0b3+20260623-s390x-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260623",
+      "sha": 1
+    },
+    "x86_64-apple-darwin": {
+      "file": "cpython-3.15.0b3+20260623-x86_64-apple-darwin-install_only.tar.gz",
+      "release": "20260623",
+      "sha": 1
+    },
+    "x86_64-pc-windows-msvc": {
+      "file": "cpython-3.15.0b3+20260623-x86_64-pc-windows-msvc-install_only.tar.gz",
+      "release": "20260623",
+      "sha": 1
+    },
+    "x86_64-unknown-linux-gnu": {
+      "file": "cpython-3.15.0b3+20260623-x86_64-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260623",
+      "sha": 1
+    },
+    "x86_64-unknown-linux-musl": {
+      "file": "cpython-3.15.0b3+20260623-x86_64-unknown-linux-musl-install_only.tar.gz",
+      "release": "20260623",
+      "sha": 1
+    }
+  },
+  "3.15.0-b.4": {
+    "aarch64-apple-darwin": {
+      "file": "cpython-3.15.0b4+20260728-aarch64-apple-darwin-install_only.tar.gz",
+      "release": "20260728",
+      "sha": 1
+    },
+    "aarch64-pc-windows-msvc": {
+      "file": "cpython-3.15.0b4+20260728-aarch64-pc-windows-msvc-install_only.tar.gz",
+      "release": "20260728",
+      "sha": 1
+    },
+    "aarch64-unknown-linux-gnu": {
+      "file": "cpython-3.15.0b4+20260728-aarch64-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260728",
+      "sha": 1
+    },
+    "aarch64-unknown-linux-musl": {
+      "file": "cpython-3.15.0b4+20260728-aarch64-unknown-linux-musl-install_only.tar.gz",
+      "release": "20260728",
+      "sha": 1
+    },
+    "armv7-unknown-linux-gnueabi": {
+      "file": "cpython-3.15.0b4+20260728-armv7-unknown-linux-gnueabi-install_only.tar.gz",
+      "release": "20260728",
+      "sha": 1
+    },
+    "armv7-unknown-linux-gnueabihf": {
+      "file": "cpython-3.15.0b4+20260728-armv7-unknown-linux-gnueabihf-install_only.tar.gz",
+      "release": "20260728",
+      "sha": 1
+    },
+    "i686-pc-windows-msvc": {
+      "file": "cpython-3.15.0b4+20260728-i686-pc-windows-msvc-install_only.tar.gz",
+      "release": "20260728",
+      "sha": 1
+    },
+    "powerpc64le-unknown-linux-gnu": {
+      "file": "cpython-3.15.0b4+20260728-ppc64le-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260728",
+      "sha": 1
+    },
+    "riscv64gc-unknown-linux-gnu": {
+      "file": "cpython-3.15.0b4+20260728-riscv64-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260728",
+      "sha": 1
+    },
+    "s390x-unknown-linux-gnu": {
+      "file": "cpython-3.15.0b4+20260728-s390x-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260728",
+      "sha": 1
+    },
+    "x86_64-apple-darwin": {
+      "file": "cpython-3.15.0b4+20260728-x86_64-apple-darwin-install_only.tar.gz",
+      "release": "20260728",
+      "sha": 1
+    },
+    "x86_64-pc-windows-msvc": {
+      "file": "cpython-3.15.0b4+20260728-x86_64-pc-windows-msvc-install_only.tar.gz",
+      "release": "20260728",
+      "sha": 1
+    },
+    "x86_64-unknown-linux-gnu": {
+      "file": "cpython-3.15.0b4+20260728-x86_64-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260728",
+      "sha": 1
+    },
+    "x86_64-unknown-linux-musl": {
+      "file": "cpython-3.15.0b4+20260728-x86_64-unknown-linux-musl-install_only.tar.gz",
+      "release": "20260728",
+      "sha": 1
+    }
+  },
+  "3.15.0-rc.1": {
+    "aarch64-apple-darwin": {
+      "file": "cpython-3.15.0rc1+20260805-aarch64-apple-darwin-install_only.tar.gz",
+      "release": "20260805",
+      "sha": 1
+    },
+    "aarch64-pc-windows-msvc": {
+      "file": "cpython-3.15.0rc1+20260805-aarch64-pc-windows-msvc-install_only.tar.gz",
+      "release": "20260805",
+      "sha": 1
+    },
+    "aarch64-unknown-linux-gnu": {
+      "file": "cpython-3.15.0rc1+20260805-aarch64-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260805",
+      "sha": 1
+    },
+    "aarch64-unknown-linux-musl": {
+      "file": "cpython-3.15.0rc1+20260805-aarch64-unknown-linux-musl-install_only.tar.gz",
+      "release": "20260805",
+      "sha": 1
+    },
+    "armv7-unknown-linux-gnueabi": {
+      "file": "cpython-3.15.0rc1+20260805-armv7-unknown-linux-gnueabi-install_only.tar.gz",
+      "release": "20260805",
+      "sha": 1
+    },
+    "armv7-unknown-linux-gnueabihf": {
+      "file": "cpython-3.15.0rc1+20260805-armv7-unknown-linux-gnueabihf-install_only.tar.gz",
+      "release": "20260805",
+      "sha": 1
+    },
+    "i686-pc-windows-msvc": {
+      "file": "cpython-3.15.0rc1+20260805-i686-pc-windows-msvc-install_only.tar.gz",
+      "release": "20260805",
+      "sha": 1
+    },
+    "powerpc64le-unknown-linux-gnu": {
+      "file": "cpython-3.15.0rc1+20260805-ppc64le-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260805",
+      "sha": 1
+    },
+    "riscv64gc-unknown-linux-gnu": {
+      "file": "cpython-3.15.0rc1+20260805-riscv64-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260805",
+      "sha": 1
+    },
+    "s390x-unknown-linux-gnu": {
+      "file": "cpython-3.15.0rc1+20260805-s390x-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260805",
+      "sha": 1
+    },
+    "x86_64-apple-darwin": {
+      "file": "cpython-3.15.0rc1+20260805-x86_64-apple-darwin-install_only.tar.gz",
+      "release": "20260805",
+      "sha": 1
+    },
+    "x86_64-pc-windows-msvc": {
+      "file": "cpython-3.15.0rc1+20260805-x86_64-pc-windows-msvc-install_only.tar.gz",
+      "release": "20260805",
+      "sha": 1
+    },
+    "x86_64-unknown-linux-gnu": {
+      "file": "cpython-3.15.0rc1+20260805-x86_64-unknown-linux-gnu-install_only.tar.gz",
+      "release": "20260805",
+      "sha": 1
+    },
+    "x86_64-unknown-linux-musl": {
+      "file": "cpython-3.15.0rc1+20260805-x86_64-unknown-linux-musl-install_only.tar.gz",
+      "release": "20260805",
       "sha": 1
     }
   },
