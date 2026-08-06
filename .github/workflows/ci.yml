@@ -97,6 +97,11 @@ jobs:
           cache: false # Runs out of disk space
           components: clippy, rustfmt
           targets: wasm32-wasip1
+      # The dotnet toolchain's tests evaluate fixtures with a real `dotnet
+      # msbuild`, and `-getProperty`/`-getItem` JSON output requires SDK 8+.
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
       - run: moon ci --color --job ${{ matrix.job }} --job-total ${{ needs.plan.outputs.job-total }} --log debug
         # env:
         #   DEPOT_TOKEN: ${{ secrets.DEPOT_TOKEN }}
