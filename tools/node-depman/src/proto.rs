@@ -156,14 +156,22 @@ pub fn unpin_version(Json(input): Json<UnpinVersionInput>) -> FnResult<Json<Unpi
 }
 
 #[plugin_fn]
-pub fn load_versions(Json(_input): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
+pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
     let mut output = LoadVersionsOutput::default();
     let manager = PackageManager::detect()?;
     let registry_url = get_tool_config::<NodeDepmanToolConfig>()?.registry_url;
     let package_name = manager.get_package_name();
+    let headers = manager.get_http_headers(&registry_url, &input.context.working_dir)?;
 
-    let mut map_output = |res_text: String, is_yarn: bool| -> Result<(), Error> {
-        let res = parse_registry_response(res_text, is_yarn)?;
+    let mut fetch_versions = |url: String, is_yarn: bool| -> Result<(), Error> {
+        let res = parse_registry_response(
+            fetch(SendRequestInput {
+                url,
+                headers: headers.clone(),
+            })?
+            .text()?,
+            is_yarn,
+        )?;
 
         for item in res.versions.values() {
             output.versions.push(VersionSpec::parse(&item.version)?);
@@ -192,13 +200,10 @@ pub fn load_versions(Json(_input): Json<LoadVersionsInput>) -> FnResult<Json<Loa
     // Yarn is managed by 3 different sources, so we need to request versions from all of them!
     if manager.is_yarn() {
         // v1
-        map_output(fetch_text(format!("{registry_url}/yarn/"))?, true)?;
+        fetch_versions(format!("{registry_url}/yarn/"), true)?;
 
         // v2-5
-        map_output(
-            fetch_text(format!("{registry_url}/@yarnpkg/cli-dist/"))?,
-            true,
-        )?;
+        fetch_versions(format!("{registry_url}/@yarnpkg/cli-dist/"), true)?;
 
         // v6+
         let tags = load_git_tags("https://github.com/yarnpkg/zpm")?
@@ -210,10 +215,7 @@ pub fn load_versions(Json(_input): Json<LoadVersionsInput>) -> FnResult<Json<Loa
             output.versions.push(VersionSpec::parse(tag)?);
         }
     } else {
-        map_output(
-            fetch_text(format!("{registry_url}/{package_name}/"))?,
-            false,
-        )?;
+        fetch_versions(format!("{registry_url}/{package_name}/"), false)?;
     }
 
     output

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed an issue where auth headers were not included in load verion requests, which would cause failures for private registries.
+
 ## 0.19.1
 
 #### 🚀 Updates
