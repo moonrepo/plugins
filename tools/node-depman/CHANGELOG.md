@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added experimental support for pnpm v12 (Rust based).
+- Updated version detection to loop through all possible fields (`packageManager`, `engines`, etc) to find an applicable version, instead of failing on the first invalid version.
+
+#### 🐞 Fixes
+
+- Fixed an issue where auth headers were not included in load verion requests, which would cause failures for private registries.
+
 ## 0.19.1
 
 #### 🚀 Updates
@@ -11,7 +22,7 @@
 #### 🚀 Updates
 
 - Updated to support proto v0.59 release.
-- Added experimental support for yarn v6.
+- Added experimental support for yarn v6 (Rust based).
 
 ## 0.18.1
 

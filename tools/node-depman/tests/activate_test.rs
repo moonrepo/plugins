@@ -166,6 +166,52 @@ mod node_depman_tool {
                     ])
                 );
             }
+
+            #[tokio::test(flavor = "multi_thread")]
+
+            async fn adds_env_var_for_v12() {
+                let sandbox = create_empty_proto_sandbox();
+                let plugin = sandbox
+                    .create_plugin_with_config("pnpm-test", |config| {
+                        config.tool_config(NodeDepmanPluginConfig {
+                            shared_globals_dir: true,
+                        });
+                    })
+                    .await;
+
+                let result = plugin
+                    .activate_environment(ActivateEnvironmentInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("12.0.0").unwrap(),
+                            ..Default::default()
+                        },
+                        globals_dir: Some(create_globals_dir()),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert_eq!(
+                    result.env,
+                    HashMap::from_iter([
+                        (
+                            "pnpm_config_global_dir".into(),
+                            sandbox
+                                .path()
+                                .join(".proto/tools/node/globals")
+                                .to_string_lossy()
+                                .to_string()
+                        ),
+                        (
+                            "pnpm_config_global_bin_dir".into(),
+                            sandbox
+                                .path()
+                                .join(".proto/tools/node/globals/bin")
+                                .to_string_lossy()
+                                .to_string()
+                        )
+                    ])
+                );
+            }
         }
 
         mod yarn {

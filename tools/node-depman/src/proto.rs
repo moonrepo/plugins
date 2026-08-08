@@ -33,10 +33,11 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
         name: manager.get_bin_name(),
         type_of: PluginType::DependencyManager,
         lock_options: ToolLockOptions {
-            // Yarn v6+ is downloaded as an os/arch specific binary, so
-            // lock records must be scoped to them. Everything else is a
-            // platform agnostic tarball from the npm registry.
-            ignore_os_arch: !manager.is_yarn(),
+            // Yarn v6+ and pnpm v12+ is downloaded as an os/arch specific binary,
+            // so lock records must be scoped to them. Everything else is a
+            // platform agnostic tarball from the npm registry. Versions are not
+            // known at registration time, so scope all pnpm/yarn records.
+            ignore_os_arch: manager.is_npm(),
             ..Default::default()
         },
         minimum_proto_version: Some(Version::new(0, 60, 0)),
@@ -71,30 +72,47 @@ pub fn parse_version_file(
         && let Ok(package_json) = json::from_str::<PackageJson>(&input.content)
     {
         let manager_name = PackageManager::detect()?.get_bin_name();
+        let mut candidates = vec![];
 
         if let Some(constraint) =
             extract_dev_engine_package_manager_version(&package_json, &manager_name)
         {
-            version = Some(UnresolvedVersionSpec::parse(constraint)?);
+            candidates.push(constraint);
+        }
+
+        if let Some(constraint) = extract_package_manager_version(&package_json, &manager_name) {
+            candidates.push(constraint);
+        }
+
+        if let Some(constraint) = extract_volta_version(&package_json, &input.path, &manager_name)?
+        {
+            candidates.push(constraint);
+        }
+
+        if let Some(constraint) = extract_engine_version(&package_json, &manager_name) {
+            candidates.push(constraint);
+        }
+
+        let mut error = None;
+
+        for candidates in candidates {
+            match UnresolvedVersionSpec::parse(candidates) {
+                Ok(spec) => {
+                    version = Some(spec);
+                    break;
+                }
+                Err(err) => {
+                    if error.is_none() {
+                        error = Some(err);
+                    }
+                }
+            };
         }
 
         if version.is_none()
-            && let Some(constraint) = extract_package_manager_version(&package_json, &manager_name)
+            && let Some(error) = error
         {
-            version = Some(UnresolvedVersionSpec::parse(constraint)?);
-        }
-
-        if version.is_none()
-            && let Some(constraint) =
-                extract_volta_version(&package_json, &input.path, &manager_name)?
-        {
-            version = Some(UnresolvedVersionSpec::parse(constraint)?);
-        }
-
-        if version.is_none()
-            && let Some(constraint) = extract_engine_version(&package_json, &manager_name)
-        {
-            version = Some(UnresolvedVersionSpec::parse(constraint)?);
+            return Err(plugin_err!("{error}"));
         }
     }
 
@@ -156,14 +174,22 @@ pub fn unpin_version(Json(input): Json<UnpinVersionInput>) -> FnResult<Json<Unpi
 }
 
 #[plugin_fn]
-pub fn load_versions(Json(_input): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
+pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
     let mut output = LoadVersionsOutput::default();
     let manager = PackageManager::detect()?;
     let registry_url = get_tool_config::<NodeDepmanToolConfig>()?.registry_url;
     let package_name = manager.get_package_name();
+    let headers = manager.get_http_headers(&registry_url, &input.context.working_dir)?;
 
-    let mut map_output = |res_text: String, is_yarn: bool| -> Result<(), Error> {
-        let res = parse_registry_response(res_text, is_yarn)?;
+    let mut fetch_versions = |url: String, is_yarn: bool| -> Result<(), Error> {
+        let res = parse_registry_response(
+            fetch(SendRequestInput {
+                url,
+                headers: headers.clone(),
+            })?
+            .text()?,
+            is_yarn,
+        )?;
 
         for item in res.versions.values() {
             output.versions.push(VersionSpec::parse(&item.version)?);
@@ -192,13 +218,10 @@ pub fn load_versions(Json(_input): Json<LoadVersionsInput>) -> FnResult<Json<Loa
     // Yarn is managed by 3 different sources, so we need to request versions from all of them!
     if manager.is_yarn() {
         // v1
-        map_output(fetch_text(format!("{registry_url}/yarn/"))?, true)?;
+        fetch_versions(format!("{registry_url}/yarn/"), true)?;
 
         // v2-5
-        map_output(
-            fetch_text(format!("{registry_url}/@yarnpkg/cli-dist/"))?,
-            true,
-        )?;
+        fetch_versions(format!("{registry_url}/@yarnpkg/cli-dist/"), true)?;
 
         // v6+
         let tags = load_git_tags("https://github.com/yarnpkg/zpm")?
@@ -210,10 +233,7 @@ pub fn load_versions(Json(_input): Json<LoadVersionsInput>) -> FnResult<Json<Loa
             output.versions.push(VersionSpec::parse(tag)?);
         }
     } else {
-        map_output(
-            fetch_text(format!("{registry_url}/{package_name}/"))?,
-            false,
-        )?;
+        fetch_versions(format!("{registry_url}/{package_name}/"), false)?;
     }
 
     output
@@ -325,11 +345,11 @@ pub fn download_prebuilt(
         }));
     }
 
+    let env = get_host_environment()?;
+
     // Yarn v6 is Rust based and is NOT installed from the npm registry!
     // https://v6.yarnpkg.com/getting-started
     if manager == PackageManager::Yarn6 {
-        let env = get_host_environment()?;
-
         let arch = match env.arch {
             HostArch::Arm64 => "aarch64",
             HostArch::X64 => "x86_64",
@@ -378,7 +398,7 @@ pub fn download_prebuilt(
     }
 
     // Everything else is provided by the npm registry
-    let mut package_name = manager.get_package_name();
+    let mut package_name = manager.get_package_name_for_download(env)?;
 
     // Version 2.4.3 was published to the wrong package. It should
     // have been published to `@yarnpkg/cli-dist` but was published
@@ -456,15 +476,29 @@ pub fn locate_executables(
             // https://github.com/npm/cli/blob/latest/workspaces/config/lib/index.js#L339
             globals_lookup_dirs.push("$TOOL_DIR/shims".into());
         }
-        PackageManager::Pnpm | PackageManager::Pnpm11 => {
-            primary = ExecutableConfig::new_primary("shims/pnpm");
+        PackageManager::Pnpm | PackageManager::Pnpm11 | PackageManager::Pnpm12 => {
+            if manager == PackageManager::Pnpm12 {
+                let exe_name = env.os.get_exe_name("pnpm");
 
-            // pnpx
-            secondary.insert("pnpx".into(), ExecutableConfig::new("shims/pnpx"));
+                primary = ExecutableConfig::new_primary(&exe_name);
+                secondary.insert("pn".into(), ExecutableConfig::new(&exe_name));
 
-            if manager == PackageManager::Pnpm11 {
-                secondary.insert("pn".into(), ExecutableConfig::new("shims/pn"));
-                secondary.insert("pnx".into(), ExecutableConfig::new("shims/pnx"));
+                let pnpx_config = ExecutableConfig::new(exe_name)
+                    .no_bin(true)
+                    .shim_before_args(StringOrVec::String("dlx".into()));
+
+                secondary.insert("pnpx".into(), pnpx_config.clone());
+                secondary.insert("pnx".into(), pnpx_config);
+            } else {
+                primary = ExecutableConfig::new_primary("shims/pnpm");
+
+                // pnpx
+                secondary.insert("pnpx".into(), ExecutableConfig::new("shims/pnpx"));
+
+                if manager == PackageManager::Pnpm11 {
+                    secondary.insert("pn".into(), ExecutableConfig::new("shims/pn"));
+                    secondary.insert("pnx".into(), ExecutableConfig::new("shims/pnx"));
+                }
             }
 
             // https://pnpm.io/npmrc#global-dir
@@ -573,7 +607,7 @@ pub fn activate_environment(
 
             // Pnpm has explicit support for the bin and root dirs,
             // which makes this super simple to handle.
-            PackageManager::Pnpm | PackageManager::Pnpm11 => {
+            PackageManager::Pnpm | PackageManager::Pnpm11 | PackageManager::Pnpm12 => {
                 output
                     .env
                     .insert("pnpm_config_global_dir".into(), globals_root_dir);
@@ -636,8 +670,8 @@ fn create_internal_shims(
         PackageManager::Yarn1 | PackageManager::Yarn2to5 => {
             create_internal_shim(env, tool_dir, "yarn", "yarn.js")?;
         }
-        // Yarn v6+ is a native binary and requires no shims
-        PackageManager::Yarn6 => {}
+        // Yarn v6+ and pnpm v12+ is a native binary and requires no shims
+        PackageManager::Yarn6 | PackageManager::Pnpm12 => {}
     };
 
     Ok(())

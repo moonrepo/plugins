@@ -5,7 +5,10 @@ use crate::yarn_compat::*;
 use npmrc_config_rs::{
     Credentials, LoadOptions, NpmrcConfig, nerf_dart, registry::parse_registry_url,
 };
-use proto_pdk::{AnyResult, VersionSpec, VirtualPath, get_plugin_id};
+use proto_pdk::{
+    AnyResult, HostArch, HostEnvironment, HostLibc, HostOS, PluginError, VersionSpec, VirtualPath,
+    get_plugin_id,
+};
 use rustc_hash::FxHashMap;
 use starbase_utils::{fs::find_upwards, yaml};
 
@@ -14,10 +17,15 @@ pub enum PackageManager {
     Npm,
 
     Pnpm,
+    // Major changes
     Pnpm11,
+    // Rust based
+    Pnpm12,
 
     Yarn1,
+    // Major rewrite with different APIs / PNP
     Yarn2to5,
+    // Rust based
     Yarn6,
 }
 
@@ -39,16 +47,20 @@ impl PackageManager {
 
         if manager == Self::Pnpm {
             manager = match version {
-                VersionSpec::Canary => Self::Pnpm11,
+                VersionSpec::Canary => Self::Pnpm12,
                 VersionSpec::Alias(alias) => {
                     if alias == "latest" {
                         Self::Pnpm11
+                    } else if alias == "next" {
+                        Self::Pnpm12
                     } else {
                         Self::Pnpm
                     }
                 }
                 VersionSpec::Version(version) => {
-                    if version.major >= 11 {
+                    if version.major >= 12 {
+                        Self::Pnpm12
+                    } else if version.major >= 11 {
                         Self::Pnpm11
                     } else {
                         Self::Pnpm
@@ -87,7 +99,7 @@ impl PackageManager {
     }
 
     pub fn is_pnpm(&self) -> bool {
-        matches!(self, Self::Pnpm | Self::Pnpm11)
+        matches!(self, Self::Pnpm | Self::Pnpm11 | Self::Pnpm12)
     }
 
     pub fn is_yarn(&self) -> bool {
@@ -97,7 +109,7 @@ impl PackageManager {
     pub fn get_bin_name(&self) -> String {
         match self {
             Self::Npm => "npm".into(),
-            Self::Pnpm | Self::Pnpm11 => "pnpm".into(),
+            Self::Pnpm | Self::Pnpm11 | Self::Pnpm12 => "pnpm".into(),
             Self::Yarn1 | Self::Yarn2to5 | Self::Yarn6 => "yarn".into(),
         }
     }
@@ -106,6 +118,46 @@ impl PackageManager {
         match self {
             Self::Yarn2to5 => "@yarnpkg/cli-dist".into(),
             _ => self.get_bin_name(),
+        }
+    }
+
+    pub fn get_package_name_for_download(&self, env: &HostEnvironment) -> AnyResult<String> {
+        match self {
+            Self::Pnpm12 => {
+                let arch = match env.arch {
+                    HostArch::Arm64 => "arm64",
+                    HostArch::X64 => "x64",
+                    other => {
+                        return Err(PluginError::UnsupportedArch {
+                            tool: "pnpm".into(),
+                            arch: other.to_string(),
+                        }
+                        .into());
+                    }
+                };
+
+                let os = match env.os {
+                    HostOS::MacOS => "darwin",
+                    HostOS::Linux => "linux",
+                    HostOS::Windows => "windows",
+                    other => {
+                        return Err(PluginError::UnsupportedOS {
+                            tool: "pnpm".into(),
+                            os: other.to_string(),
+                        }
+                        .into());
+                    }
+                };
+
+                let mut name = format!("@pnpm/exe.{os}-{arch}");
+
+                if env.libc == HostLibc::Musl {
+                    name.push_str("-musl");
+                }
+
+                Ok(name)
+            }
+            _ => Ok(self.get_package_name()),
         }
     }
 
@@ -118,7 +170,7 @@ impl PackageManager {
         let url = parse_registry_url(registry_url)?;
 
         let credentials = match self {
-            Self::Npm | Self::Pnpm | Self::Pnpm11 => {
+            Self::Npm | Self::Pnpm | Self::Pnpm11 | Self::Pnpm12 => {
                 let rc = NpmrcConfig::load_with_options(LoadOptions {
                     cwd: Some(working_dir.into()),
                     global_prefix: None,
