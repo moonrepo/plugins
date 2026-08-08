@@ -226,6 +226,128 @@ mod node_depman_tool {
         }
     }
 
+    mod nub {
+        use super::*;
+
+        generate_resolve_versions_tests!("nub-test", {
+            "0.2" => "0.2.10",
+            "0.4" => "0.4.13",
+            "0.5.0" => "0.5.0",
+        });
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn doesnt_parse_package_manager_if_diff_name() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox.create_plugin("nub-test").await;
+
+            assert_eq!(
+                plugin
+                    .parse_version_file(ParseVersionFileInput {
+                        content: r#"{ "packageManager": "npm@1.2.3" }"#.into(),
+                        file: "package.json".into(),
+                        ..Default::default()
+                    })
+                    .await,
+                ParseVersionFileOutput { version: None }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn parses_package_manager() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox.create_plugin("nub-test").await;
+
+            assert_eq!(
+                plugin
+                    .parse_version_file(ParseVersionFileInput {
+                        content: r#"{ "packageManager": "nub@1.2.3" }"#.into(),
+                        file: "package.json".into(),
+                        ..Default::default()
+                    })
+                    .await,
+                ParseVersionFileOutput {
+                    version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn parses_package_manager_latest() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox.create_plugin("nub-test").await;
+
+            assert_eq!(
+                plugin
+                    .parse_version_file(ParseVersionFileInput {
+                        content: r#"{ "packageManager": "nub" }"#.into(),
+                        file: "package.json".into(),
+                        ..Default::default()
+                    })
+                    .await,
+                ParseVersionFileOutput {
+                    version: Some(UnresolvedVersionSpec::parse("latest").unwrap()),
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn parses_engines() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox.create_plugin("nub-test").await;
+
+            assert_eq!(
+                plugin
+                    .parse_version_file(ParseVersionFileInput {
+                        content: r#"{ "engines": { "nub": "1.2.3" } }"#.into(),
+                        file: "package.json".into(),
+                        ..Default::default()
+                    })
+                    .await,
+                ParseVersionFileOutput {
+                    version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn parses_dev_engines() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox.create_plugin("nub-test").await;
+
+            assert_eq!(
+                plugin
+                    .parse_version_file(ParseVersionFileInput {
+                        content: r#"{ "devEngines": { "packageManager": { "name": "nub", "version": "1.2.3" } } }"#.into(),
+                        file: "package.json".into(),
+                        ..Default::default()
+                    })
+                    .await,
+                ParseVersionFileOutput {
+                    version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn parses_volta() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox.create_plugin("nub-test").await;
+
+            assert_eq!(
+                plugin
+                    .parse_version_file(ParseVersionFileInput {
+                        content: r#"{ "volta": { "nub": "1.2.3" } }"#.into(),
+                        file: "package.json".into(),
+                        ..Default::default()
+                    })
+                    .await,
+                ParseVersionFileOutput {
+                    version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
+                }
+            );
+        }
+    }
+
     mod pnpm {
         use super::*;
 

@@ -27,6 +27,31 @@ mod node_depman_tool {
         }
     }
 
+    mod nub {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn registers_metadata() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox.create_plugin("nub-test").await;
+
+            let metadata = plugin.register_tool(create_metadata("nub-test")).await;
+
+            assert_eq!(metadata.name, "nub");
+
+            // Binaries are os/arch specific, so records must be scoped
+            assert!(!metadata.lock_options.ignore_os_arch);
+            assert_eq!(metadata.type_of, PluginType::DependencyManager);
+            assert_eq!(
+                metadata.plugin_version.unwrap().to_string(),
+                env!("CARGO_PKG_VERSION")
+            );
+
+            // Unlike the other package managers, nub does not require Node.js
+            assert!(metadata.requires.is_empty());
+        }
+    }
+
     mod pnpm {
         use super::*;
 

@@ -173,6 +173,316 @@ mod node_depman_tool {
         }
     }
 
+    mod nub {
+        use super::*;
+
+        // Nub is Rust based and downloaded from the npm registry
+        // as an os/arch specific package: @nubjs/nub-{os}-{arch}
+
+        generate_download_install_tests!("nub-test", "0.7.4");
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_prebuilt_macos_arm64() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("nub-test", |config| {
+                    config.host(HostOS::MacOS, HostArch::Arm64);
+                })
+                .await;
+
+            assert_eq!(
+                plugin
+                    .download_prebuilt(DownloadPrebuiltInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("0.7.4").unwrap(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .await,
+                DownloadPrebuiltOutput {
+                    archive_prefix: Some("package".into()),
+                    download_url: "https://registry.npmjs.org/@nubjs/nub-darwin-arm64/-/nub-darwin-arm64-0.7.4.tgz".into(),
+                    ..Default::default()
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_prebuilt_linux_x64_gnu() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("nub-test", |config| {
+                    config.host_with(|host| {
+                        host.os = HostOS::Linux;
+                        host.arch = HostArch::X64;
+                        host.libc = HostLibc::Gnu;
+                    });
+                })
+                .await;
+
+            // Gnu is supported and has no libc suffix
+            assert_eq!(
+                plugin
+                    .download_prebuilt(DownloadPrebuiltInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("0.7.4").unwrap(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .await,
+                DownloadPrebuiltOutput {
+                    archive_prefix: Some("package".into()),
+                    download_url: "https://registry.npmjs.org/@nubjs/nub-linux-x64/-/nub-linux-x64-0.7.4.tgz".into(),
+                    ..Default::default()
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_prebuilt_linux_arm64_musl() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("nub-test", |config| {
+                    config.host_with(|host| {
+                        host.os = HostOS::Linux;
+                        host.arch = HostArch::Arm64;
+                        host.libc = HostLibc::Musl;
+                    });
+                })
+                .await;
+
+            assert_eq!(
+                plugin
+                    .download_prebuilt(DownloadPrebuiltInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("0.7.4").unwrap(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .await,
+                DownloadPrebuiltOutput {
+                    archive_prefix: Some("package".into()),
+                    download_url: "https://registry.npmjs.org/@nubjs/nub-linux-arm64-musl/-/nub-linux-arm64-musl-0.7.4.tgz".into(),
+                    ..Default::default()
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_prebuilt_windows_x64() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("nub-test", |config| {
+                    config.host(HostOS::Windows, HostArch::X64);
+                })
+                .await;
+
+            assert_eq!(
+                plugin
+                    .download_prebuilt(DownloadPrebuiltInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("0.7.4").unwrap(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .await,
+                DownloadPrebuiltOutput {
+                    archive_prefix: Some("package".into()),
+                    download_url: "https://registry.npmjs.org/@nubjs/nub-win32-x64/-/nub-win32-x64-0.7.4.tgz".into(),
+                    ..Default::default()
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn downloads_from_custom_registry() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("nub-test", |config| {
+                    config
+                        .host(HostOS::MacOS, HostArch::X64)
+                        .tool_config(NodeDepmanPluginConfig {
+                            registry_url: "https://some-internal-url.example".into(),
+                        });
+                })
+                .await;
+
+            assert_eq!(
+                plugin
+                    .download_prebuilt(DownloadPrebuiltInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("0.7.4").unwrap(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .await,
+                DownloadPrebuiltOutput {
+                    archive_prefix: Some("package".into()),
+                    download_url: "https://some-internal-url.example/@nubjs/nub-darwin-x64/-/nub-darwin-x64-0.7.4.tgz".into(),
+                    ..Default::default()
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn extracts_auth_token_header() {
+            let sandbox = create_empty_proto_sandbox();
+            sandbox.create_file(".npmrc", "//registry.npmjs.org/:_authToken = abc123");
+
+            let plugin = sandbox
+                .create_plugin_with_config("nub-test", |config| {
+                    config.host(HostOS::Linux, HostArch::Arm64);
+                })
+                .await;
+
+            assert_eq!(
+                plugin
+                    .download_prebuilt(DownloadPrebuiltInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("0.7.4").unwrap(),
+                            working_dir: plugin.tool.to_virtual_path(sandbox.path()),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .await,
+                DownloadPrebuiltOutput {
+                    archive_prefix: Some("package".into()),
+                    download_url: "https://registry.npmjs.org/@nubjs/nub-linux-arm64/-/nub-linux-arm64-0.7.4.tgz".into(),
+                    http_headers: FxHashMap::from_iter([(
+                        "Authorization".into(),
+                        "Bearer abc123".into()
+                    )]),
+                    ..Default::default()
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        #[should_panic(expected = "unsupported architecture x86.")]
+        async fn doesnt_support_other_archs() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("nub-test", |config| {
+                    config.host(HostOS::Linux, HostArch::X86);
+                })
+                .await;
+
+            plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("0.7.4").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await;
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        #[should_panic(expected = "unsupported OS freebsd.")]
+        async fn doesnt_support_other_os() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("nub-test", |config| {
+                    config.host(HostOS::FreeBSD, HostArch::Arm64);
+                })
+                .await;
+
+            plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("0.7.4").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await;
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        #[should_panic(expected = "nub does not support canary/nightly versions.")]
+        async fn doesnt_support_canary() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("nub-test", |config| {
+                    config.host(HostOS::MacOS, HostArch::Arm64);
+                })
+                .await;
+
+            plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("canary").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await;
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn locates_native_bin() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("nub-test", |config| {
+                    config.host(HostOS::MacOS, HostArch::Arm64);
+                })
+                .await;
+
+            let exes = plugin
+                .locate_executables(LocateExecutablesInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("0.7.4").unwrap(),
+                        ..Default::default()
+                    },
+                    install_dir: plugin.tool.to_virtual_path(sandbox.path()),
+                })
+                .await
+                .exes;
+
+            assert_eq!(exes.get("nub").unwrap().exe_path, Some("bin/nub".into()));
+
+            // nubx runs through the primary binary
+            assert_eq!(exes.get("nubx").unwrap().exe_path, Some("bin/nub".into()));
+
+            // No internal shims are created for the native binary
+            assert!(!sandbox.path().join("shims/nub").exists());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn locates_native_bin_windows() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("nub-test", |config| {
+                    config.host(HostOS::Windows, HostArch::X64);
+                })
+                .await;
+
+            let exes = plugin
+                .locate_executables(LocateExecutablesInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("0.7.4").unwrap(),
+                        ..Default::default()
+                    },
+                    install_dir: plugin.tool.to_virtual_path(sandbox.path()),
+                })
+                .await
+                .exes;
+
+            // The .exe extension must not be rewritten to .cmd
+            assert_eq!(
+                exes.get("nub").unwrap().exe_path,
+                Some("bin/nub.exe".into())
+            );
+        }
+    }
+
     mod pnpm {
         use super::*;
 
@@ -482,7 +792,7 @@ mod node_depman_tool {
                     .await,
                 DownloadPrebuiltOutput {
                     archive_prefix: Some("package".into()),
-                    download_url: "https://registry.npmjs.org/@pnpm/exe.windows-x64/-/exe.windows-x64-12.0.0.tgz".into(),
+                    download_url: "https://registry.npmjs.org/@pnpm/exe.win32-x64/-/exe.win32-x64-12.0.0.tgz".into(),
                     ..Default::default()
                 }
             );

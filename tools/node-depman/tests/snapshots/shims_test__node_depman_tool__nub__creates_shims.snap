@@ -1,0 +1,14 @@
+---
+source: tools/node-depman/tests/shims_test.rs
+expression: "std :: fs ::\nread_to_string(sandbox.path().join(\".proto/shims/registry.json\")).unwrap()"
+---
+{
+  "nub": {
+    "alt_exe": true,
+    "context": "nub-test"
+  },
+  "nubx": {
+    "alt_exe": true,
+    "context": "nub-test"
+  }
+}

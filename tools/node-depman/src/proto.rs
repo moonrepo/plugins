@@ -497,6 +497,20 @@ pub fn locate_executables(
 
             // nubx
             secondary.insert("nubx".into(), ExecutableConfig::new(exe_name));
+
+            // Nub's global layout is modeled on pnpm v11 and intentionally
+            // shares pnpm's directories. There is no NUB_HOME.
+            // https://github.com/nubjs/nub/blob/main/vendor/aube/crates/aube/src/commands/global.rs
+            globals_lookup_dirs.push("$PNPM_HOME".into());
+
+            if env.os.is_windows() {
+                globals_lookup_dirs.push("$LOCALAPPDATA\\pnpm".into());
+            } else if env.os.is_mac() {
+                globals_lookup_dirs.push("$HOME/Library/pnpm".into());
+            } else {
+                globals_lookup_dirs.push("$XDG_DATA_HOME/pnpm".into());
+                globals_lookup_dirs.push("$HOME/.local/share/pnpm".into());
+            }
         }
         PackageManager::Pnpm | PackageManager::Pnpm11 | PackageManager::Pnpm12 => {
             if manager == PackageManager::Pnpm12 {
@@ -533,6 +547,7 @@ pub fn locate_executables(
             } else if env.os.is_mac() {
                 globals_lookup_dirs.push("$HOME/Library/pnpm".into());
             } else {
+                globals_lookup_dirs.push("$XDG_DATA_HOME/pnpm".into());
                 globals_lookup_dirs.push("$HOME/.local/share/pnpm".into());
             }
         }
@@ -616,7 +631,7 @@ pub fn activate_environment(
         match manager {
             // Unix will create a /bin directory when installing into the root,
             // while Windows installs directly into the /bin directory.
-            PackageManager::Npm | PackageManager::Nub => {
+            PackageManager::Npm => {
                 output.env.insert(
                     "PREFIX".into(),
                     if env.os.is_windows() {
@@ -625,6 +640,19 @@ pub fn activate_environment(
                         globals_root_dir
                     },
                 );
+            }
+
+            // Nub mirrors pnpm's global-dir/global-bin-dir split, but only
+            // the npm-compat env family is always honored (pnpm_config_*
+            // requires pnpm to be the incumbent package manager, and PREFIX
+            // is never read for install locations).
+            PackageManager::Nub => {
+                output
+                    .env
+                    .insert("npm_config_global_dir".into(), globals_root_dir);
+                output
+                    .env
+                    .insert("npm_config_global_bin_dir".into(), globals_bin_dir);
             }
 
             // Pnpm has explicit support for the bin and root dirs,
