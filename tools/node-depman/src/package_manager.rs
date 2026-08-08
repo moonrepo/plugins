@@ -19,7 +19,7 @@ pub enum PackageManager {
     Nub,
 
     Pnpm,
-    // Major changes
+    // Major changes / New shims
     Pnpm11,
     // Rust based
     Pnpm12,
@@ -182,6 +182,56 @@ impl PackageManager {
             }
             _ => Ok(self.get_package_name()),
         }
+    }
+
+    pub fn get_global_lookup_dirs(&self, env: &HostEnvironment) -> Vec<String> {
+        let mut dirs: Vec<String> = vec![
+            "$PREFIX/bin".into(),
+            "$PREFIX/shims".into(),
+            "$PROTO_HOME/tools/node/$PROTO_NODE_VERSION/bin".into(),
+        ];
+
+        match self {
+            // https://docs.npmjs.com/cli/v9/configuring-npm/folders#prefix-configuration
+            // https://github.com/npm/cli/blob/latest/lib/npm.js
+            // https://github.com/npm/cli/blob/latest/workspaces/config/lib/index.js#L339
+            Self::Npm => {
+                dirs.push("$TOOL_DIR/shims".into());
+            }
+            // Nub's global layout is modeled on pnpm v11 and intentionally
+            // shares pnpm's directories. There is no NUB_HOME.
+            // https://github.com/nubjs/nub/blob/main/vendor/aube/crates/aube/src/commands/global.rs
+            Self::Nub |
+            // https://pnpm.io/npmrc#global-dir
+            // https://github.com/pnpm/pnpm/blob/main/config/config/src/index.ts#L350
+            // https://github.com/pnpm/pnpm/blob/main/config/config/src/dirs.ts#L40
+            Self::Pnpm | Self::Pnpm11 | Self::Pnpm12 => {
+                dirs.push("$PNPM_HOME".into());
+
+                if env.os.is_windows() {
+                    dirs.push("$LOCALAPPDATA/pnpm".into());
+                } else if env.os.is_mac() {
+                    dirs.push("$HOME/Library/pnpm".into());
+                } else {
+                    dirs.push("$XDG_DATA_HOME/pnpm".into());
+                    dirs.push("$HOME/.local/share/pnpm".into());
+                }
+            }
+            // https://github.com/yarnpkg/yarn/blob/master/src/cli/commands/global.js#L84
+            Self::Yarn1 | Self::Yarn2to5 | Self::Yarn6 => {
+                if env.os.is_windows() {
+                    dirs.push("$LOCALAPPDATA/Yarn/bin".into());
+                }
+
+                dirs.push("$HOME/.yarn/bin".into());
+            }
+        }
+
+        if env.os.is_windows() {
+            return dirs.into_iter().map(|dir| dir.replace("/", "\\")).collect();
+        }
+
+        dirs
     }
 
     pub fn get_http_headers(

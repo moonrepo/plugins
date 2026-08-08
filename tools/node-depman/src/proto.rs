@@ -455,123 +455,67 @@ pub fn locate_executables(
     Json(input): Json<LocateExecutablesInput>,
 ) -> FnResult<Json<LocateExecutablesOutput>> {
     let env = get_host_environment()?;
+    let config = get_tool_config::<NodeDepmanToolConfig>()?;
     let manager = PackageManager::detect_from_version(&input.context.version)?;
+    let rust_based = manager.is_rust_based();
     let mut secondary = FxHashMap::<String, ExecutableConfig>::default();
     let primary;
 
-    if !input.install_dir.join("shims").exists() {
+    if !rust_based && !input.install_dir.join("shims").exists() {
         create_internal_shims(env, &input.install_dir, &manager)?;
     }
-
-    // These are the directories that contain the executable binaries,
-    // NOT where the packages/node modules are stored. Some package managers
-    // have separate folders for the 2 processes, and then create symlinks.
-    let mut globals_lookup_dirs = vec![
-        "$PREFIX/bin".into(),
-        "$PREFIX/shims".into(),
-        "$PROTO_HOME/tools/node/$PROTO_NODE_VERSION/bin".into(),
-    ];
 
     match &manager {
         PackageManager::Npm => {
             primary = ExecutableConfig::new_primary("shims/npm");
-
-            // npx
             secondary.insert("npx".into(), ExecutableConfig::new("shims/npx"));
-
-            // node-gyp
             secondary.insert(
                 "node-gyp".into(),
                 ExecutableConfig::with_parent("node_modules/node-gyp/bin/node-gyp.js", "node"),
             );
-
-            // https://docs.npmjs.com/cli/v9/configuring-npm/folders#prefix-configuration
-            // https://github.com/npm/cli/blob/latest/lib/npm.js
-            // https://github.com/npm/cli/blob/latest/workspaces/config/lib/index.js#L339
-            globals_lookup_dirs.push("$TOOL_DIR/shims".into());
         }
         PackageManager::Nub => {
             let exe_name = env.os.get_exe_name("bin/nub");
 
             primary = ExecutableConfig::new_primary(&exe_name);
-
-            // nubx
             secondary.insert("nubx".into(), ExecutableConfig::new(exe_name));
-
-            // Nub's global layout is modeled on pnpm v11 and intentionally
-            // shares pnpm's directories. There is no NUB_HOME.
-            // https://github.com/nubjs/nub/blob/main/vendor/aube/crates/aube/src/commands/global.rs
-            globals_lookup_dirs.push("$PNPM_HOME".into());
-
-            if env.os.is_windows() {
-                globals_lookup_dirs.push("$LOCALAPPDATA\\pnpm".into());
-            } else if env.os.is_mac() {
-                globals_lookup_dirs.push("$HOME/Library/pnpm".into());
-            } else {
-                globals_lookup_dirs.push("$XDG_DATA_HOME/pnpm".into());
-                globals_lookup_dirs.push("$HOME/.local/share/pnpm".into());
-            }
         }
-        PackageManager::Pnpm | PackageManager::Pnpm11 | PackageManager::Pnpm12 => {
-            if manager == PackageManager::Pnpm12 {
-                let exe_name = env.os.get_exe_name("pnpm");
-
-                primary = ExecutableConfig::new_primary(&exe_name);
-                secondary.insert("pn".into(), ExecutableConfig::new(&exe_name));
-
-                let pnpx_config = ExecutableConfig::new(exe_name)
-                    .no_bin(true)
-                    .shim_before_args(StringOrVec::String("dlx".into()));
-
-                secondary.insert("pnpx".into(), pnpx_config.clone());
-                secondary.insert("pnx".into(), pnpx_config);
-            } else {
-                primary = ExecutableConfig::new_primary("shims/pnpm");
-
-                // pnpx
-                secondary.insert("pnpx".into(), ExecutableConfig::new("shims/pnpx"));
-
-                if manager == PackageManager::Pnpm11 {
-                    secondary.insert("pn".into(), ExecutableConfig::new("shims/pn"));
-                    secondary.insert("pnx".into(), ExecutableConfig::new("shims/pnx"));
-                }
-            }
-
-            // https://pnpm.io/npmrc#global-dir
-            // https://github.com/pnpm/pnpm/blob/main/config/config/src/index.ts#L350
-            // https://github.com/pnpm/pnpm/blob/main/config/config/src/dirs.ts#L40
-            globals_lookup_dirs.push("$PNPM_HOME".into());
-
-            if env.os.is_windows() {
-                globals_lookup_dirs.push("$LOCALAPPDATA\\pnpm".into());
-            } else if env.os.is_mac() {
-                globals_lookup_dirs.push("$HOME/Library/pnpm".into());
-            } else {
-                globals_lookup_dirs.push("$XDG_DATA_HOME/pnpm".into());
-                globals_lookup_dirs.push("$HOME/.local/share/pnpm".into());
-            }
+        PackageManager::Pnpm => {
+            primary = ExecutableConfig::new_primary("shims/pnpm");
+            secondary.insert("pnpx".into(), ExecutableConfig::new("shims/pnpx"));
         }
-        PackageManager::Yarn1 | PackageManager::Yarn2to5 | PackageManager::Yarn6 => {
-            if manager == PackageManager::Yarn6 {
-                primary = ExecutableConfig::new_primary(env.os.get_exe_name("yarn-bin"));
-            } else {
-                primary = ExecutableConfig::new_primary("shims/yarn");
+        PackageManager::Pnpm11 => {
+            primary = ExecutableConfig::new_primary("shims/pnpm");
+            secondary.insert("pnpx".into(), ExecutableConfig::new("shims/pnpx"));
+            secondary.insert("pn".into(), ExecutableConfig::new("shims/pn"));
+            secondary.insert("pnx".into(), ExecutableConfig::new("shims/pnx"));
+        }
+        PackageManager::Pnpm12 => {
+            let exe_name = env.os.get_exe_name("pnpm");
 
-                // yarnpkg
-                secondary.insert("yarnpkg".into(), ExecutableConfig::new("shims/yarn"));
-            }
+            primary = ExecutableConfig::new_primary(&exe_name);
+            secondary.insert("pn".into(), ExecutableConfig::new(&exe_name));
 
-            // https://github.com/yarnpkg/yarn/blob/master/src/cli/commands/global.js#L84
-            if env.os.is_windows() {
-                globals_lookup_dirs.push("$LOCALAPPDATA\\Yarn\\bin".into());
-                globals_lookup_dirs.push("$HOME\\.yarn\\bin".into());
-            } else {
-                globals_lookup_dirs.push("$HOME/.yarn/bin".into());
-            }
+            let pnpx_config = ExecutableConfig::new(exe_name)
+                .no_bin(true)
+                .shim_before_args(StringOrVec::String("dlx".into()));
+
+            secondary.insert("pnpx".into(), pnpx_config.clone());
+            secondary.insert("pnx".into(), pnpx_config);
+        }
+        PackageManager::Yarn1 | PackageManager::Yarn2to5 => {
+            primary = ExecutableConfig::new_primary("shims/yarn");
+            secondary.insert("yarnpkg".into(), ExecutableConfig::new("shims/yarn"));
+        }
+        PackageManager::Yarn6 => {
+            primary = ExecutableConfig::new_primary(env.os.get_exe_name("yarn-bin"));
         }
     };
 
-    let config = get_tool_config::<NodeDepmanToolConfig>()?;
+    // These are the directories that contain the executable binaries,
+    // NOT where the packages/node modules are stored. Some package managers
+    // have separate folders for the 2 processes, and then create symlinks.
+    let mut globals_lookup_dirs = manager.get_global_lookup_dirs(env);
 
     // If only shared dir, clear everything else
     if config.shared_globals_dir {
@@ -581,7 +525,6 @@ pub fn locate_executables(
     // Always add this so that it's available for `get_global_dirs`
     globals_lookup_dirs.push("$PROTO_HOME/tools/node/globals/bin".into());
 
-    let rust_based = manager.is_rust_based();
     let mut exes = FxHashMap::from_iter([(manager.get_bin_name(), primary)]);
     exes.extend(secondary);
 
