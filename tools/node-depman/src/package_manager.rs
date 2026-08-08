@@ -114,6 +114,10 @@ impl PackageManager {
         matches!(self, Self::Yarn1 | Self::Yarn2to5 | Self::Yarn6)
     }
 
+    pub fn is_rust_based(&self) -> bool {
+        matches!(self, Self::Nub | Self::Pnpm12 | Self::Yarn6)
+    }
+
     pub fn get_bin_name(&self) -> String {
         match self {
             Self::Npm => "npm".into(),

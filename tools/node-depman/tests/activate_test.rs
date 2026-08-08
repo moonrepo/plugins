@@ -264,7 +264,6 @@ mod node_depman_tool {
                             ..Default::default()
                         },
                         globals_dir: Some(create_globals_dir()),
-                        ..Default::default()
                     })
                     .await;
 

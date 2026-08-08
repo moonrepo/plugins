@@ -303,10 +303,10 @@ pub fn resolve_version(
         PackageManager::Pnpm12 => {
             if input.initial == UnresolvedVersionSpec::Canary {
                 output.candidate = Some(UnresolvedVersionSpec::parse("^12.0.0-rc.0")?);
-            } else if let UnresolvedVersionSpec::Alias(alias) = input.initial {
-                if alias == "rust" || alias == "next" {
-                    output.candidate = Some(UnresolvedVersionSpec::parse("^12.0.0-rc.0")?);
-                }
+            } else if let UnresolvedVersionSpec::Alias(alias) = input.initial
+                && (alias == "rust" || alias == "next")
+            {
+                output.candidate = Some(UnresolvedVersionSpec::parse("^12.0.0-rc.0")?);
             }
         }
 
@@ -581,11 +581,17 @@ pub fn locate_executables(
     // Always add this so that it's available for `get_global_dirs`
     globals_lookup_dirs.push("$PROTO_HOME/tools/node/globals/bin".into());
 
+    let rust_based = manager.is_rust_based();
     let mut exes = FxHashMap::from_iter([(manager.get_bin_name(), primary)]);
     exes.extend(secondary);
 
     // Update the permissions of each executable since they are custom shims
     exes.iter_mut().for_each(|(name, config)| {
+        if rust_based {
+            return;
+        }
+
+        // Only applies to shims, not real binaries!
         config.no_bin = true;
 
         if name != "node-gyp" {
