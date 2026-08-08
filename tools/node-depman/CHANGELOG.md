@@ -4,6 +4,7 @@
 
 #### 🚀 Updates
 
+- Added experimental support for Nub: https://nubjs.com/.
 - Added experimental support for pnpm v12 (Rust based).
 - Updated version detection to loop through all possible fields (`packageManager`, `engines`, etc) to find an applicable version, instead of failing on the first invalid version.
 

@@ -33,16 +33,20 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
         name: manager.get_bin_name(),
         type_of: PluginType::DependencyManager,
         lock_options: ToolLockOptions {
-            // Yarn v6+ and pnpm v12+ is downloaded as an os/arch specific binary,
+            // nub, yarn v6+, and pnpm v12+ are downloaded as an os/arch specific binary,
             // so lock records must be scoped to them. Everything else is a
             // platform agnostic tarball from the npm registry. Versions are not
-            // known at registration time, so scope all pnpm/yarn records.
+            // known at registration time, so scope all non-npm records.
             ignore_os_arch: manager.is_npm(),
             ..Default::default()
         },
         minimum_proto_version: Some(Version::new(0, 60, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
-        requires: vec!["node".into()],
+        requires: if manager.is_nub() {
+            vec![]
+        } else {
+            vec!["node".into()]
+        },
         ..Default::default()
     }))
 }
@@ -296,6 +300,16 @@ pub fn resolve_version(
             }
         }
 
+        PackageManager::Pnpm12 => {
+            if input.initial == UnresolvedVersionSpec::Canary {
+                output.candidate = Some(UnresolvedVersionSpec::parse("^12.0.0-rc.0")?);
+            } else if let UnresolvedVersionSpec::Alias(alias) = input.initial {
+                if alias == "rust" || alias == "next" {
+                    output.candidate = Some(UnresolvedVersionSpec::parse("^12.0.0-rc.0")?);
+                }
+            }
+        }
+
         PackageManager::Yarn1 | PackageManager::Yarn2to5 | PackageManager::Yarn6 => {
             if input.initial == UnresolvedVersionSpec::Canary {
                 output.candidate = Some(UnresolvedVersionSpec::parse("^6.0.0-rc.0")?);
@@ -476,6 +490,14 @@ pub fn locate_executables(
             // https://github.com/npm/cli/blob/latest/workspaces/config/lib/index.js#L339
             globals_lookup_dirs.push("$TOOL_DIR/shims".into());
         }
+        PackageManager::Nub => {
+            let exe_name = env.os.get_exe_name("bin/nub");
+
+            primary = ExecutableConfig::new_primary(&exe_name);
+
+            // nubx
+            secondary.insert("nubx".into(), ExecutableConfig::new(exe_name));
+        }
         PackageManager::Pnpm | PackageManager::Pnpm11 | PackageManager::Pnpm12 => {
             if manager == PackageManager::Pnpm12 {
                 let exe_name = env.os.get_exe_name("pnpm");
@@ -594,7 +616,7 @@ pub fn activate_environment(
         match manager {
             // Unix will create a /bin directory when installing into the root,
             // while Windows installs directly into the /bin directory.
-            PackageManager::Npm => {
+            PackageManager::Npm | PackageManager::Nub => {
                 output.env.insert(
                     "PREFIX".into(),
                     if env.os.is_windows() {
@@ -670,8 +692,8 @@ fn create_internal_shims(
         PackageManager::Yarn1 | PackageManager::Yarn2to5 => {
             create_internal_shim(env, tool_dir, "yarn", "yarn.js")?;
         }
-        // Yarn v6+ and pnpm v12+ is a native binary and requires no shims
-        PackageManager::Yarn6 | PackageManager::Pnpm12 => {}
+        // nub, yarn v6+, and pnpm v12+ are a native binary and require no shims
+        PackageManager::Nub | PackageManager::Pnpm12 | PackageManager::Yarn6 => {}
     };
 
     Ok(())
