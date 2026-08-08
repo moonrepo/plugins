@@ -5,6 +5,9 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Default, Deserialize, Serialize, Schematic)]
 #[serde(default, deny_unknown_fields, rename_all = "kebab-case")]
 pub struct CargoBackendConfig {
+    /// Install using locked versions.
+    pub locked: bool,
+
     /// Do not use `cargo-binstall` even when available.
     pub no_binstall: bool,
 
@@ -21,6 +24,9 @@ pub struct CargoToolConfig {
 
     /// List of features to enable for the package.
     pub features: Vec<String>,
+
+    /// Install using locked versions.
+    pub locked: bool,
 
     /// Custom Git URL to the package.
     // pub git_url: Option<String>,

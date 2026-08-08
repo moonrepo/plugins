@@ -93,6 +93,10 @@ pub fn native_install(
     // What to install
     command.args.push(format!("{id}@{}", input.context.version));
 
+    if tool_config.locked || backend_config.locked {
+        command.args.push("--locked".into());
+    }
+
     // if let Some(git) = &tool_config.git_url {
     //     command.args.push("--git".into());
     //     command.args.push(git.into());
