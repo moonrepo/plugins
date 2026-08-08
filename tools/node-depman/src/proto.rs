@@ -71,30 +71,47 @@ pub fn parse_version_file(
         && let Ok(package_json) = json::from_str::<PackageJson>(&input.content)
     {
         let manager_name = PackageManager::detect()?.get_bin_name();
+        let mut candidates = vec![];
 
         if let Some(constraint) =
             extract_dev_engine_package_manager_version(&package_json, &manager_name)
         {
-            version = Some(UnresolvedVersionSpec::parse(constraint)?);
+            candidates.push(constraint);
+        }
+
+        if let Some(constraint) = extract_package_manager_version(&package_json, &manager_name) {
+            candidates.push(constraint);
+        }
+
+        if let Some(constraint) = extract_volta_version(&package_json, &input.path, &manager_name)?
+        {
+            candidates.push(constraint);
+        }
+
+        if let Some(constraint) = extract_engine_version(&package_json, &manager_name) {
+            candidates.push(constraint);
+        }
+
+        let mut error = None;
+
+        for candidates in candidates {
+            match UnresolvedVersionSpec::parse(candidates) {
+                Ok(spec) => {
+                    version = Some(spec);
+                    break;
+                }
+                Err(err) => {
+                    if error.is_none() {
+                        error = Some(err);
+                    }
+                }
+            };
         }
 
         if version.is_none()
-            && let Some(constraint) = extract_package_manager_version(&package_json, &manager_name)
+            && let Some(error) = error
         {
-            version = Some(UnresolvedVersionSpec::parse(constraint)?);
-        }
-
-        if version.is_none()
-            && let Some(constraint) =
-                extract_volta_version(&package_json, &input.path, &manager_name)?
-        {
-            version = Some(UnresolvedVersionSpec::parse(constraint)?);
-        }
-
-        if version.is_none()
-            && let Some(constraint) = extract_engine_version(&package_json, &manager_name)
-        {
-            version = Some(UnresolvedVersionSpec::parse(constraint)?);
+            return Err(plugin_err!("{error}"));
         }
     }
 

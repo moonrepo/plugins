@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Updated version detection to loop through all possible fields (`packageManager`, `engines`, etc) to find an applicable version, instead of failing on the first invalid version.
+
 ## 0.17.11
 
 #### 🚀 Updates

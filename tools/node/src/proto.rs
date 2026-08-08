@@ -57,20 +57,40 @@ pub fn parse_version_file(
 
     if input.file == "package.json" {
         if let Ok(package_json) = json::from_str::<PackageJson>(&input.content) {
+            let mut candidates = vec![];
+
             if let Some(constraint) = extract_dev_engine_runtime_version(&package_json, "node") {
-                version = Some(UnresolvedVersionSpec::parse(constraint)?);
+                candidates.push(constraint);
+            }
+
+            if let Some(constraint) = extract_volta_version(&package_json, &input.path, "node")? {
+                candidates.push(constraint);
+            }
+
+            if let Some(constraint) = extract_engine_version(&package_json, "node") {
+                candidates.push(constraint);
+            }
+
+            let mut error = None;
+
+            for candidates in candidates {
+                match UnresolvedVersionSpec::parse(candidates) {
+                    Ok(spec) => {
+                        version = Some(spec);
+                        break;
+                    }
+                    Err(err) => {
+                        if error.is_none() {
+                            error = Some(err);
+                        }
+                    }
+                };
             }
 
             if version.is_none()
-                && let Some(constraint) = extract_volta_version(&package_json, &input.path, "node")?
+                && let Some(error) = error
             {
-                version = Some(UnresolvedVersionSpec::parse(constraint)?);
-            }
-
-            if version.is_none()
-                && let Some(constraint) = extract_engine_version(&package_json, "node")
-            {
-                version = Some(UnresolvedVersionSpec::parse(constraint)?);
+                return Err(plugin_err!("{error}"));
             }
         }
     } else if let Some(constraint) = extract_version_from_text(&input.content) {

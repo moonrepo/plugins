@@ -114,6 +114,61 @@ mod node_tool {
     }
 
     #[tokio::test(flavor = "multi_thread")]
+    async fn parses_first_field_when_multiple_are_valid() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("node-test").await;
+
+        assert_eq!(
+            plugin
+                .parse_version_file(ParseVersionFileInput {
+                    content: r#"{ "devEngines": { "runtime": { "name": "node", "version": "^20" } }, "volta": { "node": "18.1.0" }, "engines": { "node": ">=16" } }"#
+                        .into(),
+                    file: "package.json".into(),
+                    ..Default::default()
+                })
+                .await,
+            ParseVersionFileOutput {
+                version: Some(UnresolvedVersionSpec::parse("^20").unwrap()),
+            }
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn skips_invalid_field_and_parses_next_valid_field() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("node-test").await;
+
+        assert_eq!(
+            plugin
+                .parse_version_file(ParseVersionFileInput {
+                    content: r#"{ "volta": { "node": "invalid version" }, "engines": { "node": ">=18" } }"#
+                        .into(),
+                    file: "package.json".into(),
+                    ..Default::default()
+                })
+                .await,
+            ParseVersionFileOutput {
+                version: Some(UnresolvedVersionSpec::parse(">=18").unwrap()),
+            }
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    #[should_panic(expected = "Failed to parse a version requirement.")]
+    async fn errors_if_no_field_is_valid() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("node-test").await;
+
+        plugin
+            .parse_version_file(ParseVersionFileInput {
+                content: r#"{ "volta": { "node": "invalid version" } }"#.into(),
+                file: "package.json".into(),
+                ..Default::default()
+            })
+            .await;
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
     async fn parses_nvmrc() {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox.create_plugin("node-test").await;

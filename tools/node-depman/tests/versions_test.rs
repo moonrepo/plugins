@@ -31,6 +31,62 @@ mod node_depman_tool {
         );
     }
 
+    #[tokio::test(flavor = "multi_thread")]
+    async fn parses_first_field_when_multiple_are_valid() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("npm-test").await;
+
+        assert_eq!(
+            plugin
+                .parse_version_file(ParseVersionFileInput {
+                    content: r#"{ "devEngines": { "packageManager": { "name": "npm", "version": "1.2.3" } }, "packageManager": "npm@4.5.6", "volta": { "npm": "7.8.9" }, "engines": { "npm": "^10" } }"#
+                        .into(),
+                    file: "package.json".into(),
+                    ..Default::default()
+                })
+                .await,
+            ParseVersionFileOutput {
+                version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
+            }
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn skips_invalid_field_and_parses_next_valid_field() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("npm-test").await;
+
+        assert_eq!(
+            plugin
+                .parse_version_file(ParseVersionFileInput {
+                    content: r#"{ "packageManager": "npm@https://registry.npmjs.org/npm/-/npm-9.0.0.tgz", "volta": { "npm": "7.8.9" }, "engines": { "npm": "^10" } }"#
+                        .into(),
+                    file: "package.json".into(),
+                    ..Default::default()
+                })
+                .await,
+            ParseVersionFileOutput {
+                version: Some(UnresolvedVersionSpec::parse("7.8.9").unwrap()),
+            }
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    #[should_panic(expected = "Failed to parse a version requirement.")]
+    async fn errors_if_no_field_is_valid() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("npm-test").await;
+
+        plugin
+            .parse_version_file(ParseVersionFileInput {
+                content: r#"{ "packageManager": "npm@https://registry.npmjs.org/npm/-/npm-9.0.0.tgz" }"#
+                    .into(),
+                file: "package.json".into(),
+                ..Default::default()
+            })
+            .await;
+    }
+
     mod npm {
         use super::*;
 

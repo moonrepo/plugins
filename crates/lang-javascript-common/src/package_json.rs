@@ -75,10 +75,7 @@ pub fn extract_engine_version(package_json: &PackageJson, key: &str) -> Option<S
     None
 }
 
-pub fn extract_package_manager_version<'a>(
-    package_json: &'a PackageJson,
-    key: &str,
-) -> Option<&'a str> {
+pub fn extract_package_manager_version(package_json: &PackageJson, key: &str) -> Option<String> {
     if let Some(pm) = &package_json.package_manager {
         let mut parts = pm.split('@');
         let name = parts.next().unwrap_or_default();
@@ -95,7 +92,7 @@ pub fn extract_package_manager_version<'a>(
                 "latest"
             };
 
-            return Some(value);
+            return Some(value.into());
         }
     }
 
