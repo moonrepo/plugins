@@ -206,6 +206,34 @@ mod node_depman_tool {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn supports_prebuilt_v11() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("pnpm-test", |config| {
+                    config.host(HostOS::MacOS, HostArch::Arm64);
+                })
+                .await;
+
+            // v11 is still a platform agnostic tarball, not a native binary
+            assert_eq!(
+                plugin
+                    .download_prebuilt(DownloadPrebuiltInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("11.0.0").unwrap(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .await,
+                DownloadPrebuiltOutput {
+                    archive_prefix: Some("package".into()),
+                    download_url: "https://registry.npmjs.org/pnpm/-/pnpm-11.0.0.tgz".into(),
+                    ..Default::default()
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn locates_default_bin() {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
@@ -332,6 +360,322 @@ mod node_depman_tool {
                     )]),
                     ..Default::default()
                 }
+            );
+        }
+    }
+
+    mod pnpm12 {
+        use super::*;
+
+        // Pnpm >= 12 is Rust based and downloaded from the npm registry
+        // as an os/arch specific package: @pnpm/exe.{os}-{arch}
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_prebuilt_macos_arm64() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("pnpm-test", |config| {
+                    config.host(HostOS::MacOS, HostArch::Arm64);
+                })
+                .await;
+
+            assert_eq!(
+                plugin
+                    .download_prebuilt(DownloadPrebuiltInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("12.0.0").unwrap(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .await,
+                DownloadPrebuiltOutput {
+                    archive_prefix: Some("package".into()),
+                    download_url: "https://registry.npmjs.org/@pnpm/exe.darwin-arm64/-/exe.darwin-arm64-12.0.0.tgz".into(),
+                    ..Default::default()
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_prebuilt_linux_x64_gnu() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("pnpm-test", |config| {
+                    config.host_with(|host| {
+                        host.os = HostOS::Linux;
+                        host.arch = HostArch::X64;
+                        host.libc = HostLibc::Gnu;
+                    });
+                })
+                .await;
+
+            // Unlike yarn, gnu is supported and has no libc suffix
+            assert_eq!(
+                plugin
+                    .download_prebuilt(DownloadPrebuiltInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("12.0.0").unwrap(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .await,
+                DownloadPrebuiltOutput {
+                    archive_prefix: Some("package".into()),
+                    download_url: "https://registry.npmjs.org/@pnpm/exe.linux-x64/-/exe.linux-x64-12.0.0.tgz".into(),
+                    ..Default::default()
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_prebuilt_linux_arm64_musl() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("pnpm-test", |config| {
+                    config.host_with(|host| {
+                        host.os = HostOS::Linux;
+                        host.arch = HostArch::Arm64;
+                        host.libc = HostLibc::Musl;
+                    });
+                })
+                .await;
+
+            assert_eq!(
+                plugin
+                    .download_prebuilt(DownloadPrebuiltInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("12.0.0").unwrap(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .await,
+                DownloadPrebuiltOutput {
+                    archive_prefix: Some("package".into()),
+                    download_url: "https://registry.npmjs.org/@pnpm/exe.linux-arm64-musl/-/exe.linux-arm64-musl-12.0.0.tgz".into(),
+                    ..Default::default()
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_prebuilt_windows_x64() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("pnpm-test", |config| {
+                    config.host(HostOS::Windows, HostArch::X64);
+                })
+                .await;
+
+            // Unlike yarn, windows is supported
+            assert_eq!(
+                plugin
+                    .download_prebuilt(DownloadPrebuiltInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("12.0.0").unwrap(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .await,
+                DownloadPrebuiltOutput {
+                    archive_prefix: Some("package".into()),
+                    download_url: "https://registry.npmjs.org/@pnpm/exe.windows-x64/-/exe.windows-x64-12.0.0.tgz".into(),
+                    ..Default::default()
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn extracts_auth_token_header() {
+            let sandbox = create_empty_proto_sandbox();
+            sandbox.create_file(".npmrc", "//registry.npmjs.org/:_authToken = abc123");
+
+            let plugin = sandbox
+                .create_plugin_with_config("pnpm-test", |config| {
+                    config.host(HostOS::Linux, HostArch::Arm64);
+                })
+                .await;
+
+            assert_eq!(
+                plugin
+                    .download_prebuilt(DownloadPrebuiltInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("12.0.0").unwrap(),
+                            working_dir: plugin.tool.to_virtual_path(sandbox.path()),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .await,
+                DownloadPrebuiltOutput {
+                    archive_prefix: Some("package".into()),
+                    download_url: "https://registry.npmjs.org/@pnpm/exe.linux-arm64/-/exe.linux-arm64-12.0.0.tgz".into(),
+                    http_headers: FxHashMap::from_iter([(
+                        "Authorization".into(),
+                        "Bearer abc123".into()
+                    )]),
+                    ..Default::default()
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        #[should_panic(expected = "unsupported architecture x86.")]
+        async fn doesnt_support_other_archs() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("pnpm-test", |config| {
+                    config.host(HostOS::Linux, HostArch::X86);
+                })
+                .await;
+
+            plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("12.0.0").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await;
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        #[should_panic(expected = "unsupported OS freebsd.")]
+        async fn doesnt_support_other_os() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("pnpm-test", |config| {
+                    config.host(HostOS::FreeBSD, HostArch::Arm64);
+                })
+                .await;
+
+            plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("12.0.0").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await;
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        #[should_panic(expected = "pnpm does not support canary/nightly versions.")]
+        async fn doesnt_support_canary() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("pnpm-test", |config| {
+                    config.host(HostOS::MacOS, HostArch::Arm64);
+                })
+                .await;
+
+            plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("canary").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await;
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn locates_native_bin() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("pnpm-test", |config| {
+                    config.host(HostOS::MacOS, HostArch::Arm64);
+                })
+                .await;
+
+            let exes = plugin
+                .locate_executables(LocateExecutablesInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("12.0.0").unwrap(),
+                        ..Default::default()
+                    },
+                    install_dir: plugin.tool.to_virtual_path(sandbox.path()),
+                })
+                .await
+                .exes;
+
+            assert_eq!(exes.get("pnpm").unwrap().exe_path, Some("pnpm".into()));
+            assert_eq!(exes.get("pn").unwrap().exe_path, Some("pnpm".into()));
+
+            // pnpx and pnx run through the primary binary as `pnpm dlx`
+            for alias in ["pnpx", "pnx"] {
+                let exe = exes.get(alias).unwrap();
+
+                assert_eq!(exe.exe_path, Some("pnpm".into()));
+                assert!(exe.no_bin);
+                assert_eq!(
+                    exe.shim_before_args,
+                    Some(StringOrVec::String("dlx".into()))
+                );
+            }
+
+            // No internal shims are created for the native binary
+            assert!(!sandbox.path().join("shims/pnpm").exists());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn locates_native_bin_windows() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("pnpm-test", |config| {
+                    config.host(HostOS::Windows, HostArch::X64);
+                })
+                .await;
+
+            let exes = plugin
+                .locate_executables(LocateExecutablesInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("12.0.0").unwrap(),
+                        ..Default::default()
+                    },
+                    install_dir: plugin.tool.to_virtual_path(sandbox.path()),
+                })
+                .await
+                .exes;
+
+            // The .exe extension must not be rewritten to .cmd
+            assert_eq!(
+                exes.get("pnpm").unwrap().exe_path,
+                Some("pnpm.exe".into())
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn locates_native_bin_for_next_alias() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("pnpm-test", |config| {
+                    config.host(HostOS::MacOS, HostArch::Arm64);
+                })
+                .await;
+
+            // The "next" alias maps to v12
+            assert_eq!(
+                plugin
+                    .locate_executables(LocateExecutablesInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("next").unwrap(),
+                            ..Default::default()
+                        },
+                        install_dir: plugin.tool.to_virtual_path(sandbox.path()),
+                    })
+                    .await
+                    .exes
+                    .get("pnpm")
+                    .unwrap()
+                    .exe_path,
+                Some("pnpm".into())
             );
         }
     }

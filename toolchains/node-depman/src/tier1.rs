@@ -21,16 +21,18 @@ pub fn register_toolchain(
             lock_file_names: vec!["package-lock.json".into(), "npm-shrinkwrap.json".into()],
             ..Default::default()
         },
-        PackageManager::Pnpm | PackageManager::Pnpm11 => RegisterToolchainOutput {
-            config_file_globs: vec![
-                ".npmrc".into(),
-                "pnpm-workspace.yaml".into(),
-                ".pnpmfile.*".into(),
-            ],
-            exe_names: vec!["pnpm".into(), "pnpx".into()],
-            lock_file_names: vec!["pnpm-lock.yaml".into()],
-            ..Default::default()
-        },
+        PackageManager::Pnpm | PackageManager::Pnpm11 | PackageManager::Pnpm12 => {
+            RegisterToolchainOutput {
+                config_file_globs: vec![
+                    ".npmrc".into(),
+                    "pnpm-workspace.yaml".into(),
+                    ".pnpmfile.*".into(),
+                ],
+                exe_names: vec!["pnpm".into(), "pnpx".into()],
+                lock_file_names: vec!["pnpm-lock.yaml".into()],
+                ..Default::default()
+            }
+        }
         PackageManager::Yarn1 | PackageManager::Yarn2to5 | PackageManager::Yarn6 => {
             RegisterToolchainOutput {
                 config_file_globs: vec![".npmrc".into(), ".yarnrc.*".into()],
@@ -70,7 +72,7 @@ pub fn define_toolchain_config() -> FnResult<Json<DefineToolchainConfigOutput>> 
     Ok(Json(DefineToolchainConfigOutput {
         schema: match manager {
             PackageManager::Npm => SchemaBuilder::build_root::<NpmToolchainConfig>(),
-            PackageManager::Pnpm | PackageManager::Pnpm11 => {
+            PackageManager::Pnpm | PackageManager::Pnpm11 | PackageManager::Pnpm12 => {
                 SchemaBuilder::build_root::<PnpmToolchainConfig>()
             }
             PackageManager::Yarn1 | PackageManager::Yarn2to5 | PackageManager::Yarn6 => {

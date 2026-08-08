@@ -38,7 +38,9 @@ mod node_depman_tool {
             let metadata = plugin.register_tool(create_metadata("pnpm-test")).await;
 
             assert_eq!(metadata.name, "pnpm");
-            assert!(metadata.lock_options.ignore_os_arch);
+
+            // v12+ binaries are os/arch specific, so records must be scoped
+            assert!(!metadata.lock_options.ignore_os_arch);
             assert_eq!(metadata.type_of, PluginType::DependencyManager);
             assert_eq!(
                 metadata.plugin_version.unwrap().to_string(),

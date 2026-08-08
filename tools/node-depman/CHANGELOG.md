@@ -4,6 +4,7 @@
 
 #### 🚀 Updates
 
+- Added experimental support for pnpm v12 (Rust based).
 - Updated version detection to loop through all possible fields (`packageManager`, `engines`, etc) to find an applicable version, instead of failing on the first invalid version.
 
 #### 🐞 Fixes
@@ -21,7 +22,7 @@
 #### 🚀 Updates
 
 - Updated to support proto v0.59 release.
-- Added experimental support for yarn v6.
+- Added experimental support for yarn v6 (Rust based).
 
 ## 0.18.1
 
