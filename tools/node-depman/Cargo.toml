@@ -1,6 +1,6 @@
 [package]
 name = "node_depman_tool"
-version = "0.20.0"
+version = "0.20.1"
 edition = "2024"
 description = "Node.js dependency managers (npm, pnpm, yarn) WASM plugin for proto."
 authors = ["Miles Johnson"]
