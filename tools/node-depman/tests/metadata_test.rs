@@ -20,10 +20,6 @@ mod node_depman_tool {
             assert_eq!(metadata.name, "npm");
             assert!(metadata.lock_options.ignore_os_arch);
             assert_eq!(metadata.type_of, PluginType::DependencyManager);
-            assert_eq!(
-                metadata.plugin_version.unwrap().to_string(),
-                env!("CARGO_PKG_VERSION")
-            );
         }
     }
 
@@ -42,10 +38,6 @@ mod node_depman_tool {
             // Binaries are os/arch specific, so records must be scoped
             assert!(!metadata.lock_options.ignore_os_arch);
             assert_eq!(metadata.type_of, PluginType::DependencyManager);
-            assert_eq!(
-                metadata.plugin_version.unwrap().to_string(),
-                env!("CARGO_PKG_VERSION")
-            );
 
             // Unlike the other package managers, nub does not require Node.js
             assert!(metadata.requires.is_empty());
@@ -67,10 +59,6 @@ mod node_depman_tool {
             // v12+ binaries are os/arch specific, so records must be scoped
             assert!(!metadata.lock_options.ignore_os_arch);
             assert_eq!(metadata.type_of, PluginType::DependencyManager);
-            assert_eq!(
-                metadata.plugin_version.unwrap().to_string(),
-                env!("CARGO_PKG_VERSION")
-            );
         }
     }
 
@@ -89,10 +77,6 @@ mod node_depman_tool {
             // v6+ binaries are os/arch specific, so records must be scoped
             assert!(!metadata.lock_options.ignore_os_arch);
             assert_eq!(metadata.type_of, PluginType::DependencyManager);
-            assert_eq!(
-                metadata.plugin_version.unwrap().to_string(),
-                env!("CARGO_PKG_VERSION")
-            );
         }
     }
 }

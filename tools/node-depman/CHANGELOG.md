@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed an issue where the `nub` binary wasn't executable.
+
 ## 0.20.0
 
 #### 🚀 Updates

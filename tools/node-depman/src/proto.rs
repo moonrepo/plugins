@@ -477,8 +477,14 @@ pub fn locate_executables(
         PackageManager::Nub => {
             let exe_name = env.os.get_exe_name("bin/nub");
 
-            primary = ExecutableConfig::new_primary(&exe_name);
-            secondary.insert("nubx".into(), ExecutableConfig::new(exe_name));
+            // Nub binaries are not executable by default within the npm package,
+            // so we need to make them executable on our end!
+            // https://github.com/nubjs/nub/blob/main/npm/nub/postinstall.js#L22
+            primary = ExecutableConfig::new_primary(&exe_name).update_perms(true);
+            secondary.insert(
+                "nubx".into(),
+                ExecutableConfig::new(exe_name).update_perms(true),
+            );
         }
         PackageManager::Pnpm => {
             primary = ExecutableConfig::new_primary("shims/pnpm");
