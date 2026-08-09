@@ -85,7 +85,7 @@ pub fn extend_project_graph(
     let mut output = ExtendProjectGraphOutput::default();
     let config = parse_toolchain_config_schema::<GoToolchainConfig>(input.toolchain_config)?;
     let env = get_host_environment()?;
-    let go_exists = command_exists(&env, "go");
+    let go_exists = command_exists(env, "go");
 
     // First pass, gather all packages and their manifests
     let mut packages = BTreeMap::default();
@@ -219,7 +219,7 @@ pub fn extend_task_command(
     let env = get_host_environment()?;
 
     // Always include Go specific paths for all commands
-    gather_shared_paths(&env, input.globals_dir.as_ref(), &mut output.paths)?;
+    gather_shared_paths(env, input.globals_dir.as_ref(), &mut output.paths)?;
 
     Ok(Json(output))
 }
@@ -232,7 +232,7 @@ pub fn extend_task_script(
     let env = get_host_environment()?;
 
     // Always include Go specific paths for all commands
-    gather_shared_paths(&env, input.globals_dir.as_ref(), &mut output.paths)?;
+    gather_shared_paths(env, input.globals_dir.as_ref(), &mut output.paths)?;
 
     Ok(Json(output))
 }

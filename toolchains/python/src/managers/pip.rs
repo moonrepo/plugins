@@ -104,7 +104,7 @@ pub fn parse_pyproject_toml(path: &VirtualPath, output: &mut ParseManifestOutput
     };
 
     if let Some(version) = &project.version {
-        output.version = Version::parse(&version.to_string()).ok();
+        output.version = Version::parse(version.to_string()).ok();
     }
 
     if let Some(dependencies) = &project.dependencies {

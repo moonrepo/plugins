@@ -63,7 +63,7 @@ pub fn extend_task_command(
         output.args = Some(Extend::Prepend(config.execute_args));
     }
 
-    gather_shared_paths(&env, input.globals_dir.as_ref(), &mut output.paths)?;
+    gather_shared_paths(env, input.globals_dir.as_ref(), &mut output.paths)?;
 
     Ok(Json(output))
 }
@@ -75,7 +75,7 @@ pub fn extend_task_script(
     let mut output = ExtendTaskScriptOutput::default();
     let env = get_host_environment()?;
 
-    gather_shared_paths(&env, input.globals_dir.as_ref(), &mut output.paths)?;
+    gather_shared_paths(env, input.globals_dir.as_ref(), &mut output.paths)?;
 
     Ok(Json(output))
 }

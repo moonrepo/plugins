@@ -144,7 +144,7 @@ pub fn extend_task_command(
     }
 
     // Always include Cargo specific paths for all commands
-    gather_shared_paths(&env, input.globals_dir.as_ref(), &mut output.paths)?;
+    gather_shared_paths(env, input.globals_dir.as_ref(), &mut output.paths)?;
 
     Ok(Json(output))
 }
@@ -157,7 +157,7 @@ pub fn extend_task_script(
     let env = get_host_environment()?;
 
     // Always include Cargo specific paths for all commands
-    gather_shared_paths(&env, input.globals_dir.as_ref(), &mut output.paths)?;
+    gather_shared_paths(env, input.globals_dir.as_ref(), &mut output.paths)?;
 
     Ok(Json(output))
 }

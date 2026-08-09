@@ -18,15 +18,14 @@ const DEFAULT_NON_PRODUCTION_GROUPS: [&str; 2] = ["development", "test"];
 pub fn locate_dependencies_root(
     Json(input): Json<LocateDependenciesRootInput>,
 ) -> FnResult<Json<LocateDependenciesRootOutput>> {
-    let mut output = LocateDependenciesRootOutput::default();
-
     // Bundler has no workspace concept (unlike npm/uv/Cargo), so each project
     // is its own dependency root and there are no members to report. Walk
     // upward for the nearest Gemfile/Gemfile.lock. If none is found, `root`
     // stays `None` and moon skips install steps for this project.
-    output.root = locate_root_many(&input.starting_dir, &ROOT_FILES);
-
-    Ok(Json(output))
+    Ok(Json(LocateDependenciesRootOutput {
+        root: locate_root_many(&input.starting_dir, &ROOT_FILES),
+        ..Default::default()
+    }))
 }
 
 #[plugin_fn]
