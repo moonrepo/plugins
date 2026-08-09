@@ -11,7 +11,7 @@ mod cargo_toml {
         #[test]
         fn adds_if_not_set() {
             let mut manifest = CargoToml {
-                path: VirtualPath::Real(PathBuf::from("/base/Cargo.toml")),
+                path: VirtualPath::new(PathBuf::from("/base/Cargo.toml")),
                 data: CargoTomlInner::new_package(),
                 ..Default::default()
             };
@@ -30,7 +30,7 @@ mod cargo_toml {
         #[test]
         fn doesnt_add_if_empty() {
             let mut manifest = CargoToml {
-                path: VirtualPath::Real(PathBuf::from("/base/Cargo.toml")),
+                path: VirtualPath::new(PathBuf::from("/base/Cargo.toml")),
                 data: CargoTomlInner::new_package(),
                 ..Default::default()
             };
@@ -46,7 +46,7 @@ mod cargo_toml {
         #[test]
         fn doesnt_add_if_same_value() {
             let mut manifest = CargoToml {
-                path: VirtualPath::Real(PathBuf::from("/base/Cargo.toml")),
+                path: VirtualPath::new(PathBuf::from("/base/Cargo.toml")),
                 data: {
                     let mut pkg = CargoTomlInner::new_package();
                     pkg.package
@@ -75,7 +75,7 @@ mod cargo_toml {
         #[test]
         fn saves_field_if_set() {
             let mut manifest = CargoToml {
-                path: VirtualPath::Real(PathBuf::from("/base/Cargo.toml")),
+                path: VirtualPath::new(PathBuf::from("/base/Cargo.toml")),
                 data: CargoTomlInner::new_package(),
                 ..Default::default()
             };
@@ -97,7 +97,7 @@ mod cargo_toml {
         #[test]
         fn doesnt_save_field_if_not_set() {
             let manifest = CargoToml {
-                path: VirtualPath::Real(PathBuf::from("/base/Cargo.toml")),
+                path: VirtualPath::new(PathBuf::from("/base/Cargo.toml")),
                 data: CargoTomlInner::new_package(),
                 ..Default::default()
             };
@@ -129,7 +129,7 @@ mod cargo_toml {
         #[test]
         fn adds_if_not_set() {
             let mut manifest = CargoToml {
-                path: VirtualPath::Real(PathBuf::from("/base/Cargo.toml")),
+                path: VirtualPath::new(PathBuf::from("/base/Cargo.toml")),
                 data: CargoTomlInner::new_workspace(),
                 ..Default::default()
             };
@@ -145,7 +145,7 @@ mod cargo_toml {
         #[test]
         fn doesnt_add_if_empty() {
             let mut manifest = CargoToml {
-                path: VirtualPath::Real(PathBuf::from("/base/Cargo.toml")),
+                path: VirtualPath::new(PathBuf::from("/base/Cargo.toml")),
                 data: CargoTomlInner::new_workspace(),
                 ..Default::default()
             };
@@ -161,7 +161,7 @@ mod cargo_toml {
         #[test]
         fn doesnt_add_if_same_value() {
             let mut manifest = CargoToml {
-                path: VirtualPath::Real(PathBuf::from("/base/Cargo.toml")),
+                path: VirtualPath::new(PathBuf::from("/base/Cargo.toml")),
                 data: {
                     let mut ws = CargoTomlInner::new_workspace();
                     let pkg = ws
@@ -188,7 +188,7 @@ mod cargo_toml {
         #[test]
         fn saves_field_if_set() {
             let mut manifest = CargoToml {
-                path: VirtualPath::Real(PathBuf::from("/base/Cargo.toml")),
+                path: VirtualPath::new(PathBuf::from("/base/Cargo.toml")),
                 data: CargoTomlInner::new_workspace(),
                 ..Default::default()
             };
@@ -210,7 +210,7 @@ mod cargo_toml {
         #[test]
         fn doesnt_save_field_if_not_set() {
             let manifest = CargoToml {
-                path: VirtualPath::Real(PathBuf::from("/base/Cargo.toml")),
+                path: VirtualPath::new(PathBuf::from("/base/Cargo.toml")),
                 data: CargoTomlInner::new_workspace(),
                 ..Default::default()
             };

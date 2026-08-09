@@ -9,7 +9,6 @@ use moon_target::Target;
 use serde_json::json;
 use starbase_utils::fs;
 use std::collections::BTreeMap;
-use std::path::PathBuf;
 
 mod javascript_toolchain_tier2 {
     use super::*;
@@ -68,14 +67,14 @@ mod javascript_toolchain_tier2 {
                 ])
             );
 
-            output.input_files.sort();
+            output.input_files.sort_by(|a, d| a.cmp(d));
 
             assert_eq!(
                 output.input_files,
                 [
-                    PathBuf::from("/workspace/a/package.json"),
-                    PathBuf::from("/workspace/b/package.json"),
-                    PathBuf::from("/workspace/c/package.json"),
+                    VirtualPath::new("/workspace/a/package.json"),
+                    VirtualPath::new("/workspace/b/package.json"),
+                    VirtualPath::new("/workspace/c/package.json"),
                 ]
             );
         }
@@ -103,7 +102,7 @@ mod javascript_toolchain_tier2 {
 
             assert_eq!(
                 output.input_files,
-                [PathBuf::from("/workspace/a/package.json")]
+                [VirtualPath::new("/workspace/a/package.json")]
             );
         }
 
@@ -457,7 +456,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(sandbox.path().into()),
+                    starting_dir: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": "npm"
                     }),
@@ -476,7 +475,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(sandbox.path().join("package")),
+                    starting_dir: VirtualPath::new(sandbox.path().join("package")),
                     toolchain_config: json!({
                         "packageManager": null
                     }),
@@ -495,7 +494,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(sandbox.path().join("package/nested")),
+                    starting_dir: VirtualPath::new(sandbox.path().join("package/nested")),
                     toolchain_config: json!({
                         "packageManager": "npm"
                     }),
@@ -504,7 +503,7 @@ mod javascript_toolchain_tier2 {
                 .await;
 
             assert!(output.members.is_none());
-            assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/package"));
+            assert_eq!(output.root.unwrap(), VirtualPath::new("/workspace/package"));
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -516,7 +515,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(sandbox.path().join("package/nested")),
+                    starting_dir: VirtualPath::new(sandbox.path().join("package/nested")),
                     toolchain_config: json!({
                         "packageManager": "bun"
                     }),
@@ -525,7 +524,7 @@ mod javascript_toolchain_tier2 {
                 .await;
 
             assert!(output.members.is_none());
-            assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/package"));
+            assert_eq!(output.root.unwrap(), VirtualPath::new("/workspace/package"));
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -537,7 +536,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(sandbox.path().join("package/nested")),
+                    starting_dir: VirtualPath::new(sandbox.path().join("package/nested")),
                     toolchain_config: json!({
                         "packageManager": "deno"
                     }),
@@ -546,7 +545,7 @@ mod javascript_toolchain_tier2 {
                 .await;
 
             assert!(output.members.is_none());
-            assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/package"));
+            assert_eq!(output.root.unwrap(), VirtualPath::new("/workspace/package"));
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -564,7 +563,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(sandbox.path().join("package/nested/app")),
+                    starting_dir: VirtualPath::new(sandbox.path().join("package/nested/app")),
                     toolchain_config: json!({
                         "packageManager": "deno"
                     }),
@@ -573,7 +572,7 @@ mod javascript_toolchain_tier2 {
                 .await;
 
             assert!(output.members.is_none());
-            assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/package"));
+            assert_eq!(output.root.unwrap(), VirtualPath::new("/workspace/package"));
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -585,7 +584,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(sandbox.path().join("package/nested")),
+                    starting_dir: VirtualPath::new(sandbox.path().join("package/nested")),
                     toolchain_config: json!({
                         "packageManager": "npm"
                     }),
@@ -594,7 +593,7 @@ mod javascript_toolchain_tier2 {
                 .await;
 
             assert!(output.members.is_none());
-            assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/package"));
+            assert_eq!(output.root.unwrap(), VirtualPath::new("/workspace/package"));
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -606,7 +605,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(sandbox.path().join("package/nested")),
+                    starting_dir: VirtualPath::new(sandbox.path().join("package/nested")),
                     toolchain_config: json!({
                         "packageManager": "pnpm"
                     }),
@@ -615,7 +614,7 @@ mod javascript_toolchain_tier2 {
                 .await;
 
             assert!(output.members.is_none());
-            assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/package"));
+            assert_eq!(output.root.unwrap(), VirtualPath::new("/workspace/package"));
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -627,7 +626,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(sandbox.path().join("package/nested")),
+                    starting_dir: VirtualPath::new(sandbox.path().join("package/nested")),
                     toolchain_config: json!({
                         "packageManager": "yarn"
                     }),
@@ -636,7 +635,7 @@ mod javascript_toolchain_tier2 {
                 .await;
 
             assert!(output.members.is_none());
-            assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/package"));
+            assert_eq!(output.root.unwrap(), VirtualPath::new("/workspace/package"));
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -646,7 +645,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(
+                    starting_dir: VirtualPath::new(
                         sandbox.path().join("workspace/packages/a/nested"),
                     ),
                     toolchain_config: json!({
@@ -657,7 +656,10 @@ mod javascript_toolchain_tier2 {
                 .await;
 
             assert_eq!(output.members.unwrap(), ["packages/*"]);
-            assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/workspace"));
+            assert_eq!(
+                output.root.unwrap(),
+                VirtualPath::new("/workspace/workspace")
+            );
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -669,7 +671,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(
+                    starting_dir: VirtualPath::new(
                         sandbox.path().join("workspace/packages/a/nested"),
                     ),
                     toolchain_config: json!({
@@ -680,7 +682,10 @@ mod javascript_toolchain_tier2 {
                 .await;
 
             assert_eq!(output.members.unwrap(), ["packages/*"]);
-            assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/workspace"));
+            assert_eq!(
+                output.root.unwrap(),
+                VirtualPath::new("/workspace/workspace")
+            );
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -692,7 +697,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(
+                    starting_dir: VirtualPath::new(
                         sandbox.path().join("workspace/packages/a/nested"),
                     ),
                     toolchain_config: json!({
@@ -703,7 +708,10 @@ mod javascript_toolchain_tier2 {
                 .await;
 
             assert_eq!(output.members.unwrap(), ["packages/*"]);
-            assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/workspace"));
+            assert_eq!(
+                output.root.unwrap(),
+                VirtualPath::new("/workspace/workspace")
+            );
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -723,7 +731,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(
+                    starting_dir: VirtualPath::new(
                         sandbox.path().join("workspace/packages/a/nested"),
                     ),
                     toolchain_config: json!({
@@ -734,7 +742,10 @@ mod javascript_toolchain_tier2 {
                 .await;
 
             assert_eq!(output.members.unwrap(), ["packages/*"]);
-            assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/workspace"));
+            assert_eq!(
+                output.root.unwrap(),
+                VirtualPath::new("/workspace/workspace")
+            );
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -746,7 +757,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(
+                    starting_dir: VirtualPath::new(
                         sandbox.path().join("workspace/packages/a/nested"),
                     ),
                     toolchain_config: json!({
@@ -757,7 +768,10 @@ mod javascript_toolchain_tier2 {
                 .await;
 
             assert_eq!(output.members.unwrap(), ["packages/*"]);
-            assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/workspace"));
+            assert_eq!(
+                output.root.unwrap(),
+                VirtualPath::new("/workspace/workspace")
+            );
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -769,7 +783,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(
+                    starting_dir: VirtualPath::new(
                         sandbox.path().join("workspace/packages/a/nested"),
                     ),
                     toolchain_config: json!({
@@ -780,7 +794,10 @@ mod javascript_toolchain_tier2 {
                 .await;
 
             assert_eq!(output.members.unwrap(), ["packages/*"]);
-            assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/workspace"));
+            assert_eq!(
+                output.root.unwrap(),
+                VirtualPath::new("/workspace/workspace")
+            );
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -792,7 +809,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(
+                    starting_dir: VirtualPath::new(
                         sandbox.path().join("workspace/packages/a/nested"),
                     ),
                     toolchain_config: json!({
@@ -803,7 +820,10 @@ mod javascript_toolchain_tier2 {
                 .await;
 
             assert_eq!(output.members.unwrap(), ["apps/*"]);
-            assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/workspace"));
+            assert_eq!(
+                output.root.unwrap(),
+                VirtualPath::new("/workspace/workspace")
+            );
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -815,7 +835,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(
+                    starting_dir: VirtualPath::new(
                         sandbox.path().join("workspace/packages/a/nested"),
                     ),
                     toolchain_config: json!({
@@ -826,7 +846,10 @@ mod javascript_toolchain_tier2 {
                 .await;
 
             assert_eq!(output.members.unwrap(), ["packages/*"]);
-            assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/workspace"));
+            assert_eq!(
+                output.root.unwrap(),
+                VirtualPath::new("/workspace/workspace")
+            );
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -838,7 +861,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(
+                    starting_dir: VirtualPath::new(
                         sandbox.path().join("workspace/packages/a/nested"),
                     ),
                     toolchain_config: json!({
@@ -849,7 +872,10 @@ mod javascript_toolchain_tier2 {
                 .await;
 
             assert_eq!(output.members.unwrap(), ["packages/*"]);
-            assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/workspace"));
+            assert_eq!(
+                output.root.unwrap(),
+                VirtualPath::new("/workspace/workspace")
+            );
         }
     }
 
@@ -863,7 +889,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .install_dependencies(InstallDependenciesInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": null
                     }),
@@ -885,7 +911,7 @@ mod javascript_toolchain_tier2 {
 
                 let output = plugin
                     .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::Real(sandbox.path().into()),
+                        root: VirtualPath::new(sandbox.path()),
                         toolchain_config: json!({
                             "packageManager": "bun",
                             "dedupeOnLockfileChange": true
@@ -911,7 +937,7 @@ mod javascript_toolchain_tier2 {
 
                 let output = plugin
                     .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::Real(sandbox.path().into()),
+                        root: VirtualPath::new(sandbox.path()),
                         toolchain_config: json!({
                             "packageManager": "bun",
                             "dedupeOnLockfileChange": true
@@ -954,7 +980,7 @@ mod javascript_toolchain_tier2 {
 
                 let output = plugin
                     .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::Real(sandbox.path().into()),
+                        root: VirtualPath::new(sandbox.path()),
                         toolchain_config: json!({
                             "packageManager": "bun",
                             "dedupeOnLockfileChange": true
@@ -984,7 +1010,7 @@ mod javascript_toolchain_tier2 {
 
                 let output = plugin
                     .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::Real(sandbox.path().into()),
+                        root: VirtualPath::new(sandbox.path()),
                         toolchain_config: json!({
                             "packageManager": "deno",
                             "dedupeOnLockfileChange": true
@@ -1015,7 +1041,7 @@ mod javascript_toolchain_tier2 {
 
                 let output = plugin
                     .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::Real(sandbox.path().into()),
+                        root: VirtualPath::new(sandbox.path()),
                         toolchain_config: json!({
                             "packageManager": "deno",
                             "dedupeOnLockfileChange": true
@@ -1049,7 +1075,7 @@ mod javascript_toolchain_tier2 {
 
                 let output = plugin
                     .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::Real(sandbox.path().into()),
+                        root: VirtualPath::new(sandbox.path()),
                         toolchain_config: json!({
                             "packageManager": "deno",
                         }),
@@ -1087,7 +1113,7 @@ mod javascript_toolchain_tier2 {
                 // No lockfile — stays as `deno install`
                 let output = plugin
                     .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::Real(sandbox.path().into()),
+                        root: VirtualPath::new(sandbox.path()),
                         toolchain_config: json!({
                             "packageManager": "deno",
                         }),
@@ -1107,7 +1133,7 @@ mod javascript_toolchain_tier2 {
 
                 let output = plugin
                     .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::Real(sandbox.path().into()),
+                        root: VirtualPath::new(sandbox.path()),
                         toolchain_config: json!({
                             "packageManager": "deno",
                         }),
@@ -1145,7 +1171,7 @@ mod javascript_toolchain_tier2 {
 
                 let output = plugin
                     .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::Real(sandbox.path().into()),
+                        root: VirtualPath::new(sandbox.path()),
                         toolchain_config: json!({
                             "packageManager": "deno",
                         }),
@@ -1174,7 +1200,7 @@ mod javascript_toolchain_tier2 {
 
                 let output = plugin
                     .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::Real(sandbox.path().into()),
+                        root: VirtualPath::new(sandbox.path()),
                         toolchain_config: json!({
                             "packageManager": "deno",
                             "dedupeOnLockfileChange": true
@@ -1204,7 +1230,7 @@ mod javascript_toolchain_tier2 {
 
                 let output = plugin
                     .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::Real(sandbox.path().into()),
+                        root: VirtualPath::new(sandbox.path()),
                         toolchain_config: json!({
                             "packageManager": "npm",
                             "dedupeOnLockfileChange": true
@@ -1236,7 +1262,7 @@ mod javascript_toolchain_tier2 {
 
                 let output = plugin
                     .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::Real(sandbox.path().into()),
+                        root: VirtualPath::new(sandbox.path()),
                         toolchain_config: json!({
                             "packageManager": "npm",
                             "dedupeOnLockfileChange": true
@@ -1285,7 +1311,7 @@ mod javascript_toolchain_tier2 {
 
                 let output = plugin
                     .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::Real(sandbox.path().into()),
+                        root: VirtualPath::new(sandbox.path()),
                         toolchain_config: json!({
                             "packageManager": "npm",
                             "dedupeOnLockfileChange": true
@@ -1325,7 +1351,7 @@ mod javascript_toolchain_tier2 {
                 // Doesn't work without the lockfile
                 let output = plugin
                     .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::Real(sandbox.path().into()),
+                        root: VirtualPath::new(sandbox.path()),
                         toolchain_config: json!({
                             "packageManager": "npm",
                         }),
@@ -1346,7 +1372,7 @@ mod javascript_toolchain_tier2 {
 
                 let output = plugin
                     .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::Real(sandbox.path().into()),
+                        root: VirtualPath::new(sandbox.path()),
                         toolchain_config: json!({
                             "packageManager": "npm",
                         }),
@@ -1374,7 +1400,7 @@ mod javascript_toolchain_tier2 {
 
                 let output = plugin
                     .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::Real(sandbox.path().into()),
+                        root: VirtualPath::new(sandbox.path()),
                         toolchain_config: json!({
                             "packageManager": "pnpm",
                             "dedupeOnLockfileChange": true
@@ -1399,7 +1425,7 @@ mod javascript_toolchain_tier2 {
 
                 let output = plugin
                     .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::Real(sandbox.path().into()),
+                        root: VirtualPath::new(sandbox.path()),
                         toolchain_config: json!({
                             "packageManager": "pnpm",
                             "dedupeOnLockfileChange": true
@@ -1441,7 +1467,7 @@ mod javascript_toolchain_tier2 {
 
                 let output = plugin
                     .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::Real(sandbox.path().into()),
+                        root: VirtualPath::new(sandbox.path()),
                         toolchain_config: json!({
                             "packageManager": "pnpm",
                             "dedupeOnLockfileChange": true
@@ -1471,7 +1497,7 @@ mod javascript_toolchain_tier2 {
 
                 let output = plugin
                     .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::Real(sandbox.path().into()),
+                        root: VirtualPath::new(sandbox.path()),
                         toolchain_config: json!({
                             "packageManager": "pnpm",
                             "dedupeOnLockfileChange": true
@@ -1510,7 +1536,7 @@ mod javascript_toolchain_tier2 {
 
                 let output = plugin
                     .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::Real(sandbox.path().into()),
+                        root: VirtualPath::new(sandbox.path()),
                         toolchain_config: json!({
                             "packageManager": "pnpm",
                             "dedupeOnLockfileChange": true,
@@ -1539,7 +1565,7 @@ mod javascript_toolchain_tier2 {
 
                 let output = plugin
                     .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::Real(sandbox.path().into()),
+                        root: VirtualPath::new(sandbox.path()),
                         toolchain_config: json!({
                             "packageManager": "yarn",
                             "dedupeOnLockfileChange": true
@@ -1564,7 +1590,7 @@ mod javascript_toolchain_tier2 {
 
                 let output = plugin
                     .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::Real(sandbox.path().into()),
+                        root: VirtualPath::new(sandbox.path()),
                         toolchain_config: json!({
                             "packageManager": "yarn",
                             "dedupeOnLockfileChange": true
@@ -1596,7 +1622,7 @@ mod javascript_toolchain_tier2 {
 
                 let output = plugin
                     .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::Real(sandbox.path().into()),
+                        root: VirtualPath::new(sandbox.path()),
                         toolchain_config: json!({
                             "packageManager": "yarn",
                             "dedupeOnLockfileChange": true
@@ -1631,7 +1657,7 @@ mod javascript_toolchain_tier2 {
 
                 let output = plugin
                     .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::Real(sandbox.path().into()),
+                        root: VirtualPath::new(sandbox.path()),
                         toolchain_config: json!({
                             "packageManager": "yarn",
                             "dedupeOnLockfileChange": true
@@ -1661,7 +1687,7 @@ mod javascript_toolchain_tier2 {
 
                 let output = plugin
                     .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::Real(sandbox.path().into()),
+                        root: VirtualPath::new(sandbox.path()),
                         toolchain_config: json!({
                             "packageManager": "pnpm",
                             "dedupeOnLockfileChange": true
@@ -1700,7 +1726,7 @@ mod javascript_toolchain_tier2 {
 
                 let output = plugin
                     .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::Real(sandbox.path().into()),
+                        root: VirtualPath::new(sandbox.path()),
                         toolchain_config: json!({
                             "packageManager": "yarn",
                             "dedupeOnLockfileChange": true,
@@ -1730,7 +1756,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .parse_manifest(ParseManifestInput {
-                    path: VirtualPath::Real(sandbox.path().join("package.json")),
+                    path: VirtualPath::new(sandbox.path().join("package.json")),
                     ..Default::default()
                 })
                 .await;
@@ -1771,7 +1797,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .parse_manifest(ParseManifestInput {
-                    path: VirtualPath::Real(sandbox.path().join("package/package.json")),
+                    path: VirtualPath::new(sandbox.path().join("package/package.json")),
                     ..Default::default()
                 })
                 .await;
@@ -1833,7 +1859,7 @@ mod javascript_toolchain_tier2 {
             // This must be ran to extract the catalogs
             plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(sandbox.path().join("package")),
+                    starting_dir: VirtualPath::new(sandbox.path().join("package")),
                     toolchain_config: json!({
                         "packageManager": "npm"
                     }),
@@ -1843,8 +1869,8 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .parse_manifest(ParseManifestInput {
-                    path: VirtualPath::Real(sandbox.path().join("package/package.json")),
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    path: VirtualPath::new(sandbox.path().join("package/package.json")),
+                    root: VirtualPath::new(sandbox.path()),
                     ..Default::default()
                 })
                 .await;
@@ -1874,7 +1900,7 @@ mod javascript_toolchain_tier2 {
             // This must be ran to extract the catalogs
             plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(sandbox.path().join("package")),
+                    starting_dir: VirtualPath::new(sandbox.path().join("package")),
                     toolchain_config: json!({
                         "packageManager": "pnpm"
                     }),
@@ -1884,8 +1910,8 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .parse_manifest(ParseManifestInput {
-                    path: VirtualPath::Real(sandbox.path().join("package/package.json")),
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    path: VirtualPath::new(sandbox.path().join("package/package.json")),
+                    root: VirtualPath::new(sandbox.path()),
                     ..Default::default()
                 })
                 .await;
@@ -1915,7 +1941,7 @@ mod javascript_toolchain_tier2 {
             // This must be ran to extract the catalogs
             plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(sandbox.path().join("package")),
+                    starting_dir: VirtualPath::new(sandbox.path().join("package")),
                     toolchain_config: json!({
                         "packageManager": "yarn"
                     }),
@@ -1925,8 +1951,8 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .parse_manifest(ParseManifestInput {
-                    path: VirtualPath::Real(sandbox.path().join("package/package.json")),
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    path: VirtualPath::new(sandbox.path().join("package/package.json")),
+                    root: VirtualPath::new(sandbox.path()),
                     ..Default::default()
                 })
                 .await;
@@ -1956,7 +1982,7 @@ mod javascript_toolchain_tier2 {
             // This must be ran to extract the catalogs
             plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(sandbox.path().join("package")),
+                    starting_dir: VirtualPath::new(sandbox.path().join("package")),
                     toolchain_config: json!({
                         "packageManager": "deno"
                     }),
@@ -1966,8 +1992,8 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .parse_manifest(ParseManifestInput {
-                    path: VirtualPath::Real(sandbox.path().join("package/package.json")),
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    path: VirtualPath::new(sandbox.path().join("package/package.json")),
+                    root: VirtualPath::new(sandbox.path()),
                     ..Default::default()
                 })
                 .await;
@@ -2108,7 +2134,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .parse_lock(ParseLockInput {
-                    path: VirtualPath::Real(sandbox.path().join("bun.lock")),
+                    path: VirtualPath::new(sandbox.path().join("bun.lock")),
                     ..Default::default()
                 })
                 .await;
@@ -2123,7 +2149,7 @@ mod javascript_toolchain_tier2 {
 
         //     let output = plugin
         //         .parse_lock(ParseLockInput {
-        //             path: VirtualPath::Real(sandbox.path().join("bun.lockb")),
+        //             path: VirtualPath::new(sandbox.path().join("bun.lockb")),
         //             ..Default::default()
         //         })
         //         .await;
@@ -2152,7 +2178,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .parse_lock(ParseLockInput {
-                    path: VirtualPath::Real(sandbox.path().join("deno.lock")),
+                    path: VirtualPath::new(sandbox.path().join("deno.lock")),
                     ..Default::default()
                 })
                 .await;
@@ -2215,7 +2241,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .parse_lock(ParseLockInput {
-                    path: VirtualPath::Real(sandbox.path().join("package-lock.json")),
+                    path: VirtualPath::new(sandbox.path().join("package-lock.json")),
                     ..Default::default()
                 })
                 .await;
@@ -2230,7 +2256,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .parse_lock(ParseLockInput {
-                    path: VirtualPath::Real(sandbox.path().join("pnpm-lock.yaml")),
+                    path: VirtualPath::new(sandbox.path().join("pnpm-lock.yaml")),
                     ..Default::default()
                 })
                 .await;
@@ -2248,7 +2274,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .parse_lock(ParseLockInput {
-                    path: VirtualPath::Real(sandbox.path().join("pnpm-lock.yaml")),
+                    path: VirtualPath::new(sandbox.path().join("pnpm-lock.yaml")),
                     ..Default::default()
                 })
                 .await;
@@ -2286,7 +2312,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .parse_lock(ParseLockInput {
-                    path: VirtualPath::Real(sandbox.path().join("yarn.lock")),
+                    path: VirtualPath::new(sandbox.path().join("yarn.lock")),
                     ..Default::default()
                 })
                 .await;
@@ -2372,7 +2398,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .parse_lock(ParseLockInput {
-                    path: VirtualPath::Real(sandbox.path().join("yarn.lock")),
+                    path: VirtualPath::new(sandbox.path().join("yarn.lock")),
                     ..Default::default()
                 })
                 .await;

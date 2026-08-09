@@ -17,7 +17,7 @@ mod package_json {
         sandbox.create_file("package.json", json);
 
         let config_path = sandbox.path().join("package.json");
-        let mut file = PackageJson::load(VirtualPath::Real(config_path.clone())).unwrap();
+        let mut file = PackageJson::load(VirtualPath::new(config_path.clone())).unwrap();
 
         // Trigger dirty
         file.dirty.push("unknown".into());
@@ -32,7 +32,7 @@ mod package_json {
         #[test]
         fn adds() {
             let mut tsc = PackageJson {
-                path: VirtualPath::Real(PathBuf::from("/base/tsconfig.json")),
+                path: VirtualPath::new(PathBuf::from("/base/tsconfig.json")),
                 ..Default::default()
             };
 
@@ -52,7 +52,7 @@ mod package_json {
         #[test]
         fn overwrites() {
             let mut tsc = PackageJson {
-                path: VirtualPath::Real(PathBuf::from("/base/tsconfig.json")),
+                path: VirtualPath::new(PathBuf::from("/base/tsconfig.json")),
                 data: PackageJsonInner {
                     dependencies: Some(BTreeMap::from_iter([
                         ("example".into(), VersionProtocol::from_str("*").unwrap()),
@@ -89,7 +89,7 @@ mod package_json {
         #[test]
         fn doesnt_overwrite() {
             let mut tsc = PackageJson {
-                path: VirtualPath::Real(PathBuf::from("/base/tsconfig.json")),
+                path: VirtualPath::new(PathBuf::from("/base/tsconfig.json")),
                 data: PackageJsonInner {
                     dependencies: Some(BTreeMap::from_iter([(
                         "example".into(),
@@ -125,7 +125,7 @@ mod package_json {
         #[test]
         fn adds() {
             let mut tsc = PackageJson {
-                path: VirtualPath::Real(PathBuf::from("/base/tsconfig.json")),
+                path: VirtualPath::new(PathBuf::from("/base/tsconfig.json")),
                 ..Default::default()
             };
 
@@ -145,7 +145,7 @@ mod package_json {
         #[test]
         fn overwrites() {
             let mut tsc = PackageJson {
-                path: VirtualPath::Real(PathBuf::from("/base/tsconfig.json")),
+                path: VirtualPath::new(PathBuf::from("/base/tsconfig.json")),
                 data: PackageJsonInner {
                     dev_dependencies: Some(BTreeMap::from_iter([
                         ("example".into(), VersionProtocol::from_str("*").unwrap()),
@@ -182,7 +182,7 @@ mod package_json {
         #[test]
         fn doesnt_overwrite() {
             let mut tsc = PackageJson {
-                path: VirtualPath::Real(PathBuf::from("/base/tsconfig.json")),
+                path: VirtualPath::new(PathBuf::from("/base/tsconfig.json")),
                 data: PackageJsonInner {
                     dev_dependencies: Some(BTreeMap::from_iter([(
                         "example".into(),
@@ -218,7 +218,7 @@ mod package_json {
         #[test]
         fn adds() {
             let mut tsc = PackageJson {
-                path: VirtualPath::Real(PathBuf::from("/base/tsconfig.json")),
+                path: VirtualPath::new(PathBuf::from("/base/tsconfig.json")),
                 ..Default::default()
             };
 
@@ -238,7 +238,7 @@ mod package_json {
         #[test]
         fn overwrites() {
             let mut tsc = PackageJson {
-                path: VirtualPath::Real(PathBuf::from("/base/tsconfig.json")),
+                path: VirtualPath::new(PathBuf::from("/base/tsconfig.json")),
                 data: PackageJsonInner {
                     peer_dependencies: Some(BTreeMap::from_iter([
                         ("example".into(), VersionProtocol::from_str("*").unwrap()),
@@ -275,7 +275,7 @@ mod package_json {
         #[test]
         fn doesnt_overwrite() {
             let mut tsc = PackageJson {
-                path: VirtualPath::Real(PathBuf::from("/base/tsconfig.json")),
+                path: VirtualPath::new(PathBuf::from("/base/tsconfig.json")),
                 data: PackageJsonInner {
                     peer_dependencies: Some(BTreeMap::from_iter([(
                         "example".into(),
@@ -311,7 +311,7 @@ mod package_json {
         #[test]
         fn sets() {
             let mut tsc = PackageJson {
-                path: VirtualPath::Real(PathBuf::from("/base/tsconfig.json")),
+                path: VirtualPath::new(PathBuf::from("/base/tsconfig.json")),
                 ..Default::default()
             };
 
@@ -325,7 +325,7 @@ mod package_json {
         #[test]
         fn doesnt_set_if_empty() {
             let mut tsc = PackageJson {
-                path: VirtualPath::Real(PathBuf::from("/base/tsconfig.json")),
+                path: VirtualPath::new(PathBuf::from("/base/tsconfig.json")),
                 ..Default::default()
             };
 
@@ -339,7 +339,7 @@ mod package_json {
         #[test]
         fn unsets_if_empty() {
             let mut tsc = PackageJson {
-                path: VirtualPath::Real(PathBuf::from("/base/tsconfig.json")),
+                path: VirtualPath::new(PathBuf::from("/base/tsconfig.json")),
                 ..Default::default()
             };
 
@@ -353,7 +353,7 @@ mod package_json {
         #[test]
         fn doesnt_set_if_same_value() {
             let mut tsc = PackageJson {
-                path: VirtualPath::Real(PathBuf::from("/base/tsconfig.json")),
+                path: VirtualPath::new(PathBuf::from("/base/tsconfig.json")),
                 ..Default::default()
             };
 

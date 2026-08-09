@@ -15,7 +15,7 @@ mod node_depman_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({}),
                     ..Default::default()
                 })
@@ -31,7 +31,7 @@ mod node_depman_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({}),
                     ..Default::default()
                 })
@@ -47,7 +47,7 @@ mod node_depman_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "plugins": [],
                         "version": "^2"
@@ -60,7 +60,7 @@ mod node_depman_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "version": "^2"
                     }),
@@ -78,7 +78,7 @@ mod node_depman_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "plugins": ["example"],
                         "version": "^1"
@@ -97,7 +97,7 @@ mod node_depman_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "plugins": ["foo", "bar"],
                         "version": "^2"

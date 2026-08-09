@@ -4,7 +4,6 @@ use moon_pdk_api::*;
 use moon_pdk_test_utils::create_moon_sandbox;
 use serde_json::json;
 use starbase_sandbox::assert_snapshot;
-use std::path::PathBuf;
 
 mod javascript_toolchain_tier1 {
     use super::*;
@@ -189,7 +188,7 @@ mod javascript_toolchain_tier1 {
             assert!(!output.operations.is_empty());
             assert_eq!(
                 output.changed_files,
-                vec![PathBuf::from("/workspace/base/package.json")]
+                vec![VirtualPath::new("/workspace/base/package.json")]
             );
             assert_snapshot!(
                 format!("format_{format}"),

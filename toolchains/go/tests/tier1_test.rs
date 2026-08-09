@@ -2,7 +2,6 @@ use moon_config::DockerPruneConfig;
 use moon_pdk_api::*;
 use moon_pdk_test_utils::create_empty_moon_sandbox;
 use serde_json::json;
-use std::path::PathBuf;
 
 mod go_toolchain_tier1 {
     use super::*;
@@ -51,7 +50,7 @@ mod go_toolchain_tier1 {
                         delete_vendor_directories: true,
                         ..Default::default()
                     },
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     ..Default::default()
                 })
                 .await;
@@ -72,7 +71,7 @@ mod go_toolchain_tier1 {
                         delete_vendor_directories: false,
                         ..Default::default()
                     },
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     ..Default::default()
                 })
                 .await;
@@ -95,14 +94,17 @@ mod go_toolchain_tier1 {
                         delete_vendor_directories: true,
                         ..Default::default()
                     },
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     ..Default::default()
                 })
                 .await;
 
             assert!(!sandbox.path().join("vendor").exists());
 
-            assert_eq!(output.changed_files, [PathBuf::from("/workspace/vendor")]);
+            assert_eq!(
+                output.changed_files,
+                [VirtualPath::new("/workspace/vendor")]
+            );
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -118,7 +120,7 @@ mod go_toolchain_tier1 {
                         delete_vendor_directories: true,
                         ..Default::default()
                     },
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "vendorDir": "nested/.vendor"
                     }),
@@ -130,7 +132,7 @@ mod go_toolchain_tier1 {
 
             assert_eq!(
                 output.changed_files,
-                [PathBuf::from("/workspace/nested/.vendor")]
+                [VirtualPath::new("/workspace/nested/.vendor")]
             );
         }
     }

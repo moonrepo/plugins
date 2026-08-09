@@ -2,7 +2,6 @@ use moon_pdk_api::*;
 use moon_pdk_test_utils::{create_empty_moon_sandbox, create_moon_sandbox};
 use serde_json::json;
 use std::fs;
-use std::path::PathBuf;
 
 mod rust_toolchain_tier2 {
     use super::*;
@@ -17,7 +16,7 @@ mod rust_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "addMsrvConstraint": true,
                         "version": null
@@ -42,7 +41,7 @@ mod rust_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "addMsrvConstraint": false,
                         "version": "1.69.0"
@@ -67,7 +66,7 @@ mod rust_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "addMsrvConstraint": true,
                         "version": "1.69.0"
@@ -84,7 +83,7 @@ mod rust_toolchain_tier2 {
             );
             assert_eq!(
                 output.changed_files,
-                [PathBuf::from("/workspace/Cargo.toml")]
+                [VirtualPath::new("/workspace/Cargo.toml")]
             );
             assert!(
                 fs::read_to_string(sandbox.path().join("Cargo.toml"))
@@ -104,7 +103,7 @@ mod rust_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "syncToolchainConfig": true,
                         "version": null
@@ -129,7 +128,7 @@ mod rust_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "syncToolchainConfig": false,
                         "version": "1.69.0"
@@ -154,7 +153,7 @@ mod rust_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "syncToolchainConfig": true,
                         "version": "1.69.0"
@@ -171,7 +170,7 @@ mod rust_toolchain_tier2 {
             );
             assert_eq!(
                 output.changed_files,
-                [PathBuf::from("/workspace/rust-toolchain.toml")]
+                [VirtualPath::new("/workspace/rust-toolchain.toml")]
             );
             assert!(
                 fs::read_to_string(sandbox.path().join("rust-toolchain.toml"))
@@ -189,7 +188,7 @@ mod rust_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "syncToolchainConfig": true,
                         "version": null
@@ -201,8 +200,8 @@ mod rust_toolchain_tier2 {
             assert_eq!(
                 output.changed_files,
                 [
-                    PathBuf::from("/workspace/rust-toolchain.toml"),
-                    PathBuf::from("/workspace/rust-toolchain")
+                    VirtualPath::new("/workspace/rust-toolchain.toml"),
+                    VirtualPath::new("/workspace/rust-toolchain")
                 ]
             );
             assert!(
@@ -222,7 +221,7 @@ mod rust_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "syncToolchainConfig": true,
                         "version": null
@@ -234,8 +233,8 @@ mod rust_toolchain_tier2 {
             assert_eq!(
                 output.changed_files,
                 [
-                    PathBuf::from("/workspace/rust-toolchain.toml"),
-                    PathBuf::from("/workspace/rust-toolchain")
+                    VirtualPath::new("/workspace/rust-toolchain.toml"),
+                    VirtualPath::new("/workspace/rust-toolchain")
                 ]
             );
             assert!(
@@ -257,7 +256,7 @@ mod rust_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "components": []
                     }),
@@ -275,7 +274,7 @@ mod rust_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "components": ["rustfmt", "clippy"]
                     }),
@@ -289,7 +288,8 @@ mod rust_toolchain_tier2 {
                     ExecCommandInput::new("rustup", ["component", "add", "rustfmt", "clippy"])
                         .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                 )
-                .cache("rustup-component-add")]
+                .cache(CacheStrategy::Memory)
+                .label("rustup-component-add")]
             );
         }
     }
@@ -304,7 +304,7 @@ mod rust_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "targets": []
                     }),
@@ -322,7 +322,7 @@ mod rust_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "targets": ["wasm32-wasi", "nightly"]
                     }),
@@ -336,7 +336,8 @@ mod rust_toolchain_tier2 {
                     ExecCommandInput::new("rustup", ["target", "add", "wasm32-wasi", "nightly"],)
                         .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                 )
-                .cache("rustup-target-add")]
+                .cache(CacheStrategy::Memory)
+                .label("rustup-target-add")]
             );
         }
     }
@@ -351,7 +352,7 @@ mod rust_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "bins": []
                     }),
@@ -369,7 +370,7 @@ mod rust_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "bins": [
                             "cargo-nextest",
@@ -392,7 +393,8 @@ mod rust_toolchain_tier2 {
                         )
                         .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                     )
-                    .cache("cargo-binstall"),
+                    .cache(CacheStrategy::Memory)
+                    .label("cargo-binstall"),
                     ExecCommand::new(
                         ExecCommandInput::new(
                             "cargo",
@@ -407,7 +409,8 @@ mod rust_toolchain_tier2 {
                         )
                         .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                     )
-                    .cache("cargo-bins")
+                    .cache(CacheStrategy::Memory)
+                    .label("cargo-bins")
                 ]
             );
         }
@@ -419,7 +422,7 @@ mod rust_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "bins": [
                             "cargo-nextest",
@@ -443,7 +446,8 @@ mod rust_toolchain_tier2 {
                         )
                         .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                     )
-                    .cache("cargo-binstall"),
+                    .cache(CacheStrategy::Memory)
+                    .label("cargo-binstall"),
                     ExecCommand::new(
                         ExecCommandInput::new(
                             "cargo",
@@ -458,7 +462,8 @@ mod rust_toolchain_tier2 {
                         )
                         .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                     )
-                    .cache("cargo-bins-forced"),
+                    .cache(CacheStrategy::Memory)
+                    .label("cargo-bins-forced"),
                     ExecCommand::new(
                         ExecCommandInput::new(
                             "cargo",
@@ -472,7 +477,8 @@ mod rust_toolchain_tier2 {
                         )
                         .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                     )
-                    .cache("cargo-bins")
+                    .cache(CacheStrategy::Memory)
+                    .label("cargo-bins")
                 ]
             );
         }
@@ -491,7 +497,7 @@ mod rust_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "bins": [
                             {
@@ -515,7 +521,7 @@ mod rust_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "binstallVersion": "1.2.3",
                         "bins": ["cargo-nextest"]
@@ -534,7 +540,8 @@ mod rust_toolchain_tier2 {
                         )
                         .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                     )
-                    .cache("cargo-binstall"),
+                    .cache(CacheStrategy::Memory)
+                    .label("cargo-binstall"),
                     ExecCommand::new(
                         ExecCommandInput::new(
                             "cargo",
@@ -548,7 +555,8 @@ mod rust_toolchain_tier2 {
                         )
                         .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                     )
-                    .cache("cargo-bins")
+                    .cache(CacheStrategy::Memory)
+                    .label("cargo-bins")
                 ]
             );
         }
@@ -563,8 +571,8 @@ mod rust_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
-                    globals_dir: Some(VirtualPath::Real(sandbox.path().join(".cargo-bins"))),
+                    root: VirtualPath::new(sandbox.path()),
+                    globals_dir: Some(VirtualPath::new(sandbox.path().join(".cargo-bins"))),
                     toolchain_config: json!({
                         "bins": ["cargo-nextest"]
                     }),
@@ -587,7 +595,8 @@ mod rust_toolchain_tier2 {
                     )
                     .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                 )
-                .cache("cargo-bins")]
+                .cache(CacheStrategy::Memory)
+                .label("cargo-bins")]
             );
         }
     }

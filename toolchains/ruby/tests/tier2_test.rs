@@ -17,7 +17,7 @@ mod ruby_toolchain_tier2 {
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(sandbox.path().into()),
+                    starting_dir: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({}),
                     ..Default::default()
                 })
@@ -35,7 +35,7 @@ mod ruby_toolchain_tier2 {
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(sandbox.path().join("app")),
+                    starting_dir: VirtualPath::new(sandbox.path().join("app")),
                     toolchain_config: json!({}),
                     ..Default::default()
                 })
@@ -43,7 +43,7 @@ mod ruby_toolchain_tier2 {
 
             // Bundler has no workspaces, so no members are reported.
             assert!(output.members.is_none());
-            assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/app"));
+            assert_eq!(output.root.unwrap(), VirtualPath::new("/workspace/app"));
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -54,13 +54,13 @@ mod ruby_toolchain_tier2 {
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(sandbox.path().join("app/lib/nested")),
+                    starting_dir: VirtualPath::new(sandbox.path().join("app/lib/nested")),
                     toolchain_config: json!({}),
                     ..Default::default()
                 })
                 .await;
 
-            assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/app"));
+            assert_eq!(output.root.unwrap(), VirtualPath::new("/workspace/app"));
         }
     }
 
@@ -74,7 +74,7 @@ mod ruby_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({}),
                     ..Default::default()
                 })
@@ -99,7 +99,7 @@ mod ruby_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({ "bundlePath": "vendor/gems" }),
                     ..Default::default()
                 })
@@ -124,7 +124,7 @@ mod ruby_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({ "frozen": true }),
                     ..Default::default()
                 })
@@ -159,7 +159,7 @@ mod ruby_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({}),
                     ..Default::default()
                 })
@@ -179,7 +179,7 @@ mod ruby_toolchain_tier2 {
 
             let output = plugin
                 .install_dependencies(InstallDependenciesInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({}),
                     ..Default::default()
                 })
@@ -202,7 +202,7 @@ mod ruby_toolchain_tier2 {
 
             let output = plugin
                 .install_dependencies(InstallDependenciesInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({}),
                     production: true,
                     ..Default::default()
@@ -225,7 +225,7 @@ mod ruby_toolchain_tier2 {
 
             let output = plugin
                 .install_dependencies(InstallDependenciesInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({ "bundlerInstallArgs": ["--jobs", "4"] }),
                     ..Default::default()
                 })
@@ -313,7 +313,7 @@ BUNDLED WITH
 
             let output = plugin
                 .parse_lock(ParseLockInput {
-                    path: VirtualPath::Real(sandbox.path().join("Gemfile.lock")),
+                    path: VirtualPath::new(sandbox.path().join("Gemfile.lock")),
                     ..Default::default()
                 })
                 .await;
@@ -365,7 +365,7 @@ BUNDLED WITH
 
             let output = plugin
                 .parse_lock(ParseLockInput {
-                    path: VirtualPath::Real(sandbox.path().join("Gemfile.lock")),
+                    path: VirtualPath::new(sandbox.path().join("Gemfile.lock")),
                     ..Default::default()
                 })
                 .await;
@@ -415,7 +415,7 @@ end
 
             let output = plugin
                 .parse_manifest(ParseManifestInput {
-                    path: VirtualPath::Real(sandbox.path().join("Gemfile")),
+                    path: VirtualPath::new(sandbox.path().join("Gemfile")),
                     ..Default::default()
                 })
                 .await;

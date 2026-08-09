@@ -2,7 +2,6 @@ use moon_config::DockerPruneConfig;
 use moon_pdk_api::*;
 use moon_pdk_test_utils::create_empty_moon_sandbox;
 use starbase_utils::json::JsonValue;
-use std::path::PathBuf;
 
 mod javascript_toolchain_tier1 {
     use super::*;
@@ -198,7 +197,7 @@ mod javascript_toolchain_tier1 {
                         delete_vendor_directories: true,
                         ..Default::default()
                     },
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     ..Default::default()
                 })
                 .await;
@@ -219,7 +218,7 @@ mod javascript_toolchain_tier1 {
                         delete_vendor_directories: false,
                         ..Default::default()
                     },
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     ..Default::default()
                 })
                 .await;
@@ -240,7 +239,7 @@ mod javascript_toolchain_tier1 {
                         delete_vendor_directories: true,
                         ..Default::default()
                     },
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     ..Default::default()
                 })
                 .await;
@@ -249,7 +248,7 @@ mod javascript_toolchain_tier1 {
 
             assert_eq!(
                 output.changed_files,
-                [PathBuf::from("/workspace/node_modules")]
+                [VirtualPath::new("/workspace/node_modules")]
             );
         }
     }
