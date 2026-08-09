@@ -25,9 +25,7 @@ pub fn setup_environment(
         })?;
 
         output.operations.push(op);
-        output
-            .changed_files
-            .extend(files.into_iter().filter_map(|file| file.virtual_path()));
+        output.changed_files.extend(files);
     }
 
     // Sync `rust-toolchain.toml` toolchain
@@ -37,9 +35,7 @@ pub fn setup_environment(
         })?;
 
         output.operations.push(op);
-        output
-            .changed_files
-            .extend(files.into_iter().filter_map(|file| file.virtual_path()));
+        output.changed_files.extend(files);
     }
 
     // Install components
@@ -47,9 +43,11 @@ pub fn setup_environment(
         let mut args = vec!["component", "add"];
         args.extend(config.components.iter().map(|c| c.as_str()));
 
-        output
-            .commands
-            .push(create_command("rustup", args, &input.root).cache("rustup-component-add"));
+        output.commands.push(
+            create_command("rustup", args, &input.root)
+                .cache(CacheStrategy::Memory)
+                .label("rustup-component-add"),
+        );
     }
 
     // Install targets
@@ -57,9 +55,11 @@ pub fn setup_environment(
         let mut args = vec!["target", "add"];
         args.extend(config.targets.iter().map(|c| c.as_str()));
 
-        output
-            .commands
-            .push(create_command("rustup", args, &input.root).cache("rustup-target-add"));
+        output.commands.push(
+            create_command("rustup", args, &input.root)
+                .cache(CacheStrategy::Memory)
+                .label("rustup-target-add"),
+        );
     }
 
     // Install binaries
@@ -83,7 +83,8 @@ pub fn setup_environment(
                     vec!["install", &binstall_package, "--force", "--locked"],
                     &input.root,
                 )
-                .cache("cargo-binstall"),
+                .cache(CacheStrategy::Memory)
+                .label("cargo-binstall"),
             );
         }
 
@@ -111,18 +112,22 @@ pub fn setup_environment(
             let mut args = vec!["binstall", "--no-confirm", "--log-level", "info", "--force"];
             args.extend(force_bins);
 
-            output
-                .commands
-                .push(create_command("cargo", args, &input.root).cache("cargo-bins-forced"));
+            output.commands.push(
+                create_command("cargo", args, &input.root)
+                    .cache(CacheStrategy::Memory)
+                    .label("cargo-bins-forced"),
+            );
         }
 
         if !non_force_bins.is_empty() {
             let mut args = vec!["binstall", "--no-confirm", "--log-level", "info"];
             args.extend(non_force_bins);
 
-            output
-                .commands
-                .push(create_command("cargo", args, &input.root).cache("cargo-bins"));
+            output.commands.push(
+                create_command("cargo", args, &input.root)
+                    .cache(CacheStrategy::Memory)
+                    .label("cargo-bins"),
+            );
         }
     }
 

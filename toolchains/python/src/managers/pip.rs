@@ -78,10 +78,7 @@ pub fn parse_requirements_txt(path: &VirtualPath, output: &mut ParseLockOutput) 
             }
 
             if let Some(version) = config.version {
-                if matches!(
-                    version,
-                    UnresolvedVersionSpec::Semantic(_) | UnresolvedVersionSpec::Calendar(_)
-                ) {
+                if matches!(version, UnresolvedVersionSpec::Version(_)) {
                     dep.version = Some(version.to_resolved_spec());
                 } else {
                     dep.req = Some(version);

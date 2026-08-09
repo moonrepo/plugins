@@ -1,5 +1,5 @@
 use extension_common::download::download_from_url;
-use extension_common::{enable_tracing, format_virtual_path};
+use extension_common::enable_tracing;
 use extism_pdk::*;
 use moon_pdk::*;
 use moon_pdk_api::{ExecuteExtensionInput, RegisterExtensionInput, RegisterExtensionOutput};
@@ -7,7 +7,6 @@ use moon_pdk_api::{ExecuteExtensionInput, RegisterExtensionInput, RegisterExtens
 #[host_fn]
 extern "ExtismHost" {
     fn host_log(input: Json<HostLogInput>);
-    fn to_virtual_path(path: String) -> String;
 }
 
 #[plugin_fn]
@@ -46,34 +45,24 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
     // Determine destination directory
     debug!("Determining destination directory");
 
-    let dest_dir = into_virtual_path(
-        input
-            .context
-            .get_absolute_path(args.dest.as_deref().unwrap_or_default()),
-    )?;
+    let dest_dir = input
+        .context
+        .get_absolute_path(args.dest.as_deref().unwrap_or_default());
 
     if dest_dir.exists() && dest_dir.is_file() {
         return Err(plugin_err!(
-            "Destination <path>{}</path> must be a directory, found a file.",
-            format_virtual_path(&dest_dir),
+            "Destination <path>{dest_dir}</path> must be a directory, found a file.",
         ));
     }
 
-    debug!(
-        "Destination <path>{}</path> will be used",
-        format_virtual_path(&dest_dir),
-    );
+    debug!("Destination <path>{dest_dir}</path> will be used",);
 
     // Attempt to download the file
     host_log!(stdout, "Downloading <url>{}</url>", args.url);
 
     let dest_file = download_from_url(&args.url, &dest_dir, args.name.as_deref())?;
 
-    host_log!(
-        stdout,
-        "Downloaded to <path>{}</path>",
-        format_virtual_path(&dest_file),
-    );
+    host_log!(stdout, "Downloaded to <path>{dest_file}</path>",);
 
     Ok(())
 }

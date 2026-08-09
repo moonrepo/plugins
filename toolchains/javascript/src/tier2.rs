@@ -6,8 +6,8 @@ use extism_pdk::*;
 use moon_common::path::paths_are_equal;
 use moon_config::DependencyScope;
 use moon_pdk::{
-    get_host_environment, load_project_toolchain_config, load_toolchain_config, locate_root_many,
-    locate_root_many_with_check, parse_toolchain_config_schema,
+    VirtualPathExt, get_host_environment, load_project_toolchain_config, load_toolchain_config,
+    locate_root_many, locate_root_many_with_check, parse_toolchain_config_schema,
 };
 use moon_pdk_api::*;
 use nodejs_package_json::{VersionProtocol, WorkspaceProtocol};
@@ -81,7 +81,7 @@ pub fn extend_project_graph(
                         | VersionProtocol::Portal(rel_path) => {
                             paths_are_equal(dep_root, project_root.join(rel_path))
                         }
-                        VersionProtocol::Requirement(req) if req == &VersionReq::STAR => {
+                        VersionProtocol::Requirement(req) if req.comparators.is_empty() => {
                             packages.contains_key(dep_name)
                         }
                         VersionProtocol::Workspace(_) => true,
@@ -130,9 +130,7 @@ pub fn extend_project_graph(
             .extended_projects
             .insert(id.to_owned(), project_output);
 
-        if let Some(file) = manifest.path.virtual_path() {
-            output.input_files.push(file);
-        }
+        output.input_files.push(manifest.path.clone());
     }
 
     Ok(Json(output))
@@ -147,8 +145,12 @@ fn gather_shared_paths(
     let mut current_dir = context.get_project_root(project);
 
     while current_dir != context.workspace_root {
-        if let Some(bin_dir) = current_dir.join("node_modules").join(".bin").real_path() {
-            paths.push(bin_dir);
+        if let Some(bin_dir) = current_dir
+            .join("node_modules")
+            .join(".bin")
+            .to_real_path()?
+        {
+            paths.push(bin_dir.to_path_buf());
         }
 
         match current_dir.parent() {
@@ -165,9 +167,9 @@ fn gather_shared_paths(
         .workspace_root
         .join("node_modules")
         .join(".bin")
-        .real_path()
+        .to_real_path()?
     {
-        paths.push(bin_dir);
+        paths.push(bin_dir.to_path_buf());
     }
 
     Ok(())
@@ -349,8 +351,8 @@ pub fn locate_dependencies_root(
 
     // First attempt: find lock files
     if let Some(root) = locate_root_many(&input.starting_dir, &lock_names) {
-        output.root = root.virtual_path();
         output.members = extract_workspace_members_and_catalogs(package_manager, &root)?;
+        output.root = Some(root);
     }
 
     // Second attempt: find workspace-compatible manifest files
@@ -359,7 +361,7 @@ pub fn locate_dependencies_root(
             let mut found = false;
 
             if let Some(members) = extract_workspace_members_and_catalogs(package_manager, root)? {
-                output.root = root.virtual_path();
+                output.root = Some(root.to_owned());
                 output.members = Some(members);
                 found = true;
             }
@@ -374,7 +376,7 @@ pub fn locate_dependencies_root(
     {
         extract_workspace_members_and_catalogs(package_manager, &root)?;
 
-        output.root = root.virtual_path();
+        output.root = Some(root);
     }
 
     Ok(Json(output))
@@ -704,7 +706,7 @@ pub fn parse_manifest(
     }
 
     if let Some(version) = &manifest.version {
-        output.version = Some(version.to_owned());
+        output.version = Some(Version::parse(version.to_string())?);
     }
 
     output.publishable = manifest.version.is_some()
@@ -738,7 +740,7 @@ pub fn setup_environment(
 
         if package_path.exists()
             && let Some(version) = package_manager_config.version
-            && matches!(version, UnresolvedVersionSpec::Semantic(_))
+            && matches!(version, UnresolvedVersionSpec::Version(_))
         {
             let (op, file) = Operation::track("sync-package-manager", || {
                 let mut package = PackageJson::load(package_path)?;
@@ -748,7 +750,7 @@ pub fn setup_environment(
 
             output.operations.push(op);
 
-            if let Some(file) = file.and_then(|file| file.virtual_path()) {
+            if let Some(file) = file {
                 output.changed_files.push(file);
             }
         }

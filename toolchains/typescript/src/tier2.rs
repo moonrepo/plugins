@@ -62,7 +62,7 @@ pub fn hash_task_contents_disabled(
     Json(input): Json<HashTaskContentsInput>,
 ) -> FnResult<Json<HashTaskContentsOutput>> {
     let config = parse_toolchain_config::<TypeScriptToolchainConfig>(input.toolchain_config)?;
-    let context = create_typescript_context(&input.context, &config, &input.project);
+    let context = create_typescript_context(&input.context, &config, &input.project)?;
     let mut output = HashTaskContentsOutput::default();
     let mut data = json::json!({});
     let mut has_data = false;

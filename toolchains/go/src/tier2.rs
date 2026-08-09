@@ -5,7 +5,7 @@ use crate::go_work::GoWork;
 use extism_pdk::*;
 use moon_config::{BinEntry, DependencyScope};
 use moon_pdk::{
-    command_exists, exec, get_host_env_var, get_host_environment, locate_root,
+    VirtualPathExt, command_exists, exec, get_host_env_var, get_host_environment, locate_root,
     parse_toolchain_config_schema,
 };
 use moon_pdk_api::*;
@@ -95,9 +95,7 @@ pub fn extend_project_graph(
         let go_mod_path = project_root.join("go.mod");
 
         let mut manifest = if go_mod_path.exists() {
-            if let Some(file) = go_mod_path.virtual_path() {
-                output.input_files.push(file);
-            }
+            output.input_files.push(go_mod_path.clone());
 
             parse_go_mod(fs::read_file(&go_mod_path)?)?
         } else {
@@ -179,7 +177,7 @@ fn gather_shared_paths(
     paths: &mut Vec<PathBuf>,
 ) -> AnyResult<()> {
     if let Some(globals_dir) = globals_dir
-        && globals_dir.real_path().is_some()
+        && globals_dir.to_real_path()?.is_some()
     {
         // Avoid the host env overhead if we already
         // have a valid globals directory!
@@ -194,7 +192,11 @@ fn gather_shared_paths(
         } else if let Some(value) = get_host_env_var("GOPATH")? {
             Some(PathBuf::from(value).join("bin"))
         } else {
-            env.home_dir.join("go").join("bin").real_path()
+            env.home_dir
+                .join("go")
+                .join("bin")
+                .to_real_path()?
+                .map(|path| path.to_path_buf())
         };
 
         if let Some(dir) = maybe_dir {
@@ -252,21 +254,17 @@ pub fn locate_dependencies_root(
             output.members = Some(go_work.modules);
         }
 
-        output.root = root.virtual_path();
+        output.root = Some(root);
     }
 
     // Then `go.sum` second
-    if output.root.is_none()
-        && let Some(root) = locate_root(&input.starting_dir, "go.sum")
-    {
-        output.root = root.virtual_path();
+    if output.root.is_none() {
+        output.root = locate_root(&input.starting_dir, "go.sum");
     }
 
     // Otherwise assume `go.mod`
-    if output.root.is_none()
-        && let Some(root) = locate_root(&input.starting_dir, "go.mod")
-    {
-        output.root = root.virtual_path();
+    if output.root.is_none() {
+        output.root = locate_root(&input.starting_dir, "go.mod");
     }
 
     Ok(Json(output))
@@ -402,7 +400,8 @@ pub fn setup_environment(
 
             output.commands.push(
                 ExecCommand::new(ExecCommandInput::new("go", args).cwd(input.root.to_owned()))
-                    .cache(format!("go-bins-{version}")),
+                    .cache(CacheStrategy::Memory)
+                    .label(format!("go-bins-{version}")),
             );
         }
     }
