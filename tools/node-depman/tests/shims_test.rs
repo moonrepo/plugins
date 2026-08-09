@@ -8,6 +8,12 @@ mod node_depman_tool {
         generate_shims_test!("npm-test", ["npm", "npx", "node-gyp"]);
     }
 
+    mod nub {
+        use super::*;
+
+        generate_shims_test!("nub-test", ["nub", "nubx"]);
+    }
+
     mod pnpm {
         use super::*;
 

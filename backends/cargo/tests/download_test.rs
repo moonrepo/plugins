@@ -21,6 +21,29 @@ mod cargo_backend_download {
         });
     }
 
+    mod locked {
+        use super::*;
+
+        generate_native_install_tests!("cargo:eza", "0.23.1", None, |cfg| {
+            cfg.tool_config(CargoToolConfig {
+                locked: true,
+                ..Default::default()
+            });
+        });
+    }
+
+    mod locked_without_binstall {
+        use super::*;
+
+        generate_native_install_tests!("cargo:eza", "0.23.1", None, |cfg| {
+            cfg.backend_config(CargoBackendConfig {
+                locked: true,
+                no_binstall: true,
+                ..Default::default()
+            });
+        });
+    }
+
     // https://github.com/kbknapp/cargo-outdated/blob/master/Cargo.toml
 
     mod features {

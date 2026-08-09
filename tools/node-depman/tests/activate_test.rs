@@ -90,6 +90,84 @@ mod node_depman_tool {
             }
         }
 
+        mod nub {
+            use super::*;
+
+            #[tokio::test(flavor = "multi_thread")]
+
+            async fn does_nothing_if_not_configured() {
+                let sandbox = create_empty_proto_sandbox();
+                let plugin = sandbox.create_plugin("nub-test").await;
+
+                let result = plugin
+                    .activate_environment(ActivateEnvironmentInput::default())
+                    .await;
+
+                assert!(result.env.is_empty());
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+
+            async fn does_nothing_if_disabled() {
+                let sandbox = create_empty_proto_sandbox();
+                let plugin = sandbox
+                    .create_plugin_with_config("nub-test", |config| {
+                        config.tool_config(NodeDepmanPluginConfig {
+                            shared_globals_dir: false,
+                        });
+                    })
+                    .await;
+
+                let result = plugin
+                    .activate_environment(ActivateEnvironmentInput::default())
+                    .await;
+
+                assert!(result.env.is_empty());
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+
+            async fn adds_env_var() {
+                let sandbox = create_empty_proto_sandbox();
+                let plugin = sandbox
+                    .create_plugin_with_config("nub-test", |config| {
+                        config.tool_config(NodeDepmanPluginConfig {
+                            shared_globals_dir: true,
+                        });
+                    })
+                    .await;
+
+                let result = plugin
+                    .activate_environment(ActivateEnvironmentInput {
+                        globals_dir: Some(create_globals_dir()),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert_eq!(
+                    result.env,
+                    HashMap::from_iter([
+                        (
+                            "npm_config_global_dir".into(),
+                            sandbox
+                                .path()
+                                .join(".proto/tools/node/globals")
+                                .to_string_lossy()
+                                .to_string()
+                        ),
+                        (
+                            "npm_config_global_bin_dir".into(),
+                            sandbox
+                                .path()
+                                .join(".proto/tools/node/globals/bin")
+                                .to_string_lossy()
+                                .to_string()
+                        )
+                    ])
+                );
+            }
+        }
+
         mod pnpm {
             use super::*;
 
@@ -186,7 +264,6 @@ mod node_depman_tool {
                             ..Default::default()
                         },
                         globals_dir: Some(create_globals_dir()),
-                        ..Default::default()
                     })
                     .await;
 

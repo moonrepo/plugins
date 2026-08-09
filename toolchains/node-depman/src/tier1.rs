@@ -21,6 +21,7 @@ pub fn register_toolchain(
             lock_file_names: vec!["package-lock.json".into(), "npm-shrinkwrap.json".into()],
             ..Default::default()
         },
+        PackageManager::Nub => todo!(),
         PackageManager::Pnpm | PackageManager::Pnpm11 | PackageManager::Pnpm12 => {
             RegisterToolchainOutput {
                 config_file_globs: vec![
@@ -72,6 +73,7 @@ pub fn define_toolchain_config() -> FnResult<Json<DefineToolchainConfigOutput>> 
     Ok(Json(DefineToolchainConfigOutput {
         schema: match manager {
             PackageManager::Npm => SchemaBuilder::build_root::<NpmToolchainConfig>(),
+            PackageManager::Nub => todo!(),
             PackageManager::Pnpm | PackageManager::Pnpm11 | PackageManager::Pnpm12 => {
                 SchemaBuilder::build_root::<PnpmToolchainConfig>()
             }

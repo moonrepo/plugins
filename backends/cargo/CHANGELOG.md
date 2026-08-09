@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added a `locked` config setting, which will be passed to install commands as `--locked`.
+
 ## 0.1.5
 
 #### 🚀 Updates
