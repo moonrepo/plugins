@@ -121,6 +121,15 @@ mod node_toolchain_tier2 {
     mod extend_task_command {
         use super::*;
 
+        // The guest converts virtual paths to real paths by joining the
+        // stripped virtual suffix onto the native host prefix with `/`, so on
+        // Windows the result is a mixed-separator string like
+        // `C:\...\sandbox/project/.moon`. Mirror that exactly, since args are
+        // compared as strings, not paths.
+        fn expected_prof_dir(root: &std::path::Path) -> String {
+            format!("{}/project/.moon", root.display())
+        }
+
         #[tokio::test(flavor = "multi_thread")]
         async fn prepends_exec_args_when_node() {
             let sandbox = create_empty_moon_sandbox();
@@ -182,11 +191,7 @@ mod node_toolchain_tier2 {
                     "--cpu-prof-name".into(),
                     "snapshot.cpuprofile".into(),
                     "--cpu-prof-dir".into(),
-                    sandbox
-                        .path()
-                        .join("project/.moon")
-                        .to_string_lossy()
-                        .into()
+                    expected_prof_dir(sandbox.path())
                 ])
             );
         }
@@ -213,11 +218,7 @@ mod node_toolchain_tier2 {
                     "--heap-prof-name".into(),
                     "snapshot.heapprofile".into(),
                     "--heap-prof-dir".into(),
-                    sandbox
-                        .path()
-                        .join("project/.moon")
-                        .to_string_lossy()
-                        .into()
+                    expected_prof_dir(sandbox.path())
                 ])
             );
         }
@@ -265,11 +266,7 @@ mod node_toolchain_tier2 {
                     "--heap-prof-name".into(),
                     "snapshot.heapprofile".into(),
                     "--heap-prof-dir".into(),
-                    sandbox
-                        .path()
-                        .join("project/.moon")
-                        .to_string_lossy()
-                        .into()
+                    expected_prof_dir(sandbox.path())
                 ])
             );
         }
