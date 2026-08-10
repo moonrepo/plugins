@@ -1245,6 +1245,7 @@ files = []
                         "requests".into(),
                         vec![LockDependency {
                             meta: Some("security".into()),
+                            req: Some(UnresolvedVersionSpec::parse("==2.8.*, >=2.8.1").unwrap()),
                             ..Default::default()
                         }]
                     ),
@@ -1380,6 +1381,9 @@ files = []
                         "requests".into(),
                         ManifestDependency::Config(ManifestDependencyConfig {
                             features: vec!["security".into()],
+                            version: Some(
+                                UnresolvedVersionSpec::parse("==2.8.*, >=2.8.1").unwrap()
+                            ),
                             ..Default::default()
                         })
                     ),
