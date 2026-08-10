@@ -1,6 +1,6 @@
 [package]
 name = "python_uv_toolchain"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2024"
 description = "Python uv toolchain WASM plugin for moon."
 authors = ["Miles Johnson"]
