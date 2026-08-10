@@ -1,6 +1,6 @@
 [package]
 name = "migrate_nx_extension"
-version = "1.0.3"
+version = "1.0.4"
 edition = "2024"
 description = "moon extension WASM plugin for migrating an Nx repository to moon."
 authors = ["Miles Johnson"]
