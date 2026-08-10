@@ -1,5 +1,5 @@
 use moon_common::Id;
-use moon_pdk_api::{UnresolvedVersionSpec, Version, VersionReq, config_struct};
+use moon_pdk_api::{MatchesVersion, Requirement, UnresolvedVersionSpec, Version, config_struct};
 use nodejs_package_json::VersionProtocol;
 use rustc_hash::FxHashMap;
 use schematic::{Config, ConfigEnum, derive_enum};
@@ -146,23 +146,21 @@ impl SharedPackageManagerConfig {
             return false;
         };
 
-        let req = VersionReq::parse(req).unwrap();
+        let req = Requirement::parse(req).unwrap();
 
         match spec {
             UnresolvedVersionSpec::Canary => true,
-            UnresolvedVersionSpec::Req(value) => {
-                let value = value.comparators.first().unwrap();
+            UnresolvedVersionSpec::Requirement(value) => {
                 let mut version = Version::new(
-                    value.major,
+                    value.major.unwrap_or(0),
                     value.minor.unwrap_or(0),
                     value.patch.unwrap_or(0),
                 );
-                version.pre = value.pre.clone();
+                version.prerelease = value.prerelease.clone();
 
                 req.matches(&version)
             }
-            UnresolvedVersionSpec::Calendar(version) => req.matches(version),
-            UnresolvedVersionSpec::Semantic(version) => req.matches(version),
+            UnresolvedVersionSpec::Version(version) => req.matches(version),
             _ => false,
         }
     }

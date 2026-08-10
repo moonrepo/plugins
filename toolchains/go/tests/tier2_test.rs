@@ -5,7 +5,6 @@ use moon_pdk_test_utils::{create_empty_moon_sandbox, create_moon_sandbox};
 use serde_json::json;
 use std::collections::BTreeMap;
 use std::env;
-use std::path::PathBuf;
 
 mod go_toolchain_tier2 {
     use super::*;
@@ -67,9 +66,9 @@ mod go_toolchain_tier2 {
             assert_eq!(
                 output.input_files,
                 [
-                    PathBuf::from("/workspace/a/go.mod"),
-                    PathBuf::from("/workspace/b/go.mod"),
-                    PathBuf::from("/workspace/c/go.mod"),
+                    VirtualPath::new("/workspace/a/go.mod"),
+                    VirtualPath::new("/workspace/b/go.mod"),
+                    VirtualPath::new("/workspace/c/go.mod"),
                 ]
             );
         }
@@ -95,7 +94,10 @@ mod go_toolchain_tier2 {
                 ),])
             );
 
-            assert_eq!(output.input_files, [PathBuf::from("/workspace/a/go.mod")]);
+            assert_eq!(
+                output.input_files,
+                [VirtualPath::new("/workspace/a/go.mod")]
+            );
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -174,9 +176,9 @@ mod go_toolchain_tier2 {
                 assert_eq!(
                     output.input_files,
                     [
-                        PathBuf::from("/workspace/a/go.mod"),
-                        PathBuf::from("/workspace/b/go.mod"),
-                        PathBuf::from("/workspace/c/go.mod"),
+                        VirtualPath::new("/workspace/a/go.mod"),
+                        VirtualPath::new("/workspace/b/go.mod"),
+                        VirtualPath::new("/workspace/c/go.mod"),
                     ]
                 );
             }
@@ -226,9 +228,9 @@ mod go_toolchain_tier2 {
                 assert_eq!(
                     output.input_files,
                     [
-                        PathBuf::from("/workspace/a/go.mod"),
-                        PathBuf::from("/workspace/b/go.mod"),
-                        PathBuf::from("/workspace/c/go.mod"),
+                        VirtualPath::new("/workspace/a/go.mod"),
+                        VirtualPath::new("/workspace/b/go.mod"),
+                        VirtualPath::new("/workspace/c/go.mod"),
                     ]
                 );
             }
@@ -392,7 +394,7 @@ mod go_toolchain_tier2 {
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(sandbox.path().into()),
+                    starting_dir: VirtualPath::new(sandbox.path()),
                     ..Default::default()
                 })
                 .await;
@@ -408,13 +410,13 @@ mod go_toolchain_tier2 {
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(sandbox.path().join("package/nested")),
+                    starting_dir: VirtualPath::new(sandbox.path().join("package/nested")),
                     ..Default::default()
                 })
                 .await;
 
             assert!(output.members.is_none());
-            assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/package"));
+            assert_eq!(output.root.unwrap(), VirtualPath::new("/workspace/package"));
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -424,7 +426,7 @@ mod go_toolchain_tier2 {
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(sandbox.path().join("package-with-sum/nested")),
+                    starting_dir: VirtualPath::new(sandbox.path().join("package-with-sum/nested")),
                     ..Default::default()
                 })
                 .await;
@@ -432,7 +434,7 @@ mod go_toolchain_tier2 {
             assert!(output.members.is_none());
             assert_eq!(
                 output.root.unwrap(),
-                PathBuf::from("/workspace/package-with-sum")
+                VirtualPath::new("/workspace/package-with-sum")
             );
         }
 
@@ -443,7 +445,7 @@ mod go_toolchain_tier2 {
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(
+                    starting_dir: VirtualPath::new(
                         sandbox.path().join("workspace/modules/a/nested"),
                     ),
                     ..Default::default()
@@ -451,7 +453,10 @@ mod go_toolchain_tier2 {
                 .await;
 
             assert_eq!(output.members.unwrap(), ["modules/a"]);
-            assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/workspace"));
+            assert_eq!(
+                output.root.unwrap(),
+                VirtualPath::new("/workspace/workspace")
+            );
         }
     }
 
@@ -465,7 +470,7 @@ mod go_toolchain_tier2 {
 
             let output = plugin
                 .install_dependencies(InstallDependenciesInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({}),
                     ..Default::default()
                 })
@@ -484,7 +489,7 @@ mod go_toolchain_tier2 {
 
             let output = plugin
                 .install_dependencies(InstallDependenciesInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "workspaces": true
                     }),
@@ -511,7 +516,7 @@ mod go_toolchain_tier2 {
 
             let output = plugin
                 .install_dependencies(InstallDependenciesInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "workspaces": false
                     }),
@@ -534,7 +539,7 @@ mod go_toolchain_tier2 {
 
             let output = plugin
                 .install_dependencies(InstallDependenciesInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "tidyOnChange": true,
                         "workspaces": true
@@ -562,7 +567,7 @@ mod go_toolchain_tier2 {
 
             let output = plugin
                 .install_dependencies(InstallDependenciesInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({}),
                     ..Default::default()
                 })
@@ -588,7 +593,7 @@ mod go_toolchain_tier2 {
 
             let output = plugin
                 .install_dependencies(InstallDependenciesInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "tidyOnChange": true
                     }),
@@ -622,7 +627,7 @@ mod go_toolchain_tier2 {
 
             let output = plugin
                 .install_dependencies(InstallDependenciesInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "tidyOnChange": false
                     }),
@@ -649,7 +654,7 @@ mod go_toolchain_tier2 {
 
             let output = plugin
                 .install_dependencies(InstallDependenciesInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "tidyOnChange": true
                     }),
@@ -678,7 +683,7 @@ mod go_toolchain_tier2 {
 
             let output = plugin
                 .parse_lock(ParseLockInput {
-                    path: VirtualPath::Real(sandbox.path().join("basic.sum")),
+                    path: VirtualPath::new(sandbox.path().join("basic.sum")),
                     ..Default::default()
                 })
                 .await;
@@ -721,7 +726,7 @@ mod go_toolchain_tier2 {
 
             let output = plugin
                 .parse_lock(ParseLockInput {
-                    path: VirtualPath::Real(sandbox.path().join("basic.work.sum")),
+                    path: VirtualPath::new(sandbox.path().join("basic.work.sum")),
                     ..Default::default()
                 })
                 .await;
@@ -768,7 +773,7 @@ mod go_toolchain_tier2 {
 
             let output = plugin
                 .parse_manifest(ParseManifestInput {
-                    path: VirtualPath::Real(sandbox.path().join("c/go.mod")),
+                    path: VirtualPath::new(sandbox.path().join("c/go.mod")),
                     ..Default::default()
                 })
                 .await;
@@ -805,7 +810,7 @@ mod go_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "bins": []
                     }),
@@ -823,7 +828,7 @@ mod go_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "bins": [
                             "golang.org/x/tools/gopls",
@@ -846,12 +851,14 @@ mod go_toolchain_tier2 {
                         )
                         .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                     )
-                    .cache("go-bins-github.com/revel/cmd@latest"),
+                    .cache(CacheStrategy::Memory)
+                    .label("go-bins-github.com/revel/cmd@latest"),
                     ExecCommand::new(
                         ExecCommandInput::new("go", ["install", "-v", "golang.org/x/tools/gopls"],)
                             .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                     )
-                    .cache("go-bins-golang.org/x/tools@latest")
+                    .cache(CacheStrategy::Memory)
+                    .label("go-bins-golang.org/x/tools@latest")
                 ]
             );
         }
@@ -863,7 +870,7 @@ mod go_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "bins": [
                             "golang.org/x/tools/gopls@1",
@@ -886,7 +893,8 @@ mod go_toolchain_tier2 {
                         )
                         .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                     )
-                    .cache("go-bins-github.com/revel/cmd@2"),
+                    .cache(CacheStrategy::Memory)
+                    .label("go-bins-github.com/revel/cmd@2"),
                     ExecCommand::new(
                         ExecCommandInput::new(
                             "go",
@@ -894,7 +902,8 @@ mod go_toolchain_tier2 {
                         )
                         .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                     )
-                    .cache("go-bins-golang.org/x/tools@1"),
+                    .cache(CacheStrategy::Memory)
+                    .label("go-bins-golang.org/x/tools@1"),
                 ]
             );
         }
@@ -913,7 +922,7 @@ mod go_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "bins": [
                             {

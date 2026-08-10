@@ -97,13 +97,8 @@ pub fn scaffold_docker(
         fs::write_file(&lib_file, "")?;
         fs::write_file(&main_file, "")?;
 
-        if let Some(file) = lib_file.virtual_path() {
-            output.copied_files.push(file);
-        }
-
-        if let Some(file) = main_file.virtual_path() {
-            output.copied_files.push(file);
-        }
+        output.copied_files.push(lib_file.clone());
+        output.copied_files.push(main_file.clone());
     }
 
     // When we copy sources, we then need to remove these files
@@ -182,15 +177,13 @@ pub fn prune_docker(Json(input): Json<PruneDockerInput>) -> FnResult<Json<PruneD
     // We can now delete the target directory, this may take a while...
     fs::remove_dir_all(&target_dir)?;
 
-    if let Some(file) = target_dir.virtual_path() {
-        output.changed_files.push(file);
-    }
-
     // If we preserved bins, rename the temp directory to the target,
     // so that other tools will find them at their original location
     if target_temp_dir.exists() {
-        fs::rename(target_temp_dir, target_dir)?;
+        fs::rename(target_temp_dir, &target_dir)?;
     }
+
+    output.changed_files.push(target_dir);
 
     Ok(Json(output))
 }

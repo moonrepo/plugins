@@ -3,6 +3,7 @@ use crate::managers::*;
 use crate::pyproject_toml::{PyProjectToml, PyProjectTomlWithTools, normalize_distribution_name};
 use extism_pdk::*;
 use moon_config::DependencyScope;
+use moon_pdk::VirtualPathExt;
 use moon_pdk::{
     load_project_toolchain_config, load_toolchain_config, locate_root, locate_root_many,
     locate_root_many_with_check, parse_toolchain_config_schema,
@@ -88,9 +89,7 @@ pub fn extend_project_graph(
             .extended_projects
             .insert(id.to_owned(), project_output);
 
-        if let Some(file) = manifest.path.virtual_path() {
-            output.input_files.push(file);
-        }
+        output.input_files.push(manifest.path.clone());
     }
 
     Ok(Json(output))
@@ -102,10 +101,10 @@ fn gather_shared_paths(
     paths: &mut Vec<PathBuf>,
 ) -> AnyResult<()> {
     if let Some(venv_parent) = locate_root(current_dir, &config.venv_name)
-        && let Some(venv_root) = venv_parent.join(&config.venv_name).real_path()
+        && let Some(venv_root) = venv_parent.join(&config.venv_name).to_real_path()?
     {
-        paths.push(venv_root.join("Scripts"));
-        paths.push(venv_root.join("bin"));
+        paths.push(venv_root.join("Scripts").to_path_buf());
+        paths.push(venv_root.join("bin").to_path_buf());
     }
 
     Ok(())
@@ -152,9 +151,9 @@ pub fn locate_dependencies_root(
 
     // First attempt: find lock files
     if let Some(root) = locate_root_many(&input.starting_dir, &lock_names) {
-        output.root = root.virtual_path();
         output.members = PyProjectTomlWithTools::load(root.join("pyproject.toml"))?
             .extract_members(package_manager)?;
+        output.root = Some(root);
     }
 
     // Second attempt: find workspace-compatible manifest files
@@ -166,7 +165,7 @@ pub fn locate_dependencies_root(
             if manifest.tool.is_some()
                 && let Some(members) = manifest.extract_members(package_manager)?
             {
-                output.root = root.virtual_path();
+                output.root = Some(root.to_owned());
                 output.members = Some(members);
                 found = true;
             }
@@ -176,10 +175,8 @@ pub fn locate_dependencies_root(
     }
 
     // Last attempt: find a manifest file (project only)
-    if output.root.is_none()
-        && let Some(root) = locate_root_many(&input.starting_dir, &manifest_names)
-    {
-        output.root = root.virtual_path();
+    if output.root.is_none() {
+        output.root = locate_root_many(&input.starting_dir, &manifest_names);
     }
 
     Ok(Json(output))

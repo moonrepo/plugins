@@ -1,9 +1,7 @@
-use moon_common::path::standardize_separators;
 use moon_pdk_api::*;
 use moon_pdk_test_utils::create_empty_moon_sandbox;
 use serde_json::json;
 use std::fs;
-use std::path::PathBuf;
 
 mod node_toolchain_tier2 {
     use super::*;
@@ -21,7 +19,7 @@ mod node_toolchain_tier2 {
 
                 let output = plugin
                     .setup_environment(SetupEnvironmentInput {
-                        root: VirtualPath::Real(sandbox.path().into()),
+                        root: VirtualPath::new(sandbox.path()),
                         toolchain_config: json!({
                             "syncVersionManagerConfig": "nvm",
                             "version": null
@@ -41,7 +39,7 @@ mod node_toolchain_tier2 {
 
                 let output = plugin
                     .setup_environment(SetupEnvironmentInput {
-                        root: VirtualPath::Real(sandbox.path().into()),
+                        root: VirtualPath::new(sandbox.path()),
                         toolchain_config: json!({
                             "syncVersionManagerConfig": null,
                             "version": "20.1"
@@ -61,7 +59,7 @@ mod node_toolchain_tier2 {
 
                 let output = plugin
                     .setup_environment(SetupEnvironmentInput {
-                        root: VirtualPath::Real(sandbox.path().into()),
+                        root: VirtualPath::new(sandbox.path()),
                         toolchain_config: json!({
                             "syncVersionManagerConfig": "nvm",
                             "version": "20.1"
@@ -76,7 +74,10 @@ mod node_toolchain_tier2 {
                         .iter()
                         .any(|op| op.id == "sync-version-manager")
                 );
-                assert_eq!(output.changed_files, [PathBuf::from("/workspace/.nvmrc")]);
+                assert_eq!(
+                    output.changed_files,
+                    [VirtualPath::new("/workspace/.nvmrc")]
+                );
                 assert_eq!(
                     fs::read_to_string(sandbox.path().join(".nvmrc")).unwrap(),
                     "20.1"
@@ -90,7 +91,7 @@ mod node_toolchain_tier2 {
 
                 let output = plugin
                     .setup_environment(SetupEnvironmentInput {
-                        root: VirtualPath::Real(sandbox.path().into()),
+                        root: VirtualPath::new(sandbox.path()),
                         toolchain_config: json!({
                             "syncVersionManagerConfig": "nodenv",
                             "version": "20.1"
@@ -107,7 +108,7 @@ mod node_toolchain_tier2 {
                 );
                 assert_eq!(
                     output.changed_files,
-                    [PathBuf::from("/workspace/.node-version")]
+                    [VirtualPath::new("/workspace/.node-version")]
                 );
                 assert_eq!(
                     fs::read_to_string(sandbox.path().join(".node-version")).unwrap(),
@@ -119,6 +120,15 @@ mod node_toolchain_tier2 {
 
     mod extend_task_command {
         use super::*;
+
+        // The guest converts virtual paths to real paths by joining the
+        // stripped virtual suffix onto the native host prefix with `/`, so on
+        // Windows the result is a mixed-separator string like
+        // `C:\...\sandbox/project/.moon`. Mirror that exactly, since args are
+        // compared as strings, not paths.
+        fn expected_prof_dir(root: &std::path::Path) -> String {
+            format!("{}/project/.moon", root.display())
+        }
 
         #[tokio::test(flavor = "multi_thread")]
         async fn prepends_exec_args_when_node() {
@@ -181,7 +191,7 @@ mod node_toolchain_tier2 {
                     "--cpu-prof-name".into(),
                     "snapshot.cpuprofile".into(),
                     "--cpu-prof-dir".into(),
-                    standardize_separators(sandbox.path().join("project/.moon").to_string_lossy())
+                    expected_prof_dir(sandbox.path())
                 ])
             );
         }
@@ -208,7 +218,7 @@ mod node_toolchain_tier2 {
                     "--heap-prof-name".into(),
                     "snapshot.heapprofile".into(),
                     "--heap-prof-dir".into(),
-                    standardize_separators(sandbox.path().join("project/.moon").to_string_lossy())
+                    expected_prof_dir(sandbox.path())
                 ])
             );
         }
@@ -256,7 +266,7 @@ mod node_toolchain_tier2 {
                     "--heap-prof-name".into(),
                     "snapshot.heapprofile".into(),
                     "--heap-prof-dir".into(),
-                    standardize_separators(sandbox.path().join("project/.moon").to_string_lossy())
+                    expected_prof_dir(sandbox.path())
                 ])
             );
         }

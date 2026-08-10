@@ -4,7 +4,6 @@ use moon_pdk_api::*;
 use moon_pdk_test_utils::{create_empty_moon_sandbox, create_moon_sandbox};
 use std::collections::BTreeMap;
 use std::env;
-use std::path::PathBuf;
 
 mod rust_toolchain_tier2 {
     use super::*;
@@ -66,9 +65,9 @@ mod rust_toolchain_tier2 {
             assert_eq!(
                 output.input_files,
                 [
-                    PathBuf::from("/workspace/a/Cargo.toml"),
-                    PathBuf::from("/workspace/b/Cargo.toml"),
-                    PathBuf::from("/workspace/c/Cargo.toml"),
+                    VirtualPath::new("/workspace/a/Cargo.toml"),
+                    VirtualPath::new("/workspace/b/Cargo.toml"),
+                    VirtualPath::new("/workspace/c/Cargo.toml"),
                 ]
             );
         }
@@ -96,7 +95,7 @@ mod rust_toolchain_tier2 {
 
             assert_eq!(
                 output.input_files,
-                [PathBuf::from("/workspace/a/Cargo.toml")]
+                [VirtualPath::new("/workspace/a/Cargo.toml")]
             );
         }
 
@@ -159,7 +158,7 @@ mod rust_toolchain_tier2 {
                 .extend_task_command(ExtendTaskCommandInput {
                     command: "nextest".into(),
                     args: vec!["run".into()],
-                    globals_dir: Some(VirtualPath::Real(sandbox.path().join(".home/.cargo/bin"))),
+                    globals_dir: Some(VirtualPath::new(sandbox.path().join(".home/.cargo/bin"))),
                     ..Default::default()
                 })
                 .await;
@@ -174,7 +173,7 @@ mod rust_toolchain_tier2 {
                 .extend_task_command(ExtendTaskCommandInput {
                     command: "cargo-nextest".into(),
                     args: vec!["run".into()],
-                    globals_dir: Some(VirtualPath::Real(sandbox.path().join(".home/.cargo/bin"))),
+                    globals_dir: Some(VirtualPath::new(sandbox.path().join(".home/.cargo/bin"))),
                     ..Default::default()
                 })
                 .await;
@@ -198,7 +197,7 @@ mod rust_toolchain_tier2 {
                 .extend_task_command(ExtendTaskCommandInput {
                     command: "nextest".into(),
                     args: vec!["run".into()],
-                    globals_dir: Some(VirtualPath::Real(sandbox.path().join(".home/.cargo/bin"))),
+                    globals_dir: Some(VirtualPath::new(sandbox.path().join(".home/.cargo/bin"))),
                     ..Default::default()
                 })
                 .await;
@@ -219,7 +218,7 @@ mod rust_toolchain_tier2 {
                 .extend_task_command(ExtendTaskCommandInput {
                     command: "cargo".into(),
                     args: vec!["build".into()],
-                    globals_dir: Some(VirtualPath::Real(sandbox.path().join(".home/.cargo/bin"))),
+                    globals_dir: Some(VirtualPath::new(sandbox.path().join(".home/.cargo/bin"))),
                     ..Default::default()
                 })
                 .await;
@@ -230,7 +229,7 @@ mod rust_toolchain_tier2 {
             let output = plugin
                 .extend_task_command(ExtendTaskCommandInput {
                     command: "rustc".into(),
-                    globals_dir: Some(VirtualPath::Real(sandbox.path().join(".home/.cargo/bin"))),
+                    globals_dir: Some(VirtualPath::new(sandbox.path().join(".home/.cargo/bin"))),
                     ..Default::default()
                 })
                 .await;
@@ -279,7 +278,7 @@ mod rust_toolchain_tier2 {
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(sandbox.path().into()),
+                    starting_dir: VirtualPath::new(sandbox.path()),
                     ..Default::default()
                 })
                 .await;
@@ -295,13 +294,13 @@ mod rust_toolchain_tier2 {
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(sandbox.path().join("package/nested")),
+                    starting_dir: VirtualPath::new(sandbox.path().join("package/nested")),
                     ..Default::default()
                 })
                 .await;
 
             assert!(output.members.is_none());
-            assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/package"));
+            assert_eq!(output.root.unwrap(), VirtualPath::new("/workspace/package"));
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -311,9 +310,7 @@ mod rust_toolchain_tier2 {
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(
-                        sandbox.path().join("package-with-lock/nested"),
-                    ),
+                    starting_dir: VirtualPath::new(sandbox.path().join("package-with-lock/nested")),
                     ..Default::default()
                 })
                 .await;
@@ -321,7 +318,7 @@ mod rust_toolchain_tier2 {
             assert!(output.members.is_none());
             assert_eq!(
                 output.root.unwrap(),
-                PathBuf::from("/workspace/package-with-lock")
+                VirtualPath::new("/workspace/package-with-lock")
             );
         }
 
@@ -332,7 +329,7 @@ mod rust_toolchain_tier2 {
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(
+                    starting_dir: VirtualPath::new(
                         sandbox.path().join("workspace/crates/a/nested"),
                     ),
                     ..Default::default()
@@ -340,7 +337,10 @@ mod rust_toolchain_tier2 {
                 .await;
 
             assert_eq!(output.members.unwrap(), ["crates/*"]);
-            assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/workspace"));
+            assert_eq!(
+                output.root.unwrap(),
+                VirtualPath::new("/workspace/workspace")
+            );
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -350,7 +350,7 @@ mod rust_toolchain_tier2 {
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(
+                    starting_dir: VirtualPath::new(
                         sandbox.path().join("workspace-with-lock/crates/a/nested"),
                     ),
                     ..Default::default()
@@ -360,7 +360,7 @@ mod rust_toolchain_tier2 {
             assert_eq!(output.members.unwrap(), ["crates/*"]);
             assert_eq!(
                 output.root.unwrap(),
-                PathBuf::from("/workspace/workspace-with-lock")
+                VirtualPath::new("/workspace/workspace-with-lock")
             );
         }
     }
@@ -375,7 +375,7 @@ mod rust_toolchain_tier2 {
 
             let output = plugin
                 .install_dependencies(InstallDependenciesInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     ..Default::default()
                 })
                 .await;
@@ -391,7 +391,7 @@ mod rust_toolchain_tier2 {
 
             let output = plugin
                 .install_dependencies(InstallDependenciesInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     ..Default::default()
                 })
                 .await;
@@ -417,7 +417,7 @@ mod rust_toolchain_tier2 {
 
             let output = plugin
                 .parse_lock(ParseLockInput {
-                    path: VirtualPath::Real(sandbox.path().join("Cargo.lock")),
+                    path: VirtualPath::new(sandbox.path().join("Cargo.lock")),
                     ..Default::default()
                 })
                 .await;
@@ -468,7 +468,7 @@ mod rust_toolchain_tier2 {
 
             let output = plugin
                 .parse_manifest(ParseManifestInput {
-                    path: VirtualPath::Real(sandbox.path().join("Cargo.toml")),
+                    path: VirtualPath::new(sandbox.path().join("Cargo.toml")),
                     ..Default::default()
                 })
                 .await;
@@ -512,7 +512,7 @@ mod rust_toolchain_tier2 {
 
             let output = plugin
                 .parse_manifest(ParseManifestInput {
-                    path: VirtualPath::Real(sandbox.path().join("package/Cargo.toml")),
+                    path: VirtualPath::new(sandbox.path().join("package/Cargo.toml")),
                     ..Default::default()
                 })
                 .await;

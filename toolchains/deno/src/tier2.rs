@@ -5,7 +5,8 @@ use crate::deno_json::DenoJson;
 use extism_pdk::*;
 use moon_config::BinEntry;
 use moon_pdk::{
-    get_host_env_var, get_host_environment, parse_toolchain_config, parse_toolchain_config_schema,
+    VirtualPathExt, get_host_env_var, get_host_environment, parse_toolchain_config,
+    parse_toolchain_config_schema,
 };
 use moon_pdk_api::*;
 use std::path::PathBuf;
@@ -16,7 +17,7 @@ fn gather_shared_paths(
     paths: &mut Vec<PathBuf>,
 ) -> AnyResult<()> {
     if let Some(globals_dir) = globals_dir
-        && globals_dir.real_path().is_some()
+        && globals_dir.to_real_path()?.is_some()
     {
         // Avoid the host env overhead if we already
         // have a valid globals directory!
@@ -31,7 +32,11 @@ fn gather_shared_paths(
         } else if let Some(value) = get_host_env_var("DENO_HOME")? {
             Some(PathBuf::from(value).join("bin"))
         } else {
-            env.home_dir.join(".deno").join("bin").real_path()
+            env.home_dir
+                .join(".deno")
+                .join("bin")
+                .to_real_path()?
+                .map(|path| path.to_path_buf())
         };
 
         if let Some(dir) = maybe_dir {
@@ -58,7 +63,7 @@ pub fn extend_task_command(
         output.args = Some(Extend::Prepend(config.execute_args));
     }
 
-    gather_shared_paths(&env, input.globals_dir.as_ref(), &mut output.paths)?;
+    gather_shared_paths(env, input.globals_dir.as_ref(), &mut output.paths)?;
 
     Ok(Json(output))
 }
@@ -70,7 +75,7 @@ pub fn extend_task_script(
     let mut output = ExtendTaskScriptOutput::default();
     let env = get_host_environment()?;
 
-    gather_shared_paths(&env, input.globals_dir.as_ref(), &mut output.paths)?;
+    gather_shared_paths(env, input.globals_dir.as_ref(), &mut output.paths)?;
 
     Ok(Json(output))
 }
@@ -165,7 +170,8 @@ pub fn setup_environment(
 
             output.commands.push(
                 ExecCommand::new(ExecCommandInput::new("deno", args).cwd(input.root.to_owned()))
-                    .cache(format!("deno-bin-{name}")),
+                    .cache(CacheStrategy::Memory)
+                    .label(format!("deno-bin-{name}")),
             );
         }
     }

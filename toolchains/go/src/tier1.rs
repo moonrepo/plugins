@@ -86,9 +86,7 @@ pub fn prune_docker(Json(input): Json<PruneDockerInput>) -> FnResult<Json<PruneD
     if vendor_dir.exists() && input.docker_config.delete_vendor_directories {
         fs::remove_dir_all(&vendor_dir)?;
 
-        if let Some(file) = vendor_dir.virtual_path() {
-            output.changed_files.push(file);
-        }
+        output.changed_files.push(vendor_dir);
     }
 
     Ok(Json(output))

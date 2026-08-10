@@ -2,7 +2,6 @@ use moon_pdk_api::*;
 use moon_pdk_test_utils::create_moon_sandbox;
 use serde_json::json;
 use std::fs;
-use std::path::PathBuf;
 
 mod javascript_toolchain_tier2 {
     use super::*;
@@ -22,7 +21,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "syncPackageManagerField": false,
                         "packageManager": "npm"
@@ -52,7 +51,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "syncPackageManagerField": true,
                         "packageManager": null
@@ -82,7 +81,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "syncPackageManagerField": true,
                         "packageManager": "npm"
@@ -112,7 +111,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "syncPackageManagerField": true,
                         "packageManager": "npm"
@@ -142,7 +141,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "syncPackageManagerField": true,
                         "packageManager": "bun"
@@ -172,7 +171,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "syncPackageManagerField": true,
                         "packageManager": "deno"
@@ -202,7 +201,7 @@ mod javascript_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "syncPackageManagerField": true,
                         "packageManager": "npm"
@@ -213,7 +212,7 @@ mod javascript_toolchain_tier2 {
 
             assert_eq!(
                 output.changed_files,
-                [PathBuf::from("/workspace/package.json")]
+                [VirtualPath::new("/workspace/package.json")]
             );
             assert!(
                 fs::read_to_string(sandbox.path().join("package.json"))

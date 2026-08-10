@@ -217,10 +217,8 @@ pub fn sync_project(Json(input): Json<SyncProjectInput>) -> FnResult<Json<SyncOu
 
         output.operations.push(op);
 
-        if let Some(file) = package.save()?
-            && let Some(virtual_file) = file.virtual_path()
-        {
-            output.changed_files.push(virtual_file);
+        if let Some(file) = package.save()? {
+            output.changed_files.push(file);
         }
     }
 
@@ -318,9 +316,7 @@ pub fn prune_docker(Json(input): Json<PruneDockerInput>) -> FnResult<Json<PruneD
     if node_modules_dir.exists() && input.docker_config.delete_vendor_directories {
         fs::remove_dir_all(&node_modules_dir)?;
 
-        if let Some(file) = node_modules_dir.virtual_path() {
-            output.changed_files.push(file);
-        }
+        output.changed_files.push(node_modules_dir);
     }
 
     Ok(Json(output))

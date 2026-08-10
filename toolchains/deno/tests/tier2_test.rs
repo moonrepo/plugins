@@ -57,7 +57,7 @@ mod deno_toolchain_tier2 {
             let output = plugin
                 .extend_task_command(ExtendTaskCommandInput {
                     command: "unknown".into(),
-                    globals_dir: Some(VirtualPath::Real(sandbox.path().into())),
+                    globals_dir: Some(VirtualPath::new(sandbox.path())),
                     ..Default::default()
                 })
                 .await;
@@ -126,7 +126,7 @@ mod deno_toolchain_tier2 {
 
             let output = plugin
                 .parse_manifest(ParseManifestInput {
-                    path: VirtualPath::Real(sandbox.path().join("deno.json")),
+                    path: VirtualPath::new(sandbox.path().join("deno.json")),
                     ..Default::default()
                 })
                 .await;
@@ -181,7 +181,7 @@ mod deno_toolchain_tier2 {
 
             let output = plugin
                 .parse_manifest(ParseManifestInput {
-                    path: VirtualPath::Real(sandbox.path().join("deno-publish.json")),
+                    path: VirtualPath::new(sandbox.path().join("deno-publish.json")),
                     ..Default::default()
                 })
                 .await;
@@ -200,7 +200,7 @@ mod deno_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "bins": []
                     }),
@@ -218,7 +218,7 @@ mod deno_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "bins": [
                             "jsr:@std/http/file-server",
@@ -247,7 +247,8 @@ mod deno_toolchain_tier2 {
                         )
                         .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                     )
-                    .cache("deno-bin-jsr:@std/http/file-server"),
+                    .cache(CacheStrategy::Memory)
+                    .label("deno-bin-jsr:@std/http/file-server"),
                     ExecCommand::new(
                         ExecCommandInput::new(
                             "deno",
@@ -261,7 +262,8 @@ mod deno_toolchain_tier2 {
                         )
                         .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                     )
-                    .cache("deno-bin-https://examples.deno.land/color-logging.ts"),
+                    .cache(CacheStrategy::Memory)
+                    .label("deno-bin-https://examples.deno.land/color-logging.ts"),
                 ]
             );
         }
@@ -273,7 +275,7 @@ mod deno_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "bins": [
                             {
@@ -303,7 +305,8 @@ mod deno_toolchain_tier2 {
                     )
                     .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                 )
-                .cache("deno-bin-jsr:@std/http/file-server")]
+                .cache(CacheStrategy::Memory)
+                .label("deno-bin-jsr:@std/http/file-server")]
             );
         }
 
@@ -314,7 +317,7 @@ mod deno_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "bins": [
                             {
@@ -343,7 +346,8 @@ mod deno_toolchain_tier2 {
                     )
                     .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                 )
-                .cache("deno-bin-jsr:@std/http/file-server")]
+                .cache(CacheStrategy::Memory)
+                .label("deno-bin-jsr:@std/http/file-server")]
             );
         }
 
@@ -361,7 +365,7 @@ mod deno_toolchain_tier2 {
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "bins": [
                             {

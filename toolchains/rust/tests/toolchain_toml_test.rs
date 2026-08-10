@@ -12,7 +12,7 @@ mod toolchain_toml {
         #[test]
         fn adds_if_not_set() {
             let mut tc = ToolchainToml {
-                path: VirtualPath::Real(PathBuf::from("/base/rust-toolchain.toml")),
+                path: VirtualPath::new(PathBuf::from("/base/rust-toolchain.toml")),
                 ..Default::default()
             };
 
@@ -27,7 +27,7 @@ mod toolchain_toml {
         #[test]
         fn doesnt_add_if_empty() {
             let mut tc = ToolchainToml {
-                path: VirtualPath::Real(PathBuf::from("/base/rust-toolchain.toml")),
+                path: VirtualPath::new(PathBuf::from("/base/rust-toolchain.toml")),
                 ..Default::default()
             };
 
@@ -42,7 +42,7 @@ mod toolchain_toml {
         #[test]
         fn doesnt_add_if_same_value() {
             let mut tc = ToolchainToml {
-                path: VirtualPath::Real(PathBuf::from("/base/rust-toolchain.toml")),
+                path: VirtualPath::new(PathBuf::from("/base/rust-toolchain.toml")),
                 data: BaseToolchainToml {
                     toolchain: ToolchainSection {
                         channel: Some("stable".into()),
@@ -62,7 +62,7 @@ mod toolchain_toml {
         #[test]
         fn saves_field_if_set() {
             let mut tc = ToolchainToml {
-                path: VirtualPath::Real(PathBuf::from("/base/rust-toolchain.toml")),
+                path: VirtualPath::new(PathBuf::from("/base/rust-toolchain.toml")),
                 ..Default::default()
             };
 
@@ -81,7 +81,7 @@ mod toolchain_toml {
         #[test]
         fn doesnt_save_field_if_not_set() {
             let tc = ToolchainToml {
-                path: VirtualPath::Real(PathBuf::from("/base/rust-toolchain.toml")),
+                path: VirtualPath::new(PathBuf::from("/base/rust-toolchain.toml")),
                 ..Default::default()
             };
 

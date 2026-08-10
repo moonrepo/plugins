@@ -38,6 +38,7 @@ projects:
   python-pip-toolchain: toolchains/python-pip
   python-poetry-toolchain: toolchains/python-poetry
   python-uv-toolchain: toolchains/python-uv
+  ruby-toolchain: toolchains/ruby
   rust-toolchain: toolchains/rust
   system-toolchain: toolchains/system
   typescript-toolchain: toolchains/typescript

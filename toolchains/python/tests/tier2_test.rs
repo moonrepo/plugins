@@ -3,7 +3,6 @@ use moon_pdk_api::*;
 use moon_pdk_test_utils::{create_empty_moon_sandbox, create_moon_sandbox};
 use serde_json::json;
 use std::collections::BTreeMap;
-use std::path::PathBuf;
 
 mod python_toolchain_tier2 {
     use super::*;
@@ -62,14 +61,14 @@ mod python_toolchain_tier2 {
                 ])
             );
 
-            output.input_files.sort();
+            output.input_files.sort_by(|a, d| a.cmp(d));
 
             assert_eq!(
                 output.input_files,
                 [
-                    PathBuf::from("/workspace/a/pyproject.toml"),
-                    PathBuf::from("/workspace/b/pyproject.toml"),
-                    PathBuf::from("/workspace/c/pyproject.toml"),
+                    VirtualPath::new("/workspace/a/pyproject.toml"),
+                    VirtualPath::new("/workspace/b/pyproject.toml"),
+                    VirtualPath::new("/workspace/c/pyproject.toml"),
                 ]
             );
         }
@@ -142,7 +141,7 @@ dependencies = ["internal-lib"]
 
             assert_eq!(
                 output.input_files,
-                [PathBuf::from("/workspace/a/pyproject.toml")]
+                [VirtualPath::new("/workspace/a/pyproject.toml")]
             );
         }
 
@@ -273,7 +272,7 @@ dependencies = ["internal-lib"]
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(sandbox.path().into()),
+                    starting_dir: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": "pip"
                     }),
@@ -292,7 +291,7 @@ dependencies = ["internal-lib"]
 
             let output = plugin
                 .locate_dependencies_root(LocateDependenciesRootInput {
-                    starting_dir: VirtualPath::Real(sandbox.path().join("package")),
+                    starting_dir: VirtualPath::new(sandbox.path().join("package")),
                     toolchain_config: json!({
                         "packageManager": null
                     }),
@@ -314,7 +313,7 @@ dependencies = ["internal-lib"]
 
                 let output = plugin
                     .locate_dependencies_root(LocateDependenciesRootInput {
-                        starting_dir: VirtualPath::Real(sandbox.path().join("package/nested")),
+                        starting_dir: VirtualPath::new(sandbox.path().join("package/nested")),
                         toolchain_config: json!({
                             "packageManager": "pip"
                         }),
@@ -323,7 +322,7 @@ dependencies = ["internal-lib"]
                     .await;
 
                 assert!(output.members.is_none());
-                assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/package"));
+                assert_eq!(output.root.unwrap(), VirtualPath::new("/workspace/package"));
             }
 
             #[tokio::test(flavor = "multi_thread")]
@@ -335,7 +334,7 @@ dependencies = ["internal-lib"]
 
                 let output = plugin
                     .locate_dependencies_root(LocateDependenciesRootInput {
-                        starting_dir: VirtualPath::Real(sandbox.path().join("package/nested")),
+                        starting_dir: VirtualPath::new(sandbox.path().join("package/nested")),
                         toolchain_config: json!({
                             "packageManager": "pip"
                         }),
@@ -344,7 +343,7 @@ dependencies = ["internal-lib"]
                     .await;
 
                 assert!(output.members.is_none());
-                assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/package"));
+                assert_eq!(output.root.unwrap(), VirtualPath::new("/workspace/package"));
             }
 
             #[tokio::test(flavor = "multi_thread")]
@@ -354,7 +353,7 @@ dependencies = ["internal-lib"]
 
                 let output = plugin
                     .locate_dependencies_root(LocateDependenciesRootInput {
-                        starting_dir: VirtualPath::Real(
+                        starting_dir: VirtualPath::new(
                             sandbox.path().join("workspace/packages/a/nested"),
                         ),
                         toolchain_config: json!({
@@ -367,7 +366,7 @@ dependencies = ["internal-lib"]
                 assert!(output.members.is_none());
                 assert_eq!(
                     output.root.unwrap(),
-                    PathBuf::from("/workspace/workspace/packages/a")
+                    VirtualPath::new("/workspace/workspace/packages/a")
                 );
             }
         }
@@ -384,7 +383,7 @@ dependencies = ["internal-lib"]
 
                 let output = plugin
                     .locate_dependencies_root(LocateDependenciesRootInput {
-                        starting_dir: VirtualPath::Real(sandbox.path().join("package/nested")),
+                        starting_dir: VirtualPath::new(sandbox.path().join("package/nested")),
                         toolchain_config: json!({
                             "packageManager": "poetry"
                         }),
@@ -393,7 +392,7 @@ dependencies = ["internal-lib"]
                     .await;
 
                 assert!(output.members.is_none());
-                assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/package"));
+                assert_eq!(output.root.unwrap(), VirtualPath::new("/workspace/package"));
             }
 
             #[tokio::test(flavor = "multi_thread")]
@@ -406,7 +405,7 @@ dependencies = ["internal-lib"]
 
                 let output = plugin
                     .locate_dependencies_root(LocateDependenciesRootInput {
-                        starting_dir: VirtualPath::Real(sandbox.path().join("package/nested")),
+                        starting_dir: VirtualPath::new(sandbox.path().join("package/nested")),
                         toolchain_config: json!({
                             "packageManager": "poetry"
                         }),
@@ -415,7 +414,7 @@ dependencies = ["internal-lib"]
                     .await;
 
                 assert!(output.members.is_none());
-                assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/package"));
+                assert_eq!(output.root.unwrap(), VirtualPath::new("/workspace/package"));
             }
         }
 
@@ -429,7 +428,7 @@ dependencies = ["internal-lib"]
 
                 let output = plugin
                     .locate_dependencies_root(LocateDependenciesRootInput {
-                        starting_dir: VirtualPath::Real(sandbox.path().join("package/nested")),
+                        starting_dir: VirtualPath::new(sandbox.path().join("package/nested")),
                         toolchain_config: json!({
                             "packageManager": "uv"
                         }),
@@ -438,7 +437,7 @@ dependencies = ["internal-lib"]
                     .await;
 
                 assert!(output.members.is_none());
-                assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/package"));
+                assert_eq!(output.root.unwrap(), VirtualPath::new("/workspace/package"));
             }
 
             #[tokio::test(flavor = "multi_thread")]
@@ -450,7 +449,7 @@ dependencies = ["internal-lib"]
 
                 let output = plugin
                     .locate_dependencies_root(LocateDependenciesRootInput {
-                        starting_dir: VirtualPath::Real(sandbox.path().join("package/nested")),
+                        starting_dir: VirtualPath::new(sandbox.path().join("package/nested")),
                         toolchain_config: json!({
                             "packageManager": "uv"
                         }),
@@ -459,7 +458,7 @@ dependencies = ["internal-lib"]
                     .await;
 
                 assert!(output.members.is_none());
-                assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/package"));
+                assert_eq!(output.root.unwrap(), VirtualPath::new("/workspace/package"));
             }
 
             #[tokio::test(flavor = "multi_thread")]
@@ -469,7 +468,7 @@ dependencies = ["internal-lib"]
 
                 let output = plugin
                     .locate_dependencies_root(LocateDependenciesRootInput {
-                        starting_dir: VirtualPath::Real(
+                        starting_dir: VirtualPath::new(
                             sandbox.path().join("workspace/packages/a/nested"),
                         ),
                         toolchain_config: json!({
@@ -480,7 +479,10 @@ dependencies = ["internal-lib"]
                     .await;
 
                 assert_eq!(output.members.unwrap(), ["packages/*"]);
-                assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/workspace"));
+                assert_eq!(
+                    output.root.unwrap(),
+                    VirtualPath::new("/workspace/workspace")
+                );
             }
 
             #[tokio::test(flavor = "multi_thread")]
@@ -492,7 +494,7 @@ dependencies = ["internal-lib"]
 
                 let output = plugin
                     .locate_dependencies_root(LocateDependenciesRootInput {
-                        starting_dir: VirtualPath::Real(
+                        starting_dir: VirtualPath::new(
                             sandbox.path().join("workspace/packages/a/nested"),
                         ),
                         toolchain_config: json!({
@@ -503,7 +505,10 @@ dependencies = ["internal-lib"]
                     .await;
 
                 assert_eq!(output.members.unwrap(), ["packages/*"]);
-                assert_eq!(output.root.unwrap(), PathBuf::from("/workspace/workspace"));
+                assert_eq!(
+                    output.root.unwrap(),
+                    VirtualPath::new("/workspace/workspace")
+                );
             }
         }
     }
@@ -518,7 +523,7 @@ dependencies = ["internal-lib"]
 
             let output = plugin
                 .install_dependencies(InstallDependenciesInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({}),
                     ..Default::default()
                 })
@@ -541,7 +546,7 @@ dependencies = ["internal-lib"]
                         working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
                         ..Default::default()
                     },
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": "pip"
                     }),
@@ -579,7 +584,7 @@ dependencies = ["internal-lib"]
                         working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
                         ..Default::default()
                     },
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": "pip"
                     }),
@@ -615,7 +620,7 @@ dependencies = ["internal-lib"]
                         working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
                         ..Default::default()
                     },
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": "pip"
                     }),
@@ -652,7 +657,7 @@ dependencies = ["internal-lib"]
                         working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
                         ..Default::default()
                     },
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": "pip"
                     }),
@@ -685,7 +690,7 @@ dependencies = ["internal-lib"]
                         working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
                         ..Default::default()
                     },
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": "poetry"
                     }),
@@ -718,7 +723,7 @@ dependencies = ["internal-lib"]
                         working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
                         ..Default::default()
                     },
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": "poetry"
                     }),
@@ -756,7 +761,7 @@ dependencies = ["internal-lib"]
                         working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
                         ..Default::default()
                     },
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": "poetry"
                     }),
@@ -790,7 +795,7 @@ dependencies = ["internal-lib"]
                         working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
                         ..Default::default()
                     },
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": "uv"
                     }),
@@ -824,7 +829,7 @@ dependencies = ["internal-lib"]
                         working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
                         ..Default::default()
                     },
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": "uv"
                     }),
@@ -859,7 +864,7 @@ dependencies = ["internal-lib"]
                         working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
                         ..Default::default()
                     },
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": "uv",
                         "version": "1.2.3"
@@ -906,7 +911,7 @@ dependencies = ["internal-lib"]
                         working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
                         ..Default::default()
                     },
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": "uv"
                     }),
@@ -940,7 +945,7 @@ dependencies = ["internal-lib"]
                         working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
                         ..Default::default()
                     },
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": "uv"
                     }),
@@ -988,7 +993,7 @@ dependencies = ["internal-lib"]
                         working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
                         ..Default::default()
                     },
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": "uv-pip"
                     }),
@@ -1031,7 +1036,7 @@ dependencies = ["internal-lib"]
                         working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
                         ..Default::default()
                     },
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({ "packageManager": "uv-pip" }),
                     project: Some(ProjectFragment {
                         id: Id::raw("workspace"),
@@ -1066,7 +1071,7 @@ dependencies = ["internal-lib"]
                         working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
                         ..Default::default()
                     },
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({ "packageManager": "uv-pip" }),
                     project: Some(ProjectFragment {
                         id: Id::raw("workspace"),
@@ -1107,7 +1112,7 @@ dependencies = ["internal-lib"]
 
             let output = plugin
                 .parse_lock(ParseLockInput {
-                    path: VirtualPath::Real(sandbox.path().join("pylock.toml")),
+                    path: VirtualPath::new(sandbox.path().join("pylock.toml")),
                     ..Default::default()
                 })
                 .await;
@@ -1182,7 +1187,7 @@ files = []
 
             let output = plugin
                 .parse_lock(ParseLockInput {
-                    path: VirtualPath::Real(sandbox.path().join("poetry.lock")),
+                    path: VirtualPath::new(sandbox.path().join("poetry.lock")),
                     ..Default::default()
                 })
                 .await;
@@ -1219,7 +1224,7 @@ files = []
 
             let output = plugin
                 .parse_lock(ParseLockInput {
-                    path: VirtualPath::Real(sandbox.path().join("requirements.txt")),
+                    path: VirtualPath::new(sandbox.path().join("requirements.txt")),
                     ..Default::default()
                 })
                 .await;
@@ -1240,6 +1245,7 @@ files = []
                         "requests".into(),
                         vec![LockDependency {
                             meta: Some("security".into()),
+                            req: Some(UnresolvedVersionSpec::parse("==2.8.*, >=2.8.1").unwrap()),
                             ..Default::default()
                         }]
                     ),
@@ -1255,7 +1261,7 @@ files = []
 
             let output = plugin
                 .parse_lock(ParseLockInput {
-                    path: VirtualPath::Real(sandbox.path().join("uv.lock")),
+                    path: VirtualPath::new(sandbox.path().join("uv.lock")),
                     ..Default::default()
                 })
                 .await;
@@ -1300,7 +1306,7 @@ files = []
 
             let output = plugin
                 .parse_manifest(ParseManifestInput {
-                    path: VirtualPath::Real(sandbox.path().join("pyproject.toml")),
+                    path: VirtualPath::new(sandbox.path().join("pyproject.toml")),
                     ..Default::default()
                 })
                 .await;
@@ -1348,7 +1354,7 @@ files = []
 
             let output = plugin
                 .parse_manifest(ParseManifestInput {
-                    path: VirtualPath::Real(sandbox.path().join("requirements.in")),
+                    path: VirtualPath::new(sandbox.path().join("requirements.in")),
                     ..Default::default()
                 })
                 .await;
@@ -1375,6 +1381,9 @@ files = []
                         "requests".into(),
                         ManifestDependency::Config(ManifestDependencyConfig {
                             features: vec!["security".into()],
+                            version: Some(
+                                UnresolvedVersionSpec::parse("==2.8.*, >=2.8.1").unwrap()
+                            ),
                             ..Default::default()
                         })
                     ),
@@ -1403,7 +1412,7 @@ files = []
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": null
                     }),
@@ -1421,7 +1430,7 @@ files = []
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": "uv",
                         "venvName": ".virtual-env"
@@ -1451,7 +1460,7 @@ files = []
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": "pip"
                     }),
@@ -1484,7 +1493,7 @@ files = []
             let plugin = sandbox.create_toolchain("python").await;
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": "pip"
                     }),
@@ -1513,7 +1522,7 @@ files = []
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": "poetry"
                     }),
@@ -1546,7 +1555,7 @@ files = []
             let plugin = sandbox.create_toolchain("python").await;
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": "poetry"
                     }),
@@ -1575,7 +1584,7 @@ files = []
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": "uv"
                     }),
@@ -1604,7 +1613,7 @@ files = []
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": "uv",
                         "version": "1.2.3"
@@ -1647,7 +1656,7 @@ files = []
             let plugin = sandbox.create_toolchain("python").await;
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": "uv"
                     }),
@@ -1676,7 +1685,7 @@ files = []
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": "uv",
                         "version": "3.12.0"
@@ -1714,7 +1723,7 @@ files = []
             let plugin = sandbox.create_toolchain("python").await;
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({ "packageManager": "uv-pip" }),
                     project: Some(ProjectFragment {
                         id: Id::raw("workspace"),
@@ -1739,7 +1748,7 @@ files = []
             let plugin = sandbox.create_toolchain("python").await;
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({ "packageManager": "uv-pip", "version": "3.12.0" }),
                     project: Some(ProjectFragment {
                         id: Id::raw("workspace"),
@@ -1776,7 +1785,7 @@ files = []
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": "uv"
                     }),
@@ -1801,7 +1810,7 @@ files = []
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": "pip"
                     }),
@@ -1826,7 +1835,7 @@ files = []
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": "uv-pip"
                     }),
@@ -1851,7 +1860,7 @@ files = []
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": "uv",
                         "venvName": ".virtual-env"
@@ -1880,7 +1889,7 @@ files = []
             let plugin = sandbox.create_toolchain("python").await;
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": "uv"
                     }),
@@ -1914,7 +1923,7 @@ files = []
             let plugin = sandbox.create_toolchain("python").await;
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "packageManager": "pip"
                     }),

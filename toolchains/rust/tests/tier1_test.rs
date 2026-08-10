@@ -3,7 +3,6 @@ use moon_pdk_api::*;
 use moon_pdk_test_utils::{create_empty_moon_sandbox, create_moon_sandbox};
 use serde_json::json;
 use std::fs;
-use std::path::PathBuf;
 
 mod rust_toolchain_tier1 {
     use super::*;
@@ -52,8 +51,8 @@ mod rust_toolchain_tier1 {
 
             let output = plugin
                 .scaffold_docker(ScaffoldDockerInput {
-                    input_dir: VirtualPath::Real(sandbox.path().join("in")),
-                    output_dir: VirtualPath::Real(output_dir.clone()),
+                    input_dir: VirtualPath::new(sandbox.path().join("in")),
+                    output_dir: VirtualPath::new(output_dir.clone()),
                     phase: ScaffoldDockerPhase::Configs,
                     project: Some(ProjectFragment::default()),
                     ..Default::default()
@@ -66,8 +65,8 @@ mod rust_toolchain_tier1 {
             assert_eq!(
                 output.copied_files,
                 [
-                    PathBuf::from("/workspace/out/src/lib.rs"),
-                    PathBuf::from("/workspace/out/src/main.rs")
+                    VirtualPath::new("/workspace/out/src/lib.rs"),
+                    VirtualPath::new("/workspace/out/src/main.rs")
                 ]
             );
         }
@@ -83,8 +82,8 @@ mod rust_toolchain_tier1 {
 
             let output = plugin
                 .scaffold_docker(ScaffoldDockerInput {
-                    input_dir: VirtualPath::Real(sandbox.path().join("in")),
-                    output_dir: VirtualPath::Real(output_dir.clone()),
+                    input_dir: VirtualPath::new(sandbox.path().join("in")),
+                    output_dir: VirtualPath::new(output_dir.clone()),
                     phase: ScaffoldDockerPhase::Sources,
                     ..Default::default()
                 })
@@ -108,8 +107,8 @@ mod rust_toolchain_tier1 {
 
             plugin
                 .scaffold_docker(ScaffoldDockerInput {
-                    input_dir: VirtualPath::Real(sandbox.path().join("in")),
-                    output_dir: VirtualPath::Real(output_dir.clone()),
+                    input_dir: VirtualPath::new(sandbox.path().join("in")),
+                    output_dir: VirtualPath::new(output_dir.clone()),
                     phase: ScaffoldDockerPhase::Sources,
                     project: Some(ProjectFragment::default()),
                     ..Default::default()
@@ -135,7 +134,7 @@ mod rust_toolchain_tier1 {
                         delete_vendor_directories: true,
                         ..Default::default()
                     },
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     ..Default::default()
                 })
                 .await;
@@ -156,7 +155,7 @@ mod rust_toolchain_tier1 {
                         delete_vendor_directories: false,
                         ..Default::default()
                     },
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     ..Default::default()
                 })
                 .await;
@@ -177,7 +176,7 @@ mod rust_toolchain_tier1 {
                         delete_vendor_directories: true,
                         ..Default::default()
                     },
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     ..Default::default()
                 })
                 .await;
@@ -185,7 +184,10 @@ mod rust_toolchain_tier1 {
             assert!(!sandbox.path().join("target").exists());
             assert!(!sandbox.path().join("target/other-file").exists());
 
-            assert_eq!(output.changed_files, [PathBuf::from("/workspace/target")]);
+            assert_eq!(
+                output.changed_files,
+                [VirtualPath::new("/workspace/target")]
+            );
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -199,7 +201,7 @@ mod rust_toolchain_tier1 {
                         delete_vendor_directories: true,
                         ..Default::default()
                     },
-                    root: VirtualPath::Real(sandbox.path().into()),
+                    root: VirtualPath::new(sandbox.path()),
                     ..Default::default()
                 })
                 .await;
@@ -218,7 +220,10 @@ mod rust_toolchain_tier1 {
                     .exists()
             );
 
-            assert_eq!(output.changed_files, [PathBuf::from("/workspace/target")]);
+            assert_eq!(
+                output.changed_files,
+                [VirtualPath::new("/workspace/target")]
+            );
         }
     }
 }

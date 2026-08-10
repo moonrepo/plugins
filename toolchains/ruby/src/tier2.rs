@@ -2,7 +2,7 @@ use crate::config::RubyToolchainConfig;
 use crate::gemfile;
 use extism_pdk::*;
 use moon_config::{DependencyScope, VersionSpec};
-use moon_pdk::{locate_root_many, parse_toolchain_config_schema};
+use moon_pdk::{VirtualPathExt, locate_root_many, parse_toolchain_config_schema};
 use moon_pdk_api::*;
 use rubund::parser::{SourceType, parse_lockfile};
 use starbase_utils::fs;
@@ -18,17 +18,14 @@ const DEFAULT_NON_PRODUCTION_GROUPS: [&str; 2] = ["development", "test"];
 pub fn locate_dependencies_root(
     Json(input): Json<LocateDependenciesRootInput>,
 ) -> FnResult<Json<LocateDependenciesRootOutput>> {
-    let mut output = LocateDependenciesRootOutput::default();
-
     // Bundler has no workspace concept (unlike npm/uv/Cargo), so each project
     // is its own dependency root and there are no members to report. Walk
     // upward for the nearest Gemfile/Gemfile.lock. If none is found, `root`
     // stays `None` and moon skips install steps for this project.
-    if let Some(root) = locate_root_many(&input.starting_dir, &ROOT_FILES) {
-        output.root = root.virtual_path();
-    }
-
-    Ok(Json(output))
+    Ok(Json(LocateDependenciesRootOutput {
+        root: locate_root_many(&input.starting_dir, &ROOT_FILES),
+        ..Default::default()
+    }))
 }
 
 #[plugin_fn]
@@ -113,9 +110,9 @@ pub fn extend_command(
     // PATH so tasks can invoke e.g. `rspec` directly. `bundle exec <cmd>` works
     // regardless, via the `bundle` binary provided by the toolchain (tier 3).
     if let Some(root) = locate_root_many(&input.current_dir, &ROOT_FILES)
-        && let Some(real) = root.real_path()
+        && let Some(real) = root.to_real_path()?
     {
-        output.paths.push(real.join("bin"));
+        output.paths.push(real.join("bin").to_path_buf());
     }
 
     Ok(Json(output))
@@ -266,9 +263,7 @@ pub fn extend_project_graph(
             output.extended_projects.insert(id.clone(), project_output);
         }
 
-        if let Some(file) = gemfile_path.virtual_path() {
-            output.input_files.push(file);
-        }
+        output.input_files.push(gemfile_path);
     }
 
     Ok(Json(output))

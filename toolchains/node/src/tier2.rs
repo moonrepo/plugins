@@ -2,7 +2,7 @@
 
 use crate::config::*;
 use extism_pdk::*;
-use moon_pdk::parse_toolchain_config;
+use moon_pdk::{VirtualPathExt, parse_toolchain_config};
 use moon_pdk_api::*;
 use starbase_utils::fs;
 
@@ -29,7 +29,7 @@ pub fn setup_environment(
         })?;
 
         output.operations.push(op);
-        output.changed_files.extend(file.virtual_path());
+        output.changed_files.push(file);
     }
 
     Ok(Json(output))
@@ -47,7 +47,7 @@ pub fn extend_task_command(
         let project_root = input.context.get_project_root(&input.project);
 
         if let Some(profile) = &config.profile_execution
-            && let Some(prof_dir) = project_root.join(".moon").real_path_string()
+            && let Some(prof_dir) = project_root.join(".moon").to_real_path()?
         {
             match profile {
                 NodeProfileType::Cpu => {
@@ -56,7 +56,7 @@ pub fn extend_task_command(
                         "--cpu-prof-name".into(),
                         "snapshot.cpuprofile".into(),
                         "--cpu-prof-dir".into(),
-                        prof_dir,
+                        prof_dir.to_string(),
                     ]);
                 }
                 NodeProfileType::Heap => {
@@ -65,7 +65,7 @@ pub fn extend_task_command(
                         "--heap-prof-name".into(),
                         "snapshot.heapprofile".into(),
                         "--heap-prof-dir".into(),
-                        prof_dir,
+                        prof_dir.to_string(),
                     ]);
                 }
             };

@@ -1,5 +1,5 @@
 use extension_common::download::download_from_url;
-use extension_common::{enable_tracing, format_virtual_path};
+use extension_common::enable_tracing;
 use extism_pdk::*;
 use moon_pdk::*;
 use moon_pdk_api::{ExecuteExtensionInput, RegisterExtensionInput, RegisterExtensionOutput};
@@ -8,7 +8,6 @@ use starbase_utils::fs;
 #[host_fn]
 extern "ExtismHost" {
     fn host_log(input: Json<HostLogInput>);
-    fn to_virtual_path(path: String) -> String;
 }
 
 #[plugin_fn]
@@ -45,7 +44,7 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
     let src_file = if args.src.starts_with("http") {
         debug!("Received a URL as the input source");
 
-        download_from_url(&args.src, virtual_path!("/moon/temp"), None)?
+        download_from_url(&args.src, VirtualPath::new("/moon/temp"), None)?
     } else {
         debug!(
             "Converting source <file>{}</file> to an absolute virtual path",
@@ -57,8 +56,7 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
 
     if !src_file.exists() || !src_file.is_file() {
         return Err(plugin_err!(
-            "Source <path>{}</path> must be a valid file.",
-            format_virtual_path(&src_file),
+            "Source <path>{src_file}</path> must be a valid file.",
         ));
     }
 
@@ -69,16 +67,11 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
 
     if dest_dir.exists() && dest_dir.is_file() {
         return Err(plugin_err!(
-            "Destination <path>{}</path> must be a directory, found a file.",
-            format_virtual_path(&dest_dir),
+            "Destination <path>{dest_dir}</path> must be a directory, found a file.",
         ));
     }
 
-    host_log!(
-        stdout,
-        "Unpacking archive to <path>{}</path>",
-        format_virtual_path(&dest_dir),
-    );
+    host_log!(stdout, "Unpacking archive to <path>{dest_dir}</path>",);
 
     fs::create_dir_all(&dest_dir)?;
 
@@ -86,9 +79,15 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
         exec_streamed(
             "unzip",
             [
-                src_file.real_path_string().expect("Invalid source"),
+                src_file
+                    .to_real_path()?
+                    .expect("Invalid source")
+                    .to_string(),
                 "-d".into(),
-                dest_dir.real_path_string().expect("Invalid destination"),
+                dest_dir
+                    .to_real_path()?
+                    .expect("Invalid destination")
+                    .to_string(),
             ],
         )?;
     } else {
@@ -96,9 +95,15 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
             "tar",
             [
                 "-xf".into(),
-                src_file.real_path_string().expect("Invalid source"),
+                src_file
+                    .to_real_path()?
+                    .expect("Invalid source")
+                    .to_string(),
                 "-C".into(),
-                dest_dir.real_path_string().expect("Invalid destination"),
+                dest_dir
+                    .to_real_path()?
+                    .expect("Invalid destination")
+                    .to_string(),
             ],
         )?;
     }

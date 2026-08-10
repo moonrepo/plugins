@@ -2,7 +2,9 @@ use crate::cargo_toml::CargoToml;
 use cargo_toml::{Dependency, DepsSet, Publish};
 use extism_pdk::*;
 use moon_config::DependencyScope;
-use moon_pdk::{get_host_env_var, get_host_environment, locate_root, locate_root_with_check};
+use moon_pdk::{
+    VirtualPathExt, get_host_env_var, get_host_environment, locate_root, locate_root_with_check,
+};
 use moon_pdk_api::*;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -67,9 +69,7 @@ pub fn extend_project_graph(
                 .extended_projects
                 .insert(id.to_owned(), project_output);
 
-            if let Some(file) = manifest.path.virtual_path() {
-                output.input_files.push(file);
-            }
+            output.input_files.push(manifest.path.clone());
         }
     }
 
@@ -82,7 +82,7 @@ fn gather_shared_paths(
     paths: &mut Vec<PathBuf>,
 ) -> AnyResult<()> {
     if let Some(globals_dir) = globals_dir
-        && globals_dir.real_path().is_some()
+        && globals_dir.to_real_path()?.is_some()
     {
         // Avoid the host env overhead if we already
         // have a valid globals directory!
@@ -97,7 +97,11 @@ fn gather_shared_paths(
         } else if let Some(value) = get_host_env_var("CARGO_HOME")? {
             Some(PathBuf::from(value).join("bin"))
         } else {
-            env.home_dir.join(".cargo").join("bin").real_path()
+            env.home_dir
+                .join(".cargo")
+                .join("bin")
+                .to_real_path()?
+                .map(|path| path.to_path_buf())
         };
 
         if let Some(dir) = maybe_dir {
@@ -140,7 +144,7 @@ pub fn extend_task_command(
     }
 
     // Always include Cargo specific paths for all commands
-    gather_shared_paths(&env, input.globals_dir.as_ref(), &mut output.paths)?;
+    gather_shared_paths(env, input.globals_dir.as_ref(), &mut output.paths)?;
 
     Ok(Json(output))
 }
@@ -153,7 +157,7 @@ pub fn extend_task_script(
     let env = get_host_environment()?;
 
     // Always include Cargo specific paths for all commands
-    gather_shared_paths(&env, input.globals_dir.as_ref(), &mut output.paths)?;
+    gather_shared_paths(env, input.globals_dir.as_ref(), &mut output.paths)?;
 
     Ok(Json(output))
 }
@@ -166,8 +170,8 @@ pub fn locate_dependencies_root(
 
     // Attempt to find `Cargo.lock` first
     if let Some(root) = locate_root(&input.starting_dir, "Cargo.lock") {
-        output.root = root.virtual_path();
         output.members = CargoToml::load(root.join("Cargo.toml"))?.extract_members();
+        output.root = Some(root);
     }
 
     // Otherwise find a `Cargo.toml` workspace
@@ -177,7 +181,7 @@ pub fn locate_dependencies_root(
             let mut found = false;
 
             if manifest.workspace.is_some() {
-                output.root = root.virtual_path();
+                output.root = Some(root.to_owned());
                 output.members = manifest.extract_members();
                 found = true;
             }
@@ -193,7 +197,7 @@ pub fn locate_dependencies_root(
             let mut found = false;
 
             if manifest.package.is_some() {
-                output.root = root.virtual_path();
+                output.root = Some(root.to_owned());
                 found = true;
             }
 

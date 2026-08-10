@@ -91,7 +91,7 @@ pub fn sync_project(Json(input): Json<SyncProjectInput>) -> FnResult<Json<SyncOu
 
     if is_project_toolchain_enabled(&input.project) {
         let config = parse_toolchain_config::<TypeScriptToolchainConfig>(input.toolchain_config)?;
-        let context = create_typescript_context(&input.context, &config, &input.project);
+        let context = create_typescript_context(&input.context, &config, &input.project)?;
 
         let (op, files) = Operation::track("sync-project-references", || {
             sync_project_references(
@@ -103,9 +103,7 @@ pub fn sync_project(Json(input): Json<SyncProjectInput>) -> FnResult<Json<SyncOu
         })?;
 
         output.operations.push(op);
-        output
-            .changed_files
-            .extend(files.into_iter().filter_map(|file| file.virtual_path()));
+        output.changed_files.extend(files);
     } else {
         output.skipped = true;
     }
