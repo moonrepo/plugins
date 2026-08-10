@@ -2595,7 +2595,7 @@ dependencies = [
 
 [[package]]
 name = "javascript_toolchain"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "deno_lockfile",
  "extism-pdk",
