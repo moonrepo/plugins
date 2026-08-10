@@ -1,6 +1,6 @@
 [package]
 name = "node_depman_toolchain"
-version = "1.0.3"
+version = "1.0.4"
 edition = "2024"
 description = "Node.js dependency managers (npm, pnpm, yarn) toolchain WASM plugin for moon."
 authors = ["Miles Johnson"]
