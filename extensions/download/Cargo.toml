@@ -1,6 +1,6 @@
 [package]
 name = "download_extension"
-version = "1.0.2"
+version = "1.0.3"
 edition = "2024"
 description = "moon extension WASM plugin for downloading a file from a URL."
 authors = ["Miles Johnson"]
