@@ -17,6 +17,20 @@ config_struct!(
 );
 
 config_struct!(
+    /// Configures and enables the Nub toolchain.
+    /// Docs: https://moonrepo.dev/docs/config/toolchain#nub
+    #[derive(Config)]
+    pub struct NubToolchainConfig {
+        /// List of arguments to append to `nub install` commands.
+        /// These arguments are inherited by the JavaScript toolchain.
+        pub install_args: Vec<String>,
+
+        /// Configured version to download and install.
+        pub version: Option<UnresolvedVersionSpec>,
+    }
+);
+
+config_struct!(
     /// Configures and enables the pnpm toolchain.
     /// Docs: https://moonrepo.dev/docs/config/toolchain#pnpm
     #[derive(Config)]
