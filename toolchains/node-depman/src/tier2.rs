@@ -33,9 +33,14 @@ pub fn setup_environment(
         let config = parse_toolchain_config_schema::<YarnToolchainConfig>(input.toolchain_config)?;
 
         if let Some(compat_version) = &config.version {
-            let compat_spec = compat_version.to_resolved_spec();
+            let compat_spec = match compat_version {
+                UnresolvedVersionSpec::Range(_) | UnresolvedVersionSpec::Requirement(_) => None,
+                other => Some(other.to_resolved_spec()),
+            };
 
-            if PackageManager::detect_from_version(&compat_spec)? == PackageManager::Yarn2to5 {
+            if let Some(compat_spec) = compat_spec
+                && PackageManager::detect_from_version(&compat_spec)? == PackageManager::Yarn2to5
+            {
                 for plugin in config.plugins {
                     output.commands.push(ExecCommand::new(
                         ExecCommandInput::new("yarn", ["plugin", "import", &plugin])
