@@ -17,23 +17,44 @@ pub struct BunLockPackageJson {
     pub optional_dependencies: BTreeMap<String, String>,
 }
 
+// Entry shapes are defined by bun's lockfile serializer:
+// https://github.com/oven-sh/bun/blob/main/src/install/lockfile/bun.lock.rs
+//   npm       -> [ "name@version", registry, INFO, integrity ]
+//   git       -> [ "name@git+repo", INFO, bun tag, integrity? ]
+//   github    -> [ "name@github:user/repo", INFO, bun tag, integrity? ]
+//   tarball   -> [ "name@url", INFO, integrity? ]
+//   symlink   -> [ "name@link:path", INFO ]
+//   folder    -> [ "name@file:path", INFO ]
+//   root      -> [ "name@root:", INFO ]
+//   workspace -> [ "name@workspace:path" ]
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
 pub enum BunLockPackage {
+    // npm
     Dependency1(
         String,    // identifier
-        String,    // ???
+        String,    // registry
         JsonValue, // object
         String,    // sha
     ),
 
+    // git/github with integrity
     Dependency2(
         String,    // identifier
         JsonValue, // object
+        String,    // bun tag
         String,    // sha
     ),
 
+    // git/github without integrity, tarball
     Dependency3(
+        String,    // identifier
+        JsonValue, // object
+        String,    // bun tag or sha
+    ),
+
+    // symlink, folder, root
+    Dependency4(
         String,    // identifier
         JsonValue, // object
     ),
@@ -79,21 +100,28 @@ pub fn parse_bun_lock(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyRe
 
                 continue;
             }
-            BunLockPackage::Dependency1(id, _unknown, _data, integrity) => {
+            BunLockPackage::Dependency1(id, _registry, _data, integrity) => {
                 let Some((name, version)) = parse_name_and_version(id, "") else {
                     continue;
                 };
 
                 (name, version, Some(integrity))
             }
-            BunLockPackage::Dependency2(id, _data, integrity) => {
+            BunLockPackage::Dependency2(id, _data, _tag, integrity) => {
                 let Some((name, version)) = parse_name_and_version(id, "") else {
                     continue;
                 };
 
                 (name, version, Some(integrity))
             }
-            BunLockPackage::Dependency3(id, _data) => {
+            BunLockPackage::Dependency3(id, _data, integrity) => {
+                let Some((name, version)) = parse_name_and_version(id, "") else {
+                    continue;
+                };
+
+                (name, version, Some(integrity))
+            }
+            BunLockPackage::Dependency4(id, _data) => {
                 let Some((name, version)) = parse_name_and_version(id, "") else {
                     continue;
                 };
@@ -120,4 +148,59 @@ pub fn parse_bun_lockb(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyR
     let content = exec(ExecCommandInput::pipe("bun", ["bun.lockb"]).cwd(path.parent().unwrap()))?;
 
     parse_yarn_lock_content(content.stdout.trim(), output)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parse(content: &str) -> BunLockPackage {
+        json::parse(content).unwrap()
+    }
+
+    #[test]
+    fn parses_npm_entry() {
+        assert!(matches!(
+            parse(r#"["csstype@3.1.3", "", {}, "sha512-M1uQ=="]"#),
+            BunLockPackage::Dependency1(..)
+        ));
+    }
+
+    // https://github.com/moonrepo/plugins/issues/174
+    #[test]
+    fn parses_github_entry_with_integrity() {
+        assert!(matches!(
+            parse(
+                r#"["@portkey-ai/gateway@github:Portkey-AI/gateway#ca77129", { "dependencies": { "async-retry": "^1.3.3" }, "bin": "build/start-server.js" }, "Portkey-AI-gateway-ca77129", "sha512-71lq=="]"#
+            ),
+            BunLockPackage::Dependency2(..)
+        ));
+    }
+
+    // https://github.com/moonrepo/moon/issues/2049
+    #[test]
+    fn parses_github_entry_without_integrity() {
+        assert!(matches!(
+            parse(
+                r#"["uWebSockets.js@github:uNetworking/uWebSockets.js#6609a88", {}, "uNetworking-uWebSockets.js-6609a88"]"#
+            ),
+            BunLockPackage::Dependency3(..)
+        ));
+    }
+
+    #[test]
+    fn parses_symlink_entry() {
+        assert!(matches!(
+            parse(r#"["local-lib@link:packages/local-lib", {}]"#),
+            BunLockPackage::Dependency4(..)
+        ));
+    }
+
+    #[test]
+    fn parses_workspace_entry() {
+        assert!(matches!(
+            parse(r#"["a@workspace:packages/a"]"#),
+            BunLockPackage::Workspace(..)
+        ));
+    }
 }
