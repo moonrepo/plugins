@@ -12,6 +12,7 @@ derive_enum!(
         Deno,
         #[default]
         Npm,
+        Nub,
         Pnpm,
         Yarn,
     }
@@ -20,14 +21,22 @@ derive_enum!(
 impl JavaScriptPackageManager {
     pub fn get_runtime_toolchain(&self) -> Id {
         match self {
-            JavaScriptPackageManager::Bun => Id::raw("bun"),
-            JavaScriptPackageManager::Deno => Id::raw("deno"),
+            Self::Bun => Id::raw("bun"),
+            Self::Deno => Id::raw("deno"),
+            Self::Nub => Id::raw("nub"),
             _ => Id::raw("node"),
         }
     }
 
+    /// Installs dependencies for the Node.js ecosystem.
     pub fn is_for_node(&self) -> bool {
-        matches!(self, Self::Npm | Self::Pnpm | Self::Yarn)
+        matches!(self, Self::Npm | Self::Nub | Self::Pnpm | Self::Yarn)
+    }
+
+    /// Runs as a standalone binary and does not require the
+    /// Node.js toolchain to operate.
+    pub fn is_standalone(&self) -> bool {
+        matches!(self, Self::Bun | Self::Deno | Self::Nub)
     }
 }
 

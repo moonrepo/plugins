@@ -597,6 +597,48 @@ mod javascript_toolchain_tier2 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn finds_package_with_nub_lock() {
+            let sandbox = create_moon_sandbox("locate");
+            sandbox.create_file("package/nub.lock", "");
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .locate_dependencies_root(LocateDependenciesRootInput {
+                    starting_dir: VirtualPath::new(sandbox.path().join("package/nested")),
+                    toolchain_config: json!({
+                        "packageManager": "nub"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.members.is_none());
+            assert_eq!(output.root.unwrap(), VirtualPath::new("/workspace/package"));
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn finds_package_with_other_pm_lock_when_using_nub() {
+            let sandbox = create_moon_sandbox("locate");
+            sandbox.create_file("package/pnpm-lock.yaml", "");
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .locate_dependencies_root(LocateDependenciesRootInput {
+                    starting_dir: VirtualPath::new(sandbox.path().join("package/nested")),
+                    toolchain_config: json!({
+                        "packageManager": "nub"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.members.is_none());
+            assert_eq!(output.root.unwrap(), VirtualPath::new("/workspace/package"));
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn finds_package_with_pnpm_lock() {
             let sandbox = create_moon_sandbox("locate");
             sandbox.create_file("package/pnpm-lock.yaml", "");
@@ -794,6 +836,58 @@ mod javascript_toolchain_tier2 {
                 .await;
 
             assert_eq!(output.members.unwrap(), ["packages/*"]);
+            assert_eq!(
+                output.root.unwrap(),
+                VirtualPath::new("/workspace/workspace")
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn finds_workspace_with_nub_lock() {
+            let sandbox = create_moon_sandbox("locate");
+            sandbox.create_file("workspace/nub.lock", "");
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .locate_dependencies_root(LocateDependenciesRootInput {
+                    starting_dir: VirtualPath::new(
+                        sandbox.path().join("workspace/packages/a/nested"),
+                    ),
+                    toolchain_config: json!({
+                        "packageManager": "nub"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.members.unwrap(), ["packages/*"]);
+            assert_eq!(
+                output.root.unwrap(),
+                VirtualPath::new("/workspace/workspace")
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn finds_workspace_with_pnpm_workspace_when_using_nub() {
+            let sandbox = create_moon_sandbox("locate");
+            sandbox.create_file("workspace/pnpm-workspace.yaml", "packages: ['apps/*']");
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .locate_dependencies_root(LocateDependenciesRootInput {
+                    starting_dir: VirtualPath::new(
+                        sandbox.path().join("workspace/packages/a/nested"),
+                    ),
+                    toolchain_config: json!({
+                        "packageManager": "nub"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.members.unwrap(), ["apps/*"]);
             assert_eq!(
                 output.root.unwrap(),
                 VirtualPath::new("/workspace/workspace")
@@ -1384,6 +1478,216 @@ mod javascript_toolchain_tier2 {
                     output.install_command.unwrap(),
                     ExecCommand::new(
                         ExecCommandInput::new("npm", ["ci"])
+                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
+                );
+            }
+        }
+
+        mod nub {
+            use super::*;
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn default_commands() {
+                let sandbox = create_empty_moon_sandbox();
+                let plugin = sandbox.create_toolchain("javascript").await;
+
+                let output = plugin
+                    .install_dependencies(InstallDependenciesInput {
+                        root: VirtualPath::new(sandbox.path()),
+                        toolchain_config: json!({
+                            "packageManager": "nub",
+                            "dedupeOnLockfileChange": true
+                        }),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert_eq!(
+                    output.install_command.unwrap(),
+                    ExecCommand::new(
+                        ExecCommandInput::new("nub", ["install"])
+                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
+                );
+
+                assert_eq!(
+                    output.dedupe_command.unwrap(),
+                    ExecCommand::new(
+                        ExecCommandInput::new("nub", ["dedupe"])
+                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
+                );
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn focused_commands() {
+                let sandbox = create_empty_moon_sandbox();
+                let plugin = sandbox.create_toolchain("javascript").await;
+
+                let output = plugin
+                    .install_dependencies(InstallDependenciesInput {
+                        root: VirtualPath::new(sandbox.path()),
+                        toolchain_config: json!({
+                            "packageManager": "nub",
+                            "dedupeOnLockfileChange": true
+                        }),
+                        packages: vec!["foo".into(), "@scope/bar".into()],
+                        production: true,
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert_eq!(
+                    output.install_command.unwrap(),
+                    ExecCommand::new(
+                        ExecCommandInput::new(
+                            "nub",
+                            [
+                                "install",
+                                "--prod",
+                                "--filter-prod",
+                                "foo...",
+                                "--filter-prod",
+                                "@scope/bar..."
+                            ]
+                        )
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
+                );
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn inherits_args_from_nub_toolchain() {
+                let mut sandbox = create_empty_moon_sandbox();
+
+                sandbox
+                    .host_funcs
+                    .mock_load_toolchain_config(|_, _| json!({ "installArgs": ["-a", "b", "--c"]}));
+
+                let plugin = sandbox.create_toolchain("javascript").await;
+
+                let output = plugin
+                    .install_dependencies(InstallDependenciesInput {
+                        root: VirtualPath::new(sandbox.path()),
+                        toolchain_config: json!({
+                            "packageManager": "nub",
+                            "dedupeOnLockfileChange": true
+                        }),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert_eq!(
+                    output.install_command.unwrap(),
+                    ExecCommand::new(
+                        ExecCommandInput::new("nub", ["install", "-a", "b", "--c"])
+                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
+                );
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn switches_to_ci_in_ci() {
+                let sandbox = create_empty_moon_sandbox();
+                let plugin = sandbox
+                    .create_toolchain_with_config("javascript", |cfg| {
+                        cfg.host_environment(HostEnvironment {
+                            ci: true,
+                            ..Default::default()
+                        });
+                    })
+                    .await;
+
+                // Doesn't work without the lockfile
+                let output = plugin
+                    .install_dependencies(InstallDependenciesInput {
+                        root: VirtualPath::new(sandbox.path()),
+                        toolchain_config: json!({
+                            "packageManager": "nub",
+                        }),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert_eq!(
+                    output.install_command.unwrap(),
+                    ExecCommand::new(
+                        ExecCommandInput::new("nub", ["install"])
+                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
+                );
+
+                // Now works!
+                sandbox.create_file("nub.lock", "");
+
+                let output = plugin
+                    .install_dependencies(InstallDependenciesInput {
+                        root: VirtualPath::new(sandbox.path()),
+                        toolchain_config: json!({
+                            "packageManager": "nub",
+                        }),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert_eq!(
+                    output.install_command.unwrap(),
+                    ExecCommand::new(
+                        ExecCommandInput::new("nub", ["ci"])
+                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
+                );
+
+                // But not for production, since `nub ci` has no `--prod`
+                let output = plugin
+                    .install_dependencies(InstallDependenciesInput {
+                        root: VirtualPath::new(sandbox.path()),
+                        toolchain_config: json!({
+                            "packageManager": "nub",
+                        }),
+                        production: true,
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert_eq!(
+                    output.install_command.unwrap(),
+                    ExecCommand::new(
+                        ExecCommandInput::new("nub", ["install", "--prod"])
+                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
+                );
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn switches_to_ci_with_other_pm_lock() {
+                let sandbox = create_empty_moon_sandbox();
+                sandbox.create_file("pnpm-lock.yaml", "");
+
+                let plugin = sandbox
+                    .create_toolchain_with_config("javascript", |cfg| {
+                        cfg.host_environment(HostEnvironment {
+                            ci: true,
+                            ..Default::default()
+                        });
+                    })
+                    .await;
+
+                let output = plugin
+                    .install_dependencies(InstallDependenciesInput {
+                        root: VirtualPath::new(sandbox.path()),
+                        toolchain_config: json!({
+                            "packageManager": "nub",
+                        }),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert_eq!(
+                    output.install_command.unwrap(),
+                    ExecCommand::new(
+                        ExecCommandInput::new("nub", ["ci"])
                             .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                     )
                 );
@@ -2247,6 +2551,22 @@ mod javascript_toolchain_tier2 {
                 .await;
 
             assert_eq!(output.dependencies, expected_dependencies());
+        }
+
+        // `nub.lock` uses the pnpm lockfile format
+        #[tokio::test(flavor = "multi_thread")]
+        async fn parses_nub() {
+            let sandbox = create_lockfile_sandbox("nub");
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .parse_lock(ParseLockInput {
+                    path: VirtualPath::new(sandbox.path().join("nub.lock")),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.dependencies, expected_base_dependencies());
         }
 
         #[tokio::test(flavor = "multi_thread")]

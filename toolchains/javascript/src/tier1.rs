@@ -42,6 +42,8 @@ pub fn register_toolchain(
             "deno.jsonc".into(),
             // npm
             ".npmrc".into(),
+            // nub
+            "nub.jsonc".into(),
             // pnpm
             "pnpm-workspace.yaml".into(),
             ".pnpmfile.*".into(),
@@ -60,6 +62,8 @@ pub fn register_toolchain(
             // npm
             "package-lock.json".into(),
             "npm-shrinkwrap.json".into(),
+            // nub
+            "nub.lock".into(),
             // pnpm
             "pnpm-lock.yaml".into(),
             // yarn
@@ -78,9 +82,14 @@ pub fn register_toolchain(
             // npm
             "npm".into(),
             "npx".into(),
+            // nub
+            "nub".into(),
+            "nubx".into(),
             // pnpm
             "pnpm".into(),
             "pnpx".into(),
+            "pn".into(),
+            "pnx".into(),
             // yarn
             "yarn".into(),
             "yarnpkg".into()
@@ -114,6 +123,7 @@ pub fn initialize_toolchain(
                     JsonValue::String("bun".into()),
                     JsonValue::String("deno".into()),
                     JsonValue::String("npm".into()),
+                    JsonValue::String("nub".into()),
                     JsonValue::String("pnpm".into()),
                     JsonValue::String("yarn".into()),
                 ],
@@ -157,6 +167,8 @@ fn detect_package_manager(root: &VirtualPath) -> AnyResult<Option<JavaScriptPack
         return Ok(Some(JavaScriptPackageManager::Deno));
     } else if root.join("package-lock.json").exists() || root.join("npm-shrinkwrap.json").exists() {
         return Ok(Some(JavaScriptPackageManager::Npm));
+    } else if root.join("nub.lock").exists() {
+        return Ok(Some(JavaScriptPackageManager::Nub));
     } else if root.join("pnpm-lock.yaml").exists() || root.join("pnpm-workspace.yaml").exists() {
         return Ok(Some(JavaScriptPackageManager::Pnpm));
     } else if root.join("yarn.lock").exists() {

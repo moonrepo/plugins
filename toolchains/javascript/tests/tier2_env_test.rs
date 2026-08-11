@@ -190,6 +190,38 @@ mod javascript_toolchain_tier2 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn sets_field_for_nub() {
+            let mut sandbox = create_moon_sandbox("files");
+
+            sandbox
+                .host_funcs
+                .mock_load_toolchain_config(|_, _| json!({ "version": "1.2.3" }));
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    toolchain_config: json!({
+                        "syncPackageManagerField": true,
+                        "packageManager": "nub"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.changed_files,
+                [VirtualPath::new("/workspace/package.json")]
+            );
+            assert!(
+                fs::read_to_string(sandbox.path().join("package.json"))
+                    .unwrap()
+                    .contains(r#""packageManager": "nub@1.2.3""#)
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn sets_field() {
             let mut sandbox = create_moon_sandbox("files");
 
