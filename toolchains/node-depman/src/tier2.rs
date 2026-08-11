@@ -34,7 +34,10 @@ pub fn setup_environment(
 
         if let Some(compat_version) = &config.version {
             let compat_spec = match compat_version {
-                UnresolvedVersionSpec::Range(_) | UnresolvedVersionSpec::Requirement(_) => None,
+                UnresolvedVersionSpec::Range(_) => None,
+                UnresolvedVersionSpec::Requirement(req) => {
+                    VersionSpec::parse(format!("{}.0.0", req.major.unwrap_or_default())).ok()
+                }
                 other => Some(other.to_resolved_spec()),
             };
 
