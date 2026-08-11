@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added unstable support for [Nub](https://nubjs.com/).
+
 ## 1.0.4
 
 #### 🚀 Updates

@@ -206,7 +206,7 @@ pub fn define_requirements(
     let mut output = DefineRequirementsOutput::default();
 
     if let Some(package_manager) = config.package_manager {
-        if package_manager.is_for_node() {
+        if !package_manager.is_standalone() {
             output.requires.push("node".into());
         }
 
@@ -215,6 +215,18 @@ pub fn define_requirements(
 
     Ok(Json(output))
 }
+
+// Nub natively uses `nub.lock`, but respects the lockfiles of other
+// package managers (for both resolution and layout), so treat them
+// all as valid dependency roots for migration
+const NUB_LOCK_NAMES: &[&str] = &[
+    "nub.lock",
+    "package-lock.json",
+    "npm-shrinkwrap.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
+    "bun.lock",
+];
 
 fn get_var_key(prefix: &str, root: &VirtualPath) -> String {
     format!("{prefix}:{}", root.to_string().trim_end_matches('/'))
@@ -253,7 +265,9 @@ fn extract_workspace_members_and_catalogs(
             catalogs = deno.extract_catalogs();
             members = deno.workspace.map(|ws| ws.get_members().to_vec());
         }
-        JavaScriptPackageManager::Pnpm => {
+        // Nub reads `pnpm-workspace.yaml` when operating on a pnpm
+        // workspace, otherwise `package.json` (handled below)
+        JavaScriptPackageManager::Nub | JavaScriptPackageManager::Pnpm => {
             let workspace_file = root.join("pnpm-workspace.yaml");
 
             if workspace_file.exists() {
@@ -322,7 +336,9 @@ pub fn locate_dependencies_root(
 
     let workspace_manifest_names = match package_manager {
         JavaScriptPackageManager::Deno => vec!["deno.json", "deno.jsonc", "package.json"],
-        JavaScriptPackageManager::Pnpm => vec!["pnpm-workspace.yaml", "package.json"],
+        JavaScriptPackageManager::Nub | JavaScriptPackageManager::Pnpm => {
+            vec!["pnpm-workspace.yaml", "package.json"]
+        }
         _ => vec!["package.json"],
     };
 
@@ -345,6 +361,7 @@ pub fn locate_dependencies_root(
             }
         }
         JavaScriptPackageManager::Npm => vec!["package-lock.json", "npm-shrinkwrap.json"],
+        JavaScriptPackageManager::Nub => NUB_LOCK_NAMES.to_vec(),
         JavaScriptPackageManager::Pnpm => vec!["pnpm-lock.yaml"],
         JavaScriptPackageManager::Yarn => vec!["yarn.lock"],
     };
@@ -469,6 +486,39 @@ pub fn install_dependencies(
 
             cmd
         }
+        JavaScriptPackageManager::Nub => {
+            // `nub ci` installs strictly from the lockfile, but has no
+            // `--prod` flag, so fall back to `nub install` for production
+            // installs, which is frozen by default in CI anyways
+            let use_ci = env.ci
+                && !input.production
+                && NUB_LOCK_NAMES
+                    .iter()
+                    .any(|name| input.root.join(name).exists());
+
+            let mut cmd = if use_ci {
+                ExecCommandInput::new("nub", ["ci"])
+            } else {
+                ExecCommandInput::new("nub", ["install"])
+            };
+
+            if input.production {
+                cmd.args.push("--prod".into());
+            }
+
+            for package_name in input.packages {
+                cmd.args.push(if input.production {
+                    "--filter-prod".into()
+                } else {
+                    "--filter".into()
+                });
+
+                // https://nubjs.com/docs/install#nub-install
+                cmd.args.push(format!("{package_name}..."));
+            }
+
+            cmd
+        }
         JavaScriptPackageManager::Pnpm => {
             let mut cmd = ExecCommandInput::new("pnpm", ["install"]);
 
@@ -526,6 +576,13 @@ pub fn install_dependencies(
             JavaScriptPackageManager::Npm => {
                 output.dedupe_command = Some(
                     ExecCommandInput::new("npm", ["dedupe"])
+                        .cwd(input.root)
+                        .into(),
+                );
+            }
+            JavaScriptPackageManager::Nub => {
+                output.dedupe_command = Some(
+                    ExecCommandInput::new("nub", ["dedupe"])
                         .cwd(input.root)
                         .into(),
                 );
@@ -590,7 +647,10 @@ pub fn parse_lock(Json(input): Json<ParseLockInput>) -> FnResult<Json<ParseLockO
         Some("package-lock.json" | "npm-shrinkwrap.json") => {
             parse_package_lock_json(&input.path, &mut output)?
         }
-        Some("pnpm-lock.yaml") => parse_pnpm_lock_yaml(&input.path, &mut output)?,
+        // `nub.lock` uses the pnpm lockfile format
+        Some("nub.lock") | Some("pnpm-lock.yaml") => {
+            parse_pnpm_lock_yaml(&input.path, &mut output)?
+        }
         Some("yarn.lock") => parse_yarn_lock(&input.path, &mut output)?,
         _ => {}
     };

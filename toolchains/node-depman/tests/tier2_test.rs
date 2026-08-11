@@ -25,6 +25,22 @@ mod node_depman_toolchain_tier2 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn does_nothing_for_nub() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("nub").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    toolchain_config: json!({}),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.commands.is_empty());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn does_nothing_for_pnpm() {
             let sandbox = create_empty_moon_sandbox();
             let plugin = sandbox.create_toolchain("pnpm").await;

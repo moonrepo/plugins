@@ -139,10 +139,7 @@ impl<'a> TasksInferrer<'a> {
         }
 
         // toolchains
-        if matches!(
-            package_manager,
-            JavaScriptPackageManager::Bun | JavaScriptPackageManager::Deno
-        ) {
+        if package_manager.is_standalone() {
             config.toolchains = Some(OneOrMany::Many(vec![
                 Id::raw("javascript"),
                 package_manager.get_runtime_toolchain(),

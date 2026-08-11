@@ -112,6 +112,40 @@ mod javascript_toolchain_tier1 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn detects_nub_via_lockfile() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("nub.lock", "");
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .initialize_toolchain(InitializeToolchainInput::default())
+                .await;
+
+            assert_eq!(
+                output.default_settings.get("packageManager").unwrap(),
+                &JsonValue::String("nub".into())
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn detects_nub_via_package_json() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("package.json", r#"{ "packageManager": "nub@0.7.0" }"#);
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .initialize_toolchain(InitializeToolchainInput::default())
+                .await;
+
+            assert_eq!(
+                output.default_settings.get("packageManager").unwrap(),
+                &JsonValue::String("nub".into())
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn detects_pnpm_via_lockfile() {
             let sandbox = create_empty_moon_sandbox();
             sandbox.create_file("pnpm-lock.yaml", "");

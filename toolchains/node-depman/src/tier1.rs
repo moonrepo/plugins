@@ -21,7 +21,12 @@ pub fn register_toolchain(
             lock_file_names: vec!["package-lock.json".into(), "npm-shrinkwrap.json".into()],
             ..Default::default()
         },
-        PackageManager::Nub => todo!(),
+        PackageManager::Nub => RegisterToolchainOutput {
+            config_file_globs: vec![".npmrc".into(), "nub.jsonc".into()],
+            exe_names: vec!["nub".into(), "nubx".into()],
+            lock_file_names: vec!["nub.lock".into()],
+            ..Default::default()
+        },
         PackageManager::Pnpm | PackageManager::Pnpm11 | PackageManager::Pnpm12 => {
             RegisterToolchainOutput {
                 config_file_globs: vec![
@@ -73,7 +78,7 @@ pub fn define_toolchain_config() -> FnResult<Json<DefineToolchainConfigOutput>> 
     Ok(Json(DefineToolchainConfigOutput {
         schema: match manager {
             PackageManager::Npm => SchemaBuilder::build_root::<NpmToolchainConfig>(),
-            PackageManager::Nub => todo!(),
+            PackageManager::Nub => SchemaBuilder::build_root::<NubToolchainConfig>(),
             PackageManager::Pnpm | PackageManager::Pnpm11 | PackageManager::Pnpm12 => {
                 SchemaBuilder::build_root::<PnpmToolchainConfig>()
             }
