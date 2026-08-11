@@ -359,6 +359,29 @@ pub fn parse_manifest(
     Ok(Json(output))
 }
 
+fn is_bin_installed(
+    env: &HostEnvironment,
+    globals_dir: Option<&VirtualPath>,
+    module: &str,
+    version: &str,
+) -> bool {
+    // Without a registry to inspect (like Cargo's `.crates.toml`), we can't
+    // verify which version an installed binary is, so entries pinned to a
+    // version, branch, or commit are always included. Their command only
+    // executes when the environment fingerprint changes, like a version bump
+    if version != "latest" {
+        return false;
+    }
+
+    let Some(globals_dir) = globals_dir else {
+        return false;
+    };
+
+    globals_dir
+        .join(env.os.get_exe_name(get_bin_name(module)))
+        .exists()
+}
+
 #[plugin_fn]
 pub fn setup_environment(
     Json(input): Json<SetupEnvironmentInput>,
@@ -374,18 +397,23 @@ pub fn setup_environment(
         let mut bins_by_version = BTreeMap::default();
 
         for bin in &config.bins {
-            let name = match bin {
-                BinEntry::String(inner) => inner,
+            let (name, force) = match bin {
+                BinEntry::String(inner) => (inner.as_str(), false),
                 BinEntry::Object(cfg) => {
                     if cfg.local && env.ci {
                         continue;
-                    } else {
-                        cfg.bin.as_str()
                     }
+
+                    (cfg.bin.as_str(), cfg.force)
                 }
             };
 
             let (module, version) = name.split_once('@').unwrap_or((name, "latest"));
+
+            if !force && is_bin_installed(env, input.globals_dir.as_ref(), module, version) {
+                continue;
+            }
+
             let base_module = get_base_module(module);
 
             bins_by_version
@@ -441,4 +469,31 @@ fn get_base_module(module: &str) -> String {
     base.push_str(parts.next().unwrap_or_default());
 
     base
+}
+
+// A major version suffix segment: v2, v3, etc, but never v0 or v1
+// https://go.dev/ref/mod#major-version-suffixes
+fn is_version_segment(segment: &str) -> bool {
+    match segment.strip_prefix('v') {
+        Some(digits) => {
+            !digits.is_empty()
+                && !digits.starts_with('0')
+                && digits != "1"
+                && digits.chars().all(|c| c.is_ascii_digit())
+        }
+        None => false,
+    }
+}
+
+// The executable is named after the last segment of the module path,
+// excluding a major version suffix: `github.com/foo/bar/v2` -> `bar`
+fn get_bin_name(module: &str) -> &str {
+    let mut segments = module.rsplit('/');
+    let last = segments.next().unwrap_or(module);
+
+    if is_version_segment(last) {
+        return segments.next().unwrap_or(last);
+    }
+
+    last
 }

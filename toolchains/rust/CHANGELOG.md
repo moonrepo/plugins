@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed configured `bins` not being reinstalled when their binaries were
+  uninstalled or deleted outside of moon. Only missing binaries are now
+  installed.
+
 ## 1.0.8
 
 #### 🚀 Updates
