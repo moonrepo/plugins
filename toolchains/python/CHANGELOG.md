@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Ensures that package manager toolchains are installed before setting up the environment.
+
 ## 0.2.1
 
 #### 🚀 Updates

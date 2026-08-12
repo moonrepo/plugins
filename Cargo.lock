@@ -3159,9 +3159,9 @@ dependencies = [
 
 [[package]]
 name = "moon_pdk_api"
-version = "2.1.0"
+version = "2.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "17e60b6592bdd68319ce9c0b5874e6cf67b7dd2cbdb4a72ca75de8232a2186b6"
+checksum = "1c169515d9d4d62fd45d979482532cc8bdd4f7c2fdfb6f4ca43ea7379f45b19f"
 dependencies = [
  "derive_setters",
  "moon_common",

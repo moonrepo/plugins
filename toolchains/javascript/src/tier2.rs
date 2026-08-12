@@ -203,7 +203,10 @@ pub fn define_requirements(
 ) -> FnResult<Json<DefineRequirementsOutput>> {
     let config =
         parse_toolchain_config_schema::<JavaScriptToolchainConfig>(input.toolchain_config)?;
-    let mut output = DefineRequirementsOutput::default();
+    let mut output = DefineRequirementsOutput {
+        for_setup_toolchain: true,
+        ..Default::default()
+    };
 
     if let Some(package_manager) = config.package_manager {
         if !package_manager.is_standalone() {

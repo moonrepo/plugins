@@ -18,6 +18,8 @@ pub fn define_requirements(
         } else {
             vec!["node".into()]
         },
+        for_setup_environment: false,
+        for_setup_toolchain: true,
     }))
 }
 

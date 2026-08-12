@@ -14,6 +14,27 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 #[plugin_fn]
+pub fn define_requirements(
+    Json(input): Json<DefineRequirementsInput>,
+) -> FnResult<Json<DefineRequirementsOutput>> {
+    let config = parse_toolchain_config_schema::<PythonToolchainConfig>(input.toolchain_config)?;
+
+    Ok(Json(DefineRequirementsOutput {
+        requires: match config.package_manager {
+            Some(package_manager) => vec![format!("unstable_{package_manager}")],
+            None => vec![],
+        },
+        // We must ensure package managers are fully installed
+        // before we setup the environment, otherwise commands fail
+        for_setup_environment: true,
+        // However, we don't want this when we setup this toolchain,
+        // because the package managers depend on us, and it would
+        // introduce a cycle
+        for_setup_toolchain: false,
+    }))
+}
+
+#[plugin_fn]
 pub fn extend_project_graph(
     Json(input): Json<ExtendProjectGraphInput>,
 ) -> FnResult<Json<ExtendProjectGraphOutput>> {
