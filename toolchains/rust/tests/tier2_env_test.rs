@@ -510,8 +510,8 @@ mod rust_toolchain_tier2 {
                 })
                 .await;
 
-            // binstall command
-            assert_eq!(output.commands.len(), 1);
+            // no binstall command either, since there's nothing to install
+            assert!(output.commands.is_empty());
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -597,6 +597,143 @@ mod rust_toolchain_tier2 {
                 )
                 .cache(CacheStrategy::Memory)
                 .label("cargo-bins")]
+            );
+        }
+
+        // https://github.com/moonrepo/plugins/issues/137
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn only_installs_missing_bins() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(".cargo/bin/cargo-nextest", "");
+            sandbox.create_file(".cargo/bin/cargo-nextest.exe", "");
+
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    globals_dir: Some(VirtualPath::new(sandbox.path().join(".cargo/bin"))),
+                    toolchain_config: json!({
+                        "bins": ["cargo-nextest", "just"]
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.commands,
+                [
+                    ExecCommand::new(
+                        ExecCommandInput::new(
+                            "cargo",
+                            ["install", "cargo-binstall", "--force", "--locked"],
+                        )
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
+                    .cache(CacheStrategy::Memory)
+                    .label("cargo-binstall"),
+                    ExecCommand::new(
+                        ExecCommandInput::new(
+                            "cargo",
+                            ["binstall", "--no-confirm", "--log-level", "info", "just"],
+                        )
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
+                    .cache(CacheStrategy::Memory)
+                    .label("cargo-bins")
+                ]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn adds_no_commands_if_all_bins_installed() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(".cargo/bin/cargo-nextest", "");
+            sandbox.create_file(".cargo/bin/cargo-nextest.exe", "");
+
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    globals_dir: Some(VirtualPath::new(sandbox.path().join(".cargo/bin"))),
+                    toolchain_config: json!({
+                        "bins": ["cargo-nextest"]
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.commands.is_empty());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn skips_installed_versioned_bins() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(".cargo/bin/cargo-nextest", "");
+            sandbox.create_file(".cargo/bin/cargo-nextest.exe", "");
+
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    globals_dir: Some(VirtualPath::new(sandbox.path().join(".cargo/bin"))),
+                    toolchain_config: json!({
+                        "bins": ["cargo-nextest@0.9.52"]
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.commands.is_empty());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn always_installs_forced_bins() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(".cargo/bin/cargo-binstall", "");
+            sandbox.create_file(".cargo/bin/cargo-binstall.exe", "");
+            sandbox.create_file(".cargo/bin/cargo-nextest", "");
+            sandbox.create_file(".cargo/bin/cargo-nextest.exe", "");
+
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    globals_dir: Some(VirtualPath::new(sandbox.path().join(".cargo/bin"))),
+                    toolchain_config: json!({
+                        "bins": [
+                            {
+                                "bin": "cargo-nextest",
+                                "force": true
+                            }
+                        ]
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.commands,
+                [ExecCommand::new(
+                    ExecCommandInput::new(
+                        "cargo",
+                        [
+                            "binstall",
+                            "--no-confirm",
+                            "--log-level",
+                            "info",
+                            "--force",
+                            "cargo-nextest",
+                        ],
+                    )
+                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )
+                .cache(CacheStrategy::Memory)
+                .label("cargo-bins-forced")]
             );
         }
     }

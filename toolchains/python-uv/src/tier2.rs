@@ -9,5 +9,8 @@ pub fn define_requirements(
 ) -> FnResult<Json<DefineRequirementsOutput>> {
     Ok(Json(DefineRequirementsOutput {
         requires: vec!["unstable_python".into()],
+        for_setup_environment: false,
+        // Aligns with other package managers
+        for_setup_toolchain: true,
     }))
 }

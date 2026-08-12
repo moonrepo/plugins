@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed configured `bins` not being reinstalled when their binaries were
+  uninstalled or deleted outside of moon. Missing binaries are now detected in
+  the globals directory, and only missing binaries are installed. Binaries
+  pinned to a version, branch, or commit are always installed, as their
+  installed version cannot be verified.
+- The `force` option for `bins` entries is now respected, and will always
+  install the binary.
+
 ## 1.4.5
 
 #### 🚀 Updates

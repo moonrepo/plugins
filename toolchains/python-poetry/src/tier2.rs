@@ -9,5 +9,8 @@ pub fn define_requirements(
 ) -> FnResult<Json<DefineRequirementsOutput>> {
     Ok(Json(DefineRequirementsOutput {
         requires: vec!["unstable_python".into()],
+        for_setup_environment: false,
+        // Requires python to run poetry
+        for_setup_toolchain: true,
     }))
 }

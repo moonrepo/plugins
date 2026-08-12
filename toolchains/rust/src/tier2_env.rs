@@ -11,6 +11,20 @@ fn create_command(bin: &str, args: Vec<&str>, cwd: &VirtualPath) -> ExecCommand 
     ExecCommand::new(ExecCommandInput::new(bin, args).cwd(cwd.to_owned()))
 }
 
+fn is_bin_installed(env: &HostEnvironment, globals_dir: Option<&VirtualPath>, spec: &str) -> bool {
+    let Some(globals_dir) = globals_dir else {
+        return false;
+    };
+
+    // Entries may be suffixed with a version: `cargo-nextest@0.9.52`
+    let name = match spec.split_once('@') {
+        Some((prefix, _)) => prefix,
+        None => spec,
+    };
+
+    globals_dir.join(env.os.get_exe_name(name)).exists()
+}
+
 #[plugin_fn]
 pub fn setup_environment(
     Json(input): Json<SetupEnvironmentInput>,
@@ -66,68 +80,73 @@ pub fn setup_environment(
     if !config.bins.is_empty() {
         let env = get_host_environment()?;
 
-        // Only install if we can't find the binary
-        if input
-            .globals_dir
-            .is_none_or(|dir| !dir.join(env.os.get_exe_name("cargo-binstall")).exists())
-        {
-            let binstall_package = if let Some(version) = &config.binstall_version {
-                format!("cargo-binstall@{version}")
-            } else {
-                "cargo-binstall".into()
-            };
-
-            output.commands.push(
-                create_command(
-                    "cargo",
-                    vec!["install", &binstall_package, "--force", "--locked"],
-                    &input.root,
-                )
-                .cache(CacheStrategy::Memory)
-                .label("cargo-binstall"),
-            );
-        }
-
         let mut force_bins = vec![];
         let mut non_force_bins = vec![];
 
         for bin in &config.bins {
             match bin {
                 BinEntry::String(inner) => {
-                    non_force_bins.push(inner.as_str());
+                    if !is_bin_installed(env, input.globals_dir.as_ref(), inner) {
+                        non_force_bins.push(inner.as_str());
+                    }
                 }
                 BinEntry::Object(cfg) => {
                     if cfg.local && env.ci {
                         continue;
                     } else if cfg.force {
                         force_bins.push(cfg.bin.as_str());
-                    } else {
+                    } else if !is_bin_installed(env, input.globals_dir.as_ref(), &cfg.bin) {
                         non_force_bins.push(cfg.bin.as_str());
                     }
                 }
             };
         }
 
-        if !force_bins.is_empty() {
-            let mut args = vec!["binstall", "--no-confirm", "--log-level", "info", "--force"];
-            args.extend(force_bins);
+        if !force_bins.is_empty() || !non_force_bins.is_empty() {
+            // Only install if we can't find the binary
+            if input
+                .globals_dir
+                .as_ref()
+                .is_none_or(|dir| !dir.join(env.os.get_exe_name("cargo-binstall")).exists())
+            {
+                let binstall_package = if let Some(version) = &config.binstall_version {
+                    format!("cargo-binstall@{version}")
+                } else {
+                    "cargo-binstall".into()
+                };
 
-            output.commands.push(
-                create_command("cargo", args, &input.root)
+                output.commands.push(
+                    create_command(
+                        "cargo",
+                        vec!["install", &binstall_package, "--force", "--locked"],
+                        &input.root,
+                    )
                     .cache(CacheStrategy::Memory)
-                    .label("cargo-bins-forced"),
-            );
-        }
+                    .label("cargo-binstall"),
+                );
+            }
 
-        if !non_force_bins.is_empty() {
-            let mut args = vec!["binstall", "--no-confirm", "--log-level", "info"];
-            args.extend(non_force_bins);
+            if !force_bins.is_empty() {
+                let mut args = vec!["binstall", "--no-confirm", "--log-level", "info", "--force"];
+                args.extend(force_bins);
 
-            output.commands.push(
-                create_command("cargo", args, &input.root)
-                    .cache(CacheStrategy::Memory)
-                    .label("cargo-bins"),
-            );
+                output.commands.push(
+                    create_command("cargo", args, &input.root)
+                        .cache(CacheStrategy::Memory)
+                        .label("cargo-bins-forced"),
+                );
+            }
+
+            if !non_force_bins.is_empty() {
+                let mut args = vec!["binstall", "--no-confirm", "--log-level", "info"];
+                args.extend(non_force_bins);
+
+                output.commands.push(
+                    create_command("cargo", args, &input.root)
+                        .cache(CacheStrategy::Memory)
+                        .label("cargo-bins"),
+                );
+            }
         }
     }
 

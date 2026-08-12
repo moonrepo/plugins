@@ -36,6 +36,7 @@ config_struct!(
         pub profile_execution: Option<NodeProfileType>,
 
         /// When `version` is defined, syncs the version to the chosen config.
+        #[deprecated]
         pub sync_version_manager_config: Option<NodeVersionManager>,
 
         /// Configured version to download and install.

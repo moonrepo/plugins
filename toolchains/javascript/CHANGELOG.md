@@ -11,6 +11,11 @@
     present, otherwise from `package.json`.
   - Does not require the Node.js toolchain, as nub is a standalone binary.
 
+#### 🐞 Fixes
+
+- Fixed `bun.lock` parsing failing on Git/GitHub dependencies that include both
+  package metadata (`dependencies`, `bin`, etc) and an integrity hash.
+
 ## 1.2.2
 
 #### 🚀 Updates

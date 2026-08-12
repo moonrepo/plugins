@@ -1,9 +1,10 @@
 use crate::config::{PythonPackageManager, PythonToolchainConfig};
 use extism_pdk::*;
 use moon_config::LanguageType;
-use moon_pdk::parse_toolchain_config;
+use moon_pdk::{parse_toolchain_config, parse_toolchain_config_schema};
 use moon_pdk_api::*;
 use schematic::SchemaBuilder;
+use starbase_utils::fs;
 use starbase_utils::json::JsonValue;
 use toolchain_common::enable_tracing;
 
@@ -140,4 +141,25 @@ pub fn define_docker_metadata(
         )),
         scaffold_globs: vec![],
     }))
+}
+
+#[plugin_fn]
+pub fn prune_docker(Json(input): Json<PruneDockerInput>) -> FnResult<Json<PruneDockerOutput>> {
+    let config = parse_toolchain_config_schema::<PythonToolchainConfig>(input.toolchain_config)?;
+    let mut output = PruneDockerOutput::default();
+
+    if input.docker_config.delete_vendor_directories {
+        for dep in input.project_dependencies {
+            let dep_root = input.context.get_project_root(&dep);
+            let venv_dir = dep_root.join(&config.venv_name);
+
+            if venv_dir.exists() {
+                fs::remove_dir_all(&venv_dir)?;
+
+                output.changed_files.push(venv_dir);
+            }
+        }
+    }
+
+    Ok(Json(output))
 }

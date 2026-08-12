@@ -2443,7 +2443,28 @@ mod javascript_toolchain_tier2 {
                 })
                 .await;
 
-            assert_eq!(output.dependencies, expected_dependencies());
+            // GitHub dependencies only exist in the bun lockfile fixture:
+            // with package metadata + integrity, and without either
+            let mut expected = expected_dependencies();
+            expected.insert(
+                "@portkey-ai/gateway".into(),
+                vec![LockDependency {
+                    hash: Some(
+                        "sha512-71lqRjKGGxMSs4l6DdrzXHkGvitFdCsWxLbxYVfbYDTfhqOL0dJbmqjyrKObjSTbQqCXTh2XZQeI2Un0FN7pig=="
+                            .into()
+                    ),
+                    ..Default::default()
+                }],
+            );
+            expected.insert(
+                "uWebSockets.js".into(),
+                vec![LockDependency {
+                    hash: Some("uNetworking-uWebSockets.js-6609a88".into()),
+                    ..Default::default()
+                }],
+            );
+
+            assert_eq!(output.dependencies, expected);
         }
 
         // #[tokio::test(flavor = "multi_thread")]

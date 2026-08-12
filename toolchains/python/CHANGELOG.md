@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Ensures that package manager toolchains are installed before setting up the environment.
+- Added support to the Docker pruning workflow where we remove `.venv` directories for non-focused projects (those that were explicitly scaffolded).
+
 ## 0.2.1
 
 #### 🚀 Updates
