@@ -88,6 +88,15 @@ enum GoRequireTarget {
     External,
 }
 
+// Whether `import_path` is the package at `prefix` itself, or nested beneath
+// it.
+fn import_within(import_path: &str, prefix: &str) -> bool {
+    import_path == prefix
+        || import_path
+            .strip_prefix(prefix)
+            .is_some_and(|rest| rest.starts_with('/'))
+}
+
 // Workspace-relative dirs that may own a project's `go.mod`: the project dir
 // itself, then each ancestor up to the workspace root ("").
 fn module_dir_candidates(source: &str) -> Vec<&str> {
@@ -279,12 +288,7 @@ impl GoProjectGraph {
     fn resolve_import(&self, import_path: &str) -> Option<&Id> {
         self.package_prefixes
             .iter()
-            .filter(|(prefix, _)| {
-                import_path == prefix.as_str()
-                    || import_path
-                        .strip_prefix(prefix)
-                        .is_some_and(|rest| rest.starts_with('/'))
-            })
+            .filter(|(prefix, _)| import_within(import_path, prefix))
             .max_by_key(|(prefix, _)| prefix.len())
             .map(|(_, id)| id)
     }
@@ -379,6 +383,15 @@ impl GoProjectGraph {
             )?;
 
             for import_path in imports {
+                // `./...` also enumerates packages belonging to projects
+                // nested inside this one; anything within the project's own
+                // import path is ownership, not an import
+                if let Some(own) = project.import_path.as_deref()
+                    && import_within(&import_path, own)
+                {
+                    continue;
+                }
+
                 if let Some(dep_id) = self.resolve_import(&import_path)
                     && dep_id != &project.id
                     && seen.insert(dep_id)

@@ -319,6 +319,42 @@ mod go_toolchain_tier2 {
             }
 
             #[tokio::test(flavor = "multi_thread")]
+            async fn doesnt_infer_edges_to_nested_projects_it_never_imports() {
+                let sandbox = create_moon_sandbox("projects-single-module");
+                let plugin = sandbox.create_toolchain("go").await;
+
+                let mut input = ExtendProjectGraphInput::default();
+                input.project_sources.insert(Id::raw("a"), "apps/a".into());
+                input.project_sources.insert(Id::raw("b"), "libs/b".into());
+                input
+                    .project_sources
+                    .insert(Id::raw("tool"), "apps/a/tool".into());
+                input.toolchain_config = json!({
+                    "inferRelationships": true
+                });
+
+                let output = plugin.extend_project_graph(input).await;
+
+                // `go list -deps ./...` run from `a` enumerates the nested
+                // `tool` project's package as a root even though nothing
+                // imports it; ownership must not become a dependency edge.
+                assert_eq!(
+                    output.extended_projects,
+                    BTreeMap::from_iter([(
+                        Id::raw("a"),
+                        ExtendProjectOutput {
+                            dependencies: vec![ProjectDependency {
+                                id: Id::raw("b"),
+                                scope: DependencyScope::Production,
+                                via: Some("package example.com/org/libs/b".into()),
+                            }],
+                            ..Default::default()
+                        }
+                    )])
+                );
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
             async fn doesnt_infer_relations_if_config_disabled() {
                 let sandbox = create_moon_sandbox("projects-workspace");
                 let plugin = sandbox.create_toolchain("go").await;
