@@ -1,6 +1,6 @@
 [package]
 name = "rust_toolchain"
-version = "1.0.8"
+version = "1.0.9"
 edition = "2024"
 description = "Rust toolchain WASM plugin for moon."
 authors = ["Miles Johnson"]
