@@ -42,21 +42,12 @@ mod go_toolchain_tier2 {
                         }
                     ),
                     (
+                        // Nothing wires these sibling modules together (no
+                        // go.work), so `c` requiring them by version doesn't
+                        // create a local relationship.
                         Id::raw("c"),
                         ExtendProjectOutput {
                             alias: Some("example.com/org/c".into()),
-                            dependencies: vec![
-                                ProjectDependency {
-                                    id: Id::raw("a"),
-                                    scope: DependencyScope::Production,
-                                    via: Some("module example.com/org/a".into()),
-                                },
-                                ProjectDependency {
-                                    id: Id::raw("b"),
-                                    scope: DependencyScope::Production,
-                                    via: Some("module example.com/org/b".into()),
-                                }
-                            ],
                             ..Default::default()
                         }
                     ),
@@ -139,26 +130,13 @@ mod go_toolchain_tier2 {
                 output.extended_projects,
                 BTreeMap::from_iter([
                     (
+                        // `consumer` requires the sibling modules by version
+                        // with nothing wiring them to local source, so no
+                        // relationships are created; the version-suffixed
+                        // aliases below still resolve.
                         Id::raw("consumer"),
                         ExtendProjectOutput {
                             alias: Some("example.com/org/consumer".into()),
-                            dependencies: vec![
-                                ProjectDependency {
-                                    id: Id::raw("mod"),
-                                    scope: DependencyScope::Production,
-                                    via: Some("module example.com/org/mod".into()),
-                                },
-                                ProjectDependency {
-                                    id: Id::raw("mod-v2"),
-                                    scope: DependencyScope::Production,
-                                    via: Some("module example.com/org/mod/v2".into()),
-                                },
-                                ProjectDependency {
-                                    id: Id::raw("suffixed"),
-                                    scope: DependencyScope::Production,
-                                    via: Some("module example.com/org/suffixed/v3".into()),
-                                }
-                            ],
                             ..Default::default()
                         }
                     ),
@@ -282,12 +260,12 @@ mod go_toolchain_tier2 {
                                     ProjectDependency {
                                         id: Id::raw("a"),
                                         scope: DependencyScope::Production,
-                                        via: Some("module example.com/org/a".into()),
+                                        via: Some("package example.com/org/a".into()),
                                     },
                                     ProjectDependency {
                                         id: Id::raw("b"),
                                         scope: DependencyScope::Production,
-                                        via: Some("module example.com/org/b".into()),
+                                        via: Some("package example.com/org/b".into()),
                                     }
                                 ],
                                 ..Default::default()
@@ -304,6 +282,40 @@ mod go_toolchain_tier2 {
                         VirtualPath::new("/workspace/c/go.mod"),
                     ]
                 );
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn infers_relations_within_a_single_module() {
+                let sandbox = create_moon_sandbox("projects-single-module");
+                let plugin = sandbox.create_toolchain("go").await;
+
+                let mut input = ExtendProjectGraphInput::default();
+                input.project_sources.insert(Id::raw("a"), "apps/a".into());
+                input.project_sources.insert(Id::raw("b"), "libs/b".into());
+                input.toolchain_config = json!({
+                    "inferRelationships": true
+                });
+
+                let output = plugin.extend_project_graph(input).await;
+
+                // Both projects derive their import path from the root go.mod,
+                // so only "a" has anything to output.
+                assert_eq!(
+                    output.extended_projects,
+                    BTreeMap::from_iter([(
+                        Id::raw("a"),
+                        ExtendProjectOutput {
+                            dependencies: vec![ProjectDependency {
+                                id: Id::raw("b"),
+                                scope: DependencyScope::Production,
+                                via: Some("package example.com/org/libs/b".into()),
+                            }],
+                            ..Default::default()
+                        }
+                    )])
+                );
+
+                assert_eq!(output.input_files, [VirtualPath::new("/workspace/go.mod")]);
             }
 
             #[tokio::test(flavor = "multi_thread")]
@@ -381,7 +393,7 @@ mod go_toolchain_tier2 {
                         dependencies: vec![ProjectDependency {
                             id: Id::raw("a"),
                             scope: DependencyScope::Production,
-                            via: Some("module example.com/org/a".into()),
+                            via: Some("package example.com/org/a".into()),
                         }],
                         ..Default::default()
                     })
@@ -402,10 +414,9 @@ mod go_toolchain_tier2 {
 
                 let output = plugin.extend_project_graph(input).await;
 
-                // `e` imports `example.com/org/a` only through the `a/pkg`
-                // subpackage, so the dependency is only inferred when
-                // `go list -deps` emits the owning module path via
-                // `-f {{if .Module}}{{.Module.Path}}{{end}}`.
+                // `e` never imports `example.com/org/a` itself, only the
+                // `a/pkg` subpackage, so the dependency relies on prefix
+                // matching rather than an exact import path match.
                 assert_eq!(
                     output.extended_projects.get(&Id::raw("e")),
                     Some(&ExtendProjectOutput {
@@ -413,7 +424,7 @@ mod go_toolchain_tier2 {
                         dependencies: vec![ProjectDependency {
                             id: Id::raw("a"),
                             scope: DependencyScope::Production,
-                            via: Some("module example.com/org/a".into()),
+                            via: Some("package example.com/org/a/pkg".into()),
                         }],
                         ..Default::default()
                     })
