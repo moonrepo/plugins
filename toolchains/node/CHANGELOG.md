@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Deprecated the `syncVersionManagerConfig` setting (it never worked correctly).
+
 ## 1.0.3
 
 #### 🚀 Updates
