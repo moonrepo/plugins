@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed project relationships not linking when a `go.mod` is located in a major
+  version folder (`v2`+) but its `module` directive omits the version suffix.
+  The suffix is now inferred from the folder name, for both the project's alias
+  and dependency matching.
+- `replace` directives are now honored when linking project relationships. A
+  replacement pointing to a local directory links to the project at that
+  location (regardless of module names), while a replacement pointing to
+  another module no longer creates a relationship.
+- Project relationships now reference the dependency's project identifier
+  instead of its module path alias, aligning with other toolchains.
+
 ## 1.4.6
 
 #### 🐞 Fixes
