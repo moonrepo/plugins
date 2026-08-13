@@ -47,12 +47,12 @@ mod go_toolchain_tier2 {
                             alias: Some("example.com/org/c".into()),
                             dependencies: vec![
                                 ProjectDependency {
-                                    id: Id::raw("example.com/org/a"),
+                                    id: Id::raw("a"),
                                     scope: DependencyScope::Production,
                                     via: Some("module example.com/org/a".into()),
                                 },
                                 ProjectDependency {
-                                    id: Id::raw("example.com/org/b"),
+                                    id: Id::raw("b"),
                                     scope: DependencyScope::Production,
                                     via: Some("module example.com/org/b".into()),
                                 }
@@ -116,6 +116,129 @@ mod go_toolchain_tier2 {
             assert!(output.input_files.is_empty());
         }
 
+        #[tokio::test(flavor = "multi_thread")]
+        async fn appends_major_version_folder_to_module() {
+            let sandbox = create_moon_sandbox("projects-versioned");
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let mut input = ExtendProjectGraphInput::default();
+            input
+                .project_sources
+                .insert(Id::raw("consumer"), "consumer".into());
+            input.project_sources.insert(Id::raw("mod"), "mod".into());
+            input
+                .project_sources
+                .insert(Id::raw("mod-v2"), "mod/v2".into());
+            input
+                .project_sources
+                .insert(Id::raw("suffixed"), "suffixed/v3".into());
+
+            let output = plugin.extend_project_graph(input).await;
+
+            assert_eq!(
+                output.extended_projects,
+                BTreeMap::from_iter([
+                    (
+                        Id::raw("consumer"),
+                        ExtendProjectOutput {
+                            alias: Some("example.com/org/consumer".into()),
+                            dependencies: vec![
+                                ProjectDependency {
+                                    id: Id::raw("mod"),
+                                    scope: DependencyScope::Production,
+                                    via: Some("module example.com/org/mod".into()),
+                                },
+                                ProjectDependency {
+                                    id: Id::raw("mod-v2"),
+                                    scope: DependencyScope::Production,
+                                    via: Some("module example.com/org/mod/v2".into()),
+                                },
+                                ProjectDependency {
+                                    id: Id::raw("suffixed"),
+                                    scope: DependencyScope::Production,
+                                    via: Some("module example.com/org/suffixed/v3".into()),
+                                }
+                            ],
+                            ..Default::default()
+                        }
+                    ),
+                    (
+                        Id::raw("mod"),
+                        ExtendProjectOutput {
+                            alias: Some("example.com/org/mod".into()),
+                            ..Default::default()
+                        }
+                    ),
+                    (
+                        Id::raw("mod-v2"),
+                        ExtendProjectOutput {
+                            alias: Some("example.com/org/mod/v2".into()),
+                            ..Default::default()
+                        }
+                    ),
+                    (
+                        Id::raw("suffixed"),
+                        ExtendProjectOutput {
+                            alias: Some("example.com/org/suffixed/v3".into()),
+                            ..Default::default()
+                        }
+                    ),
+                ])
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn resolves_deps_through_replace_directives() {
+            let sandbox = create_moon_sandbox("projects-versioned");
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let mut input = ExtendProjectGraphInput::default();
+            input
+                .project_sources
+                .insert(Id::raw("arbitrary"), "arbitrary".into());
+            input.project_sources.insert(Id::raw("mod"), "mod".into());
+            input
+                .project_sources
+                .insert(Id::raw("replacer"), "replacer".into());
+
+            let output = plugin.extend_project_graph(input).await;
+
+            assert_eq!(
+                output.extended_projects,
+                BTreeMap::from_iter([
+                    (
+                        Id::raw("arbitrary"),
+                        ExtendProjectOutput {
+                            alias: Some("example.com/org/whatever".into()),
+                            ..Default::default()
+                        }
+                    ),
+                    (
+                        Id::raw("mod"),
+                        ExtendProjectOutput {
+                            alias: Some("example.com/org/mod".into()),
+                            ..Default::default()
+                        }
+                    ),
+                    (
+                        Id::raw("replacer"),
+                        ExtendProjectOutput {
+                            alias: Some("example.com/org/replacer".into()),
+                            // The `mod` require is replaced with an external
+                            // module, and `outside` escapes the workspace, so
+                            // neither creates a relationship
+                            dependencies: vec![ProjectDependency {
+                                id: Id::raw("arbitrary"),
+                                scope: DependencyScope::Production,
+                                via: Some("module example.com/org/renamed".into()),
+                            }],
+                            ..Default::default()
+                        }
+                    ),
+                ])
+            );
+        }
+
         mod go_list {
             use super::*;
 
@@ -157,12 +280,12 @@ mod go_toolchain_tier2 {
                                 alias: Some("example.com/org/c".into()),
                                 dependencies: vec![
                                     ProjectDependency {
-                                        id: Id::raw("example.com/org/a"),
+                                        id: Id::raw("a"),
                                         scope: DependencyScope::Production,
                                         via: Some("module example.com/org/a".into()),
                                     },
                                     ProjectDependency {
-                                        id: Id::raw("example.com/org/b"),
+                                        id: Id::raw("b"),
                                         scope: DependencyScope::Production,
                                         via: Some("module example.com/org/b".into()),
                                     }
@@ -256,7 +379,7 @@ mod go_toolchain_tier2 {
                     Some(&ExtendProjectOutput {
                         alias: Some("example.com/org/d".into()),
                         dependencies: vec![ProjectDependency {
-                            id: Id::raw("example.com/org/a"),
+                            id: Id::raw("a"),
                             scope: DependencyScope::Production,
                             via: Some("module example.com/org/a".into()),
                         }],
@@ -288,7 +411,7 @@ mod go_toolchain_tier2 {
                     Some(&ExtendProjectOutput {
                         alias: Some("example.com/org/e".into()),
                         dependencies: vec![ProjectDependency {
-                            id: Id::raw("example.com/org/a"),
+                            id: Id::raw("a"),
                             scope: DependencyScope::Production,
                             via: Some("module example.com/org/a".into()),
                         }],

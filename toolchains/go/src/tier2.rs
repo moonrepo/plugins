@@ -1,5 +1,7 @@
 use crate::config::GoToolchainConfig;
-use crate::go_mod::{GoMod, Module, ModuleDependency, parse_go_mod};
+use crate::go_mod::{
+    GoMod, Module, ModuleDependency, ModuleReplacement, Replacement, parse_go_mod,
+};
 use crate::go_sum::GoSum;
 use crate::go_work::GoWork;
 use extism_pdk::*;
@@ -89,15 +91,31 @@ pub fn extend_project_graph(
 
     // First pass, gather all packages and their manifests
     let mut packages = BTreeMap::default();
+    let mut source_to_id = BTreeMap::default();
 
     for (id, source) in input.project_sources {
-        let project_root = input.context.workspace_root.join(source);
+        let project_root = input.context.workspace_root.join(&source);
         let go_mod_path = project_root.join("go.mod");
 
         let mut manifest = if go_mod_path.exists() {
             output.input_files.push(go_mod_path.clone());
 
-            parse_go_mod(fs::read_file(&go_mod_path)?)?
+            let mut manifest = parse_go_mod(fs::read_file(&go_mod_path)?)?;
+
+            // A module in a major version folder (v2+) is imported with the
+            // version suffix, even when the `module` directive omits it
+            // https://go.dev/ref/mod#major-version-suffixes
+            if let Some(version) = source
+                .rsplit('/')
+                .next()
+                .filter(|segment| is_version_segment(segment))
+                && !manifest.module.is_empty()
+                && !is_version_segment(manifest.module.rsplit('/').next().unwrap_or_default())
+            {
+                manifest.module = format!("{}/{version}", manifest.module);
+            }
+
+            manifest
         } else {
             GoMod {
                 // This name isn't correct, but we need something!
@@ -124,11 +142,14 @@ pub fn extend_project_graph(
             }
         }
 
-        packages.insert(manifest.module.clone(), (id, manifest));
+        let source = resolve_source_path("", &source).unwrap_or(source);
+
+        source_to_id.insert(source.clone(), id.clone());
+        packages.insert(manifest.module.clone(), (id, source, manifest));
     }
 
     // Second pass, extract packages and their relationships
-    for (id, manifest) in packages.values() {
+    for (id, source, manifest) in packages.values() {
         let mut project_output = ExtendProjectOutput {
             alias: if manifest.module.is_empty() || manifest.module == id.as_str() {
                 None
@@ -139,15 +160,34 @@ pub fn extend_project_graph(
         };
 
         for dep in &manifest.require {
+            if dep.indirect {
+                continue;
+            }
+
             let dep_module = &dep.module.module_path;
 
-            if !dep.indirect
-                && packages
-                    .get(dep_module)
-                    .is_some_and(|(dep_id, _)| dep_id != id)
+            // A `replace` directive changes what the required path resolves
+            // to, so it takes precedence over matching modules directly
+            let dep_id = match manifest
+                .replace
+                .iter()
+                .find(|replacement| &replacement.module_path == dep_module)
+            {
+                // A local directory, so map to the project at that location
+                Some(ModuleReplacement {
+                    replacement: Replacement::FilePath(path),
+                    ..
+                }) => resolve_source_path(source, path).and_then(|path| source_to_id.get(&path)),
+                // Another module, so no longer a local project
+                Some(_) => None,
+                None => packages.get(dep_module).map(|(dep_id, _, _)| dep_id),
+            };
+
+            if let Some(dep_id) = dep_id
+                && dep_id != id
             {
                 project_output.dependencies.push(ProjectDependency {
-                    id: Id::raw(dep_module.clone()),
+                    id: dep_id.to_owned(),
                     scope: if dep.module.version == "internal-test" {
                         DependencyScope::Development
                     } else {
@@ -469,6 +509,31 @@ fn get_base_module(module: &str) -> String {
     base.push_str(parts.next().unwrap_or_default());
 
     base
+}
+
+// Lexically resolve a relative path (`./`, `../`) against a workspace
+// relative source, returning `None` when it escapes the workspace
+fn resolve_source_path(base: &str, path: &str) -> Option<String> {
+    if path.starts_with('/') {
+        return None;
+    }
+
+    let mut segments = base
+        .split('/')
+        .filter(|segment| !segment.is_empty() && *segment != ".")
+        .collect::<Vec<_>>();
+
+    for segment in path.split('/') {
+        match segment {
+            "" | "." => {}
+            ".." => {
+                segments.pop()?;
+            }
+            _ => segments.push(segment),
+        }
+    }
+
+    Some(segments.join("/"))
 }
 
 // A major version suffix segment: v2, v3, etc, but never v0 or v1
