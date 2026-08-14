@@ -1,16 +1,14 @@
-use crate::go_mod::{GoMod, parse_go_mod};
+use crate::config::GoToolchainConfig;
+use crate::go_mod::{GoMod, ModuleReplacement, Replacement, parse_go_mod};
+use moon_config::DependencyScope;
 use moon_pdk::exec;
 use moon_pdk_api::*;
 use starbase_utils::fs;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 // The `go list` half of the package graph: every package a directory's
 // packages depend on, as canonical import paths.
-pub fn execute_go_list(
-    dir: &VirtualPath,
-    packages: &[String],
-    test: bool,
-) -> AnyResult<Vec<String>> {
+fn execute_go_list(dir: &VirtualPath, packages: &[String], test: bool) -> AnyResult<Vec<String>> {
     let mut args = vec![
         "list",
         "-deps",
@@ -53,7 +51,7 @@ pub fn execute_go_list(
 
 // Whether `import_path` is the package at `prefix` itself, or nested beneath
 // it.
-pub fn import_within(import_path: &str, prefix: &str) -> bool {
+fn import_within(import_path: &str, prefix: &str) -> bool {
     import_path == prefix
         || import_path
             .strip_prefix(prefix)
@@ -79,13 +77,13 @@ fn module_dir_candidates(source: &str) -> Vec<&str> {
 // under, caching each `go.mod` it parses along the way. A `None` cache entry
 // memoizes "no usable `go.mod` here", so ancestors shared between
 // directories only hit the disk once.
-pub struct ModuleResolver {
+struct ModuleResolver {
     workspace_root: VirtualPath,
     go_mods: BTreeMap<String, Option<GoMod>>,
 }
 
 impl ModuleResolver {
-    pub fn new(workspace_root: VirtualPath) -> Self {
+    fn new(workspace_root: VirtualPath) -> Self {
         Self {
             workspace_root,
             go_mods: BTreeMap::default(),
@@ -97,7 +95,7 @@ impl ModuleResolver {
     // root), joined with the dir's path relative to that module root.
     // Returns the owning dir alongside so callers can key back into the
     // cache.
-    pub fn import_path(&mut self, source: &str) -> AnyResult<Option<(String, String)>> {
+    fn import_path(&mut self, source: &str) -> AnyResult<Option<(String, String)>> {
         for dir in module_dir_candidates(source) {
             if !self.go_mods.contains_key(dir) {
                 let go_mod_path = self.go_mod_path(dir);
@@ -149,11 +147,11 @@ impl ModuleResolver {
     // The parsed manifest owned by a dir previously resolved through
     // `import_path`, with any major version suffix already applied to its
     // module path.
-    pub fn manifest(&self, dir: &str) -> Option<&GoMod> {
+    fn manifest(&self, dir: &str) -> Option<&GoMod> {
         self.go_mods.get(dir).and_then(|entry| entry.as_ref())
     }
 
-    pub fn go_mod_path(&self, dir: &str) -> VirtualPath {
+    fn go_mod_path(&self, dir: &str) -> VirtualPath {
         if dir.is_empty() {
             self.workspace_root.join("go.mod")
         } else {
@@ -162,9 +160,292 @@ impl ModuleResolver {
     }
 }
 
+pub struct GoProject {
+    pub id: Id,
+    /// Module path as declared when the project owns its `go.mod`
+    pub alias: Option<String>,
+    root: VirtualPath,
+    import_path: Option<String>,
+    /// Direct module requires from the project's own `go.mod`
+    requires: Vec<GoRequire>,
+}
+
+struct GoRequire {
+    module_path: String,
+    target: GoRequireTarget,
+}
+
+// What a `require` actually resolves to once `replace` directives are
+// applied, which determines whether it can link to a local project.
+enum GoRequireTarget {
+    /// Required by version; only links when the environment wires the
+    /// module to local source (a `go.work` workspace)
+    Module,
+    /// Replaced by a local directory (workspace-relative), so it always
+    /// consumes local source
+    LocalSource(String),
+    /// Replaced by another module, or a path outside the workspace, so it
+    /// can never be a local project
+    External,
+}
+
+// All the state relationship inference works from: the resolved projects,
+// the import-path prefix map they resolve against, and the module resolver
+// used to build both.
+pub struct GoPackageGraph {
+    workspace_root: VirtualPath,
+    config: GoToolchainConfig,
+    go_exists: bool,
+    resolver: ModuleResolver,
+    projects: Vec<GoProject>,
+    /// Project lookup by workspace-relative source dir, for `replace`
+    /// directives that point at local directories
+    source_to_id: BTreeMap<String, Id>,
+    /// Import path each project resolves to, matched by prefix
+    package_prefixes: Vec<(String, Id)>,
+    /// The `go.mod` files backing the resolved import paths
+    input_files: Vec<VirtualPath>,
+}
+
+impl GoPackageGraph {
+    pub fn new(workspace_root: VirtualPath, config: GoToolchainConfig, go_exists: bool) -> Self {
+        Self {
+            resolver: ModuleResolver::new(workspace_root.clone()),
+            workspace_root,
+            config,
+            go_exists,
+            projects: vec![],
+            source_to_id: BTreeMap::default(),
+            package_prefixes: vec![],
+            input_files: vec![],
+        }
+    }
+
+    // First pass: resolve every project to its import path and manifest, and
+    // build the prefix map that imports are resolved against.
+    pub fn load_projects(&mut self, sources: BTreeMap<Id, String>) -> AnyResult<()> {
+        for (id, source) in sources {
+            let root = self.workspace_root.join(&source);
+            let source = if source == "." { "" } else { source.as_str() };
+
+            self.source_to_id.insert(source.to_owned(), id.clone());
+
+            let mut project = GoProject {
+                id,
+                root,
+                alias: None,
+                import_path: None,
+                requires: vec![],
+            };
+
+            if let Some((mod_dir, import_path)) = self.resolver.import_path(source)? {
+                let go_mod_path = self.resolver.go_mod_path(&mod_dir);
+
+                if !self.input_files.contains(&go_mod_path) {
+                    self.input_files.push(go_mod_path);
+                }
+
+                // An ancestor's requires describe the whole module, so they
+                // only participate for the project that owns the `go.mod`
+                if mod_dir == source
+                    && let Some(manifest) = self.resolver.manifest(&mod_dir)
+                {
+                    if manifest.module != project.id.as_str() {
+                        project.alias = Some(manifest.module.clone());
+                    }
+
+                    project.requires = manifest
+                        .require
+                        .iter()
+                        .filter(|dep| !dep.indirect)
+                        .map(|dep| {
+                            let module_path = dep.module.module_path.clone();
+
+                            // A `replace` directive changes what the require
+                            // resolves to, so it takes precedence over
+                            // matching import paths
+                            let target = match manifest
+                                .replace
+                                .iter()
+                                .find(|replacement| replacement.module_path == module_path)
+                            {
+                                Some(ModuleReplacement {
+                                    replacement: Replacement::FilePath(path),
+                                    ..
+                                }) => resolve_source_path(source, path).map_or(
+                                    GoRequireTarget::External,
+                                    GoRequireTarget::LocalSource,
+                                ),
+                                Some(_) => GoRequireTarget::External,
+                                None => GoRequireTarget::Module,
+                            };
+
+                            GoRequire {
+                                module_path,
+                                target,
+                            }
+                        })
+                        .collect();
+                }
+
+                project.import_path = Some(import_path);
+            }
+
+            self.projects.push(project);
+        }
+
+        self.package_prefixes = self
+            .projects
+            .iter()
+            .filter_map(|project| {
+                project
+                    .import_path
+                    .clone()
+                    .map(|path| (path, project.id.clone()))
+            })
+            .collect();
+
+        Ok(())
+    }
+
+    pub fn projects(&self) -> &[GoProject] {
+        &self.projects
+    }
+
+    pub fn into_input_files(self) -> Vec<VirtualPath> {
+        self.input_files
+    }
+
+    // Resolves an import path to the project whose import path prefixes it.
+    // The longest match wins, so the module root can't shadow projects
+    // nested beneath it.
+    fn resolve_import(&self, import_path: &str) -> Option<&Id> {
+        self.package_prefixes
+            .iter()
+            .filter(|(prefix, _)| import_within(import_path, prefix))
+            .max_by_key(|(prefix, _)| prefix.len())
+            .map(|(_, id)| id)
+    }
+
+    // Second pass: infer one project's dependencies, picking the mechanism
+    // the environment supports.
+    pub fn project_dependencies(&self, project: &GoProject) -> AnyResult<Vec<ProjectDependency>> {
+        let mut dependencies = vec![];
+
+        // A project without an import path may still sit under a `go.work`,
+        // where `go list` resolves imports in workspace mode
+        if self.go_exists
+            && (project.import_path.is_some() || project.root.join("go.work").exists())
+        {
+            dependencies = self.dependencies_from_go_list(project)?;
+        }
+
+        // Monorepos using go.work can be resolved purely off the modfile: the
+        // workspace wires required sibling modules to their local source, so
+        // a project's own requires reflect real local relationships. That
+        // only matters when `go` isn't around to resolve them properly, while
+        // requires replaced by a local directory always consume local source.
+        let include_unreplaced = !self.go_exists
+            && self.workspace_root.join("go.work").exists()
+            && project.root.join("go.mod").exists();
+
+        for dependency in self.dependencies_from_modfile(project, include_unreplaced) {
+            if !dependencies.iter().any(|dep| dep.id == dependency.id) {
+                dependencies.push(dependency);
+            }
+        }
+
+        Ok(dependencies)
+    }
+
+    fn dependencies_from_modfile(
+        &self,
+        project: &GoProject,
+        include_unreplaced: bool,
+    ) -> Vec<ProjectDependency> {
+        let mut dependencies = vec![];
+        let mut seen = BTreeSet::new();
+
+        for require in &project.requires {
+            let dep_id = match &require.target {
+                GoRequireTarget::LocalSource(path) => self.source_to_id.get(path),
+                GoRequireTarget::External => None,
+                GoRequireTarget::Module => include_unreplaced
+                    .then(|| self.resolve_import(&require.module_path))
+                    .flatten(),
+            };
+
+            if let Some(dep_id) = dep_id
+                && dep_id != &project.id
+                && seen.insert(dep_id)
+            {
+                dependencies.push(ProjectDependency {
+                    id: dep_id.to_owned(),
+                    scope: DependencyScope::Production,
+                    via: Some(format!("module {}", require.module_path)),
+                });
+            }
+        }
+
+        dependencies
+    }
+
+    fn dependencies_from_go_list(&self, project: &GoProject) -> AnyResult<Vec<ProjectDependency>> {
+        let mut dependencies = vec![];
+        let mut seen = BTreeSet::new();
+
+        for (enabled, test, scope) in [
+            (
+                self.config.infer_relationships,
+                false,
+                DependencyScope::Production,
+            ),
+            (
+                self.config.infer_relationships_from_tests,
+                true,
+                DependencyScope::Development,
+            ),
+        ] {
+            if !enabled {
+                continue;
+            }
+
+            let imports = execute_go_list(
+                &project.root,
+                &self.config.infer_relationships_packages,
+                test,
+            )?;
+
+            for import_path in imports {
+                // `./...` also enumerates packages belonging to projects
+                // nested inside this one; anything within the project's own
+                // import path is ownership, not an import
+                if let Some(own) = project.import_path.as_deref()
+                    && import_within(&import_path, own)
+                {
+                    continue;
+                }
+
+                if let Some(dep_id) = self.resolve_import(&import_path)
+                    && dep_id != &project.id
+                    && seen.insert(dep_id)
+                {
+                    dependencies.push(ProjectDependency {
+                        id: dep_id.to_owned(),
+                        scope,
+                        via: Some(format!("package {import_path}")),
+                    });
+                }
+            }
+        }
+
+        Ok(dependencies)
+    }
+}
+
 // Lexically resolve a relative path (`./`, `../`) against a workspace
 // relative source, returning `None` when it escapes the workspace
-pub fn resolve_source_path(base: &str, path: &str) -> Option<String> {
+fn resolve_source_path(base: &str, path: &str) -> Option<String> {
     if path.starts_with('/') {
         return None;
     }
