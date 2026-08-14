@@ -1,13 +1,12 @@
 use crate::config::GoToolchainConfig;
-use crate::go_mod::{
-    GoMod, Module, ModuleDependency, ModuleReplacement, Replacement, parse_go_mod,
-};
+use crate::go_mod::parse_go_mod;
 use crate::go_sum::GoSum;
 use crate::go_work::GoWork;
+use crate::package_graph::{GoPackageGraph, is_version_segment};
 use extism_pdk::*;
-use moon_config::{BinEntry, DependencyScope};
+use moon_config::BinEntry;
 use moon_pdk::{
-    VirtualPathExt, command_exists, exec, get_host_env_var, get_host_environment, locate_root,
+    VirtualPathExt, command_exists, get_host_env_var, get_host_environment, locate_root,
     parse_toolchain_config_schema,
 };
 use moon_pdk_api::*;
@@ -15,198 +14,40 @@ use starbase_utils::fs;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-fn is_go_project(dir: &VirtualPath) -> bool {
-    dir.join("go.mod").exists()
-        || dir.join("go.sum").exists()
-        || dir.join("go.work").exists()
-        || dir.join("main.go").exists()
-}
-
-fn execute_go_list(
-    dir: &VirtualPath,
-    packages: &[String],
-    test: bool,
-) -> AnyResult<Vec<ModuleDependency>> {
-    let mut args = vec![
-        "list",
-        "-deps",
-        "-f",
-        "{{if .Module}}{{.Module.Path}}{{end}}",
-    ];
-
-    if test {
-        args.push("-test");
-    }
-
-    // Scan all packages recursively by default so that dependencies imported
-    // only from subdirectories (internal/, pkg/, ...) are also inferred.
-    if packages.is_empty() {
-        args.push("./...");
-    } else {
-        for package in packages {
-            args.push(package.as_str());
-        }
-    }
-
-    let result = exec(ExecCommandInput::pipe("go", args).cwd(dir.to_owned()))?;
-
-    if result.exit_code != 0 {
-        return Ok(vec![]);
-    }
-
-    Ok(result
-        .stdout
-        .lines()
-        .flat_map(|line| {
-            let line = line.trim();
-
-            if line.is_empty() {
-                None
-            } else {
-                Some(ModuleDependency {
-                    module: Module {
-                        module_path: line.into(),
-                        // This is a hack for our use case!
-                        version: if test {
-                            "internal-test".into()
-                        } else {
-                            "".into()
-                        },
-                    },
-                    indirect: false,
-                })
-            }
-        })
-        .collect())
-}
-
 #[plugin_fn]
 pub fn extend_project_graph(
     Json(input): Json<ExtendProjectGraphInput>,
 ) -> FnResult<Json<ExtendProjectGraphOutput>> {
-    let mut output = ExtendProjectGraphOutput::default();
     let config = parse_toolchain_config_schema::<GoToolchainConfig>(input.toolchain_config)?;
     let env = get_host_environment()?;
-    let go_exists = command_exists(env, "go");
 
-    // First pass, gather all packages and their manifests
-    let mut packages = BTreeMap::default();
-    let mut source_to_id = BTreeMap::default();
+    let mut graph = GoPackageGraph::new(
+        input.context.workspace_root,
+        config,
+        command_exists(env, "go"),
+    );
 
-    for (id, source) in input.project_sources {
-        let project_root = input.context.workspace_root.join(&source);
-        let go_mod_path = project_root.join("go.mod");
+    // First pass through, we figure out what projects we have and what their root import path is
+    graph.load_projects(input.project_sources)?;
 
-        let mut manifest = if go_mod_path.exists() {
-            output.input_files.push(go_mod_path.clone());
+    let mut output = ExtendProjectGraphOutput::default();
 
-            let mut manifest = parse_go_mod(fs::read_file(&go_mod_path)?)?;
-
-            // A module in a major version folder (v2+) is imported with the
-            // version suffix, even when the `module` directive omits it
-            // https://go.dev/ref/mod#major-version-suffixes
-            if let Some(version) = source
-                .rsplit('/')
-                .next()
-                .filter(|segment| is_version_segment(segment))
-                && !manifest.module.is_empty()
-                && !is_version_segment(manifest.module.rsplit('/').next().unwrap_or_default())
-            {
-                manifest.module = format!("{}/{version}", manifest.module);
-            }
-
-            manifest
-        } else {
-            GoMod {
-                // This name isn't correct, but we need something!
-                module: id.to_string(),
-                ..Default::default()
-            }
-        };
-
-        if go_exists && is_go_project(&project_root) {
-            if config.infer_relationships {
-                manifest.require.extend(execute_go_list(
-                    &project_root,
-                    &config.infer_relationships_packages,
-                    false,
-                )?);
-            }
-
-            if config.infer_relationships_from_tests {
-                manifest.require.extend(execute_go_list(
-                    &project_root,
-                    &config.infer_relationships_packages,
-                    true,
-                )?);
-            }
-        }
-
-        let source = resolve_source_path("", &source).unwrap_or(source);
-
-        source_to_id.insert(source.clone(), id.clone());
-        packages.insert(manifest.module.clone(), (id, source, manifest));
-    }
-
-    // Second pass, extract packages and their relationships
-    for (id, source, manifest) in packages.values() {
-        let mut project_output = ExtendProjectOutput {
-            alias: if manifest.module.is_empty() || manifest.module == id.as_str() {
-                None
-            } else {
-                Some(manifest.module.clone())
-            },
+    // On the second pass, we work through all the projects and resolve their dependencies
+    for project in graph.projects() {
+        let project_output = ExtendProjectOutput {
+            alias: project.alias.clone(),
+            dependencies: graph.project_dependencies(project)?,
             ..Default::default()
         };
 
-        for dep in &manifest.require {
-            if dep.indirect {
-                continue;
-            }
-
-            let dep_module = &dep.module.module_path;
-
-            // A `replace` directive changes what the required path resolves
-            // to, so it takes precedence over matching modules directly
-            let dep_id = match manifest
-                .replace
-                .iter()
-                .find(|replacement| &replacement.module_path == dep_module)
-            {
-                // A local directory, so map to the project at that location
-                Some(ModuleReplacement {
-                    replacement: Replacement::FilePath(path),
-                    ..
-                }) => resolve_source_path(source, path).and_then(|path| source_to_id.get(&path)),
-                // Another module, so no longer a local project
-                Some(_) => None,
-                None => packages.get(dep_module).map(|(dep_id, _, _)| dep_id),
-            };
-
-            if let Some(dep_id) = dep_id
-                && dep_id != id
-            {
-                project_output.dependencies.push(ProjectDependency {
-                    id: dep_id.to_owned(),
-                    scope: if dep.module.version == "internal-test" {
-                        DependencyScope::Development
-                    } else {
-                        DependencyScope::Production
-                    },
-                    via: Some(format!("module {}", dep_module)),
-                });
-            }
-        }
-
-        if project_output.alias.is_some()
-            || !project_output.dependencies.is_empty()
-            || !project_output.tasks.is_empty()
-        {
+        if project_output.alias.is_some() || !project_output.dependencies.is_empty() {
             output
                 .extended_projects
-                .insert(id.to_owned(), project_output);
+                .insert(project.id.to_owned(), project_output);
         }
     }
+
+    output.input_files = graph.into_input_files();
 
     Ok(Json(output))
 }
@@ -509,45 +350,6 @@ fn get_base_module(module: &str) -> String {
     base.push_str(parts.next().unwrap_or_default());
 
     base
-}
-
-// Lexically resolve a relative path (`./`, `../`) against a workspace
-// relative source, returning `None` when it escapes the workspace
-fn resolve_source_path(base: &str, path: &str) -> Option<String> {
-    if path.starts_with('/') {
-        return None;
-    }
-
-    let mut segments = base
-        .split('/')
-        .filter(|segment| !segment.is_empty() && *segment != ".")
-        .collect::<Vec<_>>();
-
-    for segment in path.split('/') {
-        match segment {
-            "" | "." => {}
-            ".." => {
-                segments.pop()?;
-            }
-            _ => segments.push(segment),
-        }
-    }
-
-    Some(segments.join("/"))
-}
-
-// A major version suffix segment: v2, v3, etc, but never v0 or v1
-// https://go.dev/ref/mod#major-version-suffixes
-fn is_version_segment(segment: &str) -> bool {
-    match segment.strip_prefix('v') {
-        Some(digits) => {
-            !digits.is_empty()
-                && !digits.starts_with('0')
-                && digits != "1"
-                && digits.chars().all(|c| c.is_ascii_digit())
-        }
-        None => false,
-    }
 }
 
 // The executable is named after the last segment of the module path,

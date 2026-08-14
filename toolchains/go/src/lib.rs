@@ -4,6 +4,8 @@ pub mod go_sum;
 pub mod go_work;
 
 #[cfg(feature = "wasm")]
+mod package_graph;
+#[cfg(feature = "wasm")]
 mod tier1;
 #[cfg(feature = "wasm")]
 mod tier2;

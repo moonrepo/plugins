@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Reworked relationship inference to match package import paths instead of module paths. Each project now resolves a canonical import path (nearest `go.mod` module path plus the project's relative directory), and `go list -deps` results are matched against those by longest prefix. This makes relationships resolvable in repositories that share a single `go.mod` across all projects.
+- Sibling modules required by version without a `go.work` no longer create project relationships, since those builds consume the published module rather than the local source. When the `go` binary is unavailable, projects with their own `go.mod` under a workspace `go.work` fall back to resolving relationships from their direct requires.
+- `replace` directives keep their meaning in the new model: a require replaced by a local directory always links to the project at that location (it consumes local source even without a `go.work`), while a require replaced by another module never links.
+- Imports within a project's own import path are treated as ownership rather than dependencies. `go list -deps ./...` enumerates packages belonging to projects nested inside the scanned project, which previously inferred an edge from the parent to every nested child — forming a cycle whenever a child declared `dependsOn` on its parent.
+
 ## 1.4.7
 
 #### 🐞 Fixes

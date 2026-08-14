@@ -1,0 +1,3 @@
+package tool
+
+func Tool() {}
