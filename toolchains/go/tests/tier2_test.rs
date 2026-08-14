@@ -285,6 +285,57 @@ mod go_toolchain_tier2 {
             }
 
             #[tokio::test(flavor = "multi_thread")]
+            async fn distinguishes_major_versioned_modules() {
+                let sandbox = create_moon_sandbox("projects-workspace-versioned");
+                let plugin = sandbox.create_toolchain("go").await;
+
+                let mut input = ExtendProjectGraphInput::default();
+                input
+                    .project_sources
+                    .insert(Id::raw("consumer"), "consumer".into());
+                input.project_sources.insert(Id::raw("mod"), "mod".into());
+                input
+                    .project_sources
+                    .insert(Id::raw("mod-v2"), "mod/v2".into());
+                input.toolchain_config = json!({
+                    "inferRelationships": true
+                });
+
+                let output = plugin.extend_project_graph(input).await;
+
+                // `example.com/org/mod` prefixes `example.com/org/mod/v2`, so
+                // the v2 import must resolve to the v2 project rather than
+                // collapsing into the v1 module.
+                assert_eq!(
+                    output.extended_projects.get(&Id::raw("consumer")),
+                    Some(&ExtendProjectOutput {
+                        alias: Some("example.com/org/consumer".into()),
+                        dependencies: vec![
+                            ProjectDependency {
+                                id: Id::raw("mod"),
+                                scope: DependencyScope::Production,
+                                via: Some("package example.com/org/mod".into()),
+                            },
+                            ProjectDependency {
+                                id: Id::raw("mod-v2"),
+                                scope: DependencyScope::Production,
+                                via: Some("package example.com/org/mod/v2".into()),
+                            },
+                        ],
+                        ..Default::default()
+                    })
+                );
+
+                assert_eq!(
+                    output.extended_projects.get(&Id::raw("mod-v2")),
+                    Some(&ExtendProjectOutput {
+                        alias: Some("example.com/org/mod/v2".into()),
+                        ..Default::default()
+                    })
+                );
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
             async fn infers_relations_within_a_single_module() {
                 let sandbox = create_moon_sandbox("projects-single-module");
                 let plugin = sandbox.create_toolchain("go").await;
