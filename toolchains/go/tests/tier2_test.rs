@@ -42,9 +42,9 @@ mod go_toolchain_tier2 {
                         }
                     ),
                     (
-                        // Nothing wires these sibling modules together (no
-                        // go.work), so `c` requiring them by version doesn't
-                        // create a local relationship.
+                        // `c` requires the sibling modules in its `go.mod`
+                        // but has no source importing them; a require without
+                        // a real import is not a relationship.
                         Id::raw("c"),
                         ExtendProjectOutput {
                             alias: Some("example.com/org/c".into()),
@@ -130,8 +130,8 @@ mod go_toolchain_tier2 {
                 output.extended_projects,
                 BTreeMap::from_iter([
                     (
-                        // `consumer` requires the sibling modules by version
-                        // with nothing wiring them to local source, so no
+                        // `consumer` requires the versioned modules in its
+                        // `go.mod` but has no source importing them, so no
                         // relationships are created; the version-suffixed
                         // aliases below still resolve.
                         Id::raw("consumer"),
