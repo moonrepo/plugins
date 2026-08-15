@@ -5552,6 +5552,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "swift_tool"
+version = "0.1.0"
+dependencies = [
+ "extism-pdk",
+ "proto_pdk",
+ "proto_pdk_test_utils",
+ "schematic",
+ "serde",
+ "starbase_sandbox",
+ "tokio",
+ "tool_common",
+]
+
+[[package]]
 name = "syn"
 version = "1.0.109"
 source = "registry+https://github.com/rust-lang/crates.io-index"
