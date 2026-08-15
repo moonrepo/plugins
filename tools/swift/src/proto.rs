@@ -22,7 +22,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
         type_of: PluginType::Language,
         minimum_proto_version: Some(Version::new(0, 46, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
-        ..RegisterToolOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -136,7 +136,7 @@ pub fn download_prebuilt(
         archive_prefix: Some(archive_prefix),
         download_name: Some(filename),
         download_url,
-        ..DownloadPrebuiltOutput::default()
+        ..Default::default()
     }))
 }
 
@@ -163,6 +163,6 @@ pub fn locate_executables(
         ]),
         exes_dirs: vec!["usr/bin".into()],
         globals_lookup_dirs: vec!["$TOOL_DIR/usr/bin".into()],
-        ..LocateExecutablesOutput::default()
+        ..Default::default()
     }))
 }
