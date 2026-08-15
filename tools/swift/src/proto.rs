@@ -146,9 +146,11 @@ pub fn download_prebuilt(
         .replace("{platform}", &platform)
         .replace("{folder}", &folder)
         .replace("{file}", &filename);
+    let checksum_url = env.os.is_linux().then(|| format!("{download_url}.sig"));
 
     Ok(Json(DownloadPrebuiltOutput {
         archive_prefix,
+        checksum_url,
         download_name: Some(filename),
         download_url,
         ..Default::default()

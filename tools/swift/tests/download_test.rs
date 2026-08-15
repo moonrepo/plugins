@@ -49,6 +49,9 @@ mod swift_tool {
                     .await,
                 DownloadPrebuiltOutput {
                     archive_prefix: Some(archive_prefix.clone()),
+                    checksum_url: Some(format!(
+                        "https://download.swift.org/swift-6.1.2-release/{platform}/{folder}/{archive_prefix}.tar.gz.sig"
+                    )),
                     download_name: Some(format!("{archive_prefix}.tar.gz")),
                     download_url: format!(
                         "https://download.swift.org/swift-6.1.2-release/{platform}/{folder}/{archive_prefix}.tar.gz"
@@ -80,6 +83,9 @@ mod swift_tool {
                 .await,
             DownloadPrebuiltOutput {
                 archive_prefix: Some("swift-6.1.2-RELEASE-ubuntu24.04-aarch64".into()),
+                checksum_url: Some(
+                    "https://download.swift.org/swift-6.1.2-release/ubuntu2404-aarch64/swift-6.1.2-RELEASE/swift-6.1.2-RELEASE-ubuntu24.04-aarch64.tar.gz.sig".into(),
+                ),
                 download_name: Some("swift-6.1.2-RELEASE-ubuntu24.04-aarch64.tar.gz".into()),
                 download_url:
                     "https://download.swift.org/swift-6.1.2-release/ubuntu2404-aarch64/swift-6.1.2-RELEASE/swift-6.1.2-RELEASE-ubuntu24.04-aarch64.tar.gz".into(),
@@ -109,6 +115,9 @@ mod swift_tool {
                 .await,
             DownloadPrebuiltOutput {
                 archive_prefix: Some("swift-6.1.2-RELEASE-ubuntu24.04".into()),
+                checksum_url: Some(
+                    "https://download.swift.org/swift-6.1.2-release/ubuntu2404/swift-6.1.2-RELEASE/swift-6.1.2-RELEASE-ubuntu24.04.tar.gz.sig".into(),
+                ),
                 download_name: Some("swift-6.1.2-RELEASE-ubuntu24.04.tar.gz".into()),
                 download_url:
                     "https://download.swift.org/swift-6.1.2-release/ubuntu2404/swift-6.1.2-RELEASE/swift-6.1.2-RELEASE-ubuntu24.04.tar.gz".into(),
