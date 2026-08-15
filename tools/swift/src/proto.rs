@@ -97,7 +97,7 @@ pub fn download_prebuilt(
 
     check_supported_os_and_arch(
         NAME,
-        &env,
+        env,
         permutations! [
             HostOS::Linux => [HostArch::X64, HostArch::Arm64],
             HostOS::MacOS => [HostArch::X64, HostArch::Arm64],
@@ -114,6 +114,7 @@ pub fn download_prebuilt(
     let version = to_swift_version(version);
     let release = format!("swift-{version}-release");
     let folder = format!("swift-{version}-RELEASE");
+
     let (platform, archive_prefix, filename) = match env.os {
         HostOS::Linux => {
             let linux_platform = config.linux_platform;
@@ -126,7 +127,12 @@ pub fn download_prebuilt(
                     format!("{archive_suffix}-aarch64"),
                 ),
                 HostArch::X64 => (download_platform.into(), archive_suffix.into()),
-                _ => unreachable!(),
+                _ => {
+                    return Err(plugin_err!(PluginError::UnsupportedArch {
+                        tool: NAME.into(),
+                        arch: env.arch.to_string(),
+                    }));
+                }
             };
             let archive_prefix = format!("{folder}-{archive_suffix}");
             let filename = format!("{archive_prefix}.tar.gz");
@@ -138,18 +144,33 @@ pub fn download_prebuilt(
 
             ("xcode".into(), None, filename)
         }
-        _ => unreachable!(),
+        _ => {
+            return Err(plugin_err!(PluginError::UnsupportedOS {
+                tool: NAME.into(),
+                os: env.os.to_string(),
+            }));
+        }
     };
+
     let download_url = config
         .dist_url
         .replace("{release}", &release)
         .replace("{platform}", &platform)
         .replace("{folder}", &folder)
         .replace("{file}", &filename);
-    let checksum_url = env.os.is_linux().then(|| format!("{download_url}.sig"));
+
+    let (checksum_public_key, checksum_url) = if env.os.is_linux() {
+        (
+            Some(get_release_key(&input.context.version)?.into()),
+            Some(format!("{download_url}.sig")),
+        )
+    } else {
+        (None, None)
+    };
 
     Ok(Json(DownloadPrebuiltOutput {
         archive_prefix,
+        checksum_public_key,
         checksum_url,
         download_name: Some(filename),
         download_url,
@@ -182,4 +203,18 @@ pub fn locate_executables(
         globals_lookup_dirs: vec!["$TOOL_DIR/usr/bin".into()],
         ..Default::default()
     }))
+}
+
+static SWIFT_5_RELEASE_KEY: &str = include_str!("keys/release-key-v5.asc");
+static SWIFT_6_RELEASE_KEY: &str = include_str!("keys/release-key-v6.asc");
+
+fn get_release_key(version: &VersionSpec) -> FnResult<&'static str> {
+    match version.as_version().map(|version| version.major) {
+        Some(5) => Ok(SWIFT_5_RELEASE_KEY),
+        Some(6) => Ok(SWIFT_6_RELEASE_KEY),
+        Some(major) => Err(plugin_err!(
+            "No Swift v{major} release signing key is embedded in this plugin.",
+        )),
+        None => Err(plugin_err!("Unable to select a Swift release signing key.")),
+    }
 }

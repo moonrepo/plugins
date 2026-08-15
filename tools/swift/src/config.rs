@@ -13,8 +13,8 @@ derive_enum!(
         Fedora39,
         #[serde(rename = "fedora-41", alias = "fedora41")]
         Fedora41,
-        #[serde(rename = "red-hat-ubi-9", alias = "ubi9")]
-        RedHatUbi9,
+        #[serde(rename = "redhat-ubi-9", alias = "ubi9")]
+        RedhatUbi9,
         #[serde(rename = "ubuntu-20.04", alias = "ubuntu2004")]
         Ubuntu2004,
         #[serde(rename = "ubuntu-22.04", alias = "ubuntu2204")]
@@ -33,7 +33,7 @@ impl LinuxPlatform {
             Self::Debian12 => "debian12",
             Self::Fedora39 => "fedora39",
             Self::Fedora41 => "fedora41",
-            Self::RedHatUbi9 => "ubi9",
+            Self::RedhatUbi9 => "ubi9",
             Self::Ubuntu2004 => "ubuntu20.04",
             Self::Ubuntu2204 => "ubuntu22.04",
             Self::Ubuntu2404 => "ubuntu24.04",
@@ -47,7 +47,7 @@ impl LinuxPlatform {
             Self::Debian12 => "debian12",
             Self::Fedora39 => "fedora39",
             Self::Fedora41 => "fedora41",
-            Self::RedHatUbi9 => "ubi9",
+            Self::RedhatUbi9 => "ubi9",
             Self::Ubuntu2004 => "ubuntu2004",
             Self::Ubuntu2204 => "ubuntu2204",
             Self::Ubuntu2404 => "ubuntu2404",

@@ -4,6 +4,9 @@ mod swift_tool {
     use super::*;
     use ::swift_tool::{LinuxPlatform, SwiftToolConfig};
 
+    const SWIFT_5_RELEASE_KEY: &str = include_str!("../src/keys/release-key-v5.asc");
+    const SWIFT_6_RELEASE_KEY: &str = include_str!("../src/keys/release-key-v6.asc");
+
     #[tokio::test(flavor = "multi_thread")]
     async fn supports_all_linux_platforms() {
         let platforms = [
@@ -16,7 +19,7 @@ mod swift_tool {
             (LinuxPlatform::Debian12, "debian12", "debian12"),
             (LinuxPlatform::Fedora39, "fedora39", "fedora39"),
             (LinuxPlatform::Fedora41, "fedora41", "fedora41"),
-            (LinuxPlatform::RedHatUbi9, "ubi9", "ubi9"),
+            (LinuxPlatform::RedhatUbi9, "ubi9", "ubi9"),
             (LinuxPlatform::Ubuntu2004, "ubuntu2004", "ubuntu20.04"),
             (LinuxPlatform::Ubuntu2204, "ubuntu2204", "ubuntu22.04"),
             (LinuxPlatform::Ubuntu2404, "ubuntu2404", "ubuntu24.04"),
@@ -49,6 +52,7 @@ mod swift_tool {
                     .await,
                 DownloadPrebuiltOutput {
                     archive_prefix: Some(archive_prefix.clone()),
+                    checksum_public_key: Some(SWIFT_6_RELEASE_KEY.into()),
                     checksum_url: Some(format!(
                         "https://download.swift.org/swift-6.1.2-release/{platform}/{folder}/{archive_prefix}.tar.gz.sig"
                     )),
@@ -83,6 +87,7 @@ mod swift_tool {
                 .await,
             DownloadPrebuiltOutput {
                 archive_prefix: Some("swift-6.1.2-RELEASE-ubuntu24.04-aarch64".into()),
+                checksum_public_key: Some(SWIFT_6_RELEASE_KEY.into()),
                 checksum_url: Some(
                     "https://download.swift.org/swift-6.1.2-release/ubuntu2404-aarch64/swift-6.1.2-RELEASE/swift-6.1.2-RELEASE-ubuntu24.04-aarch64.tar.gz.sig".into(),
                 ),
@@ -115,6 +120,7 @@ mod swift_tool {
                 .await,
             DownloadPrebuiltOutput {
                 archive_prefix: Some("swift-6.1.2-RELEASE-ubuntu24.04".into()),
+                checksum_public_key: Some(SWIFT_6_RELEASE_KEY.into()),
                 checksum_url: Some(
                     "https://download.swift.org/swift-6.1.2-release/ubuntu2404/swift-6.1.2-RELEASE/swift-6.1.2-RELEASE-ubuntu24.04.tar.gz.sig".into(),
                 ),
@@ -124,6 +130,28 @@ mod swift_tool {
                 ..Default::default()
             }
         );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn selects_linux_release_key_by_major_version() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("swift-test", |config| {
+                config.host(HostOS::Linux, HostArch::X64);
+            })
+            .await;
+
+        let output = plugin
+            .download_prebuilt(DownloadPrebuiltInput {
+                context: PluginContext {
+                    version: VersionSpec::parse("5.10.1").unwrap(),
+                    ..Default::default()
+                },
+                ..Default::default()
+            })
+            .await;
+
+        assert_eq!(output.checksum_public_key, Some(SWIFT_5_RELEASE_KEY.into()));
     }
 
     #[tokio::test(flavor = "multi_thread")]
