@@ -2,6 +2,8 @@
 
 [Swift](https://www.swift.org/) WASM plugin for [proto](https://github.com/moonrepo/proto).
 
+Supports Swift.org prebuilt toolchains for Linux and macOS. macOS packages require proto v0.58 or newer.
+
 ## Installation
 
 ```shell

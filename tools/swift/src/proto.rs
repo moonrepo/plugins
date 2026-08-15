@@ -20,7 +20,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
     Ok(Json(RegisterToolOutput {
         name: NAME.into(),
         type_of: PluginType::Language,
-        minimum_proto_version: Some(Version::new(0, 46, 0)),
+        minimum_proto_version: Some(Version::new(0, 58, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         ..Default::default()
     }))
@@ -100,10 +100,11 @@ pub fn download_prebuilt(
         &env,
         permutations! [
             HostOS::Linux => [HostArch::X64, HostArch::Arm64],
+            HostOS::MacOS => [HostArch::X64, HostArch::Arm64],
         ],
     )?;
 
-    if matches!(env.libc, HostLibc::Musl) {
+    if env.os.is_linux() && matches!(env.libc, HostLibc::Musl) {
         return Err(plugin_err!(
             "No pre-built Swift archive is available for musl Linux targets.",
         ));
@@ -113,21 +114,32 @@ pub fn download_prebuilt(
     let version = to_swift_version(version);
     let release = format!("swift-{version}-release");
     let folder = format!("swift-{version}-RELEASE");
-    let linux_platform = config.linux_platform;
-    let download_platform = linux_platform.get_download_platform();
-    let archive_suffix = linux_platform.get_archive_suffix();
+    let (platform, archive_prefix, filename) = match env.os {
+        HostOS::Linux => {
+            let linux_platform = config.linux_platform;
+            let download_platform = linux_platform.get_download_platform();
+            let archive_suffix = linux_platform.get_archive_suffix();
 
-    let (platform, archive_suffix) = match env.arch {
-        HostArch::Arm64 => (
-            format!("{download_platform}-aarch64"),
-            format!("{archive_suffix}-aarch64"),
-        ),
-        HostArch::X64 => (download_platform.into(), archive_suffix.into()),
+            let (platform, archive_suffix) = match env.arch {
+                HostArch::Arm64 => (
+                    format!("{download_platform}-aarch64"),
+                    format!("{archive_suffix}-aarch64"),
+                ),
+                HostArch::X64 => (download_platform.into(), archive_suffix.into()),
+                _ => unreachable!(),
+            };
+            let archive_prefix = format!("{folder}-{archive_suffix}");
+            let filename = format!("{archive_prefix}.tar.gz");
+
+            (platform, Some(archive_prefix), filename)
+        }
+        HostOS::MacOS => {
+            let filename = format!("{folder}-osx.pkg");
+
+            ("xcode".into(), None, filename)
+        }
         _ => unreachable!(),
     };
-
-    let archive_prefix = format!("{folder}-{archive_suffix}");
-    let filename = format!("{archive_prefix}.tar.gz");
     let download_url = config
         .dist_url
         .replace("{release}", &release)
@@ -136,7 +148,7 @@ pub fn download_prebuilt(
         .replace("{file}", &filename);
 
     Ok(Json(DownloadPrebuiltOutput {
-        archive_prefix: Some(archive_prefix),
+        archive_prefix,
         download_name: Some(filename),
         download_url,
         ..Default::default()

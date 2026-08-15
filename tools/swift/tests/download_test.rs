@@ -118,6 +118,62 @@ mod swift_tool {
     }
 
     #[tokio::test(flavor = "multi_thread")]
+    async fn supports_macos_arm64() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("swift-test", |config| {
+                config.host(HostOS::MacOS, HostArch::Arm64);
+            })
+            .await;
+
+        assert_eq!(
+            plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("6.1.2").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await,
+            DownloadPrebuiltOutput {
+                download_name: Some("swift-6.1.2-RELEASE-osx.pkg".into()),
+                download_url:
+                    "https://download.swift.org/swift-6.1.2-release/xcode/swift-6.1.2-RELEASE/swift-6.1.2-RELEASE-osx.pkg".into(),
+                ..Default::default()
+            }
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn supports_macos_x64() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("swift-test", |config| {
+                config.host(HostOS::MacOS, HostArch::X64);
+            })
+            .await;
+
+        assert_eq!(
+            plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("6.1.2").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await,
+            DownloadPrebuiltOutput {
+                download_name: Some("swift-6.1.2-RELEASE-osx.pkg".into()),
+                download_url:
+                    "https://download.swift.org/swift-6.1.2-release/xcode/swift-6.1.2-RELEASE/swift-6.1.2-RELEASE-osx.pkg".into(),
+                ..Default::default()
+            }
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
     async fn locates_unix_bins() {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
