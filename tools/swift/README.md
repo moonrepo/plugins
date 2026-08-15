@@ -20,14 +20,12 @@ swift = "https://github.com/moonrepo/plugins/releases/download/swift_tool-vX.Y.Z
 Swift plugin can be configured with a `.prototools` file.
 
 - `dist-url` (string) - The distribution URL to download Swift archives from. Supports `{release}`, `{platform}`, `{folder}`, and `{file}` tokens.
-- `linux-platform` (string) - The platform directory in Swift.org download URLs. Defaults to `ubuntu2404`.
-- `linux-archive-suffix` (string) - The platform suffix in Swift.org archive names. Defaults to `ubuntu24.04`.
+- `linux-platform` (enum) - The Linux distribution to download Swift for. Defaults to `ubuntu-24.04`. Supports `amazon-linux-2`, `amazon-linux-2023`, `debian-12`, `fedora-39`, `fedora-41`, `red-hat-ubi-9`, `ubuntu-20.04`, `ubuntu-22.04`, and `ubuntu-24.04`.
 
 ```toml
 [tools.swift]
 dist-url = "https://download.swift.org/{release}/{platform}/{folder}/{file}"
-linux-platform = "ubuntu2404"
-linux-archive-suffix = "ubuntu24.04"
+linux-platform = "amazon-linux-2"
 ```
 
 ## Contributing

@@ -5,15 +5,15 @@ expression: "std :: fs ::\nread_to_string(sandbox.path().join(\".proto/shims/reg
 ---
 {
   "sourcekit-lsp": {
-    "alt_bin": true,
-    "parent": "swift-test"
+    "alt_exe": true,
+    "context": "swift-test"
   },
   "swift": {
-    "alt_bin": true,
-    "parent": "swift-test"
+    "alt_exe": true,
+    "context": "swift-test"
   },
   "swiftc": {
-    "alt_bin": true,
-    "parent": "swift-test"
+    "alt_exe": true,
+    "context": "swift-test"
   }
 }

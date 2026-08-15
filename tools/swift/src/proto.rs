@@ -113,13 +113,16 @@ pub fn download_prebuilt(
     let version = to_swift_version(version);
     let release = format!("swift-{version}-release");
     let folder = format!("swift-{version}-RELEASE");
+    let linux_platform = config.linux_platform;
+    let download_platform = linux_platform.get_download_platform();
+    let archive_suffix = linux_platform.get_archive_suffix();
 
     let (platform, archive_suffix) = match env.arch {
         HostArch::Arm64 => (
-            format!("{}-aarch64", config.linux_platform),
-            format!("{}-aarch64", config.linux_archive_suffix),
+            format!("{download_platform}-aarch64"),
+            format!("{archive_suffix}-aarch64"),
         ),
-        HostArch::X64 => (config.linux_platform, config.linux_archive_suffix),
+        HostArch::X64 => (download_platform.into(), archive_suffix.into()),
         _ => unreachable!(),
     };
 
