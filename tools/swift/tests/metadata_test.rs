@@ -15,7 +15,7 @@ mod swift_tool {
             .await;
 
         assert_eq!(metadata.name, "Swift");
-        assert_eq!(metadata.minimum_proto_version, Some(Version::new(0, 58, 0)));
+        assert_eq!(metadata.minimum_proto_version, Some(Version::new(0, 61, 0)));
         assert_eq!(
             metadata.plugin_version.unwrap().to_string(),
             env!("CARGO_PKG_VERSION")

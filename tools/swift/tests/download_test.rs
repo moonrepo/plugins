@@ -133,7 +133,7 @@ mod swift_tool {
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    async fn selects_linux_release_key_by_major_version() {
+    async fn supports_linux_v5_release_key() {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("swift-test", |config| {
@@ -141,17 +141,49 @@ mod swift_tool {
             })
             .await;
 
-        let output = plugin
+        assert_eq!(
+            plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("5.10.1").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await,
+            DownloadPrebuiltOutput {
+                archive_prefix: Some("swift-5.10.1-RELEASE-ubuntu24.04".into()),
+                checksum_public_key: Some(SWIFT_5_RELEASE_KEY.into()),
+                checksum_url: Some(
+                    "https://download.swift.org/swift-5.10.1-release/ubuntu2404/swift-5.10.1-RELEASE/swift-5.10.1-RELEASE-ubuntu24.04.tar.gz.sig".into(),
+                ),
+                download_name: Some("swift-5.10.1-RELEASE-ubuntu24.04.tar.gz".into()),
+                download_url:
+                    "https://download.swift.org/swift-5.10.1-release/ubuntu2404/swift-5.10.1-RELEASE/swift-5.10.1-RELEASE-ubuntu24.04.tar.gz".into(),
+                ..Default::default()
+            }
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    #[should_panic(expected = "No Swift v7 release signing key is embedded")]
+    async fn rejects_linux_without_release_key() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("swift-test", |config| {
+                config.host(HostOS::Linux, HostArch::X64);
+            })
+            .await;
+
+        plugin
             .download_prebuilt(DownloadPrebuiltInput {
                 context: PluginContext {
-                    version: VersionSpec::parse("5.10.1").unwrap(),
+                    version: VersionSpec::parse("7.0.0").unwrap(),
                     ..Default::default()
                 },
                 ..Default::default()
             })
             .await;
-
-        assert_eq!(output.checksum_public_key, Some(SWIFT_5_RELEASE_KEY.into()));
     }
 
     #[tokio::test(flavor = "multi_thread")]

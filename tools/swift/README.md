@@ -2,7 +2,7 @@
 
 [Swift](https://www.swift.org/) WASM plugin for [proto](https://github.com/moonrepo/proto).
 
-Supports Swift.org prebuilt toolchains for Linux and macOS. macOS packages require proto v0.58 or newer.
+Supports Swift.org prebuilt toolchains for Linux and macOS. Requires proto v0.61 or newer.
 
 ## Installation
 
@@ -22,7 +22,7 @@ swift = "https://github.com/moonrepo/plugins/releases/download/swift_tool-vX.Y.Z
 Swift plugin can be configured with a `.prototools` file.
 
 - `dist-url` (string) - The distribution URL to download Swift archives from. Supports `{release}`, `{platform}`, `{folder}`, and `{file}` tokens.
-- `linux-platform` (enum) - The Linux distribution to download Swift for. Defaults to `ubuntu-24.04`. Supports `amazon-linux-2`, `amazon-linux-2023`, `debian-12`, `fedora-39`, `fedora-41`, `red-hat-ubi-9`, `ubuntu-20.04`, `ubuntu-22.04`, and `ubuntu-24.04`.
+- `linux-platform` (enum) - The Linux distribution to download Swift for. Defaults to `ubuntu-24.04`. Supports `amazon-linux-2`, `amazon-linux-2023`, `debian-12`, `fedora-39`, `fedora-41`, `redhat-ubi-9`, `ubuntu-20.04`, `ubuntu-22.04`, and `ubuntu-24.04`.
 
 ```toml
 [tools.swift]
