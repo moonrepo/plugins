@@ -43,6 +43,9 @@ projects:
   system-toolchain: toolchains/system
   typescript-toolchain: toolchains/typescript
 
+cache:
+  unstable_sharedWorktreeCache: true
+
 pipeline:
   logRunningCommand: true
 
