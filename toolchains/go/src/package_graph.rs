@@ -305,7 +305,46 @@ impl GoPackageGraph {
             })
             .collect();
 
+        // Relationship inference reads a project's `.go` sources through
+        // `go list`, so an added import must invalidate the cached graph even
+        // when `go.mod` is untouched. Report those sources as graph inputs;
+        // without them a new edge only appears after a config change or
+        // `moon clean`. Only relevant when `go list` is what resolves edges.
+        if self.go_exists
+            && (self.config.infer_relationships || self.config.infer_relationships_from_tests)
+        {
+            let sources = self.gather_source_inputs();
+            self.input_files.extend(sources);
+        }
+
         Ok(())
+    }
+
+    // Every project's own `.go` files, for the graph cache to invalidate on.
+    // The walk stops at nested project roots — those files belong to the
+    // nested project, so this avoids re-walking them (and the whole workspace
+    // for a root-level project) under each ancestor.
+    fn gather_source_inputs(&self) -> Vec<VirtualPath> {
+        let mut files = vec![];
+
+        for project in &self.projects {
+            if project.import_path.is_none() {
+                continue;
+            }
+
+            let boundaries = self
+                .projects
+                .iter()
+                .filter(|other| other.id != project.id)
+                .map(|other| &other.root)
+                .collect::<Vec<_>>();
+
+            collect_go_files(&project.root, &boundaries, &mut files);
+        }
+
+        files.sort_by(|a, b| (**a).cmp(&**b));
+        files.dedup();
+        files
     }
 
     pub fn projects(&self) -> &[GoProject] {
@@ -440,6 +479,30 @@ impl GoPackageGraph {
         }
 
         Ok(dependencies)
+    }
+}
+
+// Recursively collect `.go` files under `dir`, without descending into any
+// `boundaries` directory (a nested project's root), whose files belong to
+// that project rather than this one.
+fn collect_go_files(dir: &VirtualPath, boundaries: &[&VirtualPath], out: &mut Vec<VirtualPath>) {
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
+    };
+
+    for entry in entries {
+        let name = entry.file_name();
+        let path = dir.join(&name);
+
+        if entry.file_type().is_ok_and(|file_type| file_type.is_dir()) {
+            if boundaries.iter().any(|boundary| **boundary == path) {
+                continue;
+            }
+
+            collect_go_files(&path, boundaries, out);
+        } else if name.to_str().is_some_and(|name| name.ends_with(".go")) {
+            out.push(path);
+        }
     }
 }
 

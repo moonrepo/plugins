@@ -274,12 +274,18 @@ mod go_toolchain_tier2 {
                     ])
                 );
 
+                // `go.mod`s plus each project's own `.go` sources — inference
+                // reads sources via `go list`, so they invalidate the graph.
                 assert_eq!(
                     output.input_files,
                     [
                         VirtualPath::new("/workspace/a/go.mod"),
                         VirtualPath::new("/workspace/b/go.mod"),
                         VirtualPath::new("/workspace/c/go.mod"),
+                        VirtualPath::new("/workspace/a/lib.go"),
+                        VirtualPath::new("/workspace/a/pkg/pkg.go"),
+                        VirtualPath::new("/workspace/b/lib.go"),
+                        VirtualPath::new("/workspace/c/lib.go"),
                     ]
                 );
             }
@@ -366,7 +372,53 @@ mod go_toolchain_tier2 {
                     )])
                 );
 
-                assert_eq!(output.input_files, [VirtualPath::new("/workspace/go.mod")]);
+                // The shared root `go.mod`, plus every project's own sources.
+                // `apps/a/tool` isn't a project here, so its file belongs to
+                // `a`.
+                assert_eq!(
+                    output.input_files,
+                    [
+                        VirtualPath::new("/workspace/go.mod"),
+                        VirtualPath::new("/workspace/apps/a/main.go"),
+                        VirtualPath::new("/workspace/apps/a/tool/tool.go"),
+                        VirtualPath::new("/workspace/libs/b/lib.go"),
+                    ]
+                );
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn source_inputs_stop_at_nested_project_boundaries() {
+                let sandbox = create_moon_sandbox("projects-single-module");
+                let plugin = sandbox.create_toolchain("go").await;
+
+                let mut input = ExtendProjectGraphInput::default();
+                // The root, an app, the app's nested `tool` project, and a lib
+                // all share the one module.
+                input.project_sources.insert(Id::raw("root"), ".".into());
+                input.project_sources.insert(Id::raw("a"), "apps/a".into());
+                input
+                    .project_sources
+                    .insert(Id::raw("tool"), "apps/a/tool".into());
+                input.project_sources.insert(Id::raw("b"), "libs/b".into());
+                input.toolchain_config = json!({
+                    "inferRelationships": true
+                });
+
+                let output = plugin.extend_project_graph(input).await;
+
+                // `apps/a/tool/tool.go` is owned by `tool`, not `a`, and the
+                // root project owns none of the nested projects' files — so the
+                // walk stops at each project boundary and every source appears
+                // exactly once, none attributed to an ancestor.
+                assert_eq!(
+                    output.input_files,
+                    [
+                        VirtualPath::new("/workspace/go.mod"),
+                        VirtualPath::new("/workspace/apps/a/main.go"),
+                        VirtualPath::new("/workspace/apps/a/tool/tool.go"),
+                        VirtualPath::new("/workspace/libs/b/lib.go"),
+                    ]
+                );
             }
 
             #[tokio::test(flavor = "multi_thread")]
