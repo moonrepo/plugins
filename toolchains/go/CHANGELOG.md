@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Test binary pseudo-packages are no longer inferred as relationships. `go list -deps -test` reports a synthetic `pkg.test` package for each tested package; its `.test` suffix kept it from matching the package under test, so it resolved to whatever ancestor project it nested under (typically the module root) as a phantom development edge. It is now reduced to the real package path and recognised as ownership.
+
 ## 1.5.0
 
 #### 🚀 Updates
