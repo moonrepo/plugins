@@ -190,6 +190,7 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
             fetch(SendRequestInput {
                 url,
                 headers: headers.clone(),
+                ..Default::default()
             })?
             .text()?,
             is_yarn,

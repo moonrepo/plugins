@@ -17,11 +17,23 @@ static NAME: &str = "Swift";
 pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {
     enable_tracing();
 
+    let env = get_host_environment()?;
+    let mut lock_options = ToolLockOptions::default();
+
+    if env.os.is_linux() {
+        let config: SwiftToolConfig = get_tool_config()?;
+
+        lock_options
+            .metadata
+            .insert("platform".into(), config.linux_platform.to_string());
+    }
+
     Ok(Json(RegisterToolOutput {
         name: NAME.into(),
         type_of: PluginType::Language,
         minimum_proto_version: Some(Version::new(0, 61, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
+        lock_options,
         ..Default::default()
     }))
 }
