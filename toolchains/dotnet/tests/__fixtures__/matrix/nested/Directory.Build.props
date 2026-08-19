@@ -1,0 +1,7 @@
+<Project>
+  <!-- Chain to the workspace-root props instead of shadowing it. -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+  <ItemGroup>
+    <PackageReference Include="NestedPkg" Version="2.0.0" />
+  </ItemGroup>
+</Project>
