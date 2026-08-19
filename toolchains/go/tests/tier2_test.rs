@@ -542,6 +542,57 @@ mod go_toolchain_tier2 {
                     })
                 );
             }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn doesnt_infer_edges_to_root_from_test_binary_pseudo_packages() {
+                let sandbox = create_moon_sandbox("projects-single-module");
+                let plugin = sandbox.create_toolchain("go").await;
+
+                let mut input = ExtendProjectGraphInput::default();
+                // The workspace root owns the module's `go.mod`, so it is
+                // itself a project — as in a single-module monorepo whose repo
+                // root is a project that everything nests under.
+                input.project_sources.insert(Id::raw("root"), ".".into());
+                input.project_sources.insert(Id::raw("a"), "apps/a".into());
+                input.project_sources.insert(Id::raw("b"), "libs/b".into());
+                input.toolchain_config = json!({
+                    "inferRelationships": true,
+                    "inferRelationshipsFromTests": true
+                });
+
+                let output = plugin.extend_project_graph(input).await;
+
+                // `go list -deps -test ./...` emits a synthetic `<pkg>.test`
+                // main package for every tested package (here libs/b). Its
+                // import path is the package path with a bare `.test` suffix,
+                // so it isn't nested under the owning project and slips past
+                // ownership filtering — yet it is still prefixed by the root
+                // module path. It must be discarded, not resolved to the root
+                // project as a phantom development edge (`b -> root`).
+                assert_eq!(
+                    output.extended_projects,
+                    BTreeMap::from_iter([
+                        (
+                            Id::raw("root"),
+                            ExtendProjectOutput {
+                                alias: Some("example.com/org".into()),
+                                ..Default::default()
+                            }
+                        ),
+                        (
+                            Id::raw("a"),
+                            ExtendProjectOutput {
+                                dependencies: vec![ProjectDependency {
+                                    id: Id::raw("b"),
+                                    scope: DependencyScope::Production,
+                                    via: Some("package example.com/org/libs/b".into()),
+                                }],
+                                ..Default::default()
+                            }
+                        ),
+                    ])
+                );
+            }
         }
     }
 

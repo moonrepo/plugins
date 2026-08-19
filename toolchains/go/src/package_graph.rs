@@ -40,9 +40,15 @@ fn execute_go_list(dir: &VirtualPath, packages: &[String], test: bool) -> AnyRes
         .stdout
         .lines()
         .filter_map(|line| {
-            // Test binary pseudo-packages render as `pkg [pkg.test]`;
-            // only the real package path participates in matching.
+            // `go list -deps -test` reports a package's test artifacts: the
+            // package compiled into its test binary as `pkg [pkg.test]`, and
+            // the synthetic test binary itself as a bare `pkg.test`. Both
+            // describe the package under test, not a new import — reduce them
+            // to the real package path so ownership filtering claims them
+            // rather than leaking an edge to whatever project the `.test`
+            // path happens to nest under (e.g. the module root).
             let import_path = line.trim().split(' ').next().unwrap_or_default();
+            let import_path = import_path.strip_suffix(".test").unwrap_or(import_path);
 
             (!import_path.is_empty()).then(|| import_path.to_owned())
         })
