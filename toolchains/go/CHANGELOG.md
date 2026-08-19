@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Relationship inference now reports each project's own `.go` sources as project-graph inputs. Edges are derived from `go list` reading imports, so a new import with no `go.mod` change previously left a locally cached graph stale until a config change or `moon clean`. The walk stops at nested project boundaries, so a project's sources exclude those owned by projects nested beneath it.
+
 ## 1.5.0
 
 #### 🚀 Updates
