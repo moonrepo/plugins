@@ -3629,7 +3629,7 @@ dependencies = [
  "serde",
  "serde_json",
  "version_spec",
- "warpgate_api 0.18.3",
+ "warpgate_api 0.18.2",
 ]
 
 [[package]]
@@ -3669,7 +3669,7 @@ dependencies = [
  "rustc-hash",
  "schematic",
  "serde",
- "warpgate_pdk 0.17.1",
+ "warpgate_pdk 0.17.0",
 ]
 
 [[package]]
@@ -3683,12 +3683,12 @@ dependencies = [
  "moon_config",
  "moon_project",
  "moon_task",
- "proto_pdk_api 0.33.2",
+ "proto_pdk_api 0.33.0",
  "rustc-hash",
  "schematic",
  "serde",
  "serde_json",
- "warpgate_api 0.18.3",
+ "warpgate_api 0.18.2",
 ]
 
 [[package]]
@@ -3700,12 +3700,12 @@ dependencies = [
  "extism",
  "moon_pdk_api",
  "moon_target",
- "proto_core 0.60.3",
+ "proto_core 0.60.4",
  "proto_pdk_test_utils 0.48.0",
  "serde",
  "serde_json",
  "starbase_sandbox",
- "warpgate 0.35.3",
+ "warpgate 0.35.2",
 ]
 
 [[package]]
@@ -4706,9 +4706,9 @@ dependencies = [
 
 [[package]]
 name = "proto_core"
-version = "0.60.3"
+version = "0.60.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "69a33f00c01ec2a7cb6cb33a31976213e095750db566fc7ee3ba001acb8aad4d"
+checksum = "4260e481e2c209eb20f59a061753a19977b6d4bd4ddd93d8e80313db1f1c44e6"
 dependencies = [
  "ai_env",
  "convert_case 0.11.0",
@@ -4720,7 +4720,7 @@ dependencies = [
  "minisign-verify",
  "oci-client",
  "once_cell",
- "proto_pdk_api 0.33.2",
+ "proto_pdk_api 0.33.0",
  "proto_shim",
  "regex",
  "reqwest",
@@ -4743,7 +4743,7 @@ dependencies = [
  "url",
  "uuid",
  "version_spec",
- "warpgate 0.35.3",
+ "warpgate 0.35.2",
 ]
 
 [[package]]
@@ -4804,9 +4804,9 @@ dependencies = [
 
 [[package]]
 name = "proto_pdk_api"
-version = "0.33.2"
+version = "0.33.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26a05993240b3c310445f6f92cc178127b062c5c2911b54409b4f53669fb2414"
+checksum = "1ab11b9f81482b9233620631855e59e7761f8c1cabb861eb9853f02b2bdaae58"
 dependencies = [
  "derive_setters",
  "rustc-hash",
@@ -4816,7 +4816,7 @@ dependencies = [
  "system_env",
  "thiserror 2.0.20",
  "version_spec",
- "warpgate_api 0.18.3",
+ "warpgate_api 0.18.2",
 ]
 
 [[package]]
@@ -4843,12 +4843,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2876fdc4762a98c8b98d333cca84eaf46c48afb9795a89fdbca29e7163c3ce6"
 dependencies = [
  "extism",
- "proto_core 0.60.3",
- "proto_pdk_api 0.33.2",
+ "proto_core 0.60.4",
+ "proto_pdk_api 0.33.0",
  "serde",
  "serde_json",
  "starbase_sandbox",
- "warpgate 0.35.3",
+ "warpgate 0.35.2",
 ]
 
 [[package]]
@@ -7391,9 +7391,9 @@ dependencies = [
 
 [[package]]
 name = "warpgate"
-version = "0.35.3"
+version = "0.35.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ef9168617044ae7d923b946d6c8eba0ffb84f29d57833b04d7feb1f7ab2cc7d"
+checksum = "74202844da125c6687881df024044bdb715b39bcd656b82b0a9851f093abd4c0"
 dependencies = [
  "async-trait",
  "compact_str 0.10.0",
@@ -7423,7 +7423,7 @@ dependencies = [
  "tracing",
  "ureq",
  "url",
- "warpgate_api 0.18.3",
+ "warpgate_api 0.18.2",
 ]
 
 [[package]]
@@ -7465,9 +7465,9 @@ dependencies = [
 
 [[package]]
 name = "warpgate_api"
-version = "0.18.3"
+version = "0.18.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18f7baa51a483d401c4a25d71c96873cd00a9352853a0d61b9cac5f993db7555"
+checksum = "6e3d85bb888170166b1bf42011090e66b4c8e48d0563ba6279e4be2cedbf710e"
 dependencies = [
  "anyhow",
  "derive_setters",
@@ -7499,13 +7499,13 @@ dependencies = [
 
 [[package]]
 name = "warpgate_pdk"
-version = "0.17.1"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "102868e52b20d09bdccbaa51c4191f8580a4cc04be550acb8fcd7dc1065e5383"
+checksum = "e59497845a80b314477c9803eb96eaf41574df879b8f269a8c1711da46ed9184"
 dependencies = [
  "extism-pdk",
  "serde",
- "warpgate_api 0.18.3",
+ "warpgate_api 0.18.2",
 ]
 
 [[package]]
