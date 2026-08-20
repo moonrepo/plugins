@@ -670,7 +670,8 @@ fn create_manifest_dependency(
         VersionProtocol::Alias(_)
         | VersionProtocol::Exec(_)
         | VersionProtocol::Patch(_)
-        | VersionProtocol::Unknown(_) => {
+        | VersionProtocol::Unknown(_)
+        | VersionProtocol::CustomProtocol(_, _) => {
             return Ok(None);
         }
         VersionProtocol::Catalog(key) => {

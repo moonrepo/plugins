@@ -69,16 +69,6 @@ pub fn build_instructions(
         return Err(PluginError::UnsupportedWindowsBuild.into());
     }
 
-    if let Some(asset) = load_prebuilt_asset(env, &version)? {
-        return Ok(Json(BuildInstructionsOutput {
-            source: Some(SourceLocation::Archive(ArchiveSource {
-                url: asset.url,
-                prefix: Some(format!("ruby-{version}")),
-            })),
-            ..Default::default()
-        }));
-    }
-
     let output = BuildInstructionsOutput {
         help_url: Some(
             "https://github.com/rbenv/ruby-build/wiki".into(),

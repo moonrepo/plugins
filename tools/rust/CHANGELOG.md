@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Updated to use the new `download_file` function.
+
 ## 0.13.12
 
 #### 🚀 Updates

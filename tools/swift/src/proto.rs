@@ -33,6 +33,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
         type_of: PluginType::Language,
         minimum_proto_version: Some(Version::new(0, 61, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
+        unstable: Switch::Toggle(true),
         lock_options,
         ..Default::default()
     }))

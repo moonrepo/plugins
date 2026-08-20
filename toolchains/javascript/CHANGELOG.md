@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Updated `package.json` version parsing to support custom protocols (`example:`).
+
 ## 1.3.0
 
 #### 🚀 Updates
