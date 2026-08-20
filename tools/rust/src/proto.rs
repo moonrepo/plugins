@@ -8,7 +8,6 @@ use tool_common::enable_tracing;
 
 #[host_fn]
 extern "ExtismHost" {
-    fn download_file(input: Json<DownloadFileInput>) -> Json<DownloadFileOutput>;
     fn exec_command(input: Json<ExecCommandInput>) -> Json<ExecCommandOutput>;
     fn set_env_var(name: String, value: String);
 }
@@ -38,7 +37,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
             no_record: true,
             ..Default::default()
         },
-        minimum_proto_version: Some(Version::new(0, 61, 0)),
+        minimum_proto_version: Some(Version::new(0, 60, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         ..Default::default()
     }))
@@ -124,13 +123,13 @@ pub fn native_install(
         });
 
         if !script_path.exists() {
-            download_from_url(
-                if is_windows {
+            fs::write_file(
+                &script_path,
+                fetch_bytes(if is_windows {
                     "https://win.rustup.rs"
                 } else {
                     "https://sh.rustup.rs"
-                },
-                &script_path,
+                })?,
             )?;
         }
 
