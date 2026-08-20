@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed build from source returning a prebuilt archive.
+
 ## 0.2.9
 
 #### 🚀 Updates
