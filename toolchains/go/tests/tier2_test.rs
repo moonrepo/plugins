@@ -54,12 +54,15 @@ mod go_toolchain_tier2 {
                 ])
             );
 
+            // Each backing `go.mod`, plus a sibling `go.sum` when one exists:
+            // only `c` has dependencies, so only `c` carries a `go.sum`.
             assert_eq!(
                 output.input_files,
                 [
                     VirtualPath::new("/workspace/a/go.mod"),
                     VirtualPath::new("/workspace/b/go.mod"),
                     VirtualPath::new("/workspace/c/go.mod"),
+                    VirtualPath::new("/workspace/c/go.sum"),
                 ]
             );
         }
