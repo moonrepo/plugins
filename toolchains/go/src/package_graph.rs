@@ -158,10 +158,20 @@ impl ModuleResolver {
     }
 
     fn go_mod_path(&self, dir: &str) -> VirtualPath {
+        self.module_file_path(dir, "go.mod")
+    }
+
+    fn go_sum_path(&self, dir: &str) -> VirtualPath {
+        self.module_file_path(dir, "go.sum")
+    }
+
+    // A file sibling to a module's `go.mod`, at the workspace root when `dir`
+    // is empty.
+    fn module_file_path(&self, dir: &str, file: &str) -> VirtualPath {
         if dir.is_empty() {
-            self.workspace_root.join("go.mod")
+            self.workspace_root.join(file)
         } else {
-            self.workspace_root.join(dir).join("go.mod")
+            self.workspace_root.join(dir).join(file)
         }
     }
 }
@@ -246,9 +256,14 @@ impl GoPackageGraph {
 
             if let Some((mod_dir, import_path)) = self.resolver.import_path(source)? {
                 let go_mod_path = self.resolver.go_mod_path(&mod_dir);
+                self.add_input_file(go_mod_path);
 
-                if !self.input_files.contains(&go_mod_path) {
-                    self.input_files.push(go_mod_path);
+                // `go.sum` sits beside `go.mod`; a changed checksum set (a
+                // dependency added, upgraded, or dropped) must invalidate the
+                // resolved graph too. Absent for a module with no dependencies.
+                let go_sum_path = self.resolver.go_sum_path(&mod_dir);
+                if go_sum_path.exists() {
+                    self.add_input_file(go_sum_path);
                 }
 
                 // An ancestor's requires describe the whole module, so they
@@ -320,6 +335,12 @@ impl GoPackageGraph {
 
     pub fn into_input_files(self) -> Vec<VirtualPath> {
         self.input_files
+    }
+
+    fn add_input_file(&mut self, path: VirtualPath) {
+        if !self.input_files.contains(&path) {
+            self.input_files.push(path);
+        }
     }
 
     // Resolves an import path to the project whose import path prefixes it.
