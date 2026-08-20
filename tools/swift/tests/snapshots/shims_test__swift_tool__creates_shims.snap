@@ -1,0 +1,19 @@
+---
+source: tools/swift/tests/shims_test.rs
+assertion_line: 7
+expression: "std :: fs ::\nread_to_string(sandbox.path().join(\".proto/shims/registry.json\")).unwrap()"
+---
+{
+  "sourcekit-lsp": {
+    "alt_exe": true,
+    "context": "swift-test"
+  },
+  "swift": {
+    "alt_exe": true,
+    "context": "swift-test"
+  },
+  "swiftc": {
+    "alt_exe": true,
+    "context": "swift-test"
+  }
+}
