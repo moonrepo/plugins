@@ -66,16 +66,12 @@ pub enum BunLockPackage {
     Workspace(Vec<String>),
 }
 
+// Only fields that are actually used are defined, as other fields
+// (like `overrides`) change shape between lockfile versions
 #[derive(Debug, Deserialize, Default)]
 #[serde(default, rename_all = "camelCase")]
 pub struct BunLock {
-    pub config_version: u32,
-    pub lockfile_version: u32,
     pub packages: BTreeMap<String, BunLockPackage>,
-    pub patched_dependencies: BTreeMap<String, String>,
-    // Bun v1.4 (lockfile v3) supports nested overrides, where the value
-    // is a map of scoped rules instead of a version
-    pub overrides: BTreeMap<String, JsonValue>,
     pub workspaces: BTreeMap<String, BunLockPackageJson>,
 }
 
@@ -222,24 +218,5 @@ mod tests {
             parse(r#"["a@workspace:packages/a"]"#),
             BunLockPackage::Workspace(..)
         ));
-    }
-
-    // Bun v1.4 nested overrides
-    #[test]
-    fn parses_nested_overrides() {
-        let lock: BunLock = json::parse(
-            r#"{
-  "lockfileVersion": 3,
-  "configVersion": 1,
-  "overrides": {
-    "debug": "4.3.4",
-    "express": { "qs": "6.13.0" },
-    "lodash@<4.17.21": { ".": "4.17.21" }
-  }
-}"#,
-        )
-        .unwrap();
-
-        assert_eq!(lock.overrides.len(), 3);
     }
 }
