@@ -1763,6 +1763,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "96cd2d7607be76b700f707349fe6f48970385220c7c3a59a72e4dcb5e19143ca"
 
 [[package]]
+name = "dotnet_tool"
+version = "0.1.0"
+dependencies = [
+ "extism-pdk",
+ "proto_pdk",
+ "proto_pdk_api",
+ "proto_pdk_test_utils",
+ "schematic",
+ "serde",
+ "serde_json",
+ "starbase_sandbox",
+ "starbase_utils",
+ "tokio",
+ "tool_common",
+]
+
+[[package]]
 name = "download_extension"
 version = "1.0.4"
 dependencies = [
