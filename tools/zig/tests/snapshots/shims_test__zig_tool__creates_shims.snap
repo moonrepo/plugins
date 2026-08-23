@@ -1,0 +1,10 @@
+---
+source: tools/zig/tests/shims_test.rs
+expression: "std :: fs ::\nread_to_string(sandbox.path().join(\".proto/shims/registry.json\")).unwrap()"
+---
+{
+  "zig": {
+    "alt_exe": true,
+    "context": "zig-test"
+  }
+}

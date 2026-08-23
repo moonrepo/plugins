@@ -27,6 +27,7 @@ projects:
   ruby-tool: tools/ruby
   rust-tool: tools/rust
   schema-tool: tools/internal-schema
+  zig-tool: tools/zig
   # Toolchains
   bun-toolchain: toolchains/bun
   deno-toolchain: toolchains/deno
