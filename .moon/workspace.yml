@@ -31,6 +31,7 @@ projects:
   # Toolchains
   bun-toolchain: toolchains/bun
   deno-toolchain: toolchains/deno
+  dotnet-toolchain: toolchains/dotnet
   go-toolchain: toolchains/go
   javascript-toolchain: toolchains/javascript
   node-toolchain: toolchains/node
