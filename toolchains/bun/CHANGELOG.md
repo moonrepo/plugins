@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Updated the embedded `bun` tool to support Windows arm64 (Bun v1.3.10+) and
+  musl based Linux (Bun v1.1.35+).
+
 ## 1.0.3
 
 #### 🚀 Updates

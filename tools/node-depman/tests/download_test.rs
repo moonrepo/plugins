@@ -234,7 +234,9 @@ mod node_depman_tool {
                     .await,
                 DownloadPrebuiltOutput {
                     archive_prefix: Some("package".into()),
-                    download_url: "https://registry.npmjs.org/@nubjs/nub-linux-x64/-/nub-linux-x64-0.7.4.tgz".into(),
+                    download_url:
+                        "https://registry.npmjs.org/@nubjs/nub-linux-x64/-/nub-linux-x64-0.7.4.tgz"
+                            .into(),
                     ..Default::default()
                 }
             );
@@ -292,7 +294,9 @@ mod node_depman_tool {
                     .await,
                 DownloadPrebuiltOutput {
                     archive_prefix: Some("package".into()),
-                    download_url: "https://registry.npmjs.org/@nubjs/nub-win32-x64/-/nub-win32-x64-0.7.4.tgz".into(),
+                    download_url:
+                        "https://registry.npmjs.org/@nubjs/nub-win32-x64/-/nub-win32-x64-0.7.4.tgz"
+                            .into(),
                     ..Default::default()
                 }
             );
@@ -733,7 +737,9 @@ mod node_depman_tool {
                     .await,
                 DownloadPrebuiltOutput {
                     archive_prefix: Some("package".into()),
-                    download_url: "https://registry.npmjs.org/@pnpm/exe.linux-x64/-/exe.linux-x64-12.0.0.tgz".into(),
+                    download_url:
+                        "https://registry.npmjs.org/@pnpm/exe.linux-x64/-/exe.linux-x64-12.0.0.tgz"
+                            .into(),
                     ..Default::default()
                 }
             );
@@ -792,7 +798,9 @@ mod node_depman_tool {
                     .await,
                 DownloadPrebuiltOutput {
                     archive_prefix: Some("package".into()),
-                    download_url: "https://registry.npmjs.org/@pnpm/exe.win32-x64/-/exe.win32-x64-12.0.0.tgz".into(),
+                    download_url:
+                        "https://registry.npmjs.org/@pnpm/exe.win32-x64/-/exe.win32-x64-12.0.0.tgz"
+                            .into(),
                     ..Default::default()
                 }
             );
@@ -955,10 +963,7 @@ mod node_depman_tool {
                 .exes;
 
             // The .exe extension must not be rewritten to .cmd
-            assert_eq!(
-                exes.get("pnpm").unwrap().exe_path,
-                Some("pnpm.exe".into())
-            );
+            assert_eq!(exes.get("pnpm").unwrap().exe_path, Some("pnpm.exe".into()));
         }
 
         #[tokio::test(flavor = "multi_thread")]

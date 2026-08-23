@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added support for Windows arm64, which Bun added in v1.3.10.
+- Added support for musl based Linux, which Bun added in v1.1.35. Older versions
+  will now error instead of installing a glibc build that can't run.
+
+#### 🐞 Fixes
+
+- Fixed the Windows support check, which would exclude future major versions,
+  like v2.0.
+
 ## 0.16.10
 
 #### 🚀 Updates

@@ -27,6 +27,8 @@ pub struct BunLockPackageJson {
 //   folder    -> [ "name@file:path", INFO ]
 //   root      -> [ "name@root:", INFO ]
 //   workspace -> [ "name@workspace:path" ]
+// Bun v1.4 records an integrity hash for git, github, and tarball entries,
+// which older lockfiles are missing.
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
 pub enum BunLockPackage {
@@ -64,15 +66,20 @@ pub enum BunLockPackage {
     Workspace(Vec<String>),
 }
 
+// Only fields that are actually used are defined, as other fields
+// (like `overrides`) change shape between lockfile versions
 #[derive(Debug, Deserialize, Default)]
 #[serde(default, rename_all = "camelCase")]
 pub struct BunLock {
-    pub config_version: u32,
-    pub lockfile_version: u32,
     pub packages: BTreeMap<String, BunLockPackage>,
-    pub patched_dependencies: BTreeMap<String, String>,
-    pub overrides: BTreeMap<String, String>,
     pub workspaces: BTreeMap<String, BunLockPackageJson>,
+}
+
+// Integrity hashes are SRI formatted: <algorithm>-<base64>
+fn is_integrity_hash(value: &str) -> bool {
+    ["sha1-", "sha256-", "sha384-", "sha512-"]
+        .iter()
+        .any(|algorithm| value.starts_with(algorithm))
 }
 
 pub fn parse_bun_lock(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyResult<()> {
@@ -114,12 +121,21 @@ pub fn parse_bun_lock(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyRe
 
                 (name, version, Some(integrity))
             }
-            BunLockPackage::Dependency3(id, _data, integrity) => {
+            // Tarballs store an integrity hash, while git/github store a bun tag
+            BunLockPackage::Dependency3(id, _data, integrity_or_tag) => {
                 let Some((name, version)) = parse_name_and_version(id, "") else {
                     continue;
                 };
 
-                (name, version, Some(integrity))
+                (
+                    name,
+                    version,
+                    if is_integrity_hash(integrity_or_tag) {
+                        Some(integrity_or_tag)
+                    } else {
+                        None
+                    },
+                )
             }
             BunLockPackage::Dependency4(id, _data) => {
                 let Some((name, version)) = parse_name_and_version(id, "") else {

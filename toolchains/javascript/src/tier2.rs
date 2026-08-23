@@ -425,7 +425,20 @@ pub fn install_dependencies(
     // Install
     let mut command = match package_manager {
         JavaScriptPackageManager::Bun => {
-            let mut cmd = ExecCommandInput::new("bun", ["install"]);
+            // Unlike other package managers, bun does not enable frozen
+            // lockfiles in CI automatically. `bun ci` (an alias for
+            // `bun install --frozen-lockfile`) was introduced in v1.2.20,
+            // while `--production` implies frozen already.
+            let use_ci = env.ci
+                && !input.production
+                && input.root.join("bun.lock").exists()
+                && package_manager_config.version_satisfies(">=1.2.20");
+
+            let mut cmd = if use_ci {
+                ExecCommandInput::new("bun", ["ci"])
+            } else {
+                ExecCommandInput::new("bun", ["install"])
+            };
 
             if input.production {
                 cmd.args.push("--production".into());
@@ -433,7 +446,16 @@ pub fn install_dependencies(
 
             for package_name in input.packages {
                 cmd.args.push("--filter".into());
-                cmd.args.push(package_name);
+
+                // Dependency relation patterns were introduced in v1.4,
+                // and are required to also install workspace dependencies
+                // https://bun.com/docs/pm/filter
+                cmd.args
+                    .push(if package_manager_config.version_satisfies(">=1.4.0") {
+                        format!("{package_name}...")
+                    } else {
+                        package_name
+                    });
             }
 
             cmd
@@ -573,7 +595,17 @@ pub fn install_dependencies(
     // Dedupe
     if config.dedupe_on_lockfile_change {
         match package_manager {
-            JavaScriptPackageManager::Bun | JavaScriptPackageManager::Deno => {
+            JavaScriptPackageManager::Bun => {
+                // `bun dedupe` was introduced in v1.4
+                if package_manager_config.version_satisfies(">=1.4.0") {
+                    output.dedupe_command = Some(
+                        ExecCommandInput::new("bun", ["dedupe"])
+                            .cwd(input.root)
+                            .into(),
+                    );
+                }
+            }
+            JavaScriptPackageManager::Deno => {
                 // N/A
             }
             JavaScriptPackageManager::Npm => {

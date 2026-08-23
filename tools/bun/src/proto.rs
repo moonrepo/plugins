@@ -174,30 +174,33 @@ pub fn download_prebuilt(
     Json(input): Json<DownloadPrebuiltInput>,
 ) -> FnResult<Json<DownloadPrebuiltOutput>> {
     let env = get_host_environment()?;
-    let has_windows_support = match &input.context.version {
-        VersionSpec::Canary => true,
-        VersionSpec::Alias(alias) => alias == "latest",
-        VersionSpec::Version(version) => version.major >= 1 && version.minor >= 1,
+    let version = &input.context.version;
+
+    // Windows x64 was added in v1.1, and arm64 in v1.3.10
+    let windows_arches = match version {
+        VersionSpec::Version(version) => {
+            if *version >= Version::new(1, 3, 10) {
+                vec![HostArch::X64, HostArch::Arm64]
+            } else if *version >= Version::new(1, 1, 0) {
+                vec![HostArch::X64]
+            } else {
+                vec![]
+            }
+        }
+        VersionSpec::Alias(alias) if alias != "latest" => vec![],
+        _ => vec![HostArch::X64, HostArch::Arm64],
     };
 
-    check_supported_os_and_arch(
-        NAME,
-        env,
-        if has_windows_support {
-            permutations! [
-                HostOS::Linux => [HostArch::X64, HostArch::Arm64],
-                HostOS::MacOS => [HostArch::X64, HostArch::Arm64],
-                HostOS::Windows => [HostArch::X64],
-            ]
-        } else {
-            permutations! [
-                HostOS::Linux => [HostArch::X64, HostArch::Arm64],
-                HostOS::MacOS => [HostArch::X64, HostArch::Arm64],
-            ]
-        },
-    )?;
+    let mut targets = permutations! [
+        HostOS::Linux => [HostArch::X64, HostArch::Arm64],
+        HostOS::MacOS => [HostArch::X64, HostArch::Arm64],
+    ];
 
-    let version = &input.context.version;
+    if !windows_arches.is_empty() {
+        targets.insert(HostOS::Windows, windows_arches);
+    }
+
+    check_supported_os_and_arch(NAME, env, targets)?;
 
     let arch = match env.arch {
         HostArch::Arm64 => "aarch64",
@@ -215,8 +218,23 @@ pub fn download_prebuilt(
         }
     };
 
+    let mut libc_suffix = "";
+
+    if env.os.is_linux() && env.libc == HostLibc::Musl {
+        // musl builds were added in v1.1.35
+        if let VersionSpec::Version(version) = version
+            && *version < Version::new(1, 1, 35)
+        {
+            return Err(plugin_err!(PluginError::Message(
+                "musl is only supported for Bun v1.1.35 and above.".into()
+            )));
+        }
+
+        libc_suffix = "-musl";
+    }
+
     let prefix = match env.os {
-        HostOS::Linux => format!("bun-linux-{arch}{avx2_suffix}"),
+        HostOS::Linux => format!("bun-linux-{arch}{libc_suffix}{avx2_suffix}"),
         HostOS::MacOS => format!("bun-darwin-{arch}{avx2_suffix}"),
         HostOS::Windows => format!("bun-windows-{arch}"),
         _ => unreachable!(),
