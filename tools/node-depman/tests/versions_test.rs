@@ -79,8 +79,9 @@ mod node_depman_tool {
 
         plugin
             .parse_version_file(ParseVersionFileInput {
-                content: r#"{ "packageManager": "npm@https://registry.npmjs.org/npm/-/npm-9.0.0.tgz" }"#
-                    .into(),
+                content:
+                    r#"{ "packageManager": "npm@https://registry.npmjs.org/npm/-/npm-9.0.0.tgz" }"#
+                        .into(),
                 file: "package.json".into(),
                 ..Default::default()
             })

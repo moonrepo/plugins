@@ -2,9 +2,22 @@
 
 ## Unreleased
 
+#### 🚀 Updates
+
+- Updated Bun support for the v1.4 release:
+  - Dependencies are now installed with `bun ci` in CI when a `bun.lock` exists
+    (v1.2.20+), as Bun does not enable frozen lockfiles in CI automatically.
+  - Dependencies are now deduped with `bun dedupe` when the
+    `dedupeOnLockfileChange` setting is enabled (v1.4+).
+  - Focused installs now include workspace dependencies, by passing `...`
+    dependency relations to `--filter` (v1.4+).
+
 #### 🐞 Fixes
 
 - Updated `package.json` version parsing to support custom protocols (`example:`).
+- Fixed `bun.lock` parsing failing on nested overrides (lockfile v3).
+- Fixed Git/GitHub `bun.lock` entries without an integrity hash recording the
+  Bun tag as the hash.
 
 ## 1.3.0
 
