@@ -27,6 +27,7 @@ mod zig_ls_tool {
         assert_eq!(
             plugin.download_prebuilt(create_input("0.16.0")).await,
             DownloadPrebuiltOutput {
+                archive_prefix: Some("zls-x86_64-linux-0.16.0".into()),
                 checksum: Some(Checksum::sha256(
                     "ded6d562a0b86ee878b1ddf70ffab2797ce3cdca3b02d6077548f9d56dff96b6".into(),
                 )),
@@ -49,6 +50,7 @@ mod zig_ls_tool {
         assert_eq!(
             plugin.download_prebuilt(create_input("0.16.0")).await,
             DownloadPrebuiltOutput {
+                archive_prefix: Some("zls-aarch64-macos-0.16.0".into()),
                 checksum: Some(Checksum::sha256(
                     "b93ec549f8558a7e85984a840e9276d274f1059b54ade4254296ef4982958359".into(),
                 )),
@@ -71,6 +73,7 @@ mod zig_ls_tool {
         assert_eq!(
             plugin.download_prebuilt(create_input("0.16.0")).await,
             DownloadPrebuiltOutput {
+                archive_prefix: Some("zls-x86-windows-0.16.0".into()),
                 checksum: Some(Checksum::sha256(
                     "ecb2870979b35143aa5e7ce92d3b69362a76fd7126c8f950a5f8a7f99a77416f".into(),
                 )),
@@ -92,7 +95,10 @@ mod zig_ls_tool {
 
         let output = plugin.download_prebuilt(create_input("0.14.0")).await;
 
-        assert_eq!(output.archive_prefix, None);
+        assert_eq!(
+            output.archive_prefix,
+            Some("zls-linux-x86_64-0.14.0".into())
+        );
         assert_eq!(
             output.download_name,
             Some("zls-linux-x86_64-0.14.0.tar.xz".into())

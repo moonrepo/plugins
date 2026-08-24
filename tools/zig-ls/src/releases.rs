@@ -1,5 +1,5 @@
 use proto_pdk::{AnyResult, HostArch, HostEnvironment, HostOS, Version, VersionSpec, anyhow};
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
 
@@ -36,23 +36,23 @@ impl ZlsRelease {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 pub struct ZlsReleaseIndex(HashMap<String, ZlsRelease>);
 
-// impl<'de> Deserialize<'de> for ZlsReleaseIndex {
-//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-//     where
-//         D: Deserializer<'de>,
-//     {
-//         let mut releases = HashMap::<String, ZlsRelease>::deserialize(deserializer)?;
+impl<'de> Deserialize<'de> for ZlsReleaseIndex {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let mut releases = HashMap::<String, ZlsRelease>::deserialize(deserializer)?;
 
-//         for (version, release) in &mut releases {
-//             release.version.clone_from(version);
-//         }
+        for (version, release) in &mut releases {
+            release.version.clone_from(version);
+        }
 
-//         Ok(Self(releases))
-//     }
-// }
+        Ok(Self(releases))
+    }
+}
 
 impl ZlsReleaseIndex {
     pub fn stable_versions(&self) -> Vec<String> {
