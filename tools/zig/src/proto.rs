@@ -94,12 +94,14 @@ pub fn download_prebuilt(
     let index: ZigReleaseIndex = fetch_json(&config.index_url)?;
     let release = index.find(&input.context.version)?;
     let artifact = release.artifact(env)?;
+
     let filename = artifact
         .tarball
         .rsplit('/')
         .next()
         .filter(|name| !name.is_empty())
         .ok_or_else(|| plugin_err!("Invalid Zig download URL <url>{}</url>.", artifact.tarball))?;
+
     let archive_prefix = filename
         .strip_suffix(".tar.xz")
         .or_else(|| filename.strip_suffix(".zip"))

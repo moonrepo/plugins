@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "wasm"), allow(dead_code))]
 
 use proto_pdk::{AnyResult, HostArch, HostEnvironment, HostOS, Version, VersionSpec, anyhow};
-use serde::{Deserialize, Deserializer};
+use serde::Deserialize;
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
 
@@ -38,25 +38,25 @@ impl ZigRelease {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct ZigReleaseIndex(HashMap<String, ZigRelease>);
 
-impl<'de> Deserialize<'de> for ZigReleaseIndex {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let mut releases = HashMap::<String, ZigRelease>::deserialize(deserializer)?;
+// impl<'de> Deserialize<'de> for ZigReleaseIndex {
+//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+//     where
+//         D: Deserializer<'de>,
+//     {
+//         let mut releases = HashMap::<String, ZigRelease>::deserialize(deserializer)?;
 
-        for (name, release) in &mut releases {
-            if release.version.is_empty() {
-                release.version.clone_from(name);
-            }
-        }
+//         for (name, release) in &mut releases {
+//             if release.version.is_empty() {
+//                 release.version.clone_from(name);
+//             }
+//         }
 
-        Ok(Self(releases))
-    }
-}
+//         Ok(Self(releases))
+//     }
+// }
 
 impl ZigReleaseIndex {
     pub fn stable_versions(&self) -> Vec<String> {
@@ -76,7 +76,7 @@ impl ZigReleaseIndex {
     }
 
     pub fn find(&self, spec: &VersionSpec) -> AnyResult<&ZigRelease> {
-        if spec.is_canary() || matches!(spec, VersionSpec::Alias(alias) if alias == "master") {
+        if spec.is_canary() || spec.is_alias("master") {
             return self
                 .master()
                 .ok_or_else(|| anyhow!("The Zig release index does not contain a master build."));
