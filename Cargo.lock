@@ -3262,6 +3262,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "lang_zig_common"
+version = "0.1.0"
+dependencies = [
+ "proto_pdk_api 0.34.1",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8584,6 +8593,40 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.119",
+]
+
+[[package]]
+name = "zig_ls_tool"
+version = "0.0.1"
+dependencies = [
+ "extism-pdk",
+ "lang_zig_common",
+ "proto_pdk",
+ "proto_pdk_api 0.34.1",
+ "proto_pdk_test_utils 0.49.3",
+ "schematic",
+ "serde",
+ "serde_json",
+ "starbase_sandbox",
+ "tokio",
+ "tool_common",
+]
+
+[[package]]
+name = "zig_tool"
+version = "0.0.1"
+dependencies = [
+ "extism-pdk",
+ "lang_zig_common",
+ "proto_pdk",
+ "proto_pdk_api 0.34.1",
+ "proto_pdk_test_utils 0.49.3",
+ "schematic",
+ "serde",
+ "serde_json",
+ "starbase_sandbox",
+ "tokio",
+ "tool_common",
 ]
 
 [[package]]
