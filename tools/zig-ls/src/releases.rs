@@ -1,13 +1,10 @@
-use proto_pdk::{AnyResult, HostArch, HostEnvironment, HostOS, Version, VersionSpec, anyhow};
+use lang_zig_common::{
+    ReleaseArtifact, VersionedRelease, ZigProduct, deserialize_release_map, select_release_artifact,
+};
+use proto_pdk::{AnyResult, HostEnvironment, Version, VersionSpec, anyhow};
 use serde::{Deserialize, Deserializer};
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
-
-#[derive(Debug, Deserialize)]
-pub struct ZlsArtifact {
-    pub shasum: String,
-    pub tarball: String,
-}
 
 #[derive(Debug, Deserialize)]
 pub struct ZlsRelease {
@@ -19,20 +16,19 @@ pub struct ZlsRelease {
 }
 
 impl ZlsRelease {
-    pub fn artifact(&self, env: &HostEnvironment) -> AnyResult<ZlsArtifact> {
-        let targets = get_target_candidates(env)?;
+    pub fn artifact(&self, env: &HostEnvironment) -> AnyResult<ReleaseArtifact> {
+        select_release_artifact(
+            &self.artifacts,
+            &self.version,
+            env,
+            ZigProduct::LanguageServer,
+        )
+    }
+}
 
-        for target in &targets {
-            if let Some(value) = self.artifacts.get(*target) {
-                return Ok(serde_json::from_value(value.clone())?);
-            }
-        }
-
-        Err(anyhow!(
-            "No ZLS {} archive is available for target <id>{}</id>.",
-            self.version,
-            targets.join("</id> or <id>")
-        ))
+impl VersionedRelease for ZlsRelease {
+    fn version_mut(&mut self) -> &mut String {
+        &mut self.version
     }
 }
 
@@ -44,13 +40,7 @@ impl<'de> Deserialize<'de> for ZlsReleaseIndex {
     where
         D: Deserializer<'de>,
     {
-        let mut releases = HashMap::<String, ZlsRelease>::deserialize(deserializer)?;
-
-        for (version, release) in &mut releases {
-            release.version.clone_from(version);
-        }
-
-        Ok(Self(releases))
+        deserialize_release_map(deserializer).map(Self)
     }
 }
 
@@ -97,36 +87,10 @@ impl ZlsReleaseIndex {
     }
 }
 
-fn get_target_candidates(env: &HostEnvironment) -> AnyResult<Vec<&'static str>> {
-    let targets = match (env.os, env.arch) {
-        (HostOS::Linux, HostArch::X64) => vec!["x86_64-linux"],
-        (HostOS::Linux, HostArch::X86) => vec!["x86-linux"],
-        (HostOS::Linux, HostArch::Arm64) => vec!["aarch64-linux"],
-        (HostOS::Linux, HostArch::Arm) => vec!["arm-linux", "armv7a-linux"],
-        (HostOS::Linux, HostArch::LongArm64) => vec!["loongarch64-linux"],
-        (HostOS::Linux, HostArch::Powerpc64) => vec!["powerpc64le-linux"],
-        (HostOS::Linux, HostArch::Riscv64) => vec!["riscv64-linux"],
-        (HostOS::Linux, HostArch::S390x) => vec!["s390x-linux"],
-        (HostOS::MacOS, HostArch::X64) => vec!["x86_64-macos"],
-        (HostOS::MacOS, HostArch::Arm64) => vec!["aarch64-macos"],
-        (HostOS::Windows, HostArch::X64) => vec!["x86_64-windows"],
-        (HostOS::Windows, HostArch::X86) => vec!["x86-windows"],
-        (HostOS::Windows, HostArch::Arm64) => vec!["aarch64-windows"],
-        _ => {
-            return Err(anyhow!(
-                "ZLS does not provide a pre-built archive for {} {}.",
-                env.os,
-                env.arch
-            ));
-        }
-    };
-
-    Ok(targets)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use proto_pdk::{HostArch, HostOS};
 
     fn parse_index() -> ZlsReleaseIndex {
         serde_json::from_str(

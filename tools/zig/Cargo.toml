@@ -18,6 +18,7 @@ pre-release-replacements = [
 crate-type = ["cdylib", "lib"]
 
 [dependencies]
+lang_zig_common = { path = "../../crates/lang-zig-common" }
 tool_common = { path = "../../crates/tool-common" }
 extism-pdk = { workspace = true }
 proto_pdk = { workspace = true }

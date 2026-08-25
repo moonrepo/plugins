@@ -1,15 +1,12 @@
 #![cfg_attr(not(feature = "wasm"), allow(dead_code))]
 
-use proto_pdk::{AnyResult, HostArch, HostEnvironment, HostOS, Version, VersionSpec, anyhow};
-use serde::Deserialize;
+use lang_zig_common::{
+    ReleaseArtifact, VersionedRelease, ZigProduct, deserialize_release_map, select_release_artifact,
+};
+use proto_pdk::{AnyResult, HostEnvironment, Version, VersionSpec, anyhow};
+use serde::{Deserialize, Deserializer};
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
-
-#[derive(Debug, Deserialize)]
-pub struct ZigArtifact {
-    pub shasum: String,
-    pub tarball: String,
-}
 
 #[derive(Debug, Deserialize)]
 pub struct ZigRelease {
@@ -21,42 +18,28 @@ pub struct ZigRelease {
 }
 
 impl ZigRelease {
-    pub fn artifact(&self, env: &HostEnvironment) -> AnyResult<ZigArtifact> {
-        let targets = get_target_candidates(env)?;
-
-        for target in &targets {
-            if let Some(value) = self.artifacts.get(*target) {
-                return Ok(serde_json::from_value(value.clone())?);
-            }
-        }
-
-        Err(anyhow!(
-            "No Zig {} archive is available for target <id>{}</id>.",
-            self.version,
-            targets.join("</id> or <id>")
-        ))
+    pub fn artifact(&self, env: &HostEnvironment) -> AnyResult<ReleaseArtifact> {
+        select_release_artifact(&self.artifacts, &self.version, env, ZigProduct::Compiler)
     }
 }
 
-#[derive(Debug, Deserialize)]
+impl VersionedRelease for ZigRelease {
+    fn version_mut(&mut self) -> &mut String {
+        &mut self.version
+    }
+}
+
+#[derive(Debug)]
 pub struct ZigReleaseIndex(HashMap<String, ZigRelease>);
 
-// impl<'de> Deserialize<'de> for ZigReleaseIndex {
-//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-//     where
-//         D: Deserializer<'de>,
-//     {
-//         let mut releases = HashMap::<String, ZigRelease>::deserialize(deserializer)?;
-
-//         for (name, release) in &mut releases {
-//             if release.version.is_empty() {
-//                 release.version.clone_from(name);
-//             }
-//         }
-
-//         Ok(Self(releases))
-//     }
-// }
+impl<'de> Deserialize<'de> for ZigReleaseIndex {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserialize_release_map(deserializer).map(Self)
+    }
+}
 
 impl ZigReleaseIndex {
     pub fn stable_versions(&self) -> Vec<String> {
@@ -111,50 +94,10 @@ impl ZigReleaseIndex {
     }
 }
 
-fn get_target_candidates(env: &HostEnvironment) -> AnyResult<Vec<&'static str>> {
-    let targets = match (env.os, env.arch) {
-        (HostOS::Linux, HostArch::X64) => vec!["x86_64-linux"],
-        (HostOS::Linux, HostArch::X86) => vec!["x86-linux"],
-        (HostOS::Linux, HostArch::Arm64) => vec!["aarch64-linux"],
-        (HostOS::Linux, HostArch::Arm) => vec!["arm-linux", "armv7a-linux"],
-        (HostOS::Linux, HostArch::LongArm64) => vec!["loongarch64-linux"],
-        (HostOS::Linux, HostArch::Powerpc64) => vec!["powerpc64le-linux"],
-        (HostOS::Linux, HostArch::Riscv64) => vec!["riscv64-linux"],
-        (HostOS::Linux, HostArch::S390x) => vec!["s390x-linux"],
-        (HostOS::MacOS, HostArch::X64) => vec!["x86_64-macos"],
-        (HostOS::MacOS, HostArch::Arm64) => vec!["aarch64-macos"],
-        (HostOS::Windows, HostArch::X64) => vec!["x86_64-windows"],
-        (HostOS::Windows, HostArch::X86) => vec!["x86-windows"],
-        (HostOS::Windows, HostArch::Arm64) => vec!["aarch64-windows"],
-        (HostOS::FreeBSD, HostArch::X64) => vec!["x86_64-freebsd"],
-        (HostOS::FreeBSD, HostArch::Arm) => vec!["arm-freebsd"],
-        (HostOS::FreeBSD, HostArch::Arm64) => vec!["aarch64-freebsd"],
-        (HostOS::FreeBSD, HostArch::Powerpc64) => vec!["powerpc64le-freebsd"],
-        (HostOS::FreeBSD, HostArch::Riscv64) => vec!["riscv64-freebsd"],
-        (HostOS::NetBSD, HostArch::X64) => vec!["x86_64-netbsd"],
-        (HostOS::NetBSD, HostArch::X86) => vec!["x86-netbsd"],
-        (HostOS::NetBSD, HostArch::Arm) => vec!["arm-netbsd"],
-        (HostOS::NetBSD, HostArch::Arm64) => vec!["aarch64-netbsd"],
-        (HostOS::NetBSD, HostArch::Riscv64) => vec!["riscv64-netbsd"],
-        (HostOS::OpenBSD, HostArch::X64) => vec!["x86_64-openbsd"],
-        (HostOS::OpenBSD, HostArch::Arm) => vec!["arm-openbsd"],
-        (HostOS::OpenBSD, HostArch::Arm64) => vec!["aarch64-openbsd"],
-        (HostOS::OpenBSD, HostArch::Riscv64) => vec!["riscv64-openbsd"],
-        _ => {
-            return Err(anyhow!(
-                "Zig does not provide a pre-built archive for {} {}.",
-                env.os,
-                env.arch
-            ));
-        }
-    };
-
-    Ok(targets)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use proto_pdk::{HostArch, HostOS};
 
     fn parse_index() -> ZigReleaseIndex {
         serde_json::from_str(

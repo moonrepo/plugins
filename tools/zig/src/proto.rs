@@ -1,6 +1,9 @@
 use crate::config::ZigToolConfig;
 use crate::releases::ZigReleaseIndex;
 use extism_pdk::*;
+use lang_zig_common::{
+    create_download_prebuilt_output, detect_zig_version_files, parse_zig_version_file,
+};
 use proto_pdk::*;
 use schematic::SchemaBuilder;
 use std::collections::HashMap;
@@ -36,33 +39,16 @@ pub fn define_tool_config(_: ()) -> FnResult<Json<DefineToolConfigOutput>> {
 
 #[plugin_fn]
 pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
-    Ok(Json(DetectVersionOutput {
-        files: vec![
-            ".zig-version".into(),
-            ".zigversion".into(),
-            "build.zig.zon".into(),
-        ],
-        ignore: vec![".zig-cache".into(), "zig-out".into()],
-    }))
+    Ok(Json(detect_zig_version_files()))
 }
 
 #[plugin_fn]
 pub fn parse_version_file(
     Json(input): Json<ParseVersionFileInput>,
 ) -> FnResult<Json<ParseVersionFileOutput>> {
-    let version = if input.file == "build.zig.zon" {
-        parse_zon_version(&input.content)
-            .map(|version| UnresolvedVersionSpec::parse(format!(">={version}")))
-            .transpose()?
-    } else {
-        input
-            .content
-            .lines()
-            .map(str::trim)
-            .find(|line| !line.is_empty())
-            .map(UnresolvedVersionSpec::parse)
-            .transpose()?
-    };
+    let version = parse_zig_version_file(&input.file, &input.content)
+        .map(|source| source.to_zig_requirement())
+        .transpose()?;
 
     Ok(Json(ParseVersionFileOutput { version }))
 }
@@ -95,25 +81,7 @@ pub fn download_prebuilt(
     let release = index.find(&input.context.version)?;
     let artifact = release.artifact(env)?;
 
-    let filename = artifact
-        .tarball
-        .rsplit('/')
-        .next()
-        .filter(|name| !name.is_empty())
-        .ok_or_else(|| plugin_err!("Invalid Zig download URL <url>{}</url>.", artifact.tarball))?;
-
-    let archive_prefix = filename
-        .strip_suffix(".tar.xz")
-        .or_else(|| filename.strip_suffix(".zip"))
-        .ok_or_else(|| plugin_err!("Unsupported Zig archive <file>{filename}</file>."))?;
-
-    Ok(Json(DownloadPrebuiltOutput {
-        archive_prefix: Some(archive_prefix.into()),
-        checksum: Some(Checksum::sha256(artifact.shasum)),
-        download_name: Some(filename.into()),
-        download_url: artifact.tarball,
-        ..Default::default()
-    }))
+    Ok(Json(create_download_prebuilt_output(NAME, artifact)?))
 }
 
 #[plugin_fn]
@@ -129,48 +97,4 @@ pub fn locate_executables(
         )]),
         ..Default::default()
     }))
-}
-
-fn parse_zon_version(content: &str) -> Option<&str> {
-    content.lines().find_map(|line| {
-        let line = line.split_once("//").map_or(line, |(code, _)| code);
-        let (key, value) = line.split_once('=')?;
-
-        if key.trim() != ".minimum_zig_version" {
-            return None;
-        }
-
-        let version = value.trim().trim_end_matches(',').trim();
-        version.strip_prefix('"')?.strip_suffix('"')
-    })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn parses_minimum_zig_version() {
-        assert_eq!(
-            parse_zon_version(
-                r#".{
-                    .name = .example,
-                    .minimum_zig_version = "0.14.1", // Required for APIs.
-                }"#,
-            ),
-            Some("0.14.1")
-        );
-    }
-
-    #[test]
-    fn ignores_other_zon_fields() {
-        assert_eq!(
-            parse_zon_version(
-                r#".{
-                    .version = "1.2.3",
-                }"#,
-            ),
-            None
-        );
-    }
 }
