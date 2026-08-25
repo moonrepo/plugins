@@ -1,6 +1,6 @@
 [package]
 name = "zig_ls_tool"
-version = "0.0.1"
+version = "0.1.0"
 edition = "2024"
 description = "ZLS WASM plugin for proto."
 authors = ["Miles Johnson"]
