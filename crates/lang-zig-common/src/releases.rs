@@ -1,4 +1,4 @@
-use proto_pdk::{AnyResult, HostArch, HostEnvironment, HostOS, anyhow};
+use proto_pdk_api::{AnyResult, HostArch, HostEnvironment, HostOS, anyhow};
 use serde::{Deserialize, Deserializer};
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;

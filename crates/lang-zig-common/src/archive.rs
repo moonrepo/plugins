@@ -1,5 +1,5 @@
 use crate::ReleaseArtifact;
-use proto_pdk::{AnyResult, Checksum, DownloadPrebuiltOutput, anyhow};
+use proto_pdk_api::{AnyResult, Checksum, DownloadPrebuiltOutput, anyhow};
 
 pub fn create_download_prebuilt_output(
     tool_name: &str,

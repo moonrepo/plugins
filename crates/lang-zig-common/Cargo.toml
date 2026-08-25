@@ -6,6 +6,6 @@ license = "MIT"
 publish = false
 
 [dependencies]
-proto_pdk = { workspace = true }
+proto_pdk_api = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

@@ -1,7 +1,7 @@
 use lang_zig_common::{
     ReleaseArtifact, VersionedRelease, ZigProduct, deserialize_release_map, select_release_artifact,
 };
-use proto_pdk::{AnyResult, HostEnvironment, Version, VersionSpec, anyhow};
+use proto_pdk_api::{AnyResult, HostEnvironment, Version, VersionSpec, anyhow};
 use serde::{Deserialize, Deserializer};
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
@@ -90,7 +90,7 @@ impl ZlsReleaseIndex {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use proto_pdk::{HostArch, HostOS};
+    use proto_pdk_api::{HostArch, HostOS};
 
     fn parse_index() -> ZlsReleaseIndex {
         serde_json::from_str(
