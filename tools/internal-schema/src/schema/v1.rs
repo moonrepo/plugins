@@ -1,3 +1,4 @@
+use super::VERSION_REGEX;
 use proto_pdk::{HostArch, HostLibc, HostOS, UnresolvedVersionSpec, Version, VersionSpec};
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -11,13 +12,17 @@ pub struct PlatformMapper {
     pub archive_prefix: Option<String>,
     pub checksum_file: Option<String>,
     pub download_file: String,
-    #[deprecated]
-    pub exes_dir: Option<PathBuf>,
     pub exes_dirs: Vec<PathBuf>,
     pub exe_path: Option<PathBuf>,
     pub libc: HashMap<HostLibc, String>,
-    #[deprecated]
-    pub bin_path: Option<PathBuf>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+#[serde(default, rename_all = "kebab-case")]
+pub struct PluginSchema {
+    pub description: Option<String>,
+    pub repository_url: Option<String>,
+    pub homepage_url: Option<String>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -97,9 +102,7 @@ impl Default for ResolveSchema {
             git_url: None,
             git_tag_pattern: None,
             versions: vec![],
-            version_pattern:
-                r"^v?((?<major>[0-9]+)\.(?<minor>[0-9]+)\.(?<patch>[0-9]+)(?<pre>-[0-9a-zA-Z\.]+)?(?<build>\+[-0-9a-zA-Z\.]+)?)$"
-                    .to_string(),
+            version_pattern: VERSION_REGEX.into(),
         }
     }
 }
@@ -127,10 +130,11 @@ pub enum SchemaType {
 
 #[derive(Debug, Default, Deserialize)]
 #[serde(default, rename_all = "kebab-case")]
-pub struct Schema {
+pub struct SchemaV1 {
     pub name: String,
     #[serde(rename = "type")]
     pub type_of: SchemaType,
+    pub plugin: PluginSchema,
     pub metadata: MetadataSchema,
     pub platform: HashMap<HostOS, PlatformMapper>,
     pub deprecations: Vec<String>,
