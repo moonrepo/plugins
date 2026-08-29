@@ -1,4 +1,4 @@
-use crate::schema::{ExecutableSchema, PlatformMapper, Schema, SchemaType};
+use crate::schema::{self, Schema};
 use extism_pdk::*;
 use proto_pdk::*;
 use regex::Captures;
@@ -14,7 +14,16 @@ extern "ExtismHost" {
 
 fn get_schema() -> Result<Schema, Error> {
     let data = config::get("proto_schema")?.expect("Missing schema!");
-    let schema: Schema = json::from_str(&data)?;
+    let value: JsonValue = json::from_str(&data)?;
+
+    let schema = if value
+        .get("format")
+        .is_some_and(|format| format.is_string() && format == "2")
+    {
+        Schema::V2(json::from_value(value)?)
+    } else {
+        Schema::V1(json::from_value(value)?)
+    };
 
     Ok(schema)
 }
