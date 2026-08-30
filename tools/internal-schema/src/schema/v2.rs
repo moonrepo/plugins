@@ -1,24 +1,10 @@
-use super::VERSION_REGEX;
+use super::{PlatformMapper, VERSION_REGEX};
 use proto_pdk::{
-    DetectVersionOutput, DownloadPrebuiltOutput, HostArch, HostLibc, HostOS, LoadVersionsOutput,
-    LocateExecutablesOutput, Range, RegisterToolOutput,
+    DetectVersionOutput, DownloadPrebuiltOutput, HostEnvironment, HostOS, LoadVersionsOutput,
+    LocateExecutablesOutput, MatchesVersion, PluginError, Range, RegisterToolOutput, VersionSpec,
 };
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::path::PathBuf;
-
-#[derive(Debug, Default, Deserialize)]
-#[serde(default)]
-pub struct PlatformMapper {
-    pub arch: HashMap<HostArch, String>,
-    pub archs: Vec<HostArch>,
-    pub archive_prefix: Option<String>,
-    pub checksum_file: Option<String>,
-    pub download_file: String,
-    pub exes_dirs: Vec<PathBuf>,
-    pub exe_path: Option<PathBuf>,
-    pub libc: HashMap<HostLibc, String>,
-}
 
 #[derive(Debug, Default, Deserialize)]
 #[serde(default)]
@@ -29,7 +15,7 @@ pub struct PluginSchema {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(default, rename_all = "kebab-case")]
+#[serde(default)]
 pub struct ResolveSchema {
     pub version_pattern: String,
     // Manifest
@@ -83,4 +69,37 @@ pub struct SchemaV2 {
     pub platform: HashMap<HostOS, PlatformMapper>,
     #[serde(default)]
     pub overrides: HashMap<Range, Override>,
+}
+
+impl SchemaV2 {
+    pub fn get_platform(
+        &self,
+        env: &HostEnvironment,
+        spec: Option<&VersionSpec>,
+    ) -> Result<PlatformMapper, PluginError> {
+        let mut platform = PlatformMapper::find_match(&self.platform, env)
+            .ok_or_else(|| PluginError::UnsupportedOS {
+                tool: self.metadata.name.clone(),
+                os: env.os.to_rust_os(),
+            })?
+            .to_owned();
+
+        let Some(spec) = spec else {
+            return Ok(platform);
+        };
+
+        for (range, or) in &self.overrides {
+            if let Some(version) = spec.as_version()
+                && range.matches(version)
+            {
+                let platform_override = PlatformMapper::find_match(&or.platform, env);
+
+                if let Some(platform_override) = platform_override {
+                    platform.override_with(platform_override);
+                }
+            }
+        }
+
+        Ok(platform)
+    }
 }

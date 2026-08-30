@@ -1,4 +1,4 @@
-use crate::schema::{self, Schema};
+use crate::schema::{Schema, interpolate_tokens, v1::SchemaType};
 use extism_pdk::*;
 use proto_pdk::*;
 use regex::Captures;
@@ -29,71 +29,52 @@ fn get_schema() -> Result<Schema, Error> {
     Ok(schema)
 }
 
-fn get_platform<'schema>(
-    schema: &'schema Schema,
-    env: &HostEnvironment,
-) -> Result<&'schema PlatformMapper, PluginError> {
-    let mut platform = schema.platform.get(&env.os);
-
-    // Fallback to linux for other OSes
-    if platform.is_none() && env.os.is_bsd() {
-        platform = schema.platform.get(&HostOS::Linux);
-    }
-
-    platform.ok_or_else(|| PluginError::UnsupportedOS {
-        tool: schema.name.clone(),
-        os: env.os.to_rust_os(),
-    })
-}
-
 #[plugin_fn]
 pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {
     enable_tracing();
 
-    let env = get_host_environment()?;
     let schema = get_schema()?;
-    let platform = get_platform(&schema, env)?;
-    let mut deprecations = schema.deprecations.clone();
 
-    #[allow(deprecated)]
-    if platform.bin_path.is_some() {
-        deprecations.push(
-            format!("The <property>platform.{os}.bin-path</property> setting is deprecated, use <property>platform.{os}.exe-path</property> instead.", os = env.os)
-        );
-    }
+    Ok(Json(match schema {
+        Schema::V1(schema) => {
+            let mut deprecations = schema.deprecations.clone();
 
-    #[allow(deprecated)]
-    if schema.install.primary.is_some() {
-        deprecations.push(
-            "The <property>install.primary</property> setting is deprecated, use <property>install.exes</property> and the <symbol>primary</symbol> flag instead.".into()
-        );
-    }
+            #[allow(deprecated)]
+            if schema.install.primary.is_some() {
+                deprecations.push(
+                    "The <property>install.primary</property> setting is deprecated, use <property>install.exes</property> and the <symbol>primary</symbol> flag instead.".into()
+                );
+            }
 
-    #[allow(deprecated)]
-    if !schema.install.secondary.is_empty() {
-        deprecations.push(
-            "The <property>install.secondary</property> setting is deprecated, use <property>install.exes</property> instead.".into()
-        );
-    }
+            #[allow(deprecated)]
+            if !schema.install.secondary.is_empty() {
+                deprecations.push(
+                    "The <property>install.secondary</property> setting is deprecated, use <property>install.exes</property> instead.".into()
+                );
+            }
 
-    Ok(Json(RegisterToolOutput {
-        name: schema.name,
-        type_of: match schema.type_of {
-            SchemaType::CommandLine => PluginType::CommandLine,
-            SchemaType::DependencyManager => PluginType::DependencyManager,
-            SchemaType::Language => PluginType::Language,
-            SchemaType::VersionManager => PluginType::VersionManager,
-        },
-        minimum_proto_version: Some(Version::new(0, 60, 0)),
-        default_version: schema.metadata.default_version,
-        plugin_version: match schema.metadata.plugin_version {
-            Some(version) => Some(version),
-            None => Version::parse(env!("CARGO_PKG_VERSION")).ok(),
-        },
-        self_upgrade_commands: schema.metadata.self_upgrade_commands,
-        deprecations,
-        requires: schema.metadata.requires,
-        ..Default::default()
+            RegisterToolOutput {
+                name: schema.name,
+                type_of: match schema.type_of {
+                    SchemaType::CommandLine => PluginType::CommandLine,
+                    SchemaType::DependencyManager => PluginType::DependencyManager,
+                    SchemaType::Language => PluginType::Language,
+                    SchemaType::VersionManager => PluginType::VersionManager,
+                },
+                minimum_proto_version: Some(Version::new(0, 60, 0)),
+                default_version: schema.metadata.default_version,
+                plugin_version: match schema.metadata.plugin_version {
+                    Some(version) => Some(version),
+                    None => Version::parse(env!("CARGO_PKG_VERSION")).ok(),
+                },
+                self_upgrade_commands: schema.metadata.self_upgrade_commands,
+                deprecations,
+                requires: schema.metadata.requires,
+                ..Default::default()
+            }
+        }
+
+        Schema::V2(schema) => schema.metadata,
     }))
 }
 
@@ -147,17 +128,11 @@ fn create_version(cap: Captures) -> String {
 #[plugin_fn]
 pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
     let schema = get_schema()?;
-    let mut versions: HashSet<VersionSpec> = HashSet::from_iter(schema.resolve.versions);
+    let mut versions: HashSet<VersionSpec> = HashSet::from_iter(schema.source_versions());
 
     // Git tags
-    if let Some(repository) = schema.resolve.git_url {
-        let pattern = regex::Regex::new(
-            schema
-                .resolve
-                .git_tag_pattern
-                .as_ref()
-                .unwrap_or(&schema.resolve.version_pattern),
-        )?;
+    if let Some(repository) = schema.resolve_git_url() {
+        let pattern = regex::Regex::new(schema.resolve_git_tag_pattern())?;
 
         for tag in load_git_tags(repository)? {
             if let Some(cap) = pattern.captures(&tag) {
@@ -166,9 +141,9 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
         }
     }
     // URL endpoint
-    else if let Some(endpoint) = schema.resolve.manifest_url {
-        let pattern = regex::Regex::new(&schema.resolve.version_pattern)?;
-        let version_key = &schema.resolve.manifest_version_key;
+    else if let Some(endpoint) = schema.resolve_manifest_url() {
+        let pattern = regex::Regex::new(schema.resolve_manifest_version_pattern())?;
+        let version_key = schema.resolve_manifest_version_key();
         let response: Vec<JsonValue> = fetch_json(endpoint)?;
 
         for row in response {
@@ -191,12 +166,12 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
     }
 
     let mut output = LoadVersionsOutput::from_versions(versions.into_iter().collect());
-    output.aliases.extend(schema.resolve.aliases);
+    output.aliases.extend(schema.source_aliases());
 
     if output.versions.is_empty() {
         return Err(plugin_err!(
             "Unable to resolve versions for {}. Schema either requires a <property>resolve.git-url</property> or <property>resolve.manifest-url</property>.",
-            schema.name
+            schema.get_name()
         ));
     }
 
@@ -207,94 +182,13 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
 pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
     let schema = get_schema()?;
 
-    Ok(Json(DetectVersionOutput {
-        files: schema.detect.version_files,
-        ignore: schema.detect.ignore,
+    Ok(Json(match schema {
+        Schema::V1(schema) => DetectVersionOutput {
+            files: schema.detect.version_files,
+            ignore: schema.detect.ignore,
+        },
+        Schema::V2(schema) => schema.detect,
     }))
-}
-
-fn interpolate_tokens(
-    value: &str,
-    version: &VersionSpec,
-    schema: &Schema,
-    platform: &PlatformMapper,
-    env: &HostEnvironment,
-) -> String {
-    let arch = env.arch.to_rust_arch();
-    let os = env.os.to_string();
-
-    let mut value = value
-        .replace("{version}", &version.to_string())
-        .replace(
-            "{arch}",
-            platform
-                .arch
-                .get(&env.arch)
-                .or_else(|| schema.install.arch.get(&env.arch))
-                .unwrap_or(&arch),
-        )
-        .replace("{os}", &os);
-
-    // Avoid detecting musl unless requested
-    if value.contains("{libc}") {
-        let libc = env.libc.to_string();
-
-        value = value.replace(
-            "{libc}",
-            platform
-                .libc
-                .get(&env.libc)
-                .or_else(|| schema.install.libc.get(&env.libc))
-                .unwrap_or(&libc),
-        );
-    }
-
-    if let Some(v) = version.as_version() {
-        let major = v.major.to_string();
-        let minor = v.minor.to_string();
-        let patch = v.patch.to_string();
-        let year = format!("{:0>4}", v.major);
-        let month = format!("{:0>2}", v.minor);
-        let day = format!("{:0>2}", v.patch);
-        let major_minor = format!("{}.{}", v.major, v.minor); // Deprecated, remains for backwards compatibility
-        let year_month = format!("{:0>4}-{:0>2}", v.major, v.minor); // Deprecated, remains for backwards compatibility
-        let pre = v
-            .prerelease
-            .as_ref()
-            .map(|pre| pre.to_string())
-            .unwrap_or_default();
-        let build = v
-            .build
-            .as_ref()
-            .map(|build| build.to_string())
-            .unwrap_or_default();
-
-        value = value
-            .replace("{versionMajor}", &major)
-            .replace("{versionMinor}", &minor)
-            .replace("{versionPatch}", &patch)
-            .replace("{versionMajorMinor}", &major_minor) // Deprecated, remains for backwards compatibility
-            .replace("{versionYear}", &year)
-            .replace("{versionMonth}", &month)
-            .replace("{versionDay}", &day)
-            .replace("{versionYearMonth}", &year_month) // Deprecated, remains for backwards compatibility
-            .replace("{versionPrerelease}", &pre)
-            .replace("{versionBuild}", &build);
-    } else {
-        value = value
-            .replace("{versionMajor}", "")
-            .replace("{versionMinor}", "")
-            .replace("{versionPatch}", "")
-            .replace("{versionMajorMinor}", "") // Deprecated, remains for backwards compatibility
-            .replace("{versionYear}", "")
-            .replace("{versionMonth}", "")
-            .replace("{versionDay}", "")
-            .replace("{versionYearMonth}", "") // Deprecated, remains for backwards compatibility
-            .replace("{versionPrerelease}", "")
-            .replace("{versionBuild}", "");
-    }
-
-    value
 }
 
 #[plugin_fn]
@@ -307,7 +201,7 @@ pub fn download_prebuilt(
 
     if !platform.archs.is_empty() {
         check_supported_os_and_arch(
-            &schema.name,
+            &schema.get_name,
             env,
             HashMap::from_iter([(env.os, platform.archs.clone())]),
         )?;
@@ -375,145 +269,138 @@ pub fn download_prebuilt(
     }))
 }
 
-fn create_executable_config(schema: ExecutableSchema) -> ExecutableConfig {
-    ExecutableConfig {
-        exe_path: schema.exe_path,
-        exe_link_path: schema.exe_link_path,
-        no_bin: schema.no_bin,
-        no_shim: schema.no_shim,
-        parent_exe_args: schema.parent_exe_args,
-        parent_exe_name: schema.parent_exe_name,
-        primary: schema.primary,
-        shim_before_args: schema.shim_before_args.map(StringOrVec::Vec),
-        shim_after_args: schema.shim_after_args.map(StringOrVec::Vec),
-        shim_env_vars: schema.shim_env_vars.map(HashMap::from_iter),
-        update_perms: false,
-    }
-}
-
 #[plugin_fn]
 pub fn locate_executables(
     Json(input): Json<LocateExecutablesInput>,
 ) -> FnResult<Json<LocateExecutablesOutput>> {
+    let id = get_plugin_id()?;
     let env = get_host_environment()?;
     let schema = get_schema()?;
-    let platform = get_platform(&schema, env)?;
-    let id = get_plugin_id()?;
+    let platform = schema.get_platform(env, Some(&input.context.version))?;
 
-    // On Windows, automatically add the `.exe` extension to all executables.
-    // But only if there is no extension, so that we don't overwrite `.js` and others!
-    let append_exe_ext = |mut path: PathBuf| -> PathBuf {
+    let prepare_exe_path = |mut path: PathBuf| -> PathBuf {
+        // On Windows, automatically add the `.exe` extension to all executables.
+        // But only if there is no extension, so that we don't overwrite `.js` and others!
         if env.os.is_windows() && path.extension().is_none() {
             path.set_extension("exe");
+        }
+
+        // If we can convert the path into a string, we should interpolate
+        // tokens, otherwise return it as-is
+        if let Some(inner) = path.to_str() {
+            return interpolate_tokens(inner, env, &input.context.version, &platform).into();
         }
 
         path
     };
 
-    let prepare_primary_exe = |config: &mut ExecutableConfig| {
-        config.primary = true;
-
-        #[allow(deprecated)]
-        let exe_path = append_exe_ext(
-            // Name from platform
-            platform
-                .exe_path
-                .as_ref()
-                .or(platform.bin_path.as_ref())
-                // Name from config
-                .or(config.exe_path.as_ref())
-                // Name from plugin ID
-                .map_or_else(|| PathBuf::from(id.as_str()), |path| path.to_owned()),
-        );
-
-        config.exe_path = Some(
-            interpolate_tokens(
-                exe_path.to_str().unwrap_or("<invalidpath>"),
-                &input.context.version,
-                &schema,
-                platform,
-                env,
-            )
-            .into(),
-        );
-
-        if let Some(no_bin) = schema.install.no_bin {
-            config.no_bin = no_bin;
-        }
-
-        if let Some(no_shim) = schema.install.no_shim {
-            config.no_shim = no_shim;
-        }
-    };
-
-    let prepare_secondary_exe = |config: &mut ExecutableConfig| {
+    let prepare_exe_config = |config: &mut ExecutableConfig| {
         if let Some(exe_path) = config.exe_path.take() {
-            config.exe_path = Some(append_exe_ext(exe_path));
+            config.exe_path = Some(prepare_exe_path(exe_path));
         }
 
         if let Some(exe_link_path) = config.exe_link_path.take() {
-            config.exe_link_path = Some(append_exe_ext(exe_link_path));
+            config.exe_link_path = Some(prepare_exe_path(exe_link_path));
         }
     };
 
-    // Executables
-    let mut has_primary = false;
-    let mut exes = schema
-        .install
-        .exes
-        .iter()
-        .map(|(key, value)| {
-            let mut config = create_executable_config(value.to_owned());
+    let output: LocateExecutablesOutput = match schema {
+        Schema::V1(schema) => {
+            let prepare_primary_exe_config = |config: &mut ExecutableConfig| {
+                config.primary = true;
 
-            if config.primary {
-                has_primary = true;
-                prepare_primary_exe(&mut config);
-            } else {
-                prepare_secondary_exe(&mut config);
+                #[allow(deprecated)]
+                let exe_path =
+                    // Name from platform
+                    platform
+                    .exe_path.as_ref()
+                    // Name from config
+                    .or(config.exe_path.as_ref())
+                    // Name from plugin ID
+                    .map_or_else(|| PathBuf::from(id.as_str()), |path| path.to_owned());
+
+                config.exe_path = Some(exe_path);
+
+                if let Some(no_bin) = schema.install.no_bin {
+                    config.no_bin = no_bin;
+                }
+
+                if let Some(no_shim) = schema.install.no_shim {
+                    config.no_shim = no_shim;
+                }
+
+                prepare_exe_config(config);
+            };
+
+            // Executables
+            let mut has_primary = false;
+            let mut exes = schema
+                .install
+                .exes
+                .iter()
+                .map(|(key, value)| {
+                    let mut config = value.to_owned().into_config();
+
+                    if config.primary {
+                        has_primary = true;
+                        prepare_primary_exe_config(&mut config);
+                    } else {
+                        prepare_exe_config(&mut config);
+                    }
+
+                    (key.to_string(), config)
+                })
+                .collect::<HashMap<_, _>>();
+
+            // Primary & secondary exe's (deprecated)
+            if !has_primary {
+                #[allow(deprecated)]
+                let mut primary = schema
+                    .install
+                    .primary
+                    .clone()
+                    .map(|exe| exe.into_config())
+                    .unwrap_or_default();
+
+                prepare_primary_exe_config(&mut primary);
+
+                exes.insert(id.to_string(), primary.clone());
             }
 
-            (key.to_string(), config)
-        })
-        .collect::<HashMap<_, _>>();
-
-    // Primary & secondary exe's (deprecated)
-    if !has_primary {
-        #[allow(deprecated)]
-        let mut primary = schema
-            .install
-            .primary
-            .clone()
-            .map(create_executable_config)
-            .unwrap_or_default();
-
-        prepare_primary_exe(&mut primary);
-
-        exes.insert(id.to_string(), primary.clone());
-    }
-
-    #[allow(deprecated)]
-    schema.install.secondary.iter().for_each(|(key, value)| {
-        exes.entry(key.to_owned()).or_insert_with(|| {
-            let mut config = create_executable_config(value.to_owned());
-
-            prepare_secondary_exe(&mut config);
-
-            config
-        });
-    });
-
-    Ok(Json(LocateExecutablesOutput {
-        exes: HashMap::from_iter(exes),
-        exes_dirs: if platform.exes_dirs.is_empty() {
             #[allow(deprecated)]
-            match platform.exes_dir.as_ref() {
-                Some(dir) => vec![dir.into()],
-                None => vec![],
+            schema.install.secondary.iter().for_each(|(key, value)| {
+                exes.entry(key.to_owned()).or_insert_with(|| {
+                    let mut config = value.to_owned().into_config();
+
+                    prepare_exe_config(&mut config);
+
+                    config
+                });
+            });
+
+            LocateExecutablesOutput {
+                exes: HashMap::from_iter(exes),
+                exes_dirs: platform.exes_dirs,
+                globals_lookup_dirs: schema.packages.globals_lookup_dirs,
+                globals_prefix: schema.packages.globals_prefix,
             }
-        } else {
-            platform.exes_dirs.clone()
-        },
-        globals_lookup_dirs: schema.packages.globals_lookup_dirs,
-        globals_prefix: schema.packages.globals_prefix,
-    }))
+        }
+
+        Schema::V2(schema) => {
+            let mut output = schema.locate;
+
+            output.exes = output
+                .exes
+                .into_iter()
+                .map(|(exe, mut config)| {
+                    prepare_exe_config(&mut config);
+                    (exe, config)
+                })
+                .collect();
+
+            output
+        }
+    };
+
+    Ok(Json(output))
 }
