@@ -126,9 +126,30 @@ fn create_version(cap: Captures) -> String {
 }
 
 #[plugin_fn]
+pub fn detect_version_files(
+    Json(_): Json<DetectVersionInput>,
+) -> FnResult<Json<DetectVersionOutput>> {
+    let schema = get_schema()?;
+
+    Ok(Json(match schema {
+        Schema::V1(schema) => DetectVersionOutput {
+            files: schema.detect.version_files,
+            ignore: schema.detect.ignore,
+        },
+        Schema::V2(schema) => schema.detect,
+    }))
+}
+
+#[plugin_fn]
 pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
     let schema = get_schema()?;
     let mut versions: HashSet<VersionSpec> = HashSet::from_iter(schema.source_versions());
+    let aliases = schema.source_aliases();
+
+    let output: LoadVersionsOutput = match schema {
+        Schema::V1(schema) => {}
+        Schema::V2(schema) => {}
+    };
 
     // Git tags
     if let Some(repository) = schema.resolve_git_url() {
@@ -176,19 +197,6 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
     }
 
     Ok(Json(output))
-}
-
-#[plugin_fn]
-pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
-    let schema = get_schema()?;
-
-    Ok(Json(match schema {
-        Schema::V1(schema) => DetectVersionOutput {
-            files: schema.detect.version_files,
-            ignore: schema.detect.ignore,
-        },
-        Schema::V2(schema) => schema.detect,
-    }))
 }
 
 #[plugin_fn]
@@ -387,7 +395,29 @@ pub fn locate_executables(
         }
 
         Schema::V2(schema) => {
-            let mut output = schema.locate;
+            let mut output = schema.apply_overrides(
+                &input.context.version,
+                schema.locate.clone(),
+                |prev, or| {
+                    if let Some(next) = &or.locate {
+                        if !next.exes.is_empty() {
+                            prev.exes = next.exes.clone();
+                        }
+
+                        if !next.exes_dirs.is_empty() {
+                            prev.exes_dirs = next.exes_dirs.clone();
+                        }
+
+                        if !next.globals_lookup_dirs.is_empty() {
+                            prev.globals_lookup_dirs = next.globals_lookup_dirs.clone();
+                        }
+
+                        if let Some(value) = &next.globals_prefix {
+                            prev.globals_prefix = Some(value.to_owned());
+                        }
+                    }
+                },
+            );
 
             output.exes = output
                 .exes

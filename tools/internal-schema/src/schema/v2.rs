@@ -41,10 +41,9 @@ impl Default for ResolveSchema {
 #[derive(Debug, Default, Deserialize)]
 #[serde(default)]
 pub struct Override {
-    pub detect: DetectVersionOutput,
-    pub resolve: ResolveSchema,
-    pub install: DownloadPrebuiltOutput,
-    pub locate: LocateExecutablesOutput,
+    pub resolve: Option<ResolveSchema>,
+    pub install: Option<DownloadPrebuiltOutput>,
+    pub locate: Option<LocateExecutablesOutput>,
 
     pub platform: HashMap<HostOS, PlatformMapper>,
 }
@@ -72,6 +71,23 @@ pub struct SchemaV2 {
 }
 
 impl SchemaV2 {
+    pub fn apply_overrides<T>(
+        &self,
+        spec: &VersionSpec,
+        mut base: T,
+        op: impl Fn(&mut T, &Override),
+    ) -> T {
+        for (range, or) in &self.overrides {
+            if let Some(version) = spec.as_version()
+                && range.matches(version)
+            {
+                op(&mut base, or);
+            }
+        }
+
+        base
+    }
+
     pub fn get_platform(
         &self,
         env: &HostEnvironment,
