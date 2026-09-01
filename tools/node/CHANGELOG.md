@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added a `dist-url-unofficial` setting, for downloading [unofficial builds](https://github.com/nodejs/unofficial-builds), like musl.
+- Added an `index-url` setting, for loading available versions from a mirror.
+- Updated `dist-url` and `index-url` to support a `{channel}` token, which is replaced with `release`, or `nightly` for canary versions.
+  - Previously, canary versions were resolved by replacing `/release/` within `dist-url`, which did nothing for custom mirrors that didn't include that path segment.
+
 ## 0.17.12
 
 #### 🚀 Updates
