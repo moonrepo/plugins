@@ -20,13 +20,19 @@ node = "https://github.com/moonrepo/plugins/releases/download/node_tool-vX.Y.Z/n
 All plugins can be configured with a `.prototools` file.
 
 - `bundled-npm` (bool) - When `node` is installed, also install `npm` with the version of npm that came bundled with Node.js. Defaults to `false`.
-- `dist-url` (string) - The distribution URL to download Node.js archives from. Supports `{version}` and `{file}` tokens.
+- `dist-url` (string) - The distribution URL to download Node.js archives from. Supports `{channel}`, `{version}`, and `{file}` tokens.
+- `dist-url-unofficial` (string) - The distribution URL to download [unofficial Node.js builds](https://github.com/nodejs/unofficial-builds) from, like musl. Supports `{channel}`, `{version}`, and `{file}` tokens.
+- `index-url` (string) - The URL of a Node.js-compatible versions index. Supports the `{channel}` token.
 
 ```toml
 [tools.node]
 bundled-npm = true
-dist-url = "https://..."
+dist-url = "https://nodejs.org/download/{channel}/v{version}/{file}"
+dist-url-unofficial = "https://unofficial-builds.nodejs.org/download/{channel}/v{version}/{file}"
+index-url = "https://nodejs.org/download/{channel}/index.json"
 ```
+
+> The `{channel}` token is replaced with `release`, or `nightly` when installing a canary version.
 
 ## Hooks
 

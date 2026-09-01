@@ -4,6 +4,7 @@ use std::fs;
 
 mod node_tool {
     use super::*;
+    use ::node_tool::NodeToolConfig;
 
     generate_resolve_versions_tests!("node-test", {
         "8" => "8.17.0",
@@ -22,6 +23,29 @@ mod node_tool {
         let output = plugin.load_versions(LoadVersionsInput::default()).await;
 
         assert!(!output.versions.is_empty());
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn loads_versions_from_custom_index_url() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("node-test", |config| {
+                config.tool_config(NodeToolConfig {
+                    index_url: "https://nodejs.org/download/nightly/index.json".into(),
+                    ..Default::default()
+                });
+            })
+            .await;
+
+        let output = plugin.load_versions(LoadVersionsInput::default()).await;
+
+        assert!(!output.versions.is_empty());
+        assert!(
+            output
+                .versions
+                .iter()
+                .all(|version| version.to_string().contains("nightly"))
+        );
     }
 
     #[tokio::test(flavor = "multi_thread")]

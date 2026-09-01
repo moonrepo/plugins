@@ -2,6 +2,7 @@ use proto_pdk_test_utils::*;
 
 mod node_tool {
     use super::*;
+    use ::node_tool::NodeToolConfig;
 
     generate_download_install_tests!("node-test", "18.0.0");
 
@@ -446,6 +447,123 @@ mod node_tool {
                     "https://nodejs.org/download/release/v20.0.0/node-v20.0.0-win-x86.zip".into(),
                 ..Default::default()
             }
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn supports_custom_dist_url() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("node-test", |config| {
+                config
+                    .host(HostOS::Linux, HostArch::X64)
+                    .tool_config(NodeToolConfig {
+                        dist_url: "https://mirror.com/node/{channel}/v{version}/{file}".into(),
+                        ..Default::default()
+                    });
+            })
+            .await;
+
+        assert_eq!(
+            plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("20.0.0").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await,
+            DownloadPrebuiltOutput {
+                archive_prefix: Some("node-v20.0.0-linux-x64".into()),
+                checksum_url: Some("https://mirror.com/node/release/v20.0.0/SHASUMS256.txt".into()),
+                download_name: Some("node-v20.0.0-linux-x64.tar.xz".into()),
+                download_url:
+                    "https://mirror.com/node/release/v20.0.0/node-v20.0.0-linux-x64.tar.xz".into(),
+                ..Default::default()
+            }
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn supports_custom_dist_url_unofficial() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("node-test", |config| {
+                config
+                    .host_environment(HostEnvironment {
+                        arch: HostArch::X64,
+                        libc: HostLibc::Musl,
+                        os: HostOS::Linux,
+                        ..Default::default()
+                    })
+                    .tool_config(NodeToolConfig {
+                        dist_url: "https://mirror.com/node/{channel}/v{version}/{file}".into(),
+                        dist_url_unofficial:
+                            "https://mirror.com/unofficial/{channel}/v{version}/{file}".into(),
+                        ..Default::default()
+                    });
+            })
+            .await;
+
+        assert_eq!(
+            plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("20.0.0").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await,
+            DownloadPrebuiltOutput {
+                archive_prefix: Some("node-v20.0.0-linux-x64-musl".into()),
+                checksum_url: Some(
+                    "https://mirror.com/unofficial/release/v20.0.0/SHASUMS256.txt".into()
+                ),
+                download_name: Some("node-v20.0.0-linux-x64-musl.tar.xz".into()),
+                download_url:
+                    "https://mirror.com/unofficial/release/v20.0.0/node-v20.0.0-linux-x64-musl.tar.xz"
+                        .into(),
+                ..Default::default()
+            }
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn uses_nightly_channel_for_canary() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("node-test", |config| {
+                config
+                    .host(HostOS::Linux, HostArch::X64)
+                    .tool_config(NodeToolConfig {
+                        dist_url: "https://mirror.com/node/{channel}/v{version}/{file}".into(),
+                        ..Default::default()
+                    });
+            })
+            .await;
+
+        let output = plugin
+            .download_prebuilt(DownloadPrebuiltInput {
+                context: PluginContext {
+                    version: VersionSpec::parse("canary").unwrap(),
+                    ..Default::default()
+                },
+                ..Default::default()
+            })
+            .await;
+
+        assert!(
+            output
+                .download_url
+                .starts_with("https://mirror.com/node/nightly/v")
+        );
+        assert!(
+            output
+                .checksum_url
+                .unwrap()
+                .starts_with("https://mirror.com/node/nightly/v")
         );
     }
 
