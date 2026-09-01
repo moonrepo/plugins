@@ -153,8 +153,9 @@ pub fn unpin_version(Json(input): Json<UnpinVersionInput>) -> FnResult<Json<Unpi
 #[plugin_fn]
 pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
     let mut output = LoadVersionsOutput::default();
+    let config = get_tool_config::<NodeToolConfig>()?;
     let response: Vec<NodeDistVersion> =
-        fetch_json("https://nodejs.org/download/release/index.json")?;
+        fetch_json(config.index_url.replace("{channel}", "release"))?;
 
     for (index, item) in response.iter().enumerate() {
         let version = UnresolvedVersionSpec::parse(&item.version[1..])?;
@@ -301,8 +302,10 @@ pub fn download_prebuilt(
         ],
     )?;
 
+    let config = get_tool_config::<NodeToolConfig>()?;
     let mut version = input.context.version;
-    let mut host = get_tool_config::<NodeToolConfig>()?.dist_url;
+    let mut host = config.dist_url;
+    let mut channel = "release";
 
     let mut arch: String = match env.arch {
         HostArch::Arm => "armv7l".into(),
@@ -337,13 +340,13 @@ pub fn download_prebuilt(
         && (env.arch == HostArch::X64 || env.arch == HostArch::Arm64)
     {
         arch.push_str("-musl");
-        host = "https://unofficial-builds.nodejs.org/download/release/v{version}/{file}".into();
+        host = config.dist_url_unofficial;
     }
 
     // When canary, extract the latest version from the index
     if version.is_canary() {
         let response: Vec<NodeDistVersion> =
-            fetch_json("https://nodejs.org/download/nightly/index.json")?;
+            fetch_json(config.index_url.replace("{channel}", "nightly"))?;
         let file_to_match = match env.os {
             HostOS::Linux => format!("linux-{arch}"),
             HostOS::MacOS => format!("osx-{arch}-tar"),
@@ -356,7 +359,7 @@ pub fn download_prebuilt(
             .find(|row| row.files.iter().any(|file| file == &file_to_match))
             .unwrap_or(&response[0]);
 
-        host = host.replace("/release/", "/nightly/");
+        channel = "nightly";
         version = VersionSpec::parse(&entry.version)?;
     }
 
@@ -377,11 +380,13 @@ pub fn download_prebuilt(
         archive_prefix: Some(prefix),
         download_url: host
             .replace("{version}", &version.to_string())
-            .replace("{file}", &filename),
+            .replace("{file}", &filename)
+            .replace("{channel}", channel),
         download_name: Some(filename),
         checksum_url: Some(
             host.replace("{version}", &version.to_string())
-                .replace("{file}", "SHASUMS256.txt"),
+                .replace("{file}", "SHASUMS256.txt")
+                .replace("{channel}", channel),
         ),
         ..Default::default()
     }))
