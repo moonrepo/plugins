@@ -1734,6 +1734,44 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1aaf95b3e5c8f23aa320147307562d361db0ae0d51242340f558153b4eb2439b"
 
 [[package]]
+name = "dotnet_tool"
+version = "0.0.1"
+dependencies = [
+ "extism-pdk",
+ "proto_pdk",
+ "proto_pdk_api 0.34.1",
+ "proto_pdk_test_utils 0.49.3",
+ "schematic",
+ "serde",
+ "serde_json",
+ "starbase_sandbox",
+ "starbase_utils 0.14.2",
+ "tokio",
+ "tool_common",
+]
+
+[[package]]
+name = "dotnet_toolchain"
+version = "0.1.0"
+dependencies = [
+ "dotnet_tool",
+ "extism-pdk",
+ "moon_common",
+ "moon_config",
+ "moon_pdk",
+ "moon_pdk_api",
+ "moon_pdk_test_utils",
+ "moon_target",
+ "schematic",
+ "serde",
+ "serde_json",
+ "starbase_sandbox",
+ "starbase_utils 0.14.2",
+ "tokio",
+ "toolchain_common",
+]
+
+[[package]]
 name = "download_extension"
 version = "1.0.3"
 dependencies = [
