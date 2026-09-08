@@ -6,4 +6,6 @@ license = "MIT"
 publish = false
 
 [dependencies]
+indexmap = { workspace = true }
 proto_pdk = { workspace = true, features = ["tracing"] }
+serde = { workspace = true }
