@@ -10,6 +10,7 @@ use tool_common::enable_tracing;
 #[host_fn]
 extern "ExtismHost" {
     fn exec_command(input: Json<ExecCommandInput>) -> Json<ExecCommandOutput>;
+    fn send_request(input: Json<SendRequestInput>) -> Json<SendRequestOutput>;
 }
 
 fn get_schema() -> Result<Schema, Error> {

@@ -10,6 +10,7 @@ use starbase_utils::fs;
 #[host_fn]
 extern "ExtismHost" {
     fn exec_command(input: Json<ExecCommandInput>) -> Json<ExecCommandOutput>;
+    fn send_request(input: Json<SendRequestInput>) -> Json<SendRequestOutput>;
 }
 
 #[plugin_fn]

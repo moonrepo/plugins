@@ -1,12 +1,12 @@
-use crate::releases::*;
 use extism_pdk::*;
 use proto_pdk::*;
 use std::collections::HashMap;
-use tool_common::enable_tracing;
+use tool_common::{enable_tracing, registry::*};
 
 #[host_fn]
 extern "ExtismHost" {
     fn exec_command(input: Json<ExecCommandInput>) -> Json<ExecCommandOutput>;
+    fn send_request(input: Json<SendRequestInput>) -> Json<SendRequestOutput>;
 }
 
 #[plugin_fn]
@@ -130,17 +130,52 @@ pub fn download_prebuilt(
     Json(input): Json<DownloadPrebuiltInput>,
 ) -> FnResult<Json<DownloadPrebuiltOutput>> {
     let env = get_host_environment()?;
-    let version = &input.context.version;
+    let spec = &input.context.version;
 
-    let Some(asset) = load_prebuilt_asset(env, version)? else {
-        return Err(plugin_err!(
-            "No pre-built available for <hash>{version}</hash> on <id>{}-{}</id>! Try building from source with <shell>--build</shell>.",
+    let make_error = || {
+        plugin_err!(
+            "No pre-built available for <hash>{spec}</hash> on <id>{}-{}</id>! Try building from source with <shell>--build</shell>.",
             env.os,
             env.arch,
-        ));
+        )
     };
 
-    Ok(Json(create_download_output(asset, version)))
+    let Some(version) = spec.as_version() else {
+        return Err(make_error());
+    };
+
+    let release = fetch_release("ruby", version)?;
+
+    // The API does not return the release identifier or the archive prefix,
+    // so we need to create those values manually
+    // https://github.com/jdx/ruby/releases
+    let mut release_id = format!("{}.{}.{}", version.major, version.minor, version.patch);
+
+    if let Some(pre) = &version.prerelease {
+        release_id.push('-');
+
+        if pre.contains("preview") {
+            release_id.push_str(&pre.replace(".", ""));
+        } else {
+            release_id.push_str(pre);
+        }
+    }
+
+    // Prefix contains prerelease but not build
+    let archive_prefix = format!("ruby-{release_id}");
+
+    if let Some(build) = &version.build {
+        release_id.push('-');
+        release_id.push_str(build);
+    }
+
+    let Some(mut output) = release.create_download_prebuilt(release_id, env, version) else {
+        return Err(make_error());
+    };
+
+    output.archive_prefix = Some(archive_prefix);
+
+    Ok(Json(output))
 }
 
 #[plugin_fn]

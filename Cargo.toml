@@ -5,6 +5,7 @@ members = ["backends/*", "crates/*", "extensions/*", "tools/*", "toolchains/*"]
 [workspace.dependencies]
 # Common
 extism-pdk = { version = "1.4.1" }
+indexmap = "2.14.2"
 regex = { version = "1.13.1", default-features = false, features = ["std"] }
 rustc-hash = "2.1.2"
 schematic = { version = "0.19.7", default-features = false, features = [

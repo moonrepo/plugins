@@ -10,6 +10,7 @@ use tool_common::enable_tracing;
 extern "ExtismHost" {
     fn exec_command(input: Json<ExecCommandInput>) -> Json<ExecCommandOutput>;
     fn host_log(input: Json<HostLogInput>);
+    fn send_request(input: Json<SendRequestInput>) -> Json<SendRequestOutput>;
 }
 
 static NAME: &str = "Python";

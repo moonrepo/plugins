@@ -21,6 +21,7 @@ const CMD_SHIM_TEMPLATE: &str = include_str!("../templates/cmd-shim.cmd");
 extern "ExtismHost" {
     fn exec_command(input: Json<ExecCommandInput>) -> Json<ExecCommandOutput>;
     fn get_env_var(key: &str) -> String;
+    fn send_request(input: Json<SendRequestInput>) -> Json<SendRequestOutput>;
 }
 
 #[plugin_fn]
