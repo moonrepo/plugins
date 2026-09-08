@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Updated pre-builts to reference our new API: https://registry.moonrepo.app/releases/ruby
+- Updated version resolving to use the latest available build (trailing `+`) when one exists, and no build was provided in the original version.
+
 ## 0.2.10
 
 #### 🐞 Fixes

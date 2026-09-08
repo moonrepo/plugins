@@ -59,6 +59,26 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
 }
 
 #[plugin_fn]
+pub fn resolve_version(
+    Json(input): Json<ResolveVersionInput>,
+) -> FnResult<Json<ResolveVersionOutput>> {
+    let mut output = ResolveVersionOutput::default();
+
+    // If we have a full semantic version without a build,
+    // fetch the available release and see if we have a build to use
+    if let UnresolvedVersionSpec::Version(version) = &input.initial
+        && version.build.is_none()
+        && let Ok(release) = fetch_release("ruby", version)
+        && !release.builds.is_empty()
+        && let Some(build_id) = release.builds.keys().next()
+    {
+        output.version = Some(VersionSpec::parse(format!("{version}+{build_id}"))?);
+    }
+
+    Ok(Json(output))
+}
+
+#[plugin_fn]
 pub fn build_instructions(
     Json(input): Json<BuildInstructionsInput>,
 ) -> FnResult<Json<BuildInstructionsOutput>> {
