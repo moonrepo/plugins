@@ -1,6 +1,6 @@
 use indexmap::IndexMap;
 use proto_pdk::{
-    AnyResult, ChecksumAlgorithm, HostArch, HostEnvironment, HostOS, Version, fetch_json,
+    AnyResult, ChecksumAlgorithm, HostArch, HostEnvironment, HostLibc, HostOS, Version, fetch_json,
 };
 use serde::Deserialize;
 
@@ -9,7 +9,8 @@ use serde::Deserialize;
 pub struct Artifact {
     pub arch: Option<HostArch>,
     pub os: Option<HostOS>,
-    pub abi: Option<String>, // TODO
+    pub libc: Option<HostLibc>,
+    pub abi: Option<String>,
     pub archive_file: String,
     pub size: Option<i64>,
     pub checksum_file: Option<String>,
@@ -57,15 +58,20 @@ pub fn fetch_versions(
     language: &str,
     with_filters: bool,
 ) -> AnyResult<Vec<Version>> {
-    let mut query = String::new();
+    let mut query = vec![];
 
     if with_filters {
-        query = format!("arch={}&os={}", env.arch, env.os);
-        // TODO ABI
+        query.push(format!("arch={}", env.arch));
+        query.push(format!("os={}", env.os));
+
+        if matches!(env.libc, HostLibc::Gnu | HostLibc::Musl | HostLibc::Msvc) {
+            query.push(format!("libc={}", env.libc));
+        }
     }
 
     let res: VersionsResponse = fetch_json(format!(
-        "https://registry.moonrepo.app/releases/{language}/versions?{query}"
+        "https://registry.moonrepo.app/releases/{language}/versions?{}",
+        query.join("&")
     ))?;
 
     Ok(res.data)
