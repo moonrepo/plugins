@@ -1,3 +1,4 @@
+use crate::version::*;
 use extism_pdk::*;
 use proto_pdk::*;
 use std::collections::HashMap;
@@ -47,7 +48,7 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
                 if version.starts_with('0') || version.starts_with('1') {
                     None
                 } else {
-                    Some(version)
+                    Some(from_ruby_version(&version))
                 }
             } else {
                 None
@@ -64,11 +65,21 @@ pub fn resolve_version(
 ) -> FnResult<Json<ResolveVersionOutput>> {
     let mut output = ResolveVersionOutput::default();
 
+    let UnresolvedVersionSpec::Version(initial) = &input.initial else {
+        return Ok(Json(output));
+    };
+
+    // Normalize prereleases to the registry format
+    let version = Version::parse(from_ruby_version(&initial.to_string()))?;
+
+    if &version != initial {
+        output.candidate = Some(UnresolvedVersionSpec::Version(version.clone()));
+    }
+
     // If we have a full semantic version without a build,
     // fetch the available release and see if we have a build to use
-    if let UnresolvedVersionSpec::Version(version) = &input.initial
-        && version.build.is_none()
-        && let Ok(release) = fetch_release("ruby", version)
+    if version.build.is_none()
+        && let Ok(release) = fetch_release("ruby", &version)
         && !release.builds.is_empty()
         && let Some(build_id) = release.builds.keys().next()
     {
@@ -88,6 +99,11 @@ pub fn build_instructions(
     if env.os.is_windows() {
         return Err(PluginError::UnsupportedWindowsBuild.into());
     }
+
+    let ruby_version = match version.as_version() {
+        Some(version) => to_ruby_version(version),
+        None => version.to_string(),
+    };
 
     let output = BuildInstructionsOutput {
         help_url: Some(
@@ -136,7 +152,7 @@ pub fn build_instructions(
             })),
             BuildInstruction::RunCommand(Box::new(CommandInstruction::with_builder(
                 "ruby-build",
-                ["--verbose", version.to_string().as_str(), "."],
+                ["--verbose", ruby_version.as_str(), "."],
             ))),
         ],
         ..Default::default()
@@ -169,17 +185,7 @@ pub fn download_prebuilt(
     // The API does not return the release identifier or the archive prefix,
     // so we need to create those values manually
     // https://github.com/jdx/ruby/releases
-    let mut release_id = format!("{}.{}.{}", version.major, version.minor, version.patch);
-
-    if let Some(pre) = &version.prerelease {
-        release_id.push('-');
-
-        if pre.contains("preview") {
-            release_id.push_str(&pre.replace(".", ""));
-        } else {
-            release_id.push_str(pre);
-        }
-    }
+    let mut release_id = to_ruby_version(version);
 
     // Prefix contains prerelease but not build
     let archive_prefix = format!("ruby-{release_id}");

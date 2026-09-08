@@ -11,6 +11,38 @@ mod ruby_tool {
     use super::*;
 
     #[tokio::test(flavor = "multi_thread")]
+    async fn loads_prereleases_in_registry_format() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("ruby-test").await;
+
+        let output = plugin.load_versions(LoadVersionsInput::default()).await;
+        let versions = output
+            .versions
+            .iter()
+            .map(|v| v.to_string())
+            .collect::<Vec<_>>();
+
+        assert!(versions.contains(&"3.4.5".to_string()));
+        assert!(versions.contains(&"4.0.0-preview.2".to_string()));
+        assert!(versions.contains(&"3.4.0-rc.1".to_string()));
+        assert!(!versions.contains(&"4.0.0-preview2".to_string()));
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn normalizes_ruby_prerelease_format() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("ruby-test").await;
+
+        assert_eq!(
+            plugin.resolve_version(create_input("4.0.0-preview2")).await,
+            ResolveVersionOutput {
+                candidate: Some(UnresolvedVersionSpec::parse("4.0.0-preview.2").unwrap()),
+                version: Some(VersionSpec::parse("4.0.0-preview.2+4").unwrap()),
+            }
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
     async fn appends_latest_build_to_full_version() {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox.create_plugin("ruby-test").await;
