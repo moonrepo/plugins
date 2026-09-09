@@ -9,3 +9,6 @@ publish = false
 indexmap = { workspace = true }
 proto_pdk = { workspace = true, features = ["tracing"] }
 serde = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }

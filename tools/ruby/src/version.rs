@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use proto_pdk::Version;
 
 // Ruby tags, ruby-build, and GitHub releases use `preview2` and `rc1`,

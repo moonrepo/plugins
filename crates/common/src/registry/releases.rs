@@ -3,13 +3,25 @@ use proto_pdk::{
     AnyResult, ChecksumAlgorithm, DownloadPrebuiltOutput, HostArch, HostEnvironment, HostLibc,
     HostOS, Version, fetch_json,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
+
+// Some artifacts use a libc/ABI that `HostLibc` doesn't support (like `msvc`),
+// so ignore those values instead of failing, which allows the artifact
+// to be matched against any host
+fn deserialize_libc<'de, D: Deserializer<'de>>(des: D) -> Result<Option<HostLibc>, D::Error> {
+    Ok(match Option::<String>::deserialize(des)?.as_deref() {
+        Some("gnu") => Some(HostLibc::Gnu),
+        Some("musl") => Some(HostLibc::Musl),
+        _ => None,
+    })
+}
 
 #[derive(Clone, Debug, Default, Deserialize)]
 #[serde(default)]
 pub struct Artifact {
     pub arch: Option<HostArch>,
     pub os: Option<HostOS>,
+    #[serde(deserialize_with = "deserialize_libc")]
     pub libc: Option<HostLibc>,
     pub abi: Option<String>,
     pub archive_file: String,
@@ -145,4 +157,42 @@ pub fn fetch_release(language: &str, version: &Version) -> AnyResult<Release> {
     ))?;
 
     Ok(res.data)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn create_build(libc: &str) -> Build {
+        serde_json::from_str(&format!(
+            r#"{{"artifacts":{{"triple":{{"arch":"x86_64","os":"windows",{libc}"archive_file":"a.tar.gz"}}}}}}"#
+        ))
+        .unwrap()
+    }
+
+    #[test]
+    fn ignores_unsupported_libc() {
+        assert_eq!(
+            create_build(r#""libc":"msvc","#).artifacts["triple"].libc,
+            None
+        );
+        assert_eq!(create_build("").artifacts["triple"].libc, None);
+        assert_eq!(
+            create_build(r#""libc":"musl","#).artifacts["triple"].libc,
+            Some(HostLibc::Musl)
+        );
+    }
+
+    #[test]
+    fn matches_artifact_ignoring_unsupported_libc() {
+        let build = create_build(r#""libc":"msvc","#);
+        let env = HostEnvironment {
+            arch: HostArch::X64,
+            os: HostOS::Windows,
+            libc: HostLibc::Unknown,
+            ..Default::default()
+        };
+
+        assert!(build.get_artifact(&env).is_some());
+    }
 }
