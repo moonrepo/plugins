@@ -4981,6 +4981,7 @@ version = "0.14.9"
 dependencies = [
  "extism-pdk",
  "proto_pdk",
+ "proto_pdk_api 0.34.1",
  "proto_pdk_test_utils 0.49.3",
  "regex",
  "schematic",
@@ -5510,6 +5511,7 @@ version = "0.2.10"
 dependencies = [
  "extism-pdk",
  "proto_pdk",
+ "proto_pdk_api 0.34.1",
  "proto_pdk_test_utils 0.49.3",
  "schematic",
  "serde",

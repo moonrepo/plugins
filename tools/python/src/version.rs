@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use proto_pdk::Version;
+use proto_pdk_api::Version;
 use regex::Regex;
 
 // Python tags, python-build, and the pre-built archives use `3.15.0rc2`,
