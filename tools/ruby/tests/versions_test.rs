@@ -11,9 +11,21 @@ mod ruby_tool {
         }
     }
 
+    // The registry versions are filtered by host, and Ruby has no
+    // Windows artifacts, so pin the host instead of inheriting it
+    fn use_linux_host(host: &mut HostEnvironment) {
+        host.os = HostOS::Linux;
+        host.arch = HostArch::X64;
+        host.libc = HostLibc::Gnu;
+    }
+
     async fn load_version_strings() -> Vec<String> {
         let sandbox = create_empty_proto_sandbox();
-        let plugin = sandbox.create_plugin("ruby-test").await;
+        let plugin = sandbox
+            .create_plugin_with_config("ruby-test", |config| {
+                config.host_with(use_linux_host);
+            })
+            .await;
 
         plugin
             .load_versions(LoadVersionsInput::default())
@@ -69,7 +81,11 @@ mod ruby_tool {
     #[tokio::test(flavor = "multi_thread")]
     async fn resolves_range_to_build_specific_version() {
         let sandbox = create_empty_proto_sandbox();
-        let plugin = sandbox.create_plugin("ruby-test").await;
+        let plugin = sandbox
+            .create_plugin_with_config("ruby-test", |config| {
+                config.host_with(use_linux_host);
+            })
+            .await;
         let mut spec = ToolSpec::parse("3.4").unwrap();
 
         flow::resolve::Resolver::new(&plugin.tool)
