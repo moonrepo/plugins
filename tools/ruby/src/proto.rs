@@ -1,7 +1,9 @@
+use crate::config::RubyToolConfig;
 use crate::version::*;
 use extism_pdk::*;
 use proto_pdk::*;
-use std::collections::HashMap;
+use schematic::SchemaBuilder;
+use std::collections::{HashMap, HashSet};
 use tool_common::{enable_tracing, registry::*};
 
 #[host_fn]
@@ -26,6 +28,13 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
 }
 
 #[plugin_fn]
+pub fn define_tool_config(_: ()) -> FnResult<Json<DefineToolConfigOutput>> {
+    Ok(Json(DefineToolConfigOutput {
+        schema: SchemaBuilder::build_root::<RubyToolConfig>(),
+    }))
+}
+
+#[plugin_fn]
 pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
     Ok(Json(DetectVersionOutput {
         files: vec![".ruby-version".into()],
@@ -35,6 +44,8 @@ pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
 
 #[plugin_fn]
 pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
+    let env = get_host_environment()?;
+
     let tags = load_git_tags("https://github.com/ruby/ruby")?
         .into_iter()
         .filter_map(|tag| {
@@ -56,13 +67,22 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
         })
         .collect::<Vec<_>>();
 
-    Ok(Json(LoadVersionsOutput::from(tags)?))
+    let mut output = LoadVersionsOutput::from(tags)?;
+    let mut versions = HashSet::<VersionSpec>::from_iter(output.versions);
+
+    // Include our build specific versions, as these are not official
+    versions.extend(fetch_versions(env, "ruby", true)?);
+
+    output.versions = versions.into_iter().collect();
+
+    Ok(Json(output))
 }
 
 #[plugin_fn]
 pub fn resolve_version(
     Json(input): Json<ResolveVersionInput>,
 ) -> FnResult<Json<ResolveVersionOutput>> {
+    let config = get_tool_config::<RubyToolConfig>()?;
     let mut output = ResolveVersionOutput::default();
 
     let UnresolvedVersionSpec::Version(initial) = &input.initial else {
@@ -78,9 +98,9 @@ pub fn resolve_version(
 
     // If we have a full semantic version without a build,
     // fetch the available release and see if we have a build to use
-    if version.build.is_none()
+    if config.use_latest_build
+        && version.build.is_none()
         && let Ok(release) = fetch_release("ruby", &version)
-        && !release.builds.is_empty()
         && let Some(build_id) = release.builds.keys().next()
     {
         output.version = Some(VersionSpec::parse(format!("{version}+{build_id}"))?);
@@ -182,24 +202,12 @@ pub fn download_prebuilt(
 
     let release = fetch_release("ruby", version)?;
 
-    // The API does not return the release identifier or the archive prefix,
-    // so we need to create those values manually
-    // https://github.com/jdx/ruby/releases
-    let mut release_id = to_ruby_version(version);
-
-    // Prefix contains prerelease but not build
-    let archive_prefix = format!("ruby-{release_id}");
-
-    if let Some(build) = &version.build {
-        release_id.push('-');
-        release_id.push_str(build);
-    }
-
-    let Some(mut output) = release.create_download_prebuilt(release_id, env, version) else {
+    let Some(mut output) = release.create_download_prebuilt(env, version) else {
         return Err(make_error());
     };
 
-    output.archive_prefix = Some(archive_prefix);
+    // Does not include the build suffix!
+    output.archive_prefix = Some(format!("ruby-{}", to_ruby_version(version)));
 
     Ok(Json(output))
 }

@@ -32,7 +32,7 @@ mod ruby_tool {
                 archive_prefix: Some("ruby-3.4.5".into()),
                 download_name: Some("ruby-3.4.5.x86_64_linux.tar.gz".into()),
                 download_url:
-                    "https://github.com/jdx/ruby/releases/download/3.4.5/ruby-3.4.5.x86_64_linux.tar.gz"
+                    "https://github.com/jdx/ruby/releases/download/3.4.5-1/ruby-3.4.5.x86_64_linux.tar.gz"
                         .into(),
                 ..Default::default()
             }
@@ -58,7 +58,7 @@ mod ruby_tool {
                 archive_prefix: Some("ruby-3.4.5".into()),
                 download_name: Some("ruby-3.4.5.arm64_linux.tar.gz".into()),
                 download_url:
-                    "https://github.com/jdx/ruby/releases/download/3.4.5/ruby-3.4.5.arm64_linux.tar.gz"
+                    "https://github.com/jdx/ruby/releases/download/3.4.5-1/ruby-3.4.5.arm64_linux.tar.gz"
                         .into(),
                 ..Default::default()
             }
@@ -80,7 +80,7 @@ mod ruby_tool {
                 archive_prefix: Some("ruby-3.4.5".into()),
                 download_name: Some("ruby-3.4.5.macos.tar.gz".into()),
                 download_url:
-                    "https://github.com/jdx/ruby/releases/download/3.4.5/ruby-3.4.5.macos.tar.gz"
+                    "https://github.com/jdx/ruby/releases/download/3.4.5-1/ruby-3.4.5.macos.tar.gz"
                         .into(),
                 ..Default::default()
             }
@@ -124,7 +124,7 @@ mod ruby_tool {
                 archive_prefix: Some("ruby-4.0.0-preview2".into()),
                 download_name: Some("ruby-4.0.0-preview2.macos.tar.gz".into()),
                 download_url:
-                    "https://github.com/jdx/ruby/releases/download/4.0.0-preview2/ruby-4.0.0-preview2.macos.tar.gz"
+                    "https://github.com/jdx/ruby/releases/download/4.0.0-preview2-1/ruby-4.0.0-preview2.macos.tar.gz"
                         .into(),
                 ..Default::default()
             }

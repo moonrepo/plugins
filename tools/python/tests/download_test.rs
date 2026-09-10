@@ -154,6 +154,29 @@ mod python_tool {
         );
     }
 
+    // The release identifier is required for the download URL, so the default
+    // build (which has no identifier) is looked up as the last entry instead
+    #[tokio::test(flavor = "multi_thread")]
+    async fn uses_default_build_when_unresolved() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("python-test", |config| {
+                config.host(HostOS::MacOS, HostArch::Arm64);
+            })
+            .await;
+
+        // Has builds 20211017 and 20211012
+        assert_eq!(
+            plugin
+                .download_prebuilt(create_input("3.10.0"))
+                .await
+                .download_url,
+            format!(
+                "{DOWNLOAD_URL}/20211012/cpython-3.10.0-aarch64-apple-darwin-install_only-20211011T1926.tar.gz"
+            )
+        );
+    }
+
     // Older releases have no checksums file
     #[tokio::test(flavor = "multi_thread")]
     async fn supports_releases_without_checksums() {
@@ -188,8 +211,9 @@ mod python_tool {
         plugin.download_prebuilt(create_input("3.12.0")).await;
     }
 
+    // The registry has no release, so the request itself fails
     #[tokio::test(flavor = "multi_thread")]
-    #[should_panic(expected = "No pre-built available for 3.0.0")]
+    #[should_panic(expected = "releases/python/3.0.0 (404)")]
     async fn errors_for_unknown_version() {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox

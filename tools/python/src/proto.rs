@@ -1,8 +1,10 @@
+use crate::config::PythonToolConfig;
 use crate::version::{from_python_tag, from_python_version, to_python_version};
 use extism_pdk::*;
 use proto_pdk::*;
 use regex::Regex;
-use std::collections::HashMap;
+use schematic::SchemaBuilder;
+use std::collections::{HashMap, HashSet};
 use tool_common::{enable_tracing, registry::*};
 
 #[host_fn]
@@ -28,6 +30,13 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
 }
 
 #[plugin_fn]
+pub fn define_tool_config(_: ()) -> FnResult<Json<DefineToolConfigOutput>> {
+    Ok(Json(DefineToolConfigOutput {
+        schema: SchemaBuilder::build_root::<PythonToolConfig>(),
+    }))
+}
+
+#[plugin_fn]
 pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
     Ok(Json(DetectVersionOutput {
         files: vec![".python-version".into()],
@@ -37,13 +46,13 @@ pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
 
 #[plugin_fn]
 pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
-    let tags = load_git_tags("https://github.com/python/cpython")?;
+    let env = get_host_environment()?;
     let regex = Regex::new(
         r"v?(?<major>[0-9]+)\.(?<minor>[0-9]+)(?:\.(?<patch>[0-9]+))?(?:(?<pre>a|b|c|rc)(?<preid>[0-9]+))?",
     )
     .unwrap();
 
-    let tags = tags
+    let tags = load_git_tags("https://github.com/python/cpython")?
         .into_iter()
         .filter_map(|tag| {
             if tag == "legacy-trunk" {
@@ -54,13 +63,22 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
         })
         .collect::<Vec<_>>();
 
-    Ok(Json(LoadVersionsOutput::from(tags)?))
+    let mut output = LoadVersionsOutput::from(tags)?;
+    let mut versions = HashSet::<VersionSpec>::from_iter(output.versions);
+
+    // Include our build specific versions, as these are not official
+    versions.extend(fetch_versions(env, "python", true)?);
+
+    output.versions = versions.into_iter().collect();
+
+    Ok(Json(output))
 }
 
 #[plugin_fn]
 pub fn resolve_version(
     Json(input): Json<ResolveVersionInput>,
 ) -> FnResult<Json<ResolveVersionOutput>> {
+    let config = get_tool_config::<PythonToolConfig>()?;
     let mut output = ResolveVersionOutput::default();
 
     let UnresolvedVersionSpec::Version(initial) = &input.initial else {
@@ -76,7 +94,8 @@ pub fn resolve_version(
 
     // If we have a full semantic version without a build,
     // fetch the available release and see if we have a build to use
-    if version.build.is_none()
+    if config.use_latest_build
+        && version.build.is_none()
         && let Ok(release) = fetch_release("python", &version)
         && let Some(build_id) = release.builds.keys().next()
     {
@@ -101,16 +120,6 @@ pub fn build_instructions(
         Some(version) => to_python_version(version),
         None => version.to_string(),
     };
-
-    // check_supported_os_and_arch(
-    //     NAME,
-    //     &env,
-    //     permutations! [
-    //         HostOS::Linux => [HostArch::X86, HostArch::X64, HostArch::Arm, HostArch::Arm64, HostArch::S390x, HostArch::Riscv64, HostArch::Powerpc64],
-    //         HostOS::MacOS => [HostArch::X64, HostArch::Arm64],
-    //         // HostOS::Windows => [HostArch::X86, HostArch::X64],
-    //     ],
-    // )?;
 
     let output = BuildInstructionsOutput {
         help_url: Some(
@@ -201,25 +210,9 @@ pub fn download_prebuilt(
         return Err(make_error());
     };
 
-    let Ok(release) = fetch_release("python", version) else {
-        return Err(make_error());
-    };
+    let release = fetch_release("python", version)?;
 
-    // The build is the date the release was published, which isn't always
-    // resolved, so fallback to the latest build available
-    let version = if version.build.is_some() {
-        version.to_owned()
-    } else if let Some(build_id) = release.builds.keys().next() {
-        Version::parse(format!("{version}+{build_id}"))?
-    } else {
-        return Err(make_error());
-    };
-
-    let Some(build_id) = version.build.clone() else {
-        return Err(make_error());
-    };
-
-    let Some(mut output) = release.create_download_prebuilt(build_id.into(), env, &version) else {
+    let Some(mut output) = release.create_download_prebuilt(env, version) else {
         return Err(make_error());
     };
 

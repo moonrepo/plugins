@@ -1,7 +1,7 @@
 use indexmap::IndexMap;
 use proto_pdk::{
     AnyResult, ChecksumAlgorithm, DownloadPrebuiltOutput, HostArch, HostEnvironment, HostLibc,
-    HostOS, Version, fetch_json,
+    HostOS, Version, VersionSpec, fetch_json,
 };
 use serde::{Deserialize, Deserializer};
 
@@ -33,6 +33,7 @@ pub struct Artifact {
 #[derive(Clone, Debug, Default, Deserialize)]
 #[serde(default)]
 pub struct Build {
+    pub tag: String,
     pub artifacts: IndexMap<String, Artifact>,
     pub artifact: Option<Artifact>,
     pub checksums_file: Option<String>,
@@ -75,7 +76,6 @@ impl Release {
 
     pub fn create_download_prebuilt(
         &self,
-        id: String,
         env: &HostEnvironment,
         version: &Version,
     ) -> Option<DownloadPrebuiltOutput> {
@@ -86,7 +86,7 @@ impl Release {
             download_name: Some(artifact.archive_file.clone()),
             download_url: self
                 .download_url
-                .replace("{release}", &id)
+                .replace("{tag}", &build.tag)
                 .replace("{file}", &artifact.archive_file),
             ..Default::default()
         };
@@ -101,7 +101,7 @@ impl Release {
                 self.checksum_url
                     .as_ref()
                     .unwrap_or(&self.download_url)
-                    .replace("{release}", &id)
+                    .replace("{tag}", &build.tag)
                     .replace("{file}", checksum_file),
             );
         }
@@ -131,14 +131,16 @@ pub fn fetch_versions(
     env: &HostEnvironment,
     language: &str,
     with_filters: bool,
-) -> AnyResult<Vec<Version>> {
+) -> AnyResult<Vec<VersionSpec>> {
     let mut query = vec![];
 
     if with_filters {
         query.push(format!("arch={}", env.arch.to_rust_arch()));
         query.push(format!("os={}", env.os.to_rust_os()));
 
-        if matches!(env.libc, HostLibc::Gnu | HostLibc::Musl) {
+        // macOS reports a gnu libc, but those artifacts have no libc at
+        // all, so filtering by it would return zero results
+        if env.os == HostOS::Linux && matches!(env.libc, HostLibc::Gnu | HostLibc::Musl) {
             query.push(format!("libc={}", env.libc));
         }
     }
@@ -148,7 +150,7 @@ pub fn fetch_versions(
         query.join("&")
     ))?;
 
-    Ok(res.data)
+    Ok(res.data.into_iter().map(VersionSpec::Version).collect())
 }
 
 pub fn fetch_release(language: &str, version: &Version) -> AnyResult<Release> {

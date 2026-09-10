@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Updated pre-builts to reference our new API: https://registry.moonrepo.app/releases/python
+- Added a new config setting `use-latest-build`, that will resolve a version to use the latest available build (trailing `+`) when one exists, and no build was provided in the original version.
+- 
 ## 0.14.9
 
 #### 🚀 Updates
