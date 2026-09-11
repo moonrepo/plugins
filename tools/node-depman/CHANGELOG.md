@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed Yarn v6 downloads on glibc Linux by always using the musl build.
+
 ## 0.20.1
 
 #### 🐞 Fixes

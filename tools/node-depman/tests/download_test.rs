@@ -1343,8 +1343,7 @@ npmRegistries:
         }
 
         #[tokio::test(flavor = "multi_thread")]
-        #[should_panic(expected = "Only musl is supported.")]
-        async fn doesnt_support_linux_gnu() {
+        async fn supports_prebuilt_linux_x64_gnu_with_musl() {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("yarn-test", |config| {
@@ -1356,15 +1355,23 @@ npmRegistries:
                 })
                 .await;
 
-            plugin
-                .download_prebuilt(DownloadPrebuiltInput {
-                    context: PluginContext {
-                        version: VersionSpec::parse("6.0.0-rc.19").unwrap(),
+            assert_eq!(
+                plugin
+                    .download_prebuilt(DownloadPrebuiltInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("6.0.0-rc.19").unwrap(),
+                            ..Default::default()
+                        },
                         ..Default::default()
-                    },
+                    })
+                    .await,
+                DownloadPrebuiltOutput {
+                    archive_prefix: Some("yarn-x86_64-unknown-linux-musl".into()),
+                    download_name: Some("yarn-x86_64-unknown-linux-musl.zip".into()),
+                    download_url: "https://github.com/yarnpkg/zpm/releases/download/v6.0.0-rc.19/yarn-x86_64-unknown-linux-musl.zip".into(),
                     ..Default::default()
-                })
-                .await;
+                }
+            );
         }
 
         #[tokio::test(flavor = "multi_thread")]
