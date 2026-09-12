@@ -1,8 +1,8 @@
 use crate::config::NpmBackendConfig;
+use crate::dist_tags::DistTags;
 use backend_common::enable_tracing;
 use extism_pdk::*;
 use proto_pdk::*;
-use rustc_hash::FxHashMap;
 use schematic::SchemaBuilder;
 use starbase_utils::{fs, json::JsonValue};
 
@@ -296,12 +296,9 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
         cmd.args.push("dist-tags".into());
         cmd
     })?;
-    let tags = match json::from_str(&result.stdout)? {
-        DistTags::Map(tags) => tags,
-        DistTags::List(list) => list.into_iter().next().unwrap_or_default(),
-    };
+    let tags: DistTags = json::from_str(&result.stdout)?;
 
-    for (alias, version) in tags {
+    for (alias, version) in tags.into_map() {
         let version = UnresolvedVersionSpec::parse(&version)?;
 
         if alias == "latest" {
@@ -312,14 +309,6 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
     }
 
     Ok(Json(output))
-}
-
-// npm v12+ wraps object results in an array
-#[derive(serde::Deserialize)]
-#[serde(untagged)]
-enum DistTags {
-    Map(FxHashMap<String, String>),
-    List(Vec<FxHashMap<String, String>>),
 }
 
 fn prepare_command(mut command: ExecCommandInput) -> ExecCommandInput {
