@@ -296,7 +296,10 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
         cmd.args.push("dist-tags".into());
         cmd
     })?;
-    let tags: FxHashMap<String, String> = json::from_str(&result.stdout)?;
+    let tags = match json::from_str(&result.stdout)? {
+        DistTags::Map(tags) => tags,
+        DistTags::List(list) => list.into_iter().next().unwrap_or_default(),
+    };
 
     for (alias, version) in tags {
         let version = UnresolvedVersionSpec::parse(&version)?;
@@ -309,6 +312,14 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
     }
 
     Ok(Json(output))
+}
+
+// npm v12+ wraps object results in an array
+#[derive(serde::Deserialize)]
+#[serde(untagged)]
+enum DistTags {
+    Map(FxHashMap<String, String>),
+    List(Vec<FxHashMap<String, String>>),
 }
 
 fn prepare_command(mut command: ExecCommandInput) -> ExecCommandInput {
