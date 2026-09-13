@@ -1,5 +1,10 @@
 use crate::config::DenoToolConfig;
 use extism_pdk::*;
+use lang_javascript_common::{
+    extract_dev_engine_runtime_version, extract_version_from_text, insert_dev_engine_version,
+    remove_dev_engine,
+};
+use nodejs_package_json::PackageJson;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
 use std::collections::HashMap;
@@ -36,9 +41,78 @@ pub fn define_tool_config(_: ()) -> FnResult<Json<DefineToolConfigOutput>> {
 #[plugin_fn]
 pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
     Ok(Json(DetectVersionOutput {
-        files: vec![".dvmrc".into()],
-        ignore: vec![],
+        files: vec![".dvmrc".into(), "package.json".into()],
+        ignore: vec!["node_modules".into()],
     }))
+}
+
+#[plugin_fn]
+pub fn parse_version_file(
+    Json(input): Json<ParseVersionFileInput>,
+) -> FnResult<Json<ParseVersionFileOutput>> {
+    let mut version = None;
+
+    if input.file == "package.json" {
+        if let Ok(package_json) = json::from_str::<PackageJson>(&input.content)
+            && let Some(constraint) = extract_dev_engine_runtime_version(&package_json, "deno")
+        {
+            version = Some(UnresolvedVersionSpec::parse(constraint)?);
+        }
+    } else if let Some(constraint) = extract_version_from_text(&input.content) {
+        version = Some(UnresolvedVersionSpec::parse(constraint)?);
+    }
+
+    Ok(Json(ParseVersionFileOutput { version }))
+}
+
+#[plugin_fn]
+pub fn pin_version(Json(input): Json<PinVersionInput>) -> FnResult<Json<PinVersionOutput>> {
+    let mut output = PinVersionOutput::default();
+    let file = input.dir.join("package.json");
+
+    if file.exists() {
+        let mut package_json: json::Value = starbase_utils::json::read_file(&file)?;
+
+        insert_dev_engine_version(
+            &mut package_json,
+            "runtime".into(),
+            "deno".into(),
+            input.version.to_string(),
+        )?;
+
+        starbase_utils::json::write_file_with_config(&file, &package_json, true)?;
+
+        output.pinned = true;
+        output.file = Some(file);
+    } else {
+        output.error = Some("No <file>package.json</file> exists in the target directory.".into());
+    }
+
+    Ok(Json(output))
+}
+
+#[plugin_fn]
+pub fn unpin_version(Json(input): Json<UnpinVersionInput>) -> FnResult<Json<UnpinVersionOutput>> {
+    let mut output = UnpinVersionOutput::default();
+    let file = input.dir.join("package.json");
+
+    if file.exists() {
+        let mut package_json: json::Value = starbase_utils::json::read_file(&file)?;
+
+        if let Some(version) =
+            remove_dev_engine(&mut package_json, "runtime".into(), "deno".into())?
+        {
+            starbase_utils::json::write_file_with_config(&file, &package_json, true)?;
+
+            output.unpinned = true;
+            output.version = Some(UnresolvedVersionSpec::parse(&version)?);
+            output.file = Some(file);
+        }
+    } else {
+        output.error = Some("No <file>package.json</file> exists in the target directory.".into());
+    }
+
+    Ok(Json(output))
 }
 
 #[plugin_fn]
