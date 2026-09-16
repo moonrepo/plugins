@@ -223,5 +223,10 @@
     "arm64_linux": "ruby-4.0.6.arm64_linux.tar.gz",
     "macos": "ruby-4.0.6.macos.tar.gz",
     "x86_64_linux": "ruby-4.0.6.x86_64_linux.tar.gz"
+  },
+  "4.0.7": {
+    "arm64_linux": "ruby-4.0.7.arm64_linux.tar.gz",
+    "macos": "ruby-4.0.7.macos.tar.gz",
+    "x86_64_linux": "ruby-4.0.7.x86_64_linux.tar.gz"
   }
 }
