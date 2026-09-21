@@ -7,6 +7,32 @@ use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use tool_common::enable_tracing;
 
+macro_rules! override_option {
+    ($prev:ident, $next:ident, [ $($prop:ident),* ]) => {
+        $(
+            override_option!($prev, $next, $prop);
+        )*
+    };
+    ($prev:ident, $next:ident, $prop:ident) => {
+        if let Some(value) = &$next.$prop {
+            $prev.$prop = Some(value.to_owned());
+        }
+    };
+}
+
+macro_rules! override_value {
+    ($prev:ident, $next:ident, [ $($prop:ident),* ]) => {
+        $(
+            override_value!($prev, $next, $prop);
+        )*
+    };
+    ($prev:ident, $next:ident, $prop:ident) => {
+        if !$next.$prop.is_empty() {
+            $prev.$prop = $next.$prop.clone();
+        }
+    };
+}
+
 #[host_fn]
 extern "ExtismHost" {
     fn exec_command(input: Json<ExecCommandInput>) -> Json<ExecCommandOutput>;
@@ -74,7 +100,17 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
             }
         }
 
-        Schema::V2(schema) => schema.metadata,
+        Schema::V2(schema) => RegisterToolOutput {
+            minimum_proto_version: schema
+                .metadata
+                .minimum_proto_version
+                .or_else(|| Some(Version::new(0, 60, 0))),
+            plugin_version: schema
+                .metadata
+                .plugin_version
+                .or_else(|| Version::parse(env!("CARGO_PKG_VERSION")).ok()),
+            ..schema.metadata
+        },
     }))
 }
 
@@ -146,11 +182,6 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
     let mut versions: HashSet<VersionSpec> = HashSet::from_iter(schema.source_versions());
     let aliases = schema.source_aliases();
 
-    let output: LoadVersionsOutput = match schema {
-        Schema::V1(schema) => {}
-        Schema::V2(schema) => {}
-    };
-
     // Git tags
     if let Some(repository) = schema.resolve_git_url() {
         let pattern = regex::Regex::new(schema.resolve_git_tag_pattern())?;
@@ -187,11 +218,11 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
     }
 
     let mut output = LoadVersionsOutput::from_versions(versions.into_iter().collect());
-    output.aliases.extend(schema.source_aliases());
+    output.aliases.extend(aliases);
 
     if output.versions.is_empty() {
         return Err(plugin_err!(
-            "Unable to resolve versions for {}. Schema either requires a <property>resolve.git-url</property> or <property>resolve.manifest-url</property>.",
+            "Unable to resolve versions for {}. Schema requires either a Git repository or registry index URL.",
             schema.get_name()
         ));
     }
@@ -205,76 +236,141 @@ pub fn download_prebuilt(
 ) -> FnResult<Json<DownloadPrebuiltOutput>> {
     let env = get_host_environment()?;
     let schema = get_schema()?;
-    let platform = get_platform(&schema, env)?;
+    let platform = schema.get_platform(env, Some(&input.context.version))?;
 
     if !platform.archs.is_empty() {
         check_supported_os_and_arch(
-            &schema.get_name,
+            schema.get_name(),
             env,
             HashMap::from_iter([(env.os, platform.archs.clone())]),
         )?;
     }
 
-    let version = &input.context.version;
-    let is_canary = version.is_canary();
+    let spec = &input.context.version;
+    let is_canary = spec.is_canary();
 
-    let download_file =
-        interpolate_tokens(&platform.download_file, version, &schema, platform, env);
+    let output: DownloadPrebuiltOutput = match schema {
+        Schema::V1(schema) => {
+            let download_file = interpolate_tokens(
+                &platform.download_file.clone().unwrap_or_default(),
+                env,
+                spec,
+                &platform,
+            );
 
-    let download_url = interpolate_tokens(
-        if is_canary {
-            schema
-                .install
-                .download_url_canary
+            let download_url = interpolate_tokens(
+                if is_canary {
+                    schema
+                        .install
+                        .download_url_canary
+                        .as_ref()
+                        .unwrap_or(&schema.install.download_url)
+                } else {
+                    &schema.install.download_url
+                },
+                env,
+                spec,
+                &platform,
+            )
+            .replace("{download_file}", &download_file);
+
+            let checksum_file = interpolate_tokens(
+                platform.checksum_file.as_deref().unwrap_or("CHECKSUM.txt"),
+                env,
+                spec,
+                &platform,
+            );
+
+            let checksum_url = if is_canary {
+                schema
+                    .install
+                    .checksum_url_canary
+                    .as_ref()
+                    .or(schema.install.checksum_url.as_ref())
+            } else {
+                schema.install.checksum_url.as_ref()
+            };
+
+            let checksum_url = checksum_url.map(|url| {
+                interpolate_tokens(url, env, spec, &platform)
+                    .replace("{checksum_file}", &checksum_file)
+            });
+
+            let archive_prefix = platform
+                .archive_prefix
                 .as_ref()
-                .unwrap_or(&schema.install.download_url)
-        } else {
-            &schema.install.download_url
-        },
-        version,
-        &schema,
-        platform,
-        env,
-    )
-    .replace("{download_file}", &download_file);
+                .map(|prefix| interpolate_tokens(prefix, env, spec, &platform));
 
-    let checksum_file = interpolate_tokens(
-        platform.checksum_file.as_deref().unwrap_or("CHECKSUM.txt"),
-        version,
-        &schema,
-        platform,
-        env,
-    );
+            DownloadPrebuiltOutput {
+                archive_prefix,
+                checksum_url,
+                checksum_name: Some(checksum_file),
+                checksum_public_key: schema.install.checksum_public_key,
+                download_url,
+                download_name: Some(download_file),
+                ..Default::default()
+            }
+        }
+        Schema::V2(schema) => {
+            let output = schema.apply_overrides(spec, schema.install.clone(), |prev, or| {
+                let Some(next) = &or.install else {
+                    return;
+                };
 
-    let checksum_url = if is_canary {
-        schema
-            .install
-            .checksum_url_canary
-            .as_ref()
-            .or(schema.install.checksum_url.as_ref())
-    } else {
-        schema.install.checksum_url.as_ref()
+                override_option!(
+                    prev,
+                    next,
+                    [
+                        archive_prefix,
+                        checksum,
+                        checksum_name,
+                        checksum_public_key,
+                        checksum_url,
+                        download_name,
+                        post_script
+                    ]
+                );
+
+                override_value!(prev, next, [download_url, http_headers, post_script_args]);
+            });
+
+            let download_name = platform
+                .download_file
+                .clone()
+                .or(output.download_name)
+                .map(|name| interpolate_tokens(&name, env, spec, &platform));
+
+            let download_url = interpolate_tokens(&output.download_url, env, spec, &platform)
+                .replace(
+                    "{download_file}",
+                    download_name.as_deref().unwrap_or_default(),
+                );
+
+            let checksum_name = platform
+                .checksum_file
+                .clone()
+                .or(output.checksum_name)
+                .map(|name| interpolate_tokens(&name, env, spec, &platform));
+
+            let checksum_url = output.checksum_url.map(|url| {
+                interpolate_tokens(&url, env, spec, &platform).replace(
+                    "{checksum_file}",
+                    checksum_name.as_deref().unwrap_or_default(),
+                )
+            });
+
+            DownloadPrebuiltOutput {
+                archive_prefix: platform.archive_prefix.or(output.archive_prefix),
+                checksum_name,
+                checksum_url,
+                download_name,
+                download_url,
+                ..output
+            }
+        }
     };
 
-    let checksum_url = checksum_url.map(|url| {
-        interpolate_tokens(url, version, &schema, platform, env)
-            .replace("{checksum_file}", &checksum_file)
-    });
-
-    let archive_prefix = platform
-        .archive_prefix
-        .as_ref()
-        .map(|prefix| interpolate_tokens(prefix, version, &schema, platform, env));
-
-    Ok(Json(DownloadPrebuiltOutput {
-        archive_prefix,
-        checksum_url,
-        checksum_name: Some(checksum_file),
-        checksum_public_key: schema.install.checksum_public_key,
-        download_url,
-        download_name: Some(download_file),
-        ..Default::default()
-    }))
+    Ok(Json(output))
 }
 
 #[plugin_fn]
@@ -388,7 +484,7 @@ pub fn locate_executables(
 
             LocateExecutablesOutput {
                 exes: HashMap::from_iter(exes),
-                exes_dirs: platform.exes_dirs,
+                exes_dirs: platform.exes_dirs.unwrap_or_default(),
                 globals_lookup_dirs: schema.packages.globals_lookup_dirs,
                 globals_prefix: schema.packages.globals_prefix,
             }
@@ -399,23 +495,13 @@ pub fn locate_executables(
                 &input.context.version,
                 schema.locate.clone(),
                 |prev, or| {
-                    if let Some(next) = &or.locate {
-                        if !next.exes.is_empty() {
-                            prev.exes = next.exes.clone();
-                        }
+                    let Some(next) = &or.locate else {
+                        return;
+                    };
 
-                        if !next.exes_dirs.is_empty() {
-                            prev.exes_dirs = next.exes_dirs.clone();
-                        }
+                    override_option!(prev, next, globals_prefix);
 
-                        if !next.globals_lookup_dirs.is_empty() {
-                            prev.globals_lookup_dirs = next.globals_lookup_dirs.clone();
-                        }
-
-                        if let Some(value) = &next.globals_prefix {
-                            prev.globals_prefix = Some(value.to_owned());
-                        }
-                    }
+                    override_value!(prev, next, [exes, exes_dirs, globals_lookup_dirs]);
                 },
             );
 
@@ -428,7 +514,7 @@ pub fn locate_executables(
                 })
                 .collect();
 
-            output
+            LocateExecutablesOutput { ..output }
         }
     };
 

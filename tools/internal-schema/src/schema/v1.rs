@@ -190,12 +190,12 @@ impl SchemaV1 {
             archs: base.archs.clone(),
             archive_prefix: base.archive_prefix.clone(),
             checksum_file: base.checksum_file.clone(),
-            download_file: base.download_file.clone(),
-            exes_dirs: if let Some(dir) = &base.exes_dir {
+            download_file: Some(base.download_file.clone()),
+            exes_dirs: Some(if let Some(dir) = &base.exes_dir {
                 vec![dir.to_owned()]
             } else {
                 base.exes_dirs.clone()
-            },
+            }),
             exe_path: base.exe_path.clone().or(base.bin_path.clone()),
             libc: self.install.libc.clone(),
         };

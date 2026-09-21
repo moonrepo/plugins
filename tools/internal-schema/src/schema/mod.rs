@@ -16,8 +16,8 @@ pub struct PlatformMapper {
     pub archs: Vec<HostArch>,
     pub archive_prefix: Option<String>,
     pub checksum_file: Option<String>,
-    pub download_file: String,
-    pub exes_dirs: Vec<PathBuf>,
+    pub download_file: Option<String>,
+    pub exes_dirs: Option<Vec<PathBuf>>,
     pub exe_path: Option<PathBuf>,
     pub libc: HashMap<HostLibc, String>,
 }
@@ -45,12 +45,12 @@ impl PlatformMapper {
             self.archs = other.archs.clone();
         }
 
-        if !other.exes_dirs.is_empty() {
-            self.exes_dirs = other.exes_dirs.clone();
+        if let Some(value) = &other.exes_dirs {
+            self.exes_dirs = Some(value.to_owned());
         }
 
-        if !other.download_file.is_empty() {
-            self.download_file = other.download_file.clone();
+        if let Some(value) = &other.download_file {
+            self.download_file = Some(value.to_owned());
         }
 
         if let Some(value) = &other.archive_prefix {
@@ -118,14 +118,14 @@ impl Schema {
     pub fn resolve_manifest_url(&self) -> Option<&str> {
         match self {
             Self::V1(inner) => inner.resolve.manifest_url.as_deref(),
-            Self::V2(inner) => inner.resolve.manifest_url.as_deref(),
+            Self::V2(inner) => inner.resolve.index_url.as_deref(),
         }
     }
 
     pub fn resolve_manifest_version_key(&self) -> &str {
         match self {
             Self::V1(inner) => &inner.resolve.manifest_version_key,
-            Self::V2(inner) => &inner.resolve.manifest_version_key,
+            Self::V2(inner) => &inner.resolve.index_version_key,
         }
     }
 
@@ -159,7 +159,7 @@ pub fn interpolate_tokens(
 ) -> String {
     let arch = env.arch.to_rust_arch();
     let libc = env.libc.to_string();
-    let os = env.os.to_string();
+    let os = env.os.to_rust_os();
 
     let mut value = value
         .replace("{version}", &spec.to_string())
