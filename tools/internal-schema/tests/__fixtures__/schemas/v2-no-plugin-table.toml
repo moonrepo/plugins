@@ -8,7 +8,7 @@ type = "command-line"
 download_url = "https://example.com/{download_file}"
 
 [platform.linux]
-download_file = "tool.tar.gz"
+download_name = "tool.tar.gz"
 
 [source]
 versions = ["1.0.0"]

@@ -264,12 +264,12 @@ mod v2_overrides {
 
         let output = download(&plugin, "3.0.0").await;
 
-        // Platform from >=2.0.0 beats install.download_name from ^3,
-        // while install.download_url from ^3 applies
-        assert_eq!(output.download_name, Some("tool-v2-x86_64.tar.gz".into()));
+        // ^3 is declared later, so its install.download_name beats the platform
+        // from >=2.0.0, while the arch map from >=2.0.0 still applies
+        assert_eq!(output.download_name, Some("tool-v3-x86_64.tar.gz".into()));
         assert_eq!(
             output.download_url,
-            "https://new.example.com/3.0.0/tool-v2-x86_64.tar.gz"
+            "https://new.example.com/3.0.0/tool-v3-x86_64.tar.gz"
         );
     }
 
@@ -281,7 +281,7 @@ mod v2_overrides {
         // ^3 sets install.download_name, but macos only has a base platform entry
         assert_eq!(
             download(&plugin, "3.0.0").await.download_name,
-            Some("ignored-aarch64.tar.gz".into())
+            Some("tool-v3-aarch64.tar.gz".into())
         );
     }
 
@@ -373,6 +373,22 @@ mod v2_overrides {
                 .unwrap()
                 .exe_path,
             Some("tool3/bin/tool".into())
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn platform_beats_locate_in_same_override() {
+        let (_sandbox, plugin) =
+            create_plugin(FIXTURE, HostOS::MacOS, HostArch::Arm64, HostLibc::Unknown).await;
+
+        assert_eq!(
+            locate(&plugin, "3.0.0")
+                .await
+                .exes
+                .get("tool")
+                .unwrap()
+                .exe_path,
+            Some("tool3/mac/tool".into())
         );
     }
 

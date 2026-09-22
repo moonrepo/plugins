@@ -7,8 +7,11 @@ name = "v2-test"
 type = "command-line"
 
 [install]
-download_url = "https://example.com/v{version}/{download_file}"
-checksum_url = "https://example.com/v{version}/{checksum_file}"
+download_url = "https://example.com/v{version}/{download_name}"
+checksum_url = "https://example.com/v{version}/{checksum_name}"
+# Platform settings win within the same layer
+download_name = "ignored.tar.gz"
+checksum_name = "ignored.sha256"
 
 [locate]
 exes_dirs = ["bin"]
@@ -18,8 +21,8 @@ exe_path = "bin/tool-{version}"
 primary = true
 
 [platform.linux]
-download_file = "tool-{os}-{arch}-{libc}.tar.gz"
-checksum_file = "tool-{arch}.sha256"
+download_name = "tool-{os}-{arch}-{libc}.tar.gz"
+checksum_name = "tool-{arch}.sha256"
 archive_prefix = "tool-{version}-{arch}"
 archs = ["x64", "arm64"]
 
@@ -30,10 +33,10 @@ x64 = "amd64"
 musl = "musl-static"
 
 [platform.macos]
-download_file = "tool-{os}-{arch}.tar.gz"
+download_name = "tool-{os}-{arch}.tar.gz"
 
 [platform.windows]
-download_file = "tool-{os}-{arch}.zip"
+download_name = "tool-{os}-{arch}.zip"
 exe_path = "win/tool"
 exes_dirs = ["win/bin"]
 

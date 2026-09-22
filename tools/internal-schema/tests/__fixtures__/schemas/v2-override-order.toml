@@ -10,24 +10,24 @@ type = "command-line"
 download_url = "https://example.com/{download_file}"
 
 [platform.linux]
-download_file = "base"
+download_name = "base"
 
 [[overrides]]
 range = ">=1.0.0"
-platform.linux.download_file = "a"
+platform.linux.download_name = "a"
 
 [[overrides]]
 range = ">=1.1.0"
-platform.linux.download_file = "b"
+platform.linux.download_name = "b"
 
 [[overrides]]
 range = ">=1.2.0"
-platform.linux.download_file = "c"
+platform.linux.download_name = "c"
 
 [[overrides]]
 range = ">=1.3.0"
-platform.linux.download_file = "d"
-platform.freebsd.download_file = "d-freebsd"
+platform.linux.download_name = "d"
+platform.freebsd.download_name = "d-freebsd"
 
 [source]
 versions = ["1.0.0"]

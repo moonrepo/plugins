@@ -251,7 +251,7 @@ pub fn download_prebuilt(
     let output: DownloadPrebuiltOutput = match schema {
         Schema::V1(schema) => {
             let download_file = interpolate_tokens(
-                &platform.download_file.clone().unwrap_or_default(),
+                &platform.download_name.clone().unwrap_or_default(),
                 env,
                 spec,
                 &platform,
@@ -274,7 +274,7 @@ pub fn download_prebuilt(
             .replace("{download_file}", &download_file);
 
             let checksum_file = interpolate_tokens(
-                platform.checksum_file.as_deref().unwrap_or("CHECKSUM.txt"),
+                platform.checksum_name.as_deref().unwrap_or("CHECKSUM.txt"),
                 env,
                 spec,
                 &platform,
@@ -311,57 +311,68 @@ pub fn download_prebuilt(
             }
         }
         Schema::V2(schema) => {
-            let output = schema.apply_overrides(spec, schema.install.clone(), |prev, or| {
-                let Some(next) = &or.install else {
-                    return;
-                };
+            let output =
+                schema.apply_layers(env, spec, |prev: &mut DownloadPrebuiltOutput, layer| {
+                    if let Some(next) = layer.install {
+                        override_option!(
+                            prev,
+                            next,
+                            [
+                                archive_prefix,
+                                checksum,
+                                checksum_name,
+                                checksum_public_key,
+                                checksum_url,
+                                download_name,
+                                post_script
+                            ]
+                        );
 
-                override_option!(
-                    prev,
-                    next,
-                    [
-                        archive_prefix,
-                        checksum,
-                        checksum_name,
-                        checksum_public_key,
-                        checksum_url,
-                        download_name,
-                        post_script
-                    ]
-                );
+                        override_value!(prev, next, [download_url, http_headers, post_script_args]);
+                    }
 
-                override_value!(prev, next, [download_url, http_headers, post_script_args]);
-            });
+                    // Platform settings beat install settings within the same layer
+                    if let Some(next) = layer.platform {
+                        override_option!(
+                            prev,
+                            next,
+                            [archive_prefix, checksum_name, download_name]
+                        );
+                    }
+                })?;
 
-            let archive_prefix = platform
+            let archive_prefix = output
                 .archive_prefix
-                .clone()
-                .or(output.archive_prefix)
-                .map(|name| interpolate_tokens(&name, env, spec, &platform));
+                .map(|prefix| interpolate_tokens(&prefix, env, spec, &platform));
 
-            let download_name = platform
-                .download_file
-                .clone()
-                .or(output.download_name)
+            let download_name = output
+                .download_name
                 .map(|name| interpolate_tokens(&name, env, spec, &platform));
 
             let download_url = interpolate_tokens(&output.download_url, env, spec, &platform)
                 .replace(
                     "{download_file}",
                     download_name.as_deref().unwrap_or_default(),
+                )
+                .replace(
+                    "{download_name}",
+                    download_name.as_deref().unwrap_or_default(),
                 );
 
-            let checksum_name = platform
-                .checksum_file
-                .clone()
-                .or(output.checksum_name)
+            let checksum_name = output
+                .checksum_name
                 .map(|name| interpolate_tokens(&name, env, spec, &platform));
 
             let checksum_url = output.checksum_url.map(|url| {
-                interpolate_tokens(&url, env, spec, &platform).replace(
-                    "{checksum_file}",
-                    checksum_name.as_deref().unwrap_or_default(),
-                )
+                interpolate_tokens(&url, env, spec, &platform)
+                    .replace(
+                        "{checksum_file}",
+                        checksum_name.as_deref().unwrap_or_default(),
+                    )
+                    .replace(
+                        "{checksum_name}",
+                        checksum_name.as_deref().unwrap_or_default(),
+                    )
             });
 
             DownloadPrebuiltOutput {
@@ -496,43 +507,37 @@ pub fn locate_executables(
         }
 
         Schema::V2(schema) => {
-            let mut output = schema.apply_overrides(
+            let mut output = schema.apply_layers(
+                env,
                 &input.context.version,
-                schema.locate.clone(),
-                |prev, or| {
-                    let Some(next) = &or.locate else {
-                        return;
-                    };
-
-                    override_option!(prev, next, globals_prefix);
-
-                    override_value!(prev, next, [exes, exes_dirs, globals_lookup_dirs]);
-                },
-            );
-
-            output.exes = output
-                .exes
-                .into_iter()
-                .map(|(exe, mut config)| {
-                    if config.primary
-                        && let Some(exe_path) = &platform.exe_path
-                    {
-                        config.exe_path = Some(exe_path.to_owned());
+                |prev: &mut LocateExecutablesOutput, layer| {
+                    if let Some(next) = layer.locate {
+                        override_option!(prev, next, globals_prefix);
+                        override_value!(prev, next, [exes, exes_dirs, globals_lookup_dirs]);
                     }
 
-                    prepare_exe_config(&mut config);
+                    // Platform settings beat locate settings within the same layer
+                    if let Some(next) = layer.platform {
+                        if let Some(exe_path) = &next.exe_path {
+                            for config in prev.exes.values_mut().filter(|config| config.primary) {
+                                config.exe_path = Some(exe_path.to_owned());
+                            }
+                        }
 
-                    (exe, config)
-                })
-                .collect();
+                        if let Some(dirs) = &next.exes_dirs
+                            && !dirs.is_empty()
+                        {
+                            prev.exes_dirs = dirs.to_owned();
+                        }
+                    }
+                },
+            )?;
 
-            if let Some(dirs) = platform.exes_dirs
-                && !dirs.is_empty()
-            {
-                output.exes_dirs = dirs;
+            for config in output.exes.values_mut() {
+                prepare_exe_config(config);
             }
 
-            LocateExecutablesOutput { ..output }
+            output
         }
     };
 

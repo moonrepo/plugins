@@ -15,7 +15,7 @@ exe_path = "bin/tool"
 primary = true
 
 [platform.linux]
-download_file = "tool-{arch}.tar.gz"
+download_name = "tool-{arch}.tar.gz"
 archs = ["x64", "arm64"]
 
 [platform.linux.arch]
@@ -23,17 +23,17 @@ x64 = "amd64"
 arm64 = "arm64"
 
 [platform.freebsd]
-download_file = "tool-freebsd-{arch}.tar.gz"
+download_name = "tool-freebsd-{arch}.tar.gz"
 
 [platform.macos]
-download_file = "tool-mac-{arch}.tar.gz"
+download_name = "tool-mac-{arch}.tar.gz"
 
 # 2.x renamed the linux asset, and dropped linux arm64
 [[overrides]]
 range = ">=2.0.0"
 
 [overrides.platform.linux]
-download_file = "tool-v2-{arch}.tar.gz"
+download_name = "tool-v2-{arch}.tar.gz"
 archs = ["x64"]
 
 [overrides.platform.linux.arch]
@@ -45,11 +45,14 @@ range = "^3"
 
 [overrides.install]
 download_url = "https://new.example.com/{version}/{download_file}"
-download_name = "ignored-{arch}.tar.gz"
+download_name = "tool-v3-{arch}.tar.gz"
 
 [overrides.locate.exes.tool]
 exe_path = "tool3/bin/tool"
 primary = true
+
+[overrides.platform.macos]
+exe_path = "tool3/mac/tool"
 
 [source]
 versions = ["1.0.0"]

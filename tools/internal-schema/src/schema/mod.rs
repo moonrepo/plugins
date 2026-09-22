@@ -15,8 +15,8 @@ pub struct PlatformMapper {
     pub arch: HashMap<HostArch, String>,
     pub archs: Vec<HostArch>,
     pub archive_prefix: Option<String>,
-    pub checksum_file: Option<String>,
-    pub download_file: Option<String>,
+    pub checksum_name: Option<String>,
+    pub download_name: Option<String>,
     pub exes_dirs: Option<Vec<PathBuf>>,
     pub exe_path: Option<PathBuf>,
     pub libc: HashMap<HostLibc, String>,
@@ -55,16 +55,16 @@ impl PlatformMapper {
             self.exes_dirs = Some(value.to_owned());
         }
 
-        if let Some(value) = &other.download_file {
-            self.download_file = Some(value.to_owned());
+        if let Some(value) = &other.download_name {
+            self.download_name = Some(value.to_owned());
         }
 
         if let Some(value) = &other.archive_prefix {
             self.archive_prefix = Some(value.to_owned());
         }
 
-        if let Some(value) = &other.checksum_file {
-            self.checksum_file = Some(value.to_owned());
+        if let Some(value) = &other.checksum_name {
+            self.checksum_name = Some(value.to_owned());
         }
 
         if let Some(value) = &other.exe_path {

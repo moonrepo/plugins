@@ -6,15 +6,15 @@ install:
   download_url: "https://example.com/{download_file}"
 platform:
   linux:
-    download_file: base
+    download_name: base
 overrides:
   - range: "^1.5"
     platform:
       linux:
-        download_file: caret
+        download_name: caret
   - range: ">=1.0.0"
     platform:
       linux:
-        download_file: gte
+        download_name: gte
 source:
   versions: ["1.0.0"]

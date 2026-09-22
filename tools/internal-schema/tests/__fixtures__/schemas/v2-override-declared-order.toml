@@ -8,17 +8,17 @@ type = "command-line"
 download_url = "https://example.com/{download_file}"
 
 [platform.linux]
-download_file = "base"
+download_name = "base"
 
 # Declared first, but sorts last alphabetically and by range
 [[overrides]]
 range = "^1.5"
-platform.linux.download_file = "caret"
+platform.linux.download_name = "caret"
 
 # Declared last, so should win
 [[overrides]]
 range = ">=1.0.0"
-platform.linux.download_file = "gte"
+platform.linux.download_name = "gte"
 
 [source]
 versions = ["1.0.0"]

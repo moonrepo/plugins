@@ -189,8 +189,8 @@ impl SchemaV1 {
             arch: self.install.arch.clone(),
             archs: base.archs.clone(),
             archive_prefix: base.archive_prefix.clone(),
-            checksum_file: base.checksum_file.clone(),
-            download_file: Some(base.download_file.clone()),
+            checksum_name: base.checksum_file.clone(),
+            download_name: Some(base.download_file.clone()),
             exes_dirs: if !base.exes_dirs.is_empty() {
                 Some(base.exes_dirs.clone())
             } else {

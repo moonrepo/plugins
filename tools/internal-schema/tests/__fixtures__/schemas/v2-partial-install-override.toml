@@ -10,7 +10,7 @@ type = "command-line"
 download_url = "https://example.com/{download_file}"
 
 [platform.linux]
-download_file = "tool.tar.gz"
+download_name = "tool.tar.gz"
 
 [[overrides]]
 range = ">=2.0.0"
