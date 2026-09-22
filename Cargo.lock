@@ -3802,7 +3802,7 @@ dependencies = [
 
 [[package]]
 name = "node_depman_tool"
-version = "0.20.1"
+version = "0.20.2"
 dependencies = [
  "extism-pdk",
  "lang_javascript_common",
