@@ -38,19 +38,22 @@ impl Default for ResolveSchema {
     }
 }
 
-#[derive(Debug, Default, Deserialize)]
-#[serde(default)]
+#[derive(Debug, Deserialize)]
 pub struct Override {
+    pub range: Range,
+
     pub resolve: Option<ResolveSchema>,
     pub install: Option<DownloadPrebuiltOutput>, //
     pub locate: Option<LocateExecutablesOutput>, //
 
+    #[serde(default)]
     pub platform: HashMap<HostOS, PlatformMapper>, //
 }
 
 #[derive(Debug, Default, Deserialize)]
 pub struct SchemaV2 {
-    pub plugin: PluginSchema,         //
+    #[serde(default)]
+    pub plugin: PluginSchema, //
     pub metadata: RegisterToolOutput, //
 
     #[serde(default)]
@@ -67,7 +70,7 @@ pub struct SchemaV2 {
     #[serde(default)]
     pub platform: HashMap<HostOS, PlatformMapper>, //
     #[serde(default)]
-    pub overrides: HashMap<Range, Override>, //
+    pub overrides: Vec<Override>, //
 }
 
 impl SchemaV2 {
@@ -77,9 +80,9 @@ impl SchemaV2 {
         mut base: T,
         op: impl Fn(&mut T, &Override),
     ) -> T {
-        for (range, or) in &self.overrides {
+        for or in &self.overrides {
             if let Some(version) = spec.as_version()
-                && range.matches(version)
+                && or.range.matches(version)
             {
                 op(&mut base, or);
             }
@@ -93,24 +96,26 @@ impl SchemaV2 {
         env: &HostEnvironment,
         spec: Option<&VersionSpec>,
     ) -> Result<PlatformMapper, PluginError> {
-        let mut platform = PlatformMapper::find_match(&self.platform, env)
-            .ok_or_else(|| PluginError::UnsupportedOS {
+        let (os, base) = PlatformMapper::find_match(&self.platform, env).ok_or_else(|| {
+            PluginError::UnsupportedOS {
                 tool: self.metadata.name.clone(),
                 os: env.os.to_rust_os(),
-            })?
-            .to_owned();
+            }
+        })?;
+        let mut platform = base.to_owned();
 
         let Some(spec) = spec else {
             return Ok(platform);
         };
 
-        for (range, or) in &self.overrides {
+        for or in &self.overrides {
             if let Some(version) = spec.as_version()
-                && range.matches(version)
+                && or.range.matches(version)
             {
-                let platform_override = PlatformMapper::find_match(&or.platform, env);
-
-                if let Some(platform_override) = platform_override {
+                // Prefer the host OS, otherwise the OS the base matched with
+                if let Some(platform_override) =
+                    or.platform.get(&env.os).or_else(|| or.platform.get(&os))
+                {
                     platform.override_with(platform_override);
                 }
             }

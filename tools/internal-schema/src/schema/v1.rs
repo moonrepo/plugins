@@ -191,11 +191,11 @@ impl SchemaV1 {
             archive_prefix: base.archive_prefix.clone(),
             checksum_file: base.checksum_file.clone(),
             download_file: Some(base.download_file.clone()),
-            exes_dirs: Some(if let Some(dir) = &base.exes_dir {
-                vec![dir.to_owned()]
+            exes_dirs: if !base.exes_dirs.is_empty() {
+                Some(base.exes_dirs.clone())
             } else {
-                base.exes_dirs.clone()
-            }),
+                base.exes_dir.as_ref().map(|dir| vec![dir.to_owned()])
+            },
             exe_path: base.exe_path.clone().or(base.bin_path.clone()),
             libc: self.install.libc.clone(),
         };

@@ -23,18 +23,24 @@ pub struct PlatformMapper {
 }
 
 impl PlatformMapper {
+    /// Returns the matching platform, and the OS it was matched with,
+    /// which may be linux for BSD based OSes.
     pub fn find_match<'a>(
         platforms: &'a HashMap<HostOS, PlatformMapper>,
         env: &HostEnvironment,
-    ) -> Option<&'a PlatformMapper> {
-        let mut platform = platforms.get(&env.os);
-
-        // Fallback to linux for other OSes
-        if platform.is_none() && env.os.is_bsd() {
-            platform = platforms.get(&HostOS::Linux);
+    ) -> Option<(HostOS, &'a PlatformMapper)> {
+        if let Some(platform) = platforms.get(&env.os) {
+            return Some((env.os, platform));
         }
 
-        platform
+        // Fallback to linux for other OSes
+        if env.os.is_bsd() {
+            return platforms
+                .get(&HostOS::Linux)
+                .map(|platform| (HostOS::Linux, platform));
+        }
+
+        None
     }
 
     pub fn override_with(&mut self, other: &PlatformMapper) {
@@ -67,6 +73,7 @@ impl PlatformMapper {
     }
 }
 
+#[allow(clippy::large_enum_variant)]
 pub enum Schema {
     V1(v1::SchemaV1),
     V2(v2::SchemaV2),

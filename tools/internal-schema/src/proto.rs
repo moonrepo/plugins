@@ -43,10 +43,9 @@ fn get_schema() -> Result<Schema, Error> {
     let data = config::get("proto_schema")?.expect("Missing schema!");
     let value: JsonValue = json::from_str(&data)?;
 
-    let schema = if value
-        .get("format")
-        .is_some_and(|format| format.is_string() && format == "2")
-    {
+    let schema = if value.get("format").is_some_and(|format| {
+        format.is_string() && format == "2" || format.is_number() && format == 2
+    }) {
         Schema::V2(json::from_value(value)?)
     } else {
         Schema::V1(json::from_value(value)?)
@@ -334,6 +333,12 @@ pub fn download_prebuilt(
                 override_value!(prev, next, [download_url, http_headers, post_script_args]);
             });
 
+            let archive_prefix = platform
+                .archive_prefix
+                .clone()
+                .or(output.archive_prefix)
+                .map(|name| interpolate_tokens(&name, env, spec, &platform));
+
             let download_name = platform
                 .download_file
                 .clone()
@@ -360,7 +365,7 @@ pub fn download_prebuilt(
             });
 
             DownloadPrebuiltOutput {
-                archive_prefix: platform.archive_prefix.or(output.archive_prefix),
+                archive_prefix,
                 checksum_name,
                 checksum_url,
                 download_name,
@@ -509,10 +514,23 @@ pub fn locate_executables(
                 .exes
                 .into_iter()
                 .map(|(exe, mut config)| {
+                    if config.primary
+                        && let Some(exe_path) = &platform.exe_path
+                    {
+                        config.exe_path = Some(exe_path.to_owned());
+                    }
+
                     prepare_exe_config(&mut config);
+
                     (exe, config)
                 })
                 .collect();
+
+            if let Some(dirs) = platform.exes_dirs
+                && !dirs.is_empty()
+            {
+                output.exes_dirs = dirs;
+            }
 
             LocateExecutablesOutput { ..output }
         }

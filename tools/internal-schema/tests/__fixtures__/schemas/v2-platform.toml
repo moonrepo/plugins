@@ -1,0 +1,41 @@
+format = "2"
+
+[plugin]
+
+[metadata]
+name = "v2-test"
+type = "command-line"
+
+[install]
+download_url = "https://example.com/v{version}/{download_file}"
+checksum_url = "https://example.com/v{version}/{checksum_file}"
+
+[locate]
+exes_dirs = ["bin"]
+
+[locate.exes.tool]
+exe_path = "bin/tool-{version}"
+primary = true
+
+[platform.linux]
+download_file = "tool-{os}-{arch}-{libc}.tar.gz"
+checksum_file = "tool-{arch}.sha256"
+archive_prefix = "tool-{version}-{arch}"
+archs = ["x64", "arm64"]
+
+[platform.linux.arch]
+x64 = "amd64"
+
+[platform.linux.libc]
+musl = "musl-static"
+
+[platform.macos]
+download_file = "tool-{os}-{arch}.tar.gz"
+
+[platform.windows]
+download_file = "tool-{os}-{arch}.zip"
+exe_path = "win/tool"
+exes_dirs = ["win/bin"]
+
+[source]
+versions = ["1.0.0"]

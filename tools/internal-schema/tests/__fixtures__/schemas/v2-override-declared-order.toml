@@ -1,0 +1,24 @@
+format = "2"
+
+[metadata]
+name = "v2-test"
+type = "command-line"
+
+[install]
+download_url = "https://example.com/{download_file}"
+
+[platform.linux]
+download_file = "base"
+
+# Declared first, but sorts last alphabetically and by range
+[[overrides]]
+range = "^1.5"
+platform.linux.download_file = "caret"
+
+# Declared last, so should win
+[[overrides]]
+range = ">=1.0.0"
+platform.linux.download_file = "gte"
+
+[source]
+versions = ["1.0.0"]

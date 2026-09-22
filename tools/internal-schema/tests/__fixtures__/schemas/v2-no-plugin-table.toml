@@ -1,0 +1,14 @@
+format = "2"
+
+[metadata]
+name = "v2-test"
+type = "command-line"
+
+[install]
+download_url = "https://example.com/{download_file}"
+
+[platform.linux]
+download_file = "tool.tar.gz"
+
+[source]
+versions = ["1.0.0"]

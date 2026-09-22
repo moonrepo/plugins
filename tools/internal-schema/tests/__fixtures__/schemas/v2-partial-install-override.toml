@@ -1,0 +1,22 @@
+format = "2"
+
+[plugin]
+
+[metadata]
+name = "v2-test"
+type = "command-line"
+
+[install]
+download_url = "https://example.com/{download_file}"
+
+[platform.linux]
+download_file = "tool.tar.gz"
+
+[[overrides]]
+range = ">=2.0.0"
+
+[overrides.install]
+checksum_url = "https://example.com/{checksum_file}"
+
+[source]
+versions = ["1.0.0"]
