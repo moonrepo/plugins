@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added a new v2 schema format, enabled with `format = "2"`. Settings mirror proto's plugin API types, and use snake_case keys.
+  - `metadata`, `detect`, `source`, `install`, and `locate` map directly to the `register_tool`, `detect_version_files`, `load_versions`, `download_prebuilt`, and `locate_executables` outputs.
+  - `resolve` loads versions from Git tags (`git_url`, `git_tag_pattern`) or an index URL (`index_url`, `index_version_key`).
+  - `[platform.<os>]` supports `download_name`, `checksum_name`, `archive_prefix`, `archs`, `arch`, `libc`, `exe_path`, and `exes_dirs`. BSD based OSes fall back to `linux`.
+  - Added `[[overrides]]` for version specific settings. Each entry requires a `range`, and can override `install`, `locate`, and `platform` settings. Entries are applied in order (later entries win), and platform settings win over install/locate settings within the same entry.
+  - URLs support `{download_name}` and `{checksum_name}` tokens, in addition to `{download_file}` and `{checksum_file}`.
+  - Unknown fields at the top-level, and within `plugin`, `resolve`, `platform`, and `overrides`, are an error.
+- Secondary executable paths now support tokens (`{version}`, etc), like the primary executable.
+
 ## 0.18.2
 
 #### 🚀 Updates

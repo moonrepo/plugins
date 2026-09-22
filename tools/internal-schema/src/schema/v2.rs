@@ -7,7 +7,7 @@ use serde::Deserialize;
 use std::collections::HashMap;
 
 #[derive(Debug, Default, Deserialize)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 pub struct PluginSchema {
     pub description: Option<String>,
     pub repository_url: Option<String>,
@@ -15,7 +15,7 @@ pub struct PluginSchema {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 pub struct ResolveSchema {
     pub version_pattern: String,
     // Manifest
@@ -39,6 +39,7 @@ impl Default for ResolveSchema {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Override {
     pub range: Range,
 
@@ -51,7 +52,10 @@ pub struct Override {
 }
 
 #[derive(Debug, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct SchemaV2 {
+    pub format: serde_json::Value,
+
     #[serde(default)]
     pub plugin: PluginSchema, //
     pub metadata: RegisterToolOutput, //
