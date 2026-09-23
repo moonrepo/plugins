@@ -86,7 +86,8 @@ mod ruby_tool {
                 config.host_with(use_linux_host);
             })
             .await;
-        let mut spec = ToolSpec::parse("3.4").unwrap();
+        // Closed range, as new upstream patches have no builds until we publish them
+        let mut spec = ToolSpec::parse(">=3.4.5, <3.4.6").unwrap();
 
         flow::resolve::Resolver::new(&plugin.tool)
             .resolve_version(&mut spec, false)
@@ -95,8 +96,7 @@ mod ruby_tool {
 
         let resolved = spec.get_resolved_version().to_string();
 
-        assert!(resolved.starts_with("3.4."), "got {resolved}");
-        assert!(resolved.contains('+'), "got {resolved}");
+        assert!(resolved.starts_with("3.4.5+"), "got {resolved}");
     }
 
     #[tokio::test(flavor = "multi_thread")]
@@ -104,26 +104,27 @@ mod ruby_tool {
         assert_eq!(resolve("3.4.5").await, ResolveVersionOutput::default());
     }
 
+    // The latest build changes whenever we republish, so only check the prefix
+    fn assert_has_build(version: Option<VersionSpec>, prefix: &str) {
+        let version = version.map(|v| v.to_string()).unwrap_or_default();
+
+        assert!(version.starts_with(&format!("{prefix}+")), "got {version}");
+    }
+
     #[tokio::test(flavor = "multi_thread")]
     async fn appends_latest_build_when_enabled() {
-        assert_eq!(
-            resolve_with_latest_build("3.4.5").await,
-            ResolveVersionOutput {
-                version: Some(VersionSpec::parse("3.4.5+4").unwrap()),
-                ..Default::default()
-            }
-        );
+        let output = resolve_with_latest_build("3.4.5").await;
+
+        assert_eq!(output.candidate, None);
+        assert_has_build(output.version, "3.4.5");
     }
 
     #[tokio::test(flavor = "multi_thread")]
     async fn appends_latest_build_to_prerelease_when_enabled() {
-        assert_eq!(
-            resolve_with_latest_build("4.0.0-preview.3").await,
-            ResolveVersionOutput {
-                version: Some(VersionSpec::parse("4.0.0-preview.3+4").unwrap()),
-                ..Default::default()
-            }
-        );
+        let output = resolve_with_latest_build("4.0.0-preview.3").await;
+
+        assert_eq!(output.candidate, None);
+        assert_has_build(output.version, "4.0.0-preview.3");
     }
 
     // An explicit build always wins over the setting
@@ -161,12 +162,12 @@ mod ruby_tool {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn normalizes_prerelease_and_appends_build_when_enabled() {
+        let output = resolve_with_latest_build("4.0.0-preview2").await;
+
         assert_eq!(
-            resolve_with_latest_build("4.0.0-preview2").await,
-            ResolveVersionOutput {
-                candidate: Some(UnresolvedVersionSpec::parse("4.0.0-preview.2").unwrap()),
-                version: Some(VersionSpec::parse("4.0.0-preview.2+4").unwrap()),
-            }
+            output.candidate,
+            Some(UnresolvedVersionSpec::parse("4.0.0-preview.2").unwrap())
         );
+        assert_has_build(output.version, "4.0.0-preview.2");
     }
 }
