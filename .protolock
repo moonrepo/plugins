@@ -17,58 +17,9 @@ checksum = "sha256:b1640525dfe68f066d56f200bef7bf4dce955a1a893bd061de6754c211431
 [[tools.moon]]
 os = "macos"
 arch = "arm64"
-spec = "2.2.3"
-version = "2.2.3"
-checksum = "sha256:3ed73eb6384346318922f7e695eb1dd3fbb4c0fa9dccf25782939a592c6377a6"
-
-[[tools.moon]]
-os = "windows"
-arch = "x64"
-spec = "2.2.3"
-version = "2.2.3"
-checksum = "sha256:b164749dbbb2e856c329bea9f81b76a611f0382f44e8330eb165aafb99a70984"
-
-[[tools.moon]]
-os = "macos"
-arch = "arm64"
-spec = "2.3.0"
-version = "2.3.0"
-checksum = "sha256:fd82f0eb8e7d596a4cc5f57472752a613e7279e5fde69eb725823c7f6383225e"
-
-[[tools.moon]]
-os = "macos"
-arch = "arm64"
-spec = "2.3.1"
-version = "2.3.1"
-checksum = "sha256:a49815c49a7c5ce599c08e894c41b52c3baa34faaff0f852f675c63adb6cc309"
-
-[[tools.moon]]
-os = "macos"
-arch = "arm64"
-spec = "2.3.2"
-version = "2.3.2"
-checksum = "sha256:5e7994592f46cb3b044296be64839a1017ce38f16748f0ab893d83d3ef192c7a"
-
-[[tools.moon]]
-os = "macos"
-arch = "arm64"
-spec = "2.4.0"
-version = "2.4.0"
-checksum = "sha256:b06e81dd993839b3b00e65295b75d7ceae0a22043330de58ae928ce3fd2d404f"
-
-[[tools.moon]]
-os = "macos"
-arch = "arm64"
-spec = "2.5.2"
-version = "2.5.2"
-checksum = "sha256:3315002e7a0f394f2a7590ffea0c1d91d10c41a6b5d3639d31f06dd03b9497da"
-
-[[tools.moon]]
-os = "macos"
-arch = "arm64"
-spec = "latest"
-version = "2.2.3"
-checksum = "sha256:3ed73eb6384346318922f7e695eb1dd3fbb4c0fa9dccf25782939a592c6377a6"
+spec = "2.5.5"
+version = "2.5.5"
+checksum = "sha256:c90963711b70609da398c1be8ee36b4cf2f6167c5ec53f486d8bd9baa56ea578"
 
 [[tools.node]]
 os = "macos"
