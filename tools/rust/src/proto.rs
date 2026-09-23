@@ -225,7 +225,9 @@ pub fn locate_executables(
 
     Ok(Json(LocateExecutablesOutput {
         exes: HashMap::from_iter([("cargo".into(), primary)]),
-        exes_dirs: vec!["bin".into()],
+        // Don't expose the toolchain's `bin` dir, as executing those binaries
+        // directly bypasses the rustup proxies in `~/.cargo/bin`
+        exes_dirs: vec![],
         globals_lookup_dirs: vec![
             "$CARGO_INSTALL_ROOT/bin".into(),
             "$CARGO_HOME/bin".into(),
