@@ -187,3 +187,24 @@ mod v1_platform {
         );
     }
 }
+
+mod v1_versions {
+    use super::*;
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn latest_alias_sets_latest() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_schema_plugin(
+                "schema-test",
+                locate_fixture("schemas").join("v1-versions.toml"),
+            )
+            .await;
+
+        let output = plugin.load_versions(LoadVersionsInput::default()).await;
+        let latest = UnresolvedVersionSpec::parse("1.0.0").unwrap();
+
+        assert_eq!(output.latest.as_ref(), Some(&latest));
+        assert_eq!(output.aliases.get("latest"), Some(&latest));
+    }
+}

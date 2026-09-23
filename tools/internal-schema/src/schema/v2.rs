@@ -1,7 +1,8 @@
 use super::{PlatformMapper, VERSION_REGEX};
 use proto_pdk::{
     DetectVersionOutput, DownloadPrebuiltOutput, HostEnvironment, HostOS, LoadVersionsOutput,
-    LocateExecutablesOutput, MatchesVersion, PluginError, Range, RegisterToolOutput, VersionSpec,
+    LocateExecutablesOutput, MatchesVersion, PluginError, Range, RegisterToolOutput, SpecError,
+    VersionSpec,
 };
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -38,10 +39,40 @@ impl Default for ResolveSchema {
     }
 }
 
+/// Either `canary`, or a range that matches against versions.
+#[derive(Debug, Deserialize)]
+#[serde(try_from = "String")]
+pub enum OverrideRange {
+    Canary,
+    Range(Range),
+}
+
+impl OverrideRange {
+    pub fn matches(&self, spec: &VersionSpec) -> bool {
+        match (self, spec) {
+            (Self::Canary, VersionSpec::Canary) => true,
+            (Self::Range(range), VersionSpec::Version(version)) => range.matches(version),
+            _ => false,
+        }
+    }
+}
+
+impl TryFrom<String> for OverrideRange {
+    type Error = SpecError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value == "canary" {
+            Ok(Self::Canary)
+        } else {
+            Range::parse(value).map(Self::Range)
+        }
+    }
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Override {
-    pub range: Range,
+    pub range: OverrideRange,
 
     pub resolve: Option<ResolveSchema>,
     pub install: Option<DownloadPrebuiltOutput>, //
@@ -105,19 +136,17 @@ impl SchemaV2 {
             },
         );
 
-        if let Some(version) = spec.as_version() {
-            for or in &self.overrides {
-                if or.range.matches(version) {
-                    op(
-                        &mut value,
-                        Layer {
-                            install: or.install.as_ref(),
-                            locate: or.locate.as_ref(),
-                            // Prefer the host OS, otherwise the OS the base matched with
-                            platform: or.platform.get(&env.os).or_else(|| or.platform.get(&os)),
-                        },
-                    );
-                }
+        for or in &self.overrides {
+            if or.range.matches(spec) {
+                op(
+                    &mut value,
+                    Layer {
+                        install: or.install.as_ref(),
+                        locate: or.locate.as_ref(),
+                        // Prefer the host OS, otherwise the OS the base matched with
+                        platform: or.platform.get(&env.os).or_else(|| or.platform.get(&os)),
+                    },
+                );
             }
         }
 

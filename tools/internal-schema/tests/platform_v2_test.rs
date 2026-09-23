@@ -341,14 +341,22 @@ mod v2_overrides {
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    async fn canary_skips_overrides() {
+    async fn canary_only_uses_canary_override() {
         let (_sandbox, plugin) =
             create_plugin(FIXTURE, HostOS::Linux, HostArch::X64, HostLibc::Gnu).await;
 
+        let output = download(&plugin, "canary").await;
+
+        // The arch map from >=2.0.0 doesn't apply, so x64 is still amd64
         assert_eq!(
-            download(&plugin, "canary").await.download_name,
-            Some("tool-amd64.tar.gz".into())
+            output.download_name,
+            Some("tool-nightly-amd64.tar.gz".into())
         );
+        assert_eq!(
+            output.download_url,
+            "https://example.com/nightly/tool-nightly-amd64.tar.gz"
+        );
+        assert_eq!(output.archive_prefix, Some("tool-canary".into()));
     }
 
     #[tokio::test(flavor = "multi_thread")]
@@ -475,5 +483,38 @@ mod v2_overrides {
             download(&plugin, "2.0.0").await.checksum_url,
             Some("https://example.com/".into())
         );
+    }
+}
+
+mod v2_versions {
+    use super::*;
+
+    async fn load(fixture: &str) -> LoadVersionsOutput {
+        let (_sandbox, plugin) =
+            create_plugin(fixture, HostOS::Linux, HostArch::X64, HostLibc::Gnu).await;
+
+        plugin.load_versions(LoadVersionsInput::default()).await
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn latest_defaults_to_highest_stable_version() {
+        let output = load("v2-versions.toml").await;
+        let latest = UnresolvedVersionSpec::parse("2.0.0").unwrap();
+
+        assert_eq!(output.latest.as_ref(), Some(&latest));
+        assert_eq!(output.aliases.get("latest"), Some(&latest));
+        assert_eq!(
+            output.aliases.get("stable"),
+            Some(&UnresolvedVersionSpec::parse("1.0.0").unwrap())
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn latest_can_be_configured() {
+        let output = load("v2-versions-latest.toml").await;
+        let latest = UnresolvedVersionSpec::parse("1.0.0").unwrap();
+
+        assert_eq!(output.latest.as_ref(), Some(&latest));
+        assert_eq!(output.aliases.get("latest"), Some(&latest));
     }
 }

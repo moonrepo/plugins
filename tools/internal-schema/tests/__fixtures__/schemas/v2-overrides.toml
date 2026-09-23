@@ -54,5 +54,15 @@ primary = true
 [overrides.platform.macos]
 exe_path = "tool3/mac/tool"
 
+# Nightly builds live elsewhere
+[[overrides]]
+range = "canary"
+
+[overrides.install]
+download_url = "https://example.com/nightly/{download_name}"
+
+[overrides.platform.linux]
+download_name = "tool-nightly-{arch}.tar.gz"
+
 [source]
 versions = ["1.0.0"]

@@ -219,6 +219,14 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
     let mut output = LoadVersionsOutput::from_versions(versions.into_iter().collect());
     output.aliases.extend(aliases);
 
+    if let Some(latest) = schema.source_latest() {
+        output.aliases.insert("latest".into(), latest);
+    }
+
+    // proto prefers this field over the alias, so keep them in sync,
+    // otherwise a configured latest is replaced with the highest version
+    output.latest = output.aliases.get("latest").cloned();
+
     if output.versions.is_empty() {
         return Err(plugin_err!(
             "Unable to resolve versions for {}. Schema requires either a Git repository or registry index URL.",

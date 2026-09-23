@@ -150,6 +150,13 @@ impl Schema {
         }
     }
 
+    pub fn source_latest(&self) -> Option<UnresolvedVersionSpec> {
+        match self {
+            Self::V1(_) => None,
+            Self::V2(inner) => inner.source.latest.clone(),
+        }
+    }
+
     pub fn source_versions(&self) -> Vec<VersionSpec> {
         match self {
             Self::V1(inner) => inner.resolve.versions.clone(),
