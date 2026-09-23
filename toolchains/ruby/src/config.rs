@@ -21,7 +21,6 @@ config_struct!(
     pub struct RubyToolchainConfig {
         /// The dependency manager to use for installing gems,
         /// running inferred tasks, and much more.
-        #[setting(default)]
         pub package_manager: RubyPackageManager,
 
         /// Where Bundler installs gems, relative to the dependency root.

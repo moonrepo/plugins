@@ -8,7 +8,7 @@ extism-pdk = { version = "1.4.1" }
 indexmap = "2.14.2"
 regex = { version = "1.13.1", default-features = false, features = ["std"] }
 rustc-hash = "2.1.2"
-schematic = { version = "0.19.7", default-features = false, features = [
+schematic = { version = "0.20.6", default-features = false, features = [
     "schema",
 ] }
 serde = { version = "1.0.228", features = ["derive"] }
@@ -16,23 +16,23 @@ serde_json = { version = "1.0.150", features = ["preserve_order"] }
 serial_test = "4.0.1"
 shell-words = "1.1.1"
 starbase_sandbox = "0.12.0"
-starbase_utils = { version = "0.14.2", default-features = false, features = [
+starbase_utils = { version = "0.14.6", default-features = false, features = [
     "editor-config",
 ] }
-tokio = { version = "1.52.3", features = ["full"] }
-toml = { version = "1.1.4", default-features = false, features = [
+tokio = { version = "1.53.1", features = ["full"] }
+toml = { version = "1.1.6", default-features = false, features = [
     "parse",
     "serde",
 ] }
 
 # moon
-moon_common = { version = "2.0.8" }
-moon_config = { version = "2.1.1" }
-moon_pdk = { version = "2.1.0" }
-moon_pdk_api = { version = "2.1.2" }
-moon_pdk_test_utils = { version = "2.1.0" }
+moon_common = { version = "2.1.0" }
+moon_config = { version = "2.2.0" }
+moon_pdk = { version = "2.3.0" }
+moon_pdk_api = { version = "2.3.0" }
+moon_pdk_test_utils = { version = "2.3.0" }
 moon_project = { version = "2.0.7" }
-moon_target = { version = "3.0.1" }
+moon_target = { version = "3.1.0" }
 # moon_common = { path = "../../moon/crates/common" }
 # moon_config = { path = "../../moon/crates/config" }
 # moon_pdk = { path = "../../moon/crates/pdk" }
@@ -51,7 +51,7 @@ proto_pdk_test_utils = { version = "0.50.1" }
 
 # JavaScript
 nodejs_package_json = { version = "0.4.11", features = ["protocols"] }
-typescript_tsconfig_json = { version = "0.5.5", features = ["serialize"] }
+typescript_tsconfig_json = { version = "0.5.7", features = ["serialize"] }
 
 [profile.release]
 codegen-units = 1
