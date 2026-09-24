@@ -11,6 +11,7 @@ download_url = "https://example.com/{download_file}"
 
 [platform.linux]
 download_name = "tool.tar.gz"
+checksum_name = "tool.sha256"
 
 [[overrides]]
 range = ">=2.0.0"

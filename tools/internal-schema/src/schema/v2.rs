@@ -2,7 +2,7 @@ use super::{PlatformMapper, VERSION_REGEX};
 use proto_pdk::{
     Clause, DetectVersionOutput, DownloadPrebuiltOutput, HostEnvironment, HostOS,
     LoadVersionsOutput, LocateExecutablesOutput, MatchesRequirement, MatchesVersion, Op,
-    PluginError, Range, RegisterToolOutput, SpecError, UnresolvedVersionSpec, VersionSpec,
+    PluginError, Range, RegisterToolOutput, SpecError, UnresolvedVersionSpec, Version, VersionSpec,
 };
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -75,7 +75,7 @@ impl OverrideRange {
     pub fn matches(&self, spec: &VersionSpec) -> bool {
         match (self, spec) {
             (Self::Canary, VersionSpec::Canary) => true,
-            (Self::Range(range), VersionSpec::Version(version)) => range.matches(version),
+            (Self::Range(range), VersionSpec::Version(version)) => matches_version(range, version),
             _ => false,
         }
     }
@@ -85,7 +85,9 @@ impl OverrideRange {
     pub fn matches_unresolved(&self, spec: &UnresolvedVersionSpec) -> bool {
         match (self, spec) {
             (Self::Canary, UnresolvedVersionSpec::Canary) => true,
-            (Self::Range(range), UnresolvedVersionSpec::Version(version)) => range.matches(version),
+            (Self::Range(range), UnresolvedVersionSpec::Version(version)) => {
+                matches_version(range, version)
+            }
             (Self::Range(range), UnresolvedVersionSpec::Requirement(req)) => range.matches_req(req),
             (Self::Range(range), UnresolvedVersionSpec::Range(other)) => other
                 .clauses
@@ -94,6 +96,17 @@ impl OverrideRange {
             _ => false,
         }
     }
+}
+
+// Pre-releases belong to their release, so that `>=2` matches `2.0.0-rc.1`,
+// and `<2` matches `1.9.0-rc.1`, which semver alone wouldn't allow
+fn matches_version(range: &Range, version: &Version) -> bool {
+    range.matches(version)
+        || version.prerelease.is_some()
+            && range.matches(&Version {
+                prerelease: None,
+                ..version.clone()
+            })
 }
 
 // Versions are ordered, so a clause overlaps one of the range's clauses
@@ -275,6 +288,16 @@ mod tests {
         assert!(matches("<1", "0.21"));
         assert!(matches(">=1.2.5", "~1.2"));
         assert!(!matches("<1", "^1"));
+    }
+
+    #[test]
+    fn matches_prereleases_by_their_release() {
+        assert!(matches(">=1", "1.0.0-rc.1"));
+        assert!(matches("<1", "0.21.3-rc.1"));
+        assert!(!matches(">=1", "0.9.0-rc.1"));
+        assert!(!matches("<1", "1.0.0-rc.1"));
+        // Explicit pre-release ranges still use semver
+        assert!(matches(">=1.0.0-rc.2 <1.0.0", "1.0.0-rc.3"));
     }
 
     #[test]

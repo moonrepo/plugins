@@ -65,6 +65,21 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
             let mut deprecations = schema.deprecations.clone();
 
             #[allow(deprecated)]
+            let mut bin_path_oses = schema
+                .platform
+                .iter()
+                .filter_map(|(os, platform)| platform.bin_path.as_ref().map(|_| os))
+                .collect::<Vec<_>>();
+
+            bin_path_oses.sort();
+
+            for os in bin_path_oses {
+                deprecations.push(format!(
+                    "The <property>platform.{os}.bin-path</property> setting is deprecated, use <property>platform.{os}.exe-path</property> instead."
+                ));
+            }
+
+            #[allow(deprecated)]
             if schema.install.primary.is_some() {
                 deprecations.push(
                     "The <property>install.primary</property> setting is deprecated, use <property>install.exes</property> and the <symbol>primary</symbol> flag instead.".into()
@@ -358,31 +373,49 @@ pub fn download_prebuilt(
                 .download_name
                 .map(|name| interpolate_tokens(&name, env, spec, &platform));
 
-            let download_url = interpolate_tokens(&output.download_url, env, spec, &platform)
-                .replace(
-                    "{download_file}",
-                    download_name.as_deref().unwrap_or_default(),
-                )
-                .replace(
-                    "{download_name}",
-                    download_name.as_deref().unwrap_or_default(),
-                );
-
             let checksum_name = output
                 .checksum_name
                 .map(|name| interpolate_tokens(&name, env, spec, &platform));
 
-            let checksum_url = output.checksum_url.map(|url| {
-                interpolate_tokens(&url, env, spec, &platform)
-                    .replace(
-                        "{checksum_file}",
-                        checksum_name.as_deref().unwrap_or_default(),
-                    )
-                    .replace(
-                        "{checksum_name}",
-                        checksum_name.as_deref().unwrap_or_default(),
-                    )
-            });
+            // Error for a missing name, instead of silently creating a broken URL
+            let replace_name = |url: String, key: &str, name: Option<&str>| -> FnResult<String> {
+                let tokens = [format!("{{{key}_name}}"), format!("{{{key}_file}}")];
+
+                if !tokens.iter().any(|token| url.contains(token)) {
+                    return Ok(url);
+                }
+
+                let Some(name) = name else {
+                    return Err(plugin_err!(
+                        "Unable to download {}, as <url>{url}</url> requires a <property>{key}_name</property>, but none is configured for {}.",
+                        schema.metadata.name,
+                        env.os,
+                    ));
+                };
+
+                Ok(tokens
+                    .iter()
+                    .fold(url, |url, token| url.replace(token, name)))
+            };
+
+            let download_url = replace_name(
+                interpolate_tokens(&output.download_url, env, spec, &platform),
+                "download",
+                download_name.as_deref(),
+            )?;
+
+            let checksum_url = output
+                .checksum_url
+                .map(|url| {
+                    let url = replace_name(
+                        interpolate_tokens(&url, env, spec, &platform),
+                        "download",
+                        download_name.as_deref(),
+                    )?;
+
+                    replace_name(url, "checksum", checksum_name.as_deref())
+                })
+                .transpose()?;
 
             DownloadPrebuiltOutput {
                 archive_prefix,
@@ -541,6 +574,24 @@ pub fn locate_executables(
                     }
                 },
             )?;
+
+            // proto only creates bins and shims for configured executables, so like v1,
+            // fallback to a primary executable named after the plugin
+            if !output.exes.values().any(|config| config.primary) {
+                output.exes.insert(
+                    id.to_string(),
+                    ExecutableConfig {
+                        exe_path: Some(
+                            platform
+                                .exe_path
+                                .clone()
+                                .unwrap_or_else(|| id.as_str().into()),
+                        ),
+                        primary: true,
+                        ..Default::default()
+                    },
+                );
+            }
 
             for config in output.exes.values_mut() {
                 prepare_exe_config(config);

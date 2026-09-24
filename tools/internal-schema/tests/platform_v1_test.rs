@@ -208,3 +208,31 @@ mod v1_versions {
         assert_eq!(output.aliases.get("latest"), Some(&latest));
     }
 }
+
+mod v1_metadata {
+    use super::*;
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn deprecates_bin_path() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_schema_plugin(
+                "schema-test",
+                locate_fixture("schemas").join("primary-platform.toml"),
+            )
+            .await;
+
+        let output = plugin
+            .register_tool(RegisterToolInput {
+                id: Id::raw("schema-test"),
+            })
+            .await;
+
+        assert!(
+            output
+                .deprecations
+                .iter()
+                .any(|message| message.contains("platform.macos.bin-path"))
+        );
+    }
+}

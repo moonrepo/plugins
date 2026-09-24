@@ -330,13 +330,13 @@ mod v2_overrides {
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    async fn prerelease_does_not_match_plain_range() {
+    async fn prerelease_matches_range_of_its_release() {
         let (_sandbox, plugin) =
             create_plugin(FIXTURE, HostOS::Linux, HostArch::X64, HostLibc::Gnu).await;
 
         assert_eq!(
             download(&plugin, "2.1.0-rc.1").await.download_name,
-            Some("tool-amd64.tar.gz".into())
+            Some("tool-v2-x86_64.tar.gz".into())
         );
     }
 
@@ -481,7 +481,7 @@ mod v2_overrides {
 
         assert_eq!(
             download(&plugin, "2.0.0").await.checksum_url,
-            Some("https://example.com/".into())
+            Some("https://example.com/tool.sha256".into())
         );
     }
 }
@@ -555,5 +555,81 @@ mod v2_resolve {
         for initial in ["latest", "^1", "1.2.3 - 2.0.0", "canary"] {
             assert!(!has_pre_v1(&plugin, initial).await, "{initial}");
         }
+    }
+}
+
+mod v2_minimal {
+    use super::*;
+
+    const FIXTURE: &str = "v2-minimal.toml";
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn supports_cli_type() {
+        let (_sandbox, plugin) =
+            create_plugin(FIXTURE, HostOS::Linux, HostArch::X64, HostLibc::Gnu).await;
+
+        let output = plugin
+            .register_tool(RegisterToolInput {
+                id: Id::raw("schema-test"),
+            })
+            .await;
+
+        assert_eq!(output.type_of, PluginType::CommandLine);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn checksum_url_can_use_download_name() {
+        let (_sandbox, plugin) =
+            create_plugin(FIXTURE, HostOS::Linux, HostArch::X64, HostLibc::Gnu).await;
+
+        let output = download(&plugin, "1.0.0").await;
+
+        assert_eq!(
+            output.download_url,
+            "https://example.com/tool-x86_64.tar.gz"
+        );
+        assert_eq!(
+            output.checksum_url,
+            Some("https://example.com/tool-x86_64.tar.gz.sha256".into())
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn errors_for_missing_name_in_url() {
+        let (_sandbox, plugin) =
+            create_plugin(FIXTURE, HostOS::Windows, HostArch::X64, HostLibc::Unknown).await;
+
+        let error = try_download(&plugin, "1.0.0").await.unwrap_err();
+
+        assert!(error.contains("download_name"), "{error}");
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn creates_primary_exe_when_missing() {
+        let (_sandbox, plugin) =
+            create_plugin(FIXTURE, HostOS::Linux, HostArch::X64, HostLibc::Gnu).await;
+
+        let output = locate(&plugin, "1.0.0").await;
+        let primary = output.exes.get("schema-test").unwrap();
+
+        assert!(primary.primary);
+        assert_eq!(primary.exe_path, Some("schema-test".into()));
+        assert!(!output.exes.get("helper").unwrap().primary);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn created_primary_exe_uses_platform_exe_path() {
+        let (_sandbox, plugin) =
+            create_plugin(FIXTURE, HostOS::MacOS, HostArch::Arm64, HostLibc::Unknown).await;
+
+        assert_eq!(
+            locate(&plugin, "1.0.0")
+                .await
+                .exes
+                .get("schema-test")
+                .unwrap()
+                .exe_path,
+            Some("bin/tool".into())
+        );
     }
 }

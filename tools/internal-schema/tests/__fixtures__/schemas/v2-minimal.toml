@@ -1,0 +1,23 @@
+format = "2"
+
+[metadata]
+name = "v2-test"
+type = "cli"
+
+[install]
+download_url = "https://example.com/{download_name}"
+checksum_url = "https://example.com/{download_name}.sha256"
+
+# No primary executable, so one is created for the plugin
+[locate.exes.helper]
+exe_path = "bin/helper"
+
+[platform.linux]
+download_name = "tool-{arch}.tar.gz"
+
+[platform.macos]
+download_name = "tool-{arch}.tar.gz"
+exe_path = "bin/tool"
+
+# Missing a download name
+[platform.windows]
