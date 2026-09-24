@@ -2,7 +2,7 @@
   "format": "2",
   "plugin": {},
   "metadata": { "name": "v2-test", "type": "command-line" },
-  "install": { "downloadUrl": "https://example.com/{download_file}" },
-  "platform": { "linux": { "downloadName": "tool-{arch}.tar.gz" } },
+  "install": { "download_url": "https://example.com/{download_file}" },
+  "platform": { "linux": { "download_name": "tool-{arch}.tar.gz" } },
   "source": { "versions": ["1.0.0"] }
 }

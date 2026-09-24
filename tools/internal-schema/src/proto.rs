@@ -176,14 +176,15 @@ pub fn detect_version_files(
 }
 
 #[plugin_fn]
-pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
+pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
     let schema = get_schema()?;
+    let resolve = schema.get_resolve(&input.initial);
     let mut versions: HashSet<VersionSpec> = HashSet::from_iter(schema.source_versions());
     let aliases = schema.source_aliases();
 
     // Git tags
-    if let Some(repository) = schema.resolve_git_url() {
-        let pattern = regex::Regex::new(schema.resolve_git_tag_pattern())?;
+    if let Some(repository) = resolve.git_url.as_deref() {
+        let pattern = regex::Regex::new(resolve.get_git_tag_pattern())?;
 
         for tag in load_git_tags(repository)? {
             if let Some(cap) = pattern.captures(&tag) {
@@ -192,9 +193,9 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
         }
     }
     // URL endpoint
-    else if let Some(endpoint) = schema.resolve_manifest_url() {
-        let pattern = regex::Regex::new(schema.resolve_manifest_version_pattern())?;
-        let version_key = schema.resolve_manifest_version_key();
+    else if let Some(endpoint) = resolve.index_url.as_deref() {
+        let pattern = regex::Regex::new(resolve.get_version_pattern())?;
+        let version_key = resolve.get_index_version_key();
         let response: Vec<JsonValue> = fetch_json(endpoint)?;
 
         for row in response {

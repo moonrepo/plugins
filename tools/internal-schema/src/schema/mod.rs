@@ -100,46 +100,16 @@ impl Schema {
         Ok(platform)
     }
 
-    pub fn resolve_git_tag_pattern(&self) -> &str {
+    pub fn get_resolve(&self, spec: &UnresolvedVersionSpec) -> v2::ResolveSchema {
         match self {
-            Self::V1(inner) => inner
-                .resolve
-                .git_tag_pattern
-                .as_deref()
-                .unwrap_or(&inner.resolve.version_pattern),
-            Self::V2(inner) => inner
-                .resolve
-                .git_tag_pattern
-                .as_deref()
-                .unwrap_or(&inner.resolve.version_pattern),
-        }
-    }
-
-    pub fn resolve_git_url(&self) -> Option<&str> {
-        match self {
-            Self::V1(inner) => inner.resolve.git_url.as_deref(),
-            Self::V2(inner) => inner.resolve.git_url.as_deref(),
-        }
-    }
-
-    pub fn resolve_manifest_url(&self) -> Option<&str> {
-        match self {
-            Self::V1(inner) => inner.resolve.manifest_url.as_deref(),
-            Self::V2(inner) => inner.resolve.index_url.as_deref(),
-        }
-    }
-
-    pub fn resolve_manifest_version_key(&self) -> &str {
-        match self {
-            Self::V1(inner) => &inner.resolve.manifest_version_key,
-            Self::V2(inner) => &inner.resolve.index_version_key,
-        }
-    }
-
-    pub fn resolve_manifest_version_pattern(&self) -> &str {
-        match self {
-            Self::V1(inner) => &inner.resolve.version_pattern,
-            Self::V2(inner) => &inner.resolve.version_pattern,
+            Self::V1(inner) => v2::ResolveSchema {
+                version_pattern: Some(inner.resolve.version_pattern.clone()),
+                index_url: inner.resolve.manifest_url.clone(),
+                index_version_key: Some(inner.resolve.manifest_version_key.clone()),
+                git_url: inner.resolve.git_url.clone(),
+                git_tag_pattern: inner.resolve.git_tag_pattern.clone(),
+            },
+            Self::V2(inner) => inner.get_resolve(spec),
         }
     }
 

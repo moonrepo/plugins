@@ -1,8 +1,8 @@
 use super::{PlatformMapper, VERSION_REGEX};
 use proto_pdk::{
-    DetectVersionOutput, DownloadPrebuiltOutput, HostEnvironment, HostOS, LoadVersionsOutput,
-    LocateExecutablesOutput, MatchesVersion, PluginError, Range, RegisterToolOutput, SpecError,
-    VersionSpec,
+    Clause, DetectVersionOutput, DownloadPrebuiltOutput, HostEnvironment, HostOS,
+    LoadVersionsOutput, LocateExecutablesOutput, MatchesRequirement, MatchesVersion, Op,
+    PluginError, Range, RegisterToolOutput, SpecError, UnresolvedVersionSpec, VersionSpec,
 };
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -15,26 +15,50 @@ pub struct PluginSchema {
     pub homepage_url: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct ResolveSchema {
-    pub version_pattern: String,
+    pub version_pattern: Option<String>,
     // Manifest
     pub index_url: Option<String>,
-    pub index_version_key: String,
+    pub index_version_key: Option<String>,
     // Tags
     pub git_url: Option<String>,
     pub git_tag_pattern: Option<String>,
 }
 
-impl Default for ResolveSchema {
-    fn default() -> Self {
-        ResolveSchema {
-            index_url: None,
-            index_version_key: "version".to_string(),
-            git_url: None,
-            git_tag_pattern: None,
-            version_pattern: VERSION_REGEX.into(),
+impl ResolveSchema {
+    pub fn get_version_pattern(&self) -> &str {
+        self.version_pattern.as_deref().unwrap_or(VERSION_REGEX)
+    }
+
+    pub fn get_git_tag_pattern(&self) -> &str {
+        self.git_tag_pattern
+            .as_deref()
+            .unwrap_or_else(|| self.get_version_pattern())
+    }
+
+    pub fn get_index_version_key(&self) -> &str {
+        self.index_version_key.as_deref().unwrap_or("version")
+    }
+
+    pub fn override_with(&mut self, other: &ResolveSchema) {
+        // Versions come from either a Git repository or an index, so replace both
+        if other.git_url.is_some() || other.index_url.is_some() {
+            self.git_url = other.git_url.clone();
+            self.index_url = other.index_url.clone();
+        }
+
+        if let Some(value) = &other.git_tag_pattern {
+            self.git_tag_pattern = Some(value.to_owned());
+        }
+
+        if let Some(value) = &other.index_version_key {
+            self.index_version_key = Some(value.to_owned());
+        }
+
+        if let Some(value) = &other.version_pattern {
+            self.version_pattern = Some(value.to_owned());
         }
     }
 }
@@ -55,6 +79,43 @@ impl OverrideRange {
             _ => false,
         }
     }
+
+    /// Match against the version being resolved, where a requirement or
+    /// range matches if at least one version satisfies both.
+    pub fn matches_unresolved(&self, spec: &UnresolvedVersionSpec) -> bool {
+        match (self, spec) {
+            (Self::Canary, UnresolvedVersionSpec::Canary) => true,
+            (Self::Range(range), UnresolvedVersionSpec::Version(version)) => range.matches(version),
+            (Self::Range(range), UnresolvedVersionSpec::Requirement(req)) => range.matches_req(req),
+            (Self::Range(range), UnresolvedVersionSpec::Range(other)) => other
+                .clauses
+                .iter()
+                .any(|clause| overlaps_clause(range, clause)),
+            _ => false,
+        }
+    }
+}
+
+// Versions are ordered, so a clause overlaps one of the range's clauses
+// if it overlaps each of the clause's requirements (Helly's theorem)
+fn overlaps_clause(range: &Range, clause: &Clause) -> bool {
+    let reqs = match clause {
+        Clause::All(reqs) => reqs.to_owned(),
+        Clause::Between(lower, upper) => vec![
+            lower.to_requirement(Op::GreaterEq),
+            upper.to_requirement(Op::LessEq),
+        ],
+        Clause::Only(req) => vec![req.to_owned()],
+    };
+
+    if range.clauses.is_empty() {
+        return reqs.iter().all(|req| range.matches_req(req));
+    }
+
+    range
+        .clauses
+        .iter()
+        .any(|own| reqs.iter().all(|req| own.matches_req(req)))
 }
 
 impl TryFrom<String> for OverrideRange {
@@ -74,6 +135,7 @@ impl TryFrom<String> for OverrideRange {
 pub struct Override {
     pub range: OverrideRange,
 
+    // Matched against the version being resolved, instead of installed
     pub resolve: Option<ResolveSchema>,
     pub install: Option<DownloadPrebuiltOutput>, //
     pub locate: Option<LocateExecutablesOutput>, //
@@ -153,6 +215,22 @@ impl SchemaV2 {
         Ok(value)
     }
 
+    /// Apply the base resolve settings, then each override that matches the
+    /// version being resolved, in the order they were declared.
+    pub fn get_resolve(&self, spec: &UnresolvedVersionSpec) -> ResolveSchema {
+        let mut resolve = self.resolve.clone();
+
+        for or in &self.overrides {
+            if let Some(next) = &or.resolve
+                && or.range.matches_unresolved(spec)
+            {
+                resolve.override_with(next);
+            }
+        }
+
+        resolve
+    }
+
     pub fn get_platform(
         &self,
         env: &HostEnvironment,
@@ -177,5 +255,46 @@ impl SchemaV2 {
             tool: self.metadata.name.clone(),
             os: env.os.to_rust_os(),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn matches(range: &str, spec: &str) -> bool {
+        OverrideRange::try_from(range.to_owned())
+            .unwrap()
+            .matches_unresolved(&UnresolvedVersionSpec::parse(spec).unwrap())
+    }
+
+    #[test]
+    fn matches_versions_and_requirements() {
+        assert!(matches("<1", "0.21.3"));
+        assert!(!matches("<1", "1.0.0"));
+        assert!(matches("<1", "0.21"));
+        assert!(matches(">=1.2.5", "~1.2"));
+        assert!(!matches("<1", "^1"));
+    }
+
+    #[test]
+    fn matches_ranges_that_overlap() {
+        assert!(matches("<1", ">=0.5 <2"));
+        assert!(matches("<1", "^0.1 || ^3"));
+        assert!(matches(">=1.5 <3", ">=1 <2"));
+        assert!(matches(">=1.5 <3", "1.2.3 - 1.5.0"));
+        assert!(!matches("<1", "1.2.3 - 2.0.0"));
+        assert!(!matches("<1", ">=1 <2 || ^3"));
+        assert!(!matches(">=1.5 <3", ">=1 <1.5"));
+        // Each requirement overlaps a different clause, but none overlap both
+        assert!(!matches("<1 || >=3", ">=1 <2"));
+    }
+
+    #[test]
+    fn matches_canary_only_with_canary() {
+        assert!(matches("canary", "canary"));
+        assert!(!matches("canary", "1.0.0"));
+        assert!(!matches("*", "canary"));
+        assert!(!matches("<1", "latest"));
     }
 }

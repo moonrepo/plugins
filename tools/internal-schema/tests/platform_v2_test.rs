@@ -158,7 +158,7 @@ mod v2_platform {
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    async fn camel_case_json_schema() {
+    async fn loads_json_schema() {
         let (_sandbox, plugin) = create_plugin(
             "v2-platform.json",
             HostOS::Linux,
@@ -516,5 +516,44 @@ mod v2_versions {
 
         assert_eq!(output.latest.as_ref(), Some(&latest));
         assert_eq!(output.aliases.get("latest"), Some(&latest));
+    }
+}
+
+mod v2_resolve {
+    use super::*;
+
+    async fn has_pre_v1(plugin: &WasmTestWrapper, initial: &str) -> bool {
+        plugin
+            .load_versions(LoadVersionsInput {
+                initial: UnresolvedVersionSpec::parse(initial).unwrap(),
+                ..Default::default()
+            })
+            .await
+            .versions
+            .iter()
+            .any(|version| {
+                version
+                    .as_version()
+                    .is_some_and(|version| version.major == 0)
+            })
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn override_resolves_requests_within_range() {
+        let (_sandbox, plugin) = create_plugin(
+            "v2-resolve.toml",
+            HostOS::Linux,
+            HostArch::X64,
+            HostLibc::Gnu,
+        )
+        .await;
+
+        for initial in ["0.21", "0.21.3", ">=0.5 <2", "^0.1 || ^3"] {
+            assert!(has_pre_v1(&plugin, initial).await, "{initial}");
+        }
+
+        for initial in ["latest", "^1", "1.2.3 - 2.0.0", "canary"] {
+            assert!(!has_pre_v1(&plugin, initial).await, "{initial}");
+        }
     }
 }

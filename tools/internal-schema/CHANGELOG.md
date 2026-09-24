@@ -8,7 +8,7 @@
   - `metadata`, `detect`, `source`, `install`, and `locate` map directly to the `register_tool`, `detect_version_files`, `load_versions`, `download_prebuilt`, and `locate_executables` outputs.
   - `resolve` loads versions from Git tags (`git_url`, `git_tag_pattern`) or an index URL (`index_url`, `index_version_key`).
   - `[platform.<os>]` supports `download_name`, `checksum_name`, `archive_prefix`, `archs`, `arch`, `libc`, `exe_path`, and `exes_dirs`. BSD based OSes fall back to `linux`.
-  - Added `[[overrides]]` for version specific settings. Each entry requires a `range` (or `canary` to match canary releases), and can override `install`, `locate`, and `platform` settings. Entries are applied in order (later entries win), and platform settings win over install/locate settings within the same entry.
+  - Added `[[overrides]]` for version specific settings. Each entry requires a `range` (or `canary` to match canary releases), and can override `install`, `locate`, `platform`, and `resolve` settings. Entries are applied in order (later entries win), and platform settings win over install/locate settings within the same entry. `resolve` overrides are matched against the version being resolved, where a requirement or range matches if it overlaps the entry's range.
   - `source.latest` sets the latest version, instead of using the highest stable version.
   - URLs support `{download_name}` and `{checksum_name}` tokens, in addition to `{download_file}` and `{checksum_file}`.
   - Unknown fields at the top-level, and within `plugin`, `resolve`, `platform`, and `overrides`, are an error.
