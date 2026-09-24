@@ -174,6 +174,11 @@
     "macos": "ruby-3.4.10.macos.tar.gz",
     "x86_64_linux": "ruby-3.4.10.x86_64_linux.tar.gz"
   },
+  "3.4.11": {
+    "arm64_linux": "ruby-3.4.11.arm64_linux.tar.gz",
+    "macos": "ruby-3.4.11.macos.tar.gz",
+    "x86_64_linux": "ruby-3.4.11.x86_64_linux.tar.gz"
+  },
   "3.5.0-preview1": {
     "arm64_linux": "ruby-3.5.0-preview1.arm64_linux.tar.gz",
     "macos": "ruby-3.5.0-preview1.macos.tar.gz",
