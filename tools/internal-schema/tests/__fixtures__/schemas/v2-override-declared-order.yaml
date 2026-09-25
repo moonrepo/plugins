@@ -1,0 +1,20 @@
+format: "2"
+metadata:
+  name: v2-test
+  type: command-line
+install:
+  download_url: "https://example.com/{download_file}"
+platform:
+  linux:
+    download_name: base
+overrides:
+  - range: "^1.5"
+    platform:
+      linux:
+        download_name: caret
+  - range: ">=1.0.0"
+    platform:
+      linux:
+        download_name: gte
+source:
+  versions: ["1.0.0"]

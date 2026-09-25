@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added a new v2 schema format, enabled with `format = "2"`. Settings mirror proto's plugin API types, and use snake_case keys.
+  - `metadata`, `detect`, `source`, `install`, and `locate` map directly to the `register_tool`, `detect_version_files`, `load_versions`, `download_prebuilt`, and `locate_executables` outputs.
+  - `resolve` loads versions from Git tags (`git_url`, `git_tag_pattern`) or an index URL (`index_url`, `index_version_key`).
+  - `[platform.<os>]` supports `download_name`, `checksum_name`, `archive_prefix`, `archs`, `arch`, `libc`, `exe_path`, and `exes_dirs`. BSD based OSes fall back to `linux`.
+  - Added `[[overrides]]` for version specific settings. Each entry requires a `range` (or `canary` to match canary releases), and can override `install`, `locate`, `platform`, and `resolve` settings. Entries are applied in order (later entries win), and platform settings win over install/locate settings within the same entry. Pre-releases match the range of their release, for example `2.0.0-rc.1` matches `>=2`. `resolve` overrides are matched against the version being resolved, where a requirement or range matches if it overlaps the entry's range.
+  - If no `locate.exes` executable is marked as `primary`, one is created that's named after the plugin, using `platform.<os>.exe_path` if set.
+  - `source.latest` sets the latest version, instead of using the highest stable version.
+  - URLs support `{download_name}` and `{checksum_name}` tokens, in addition to `{download_file}` and `{checksum_file}`. Checksum URLs also support `{download_name}`. Using a token without its name configured is an error.
+  - Unknown fields at the top-level, and within `plugin`, `resolve`, `platform`, and `overrides`, are an error.
+- Secondary executable paths now support tokens (`{version}`, etc), like the primary executable.
+
+#### 🐞 Fixes
+
+- Fixed a configured `latest` alias being replaced with the highest stable version.
+
 ## 0.18.2
 
 #### 🚀 Updates

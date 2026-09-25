@@ -1,0 +1,14 @@
+name = "v1-test"
+type = "cli"
+
+[platform.linux]
+download-file = "tool.tar.gz"
+
+[install]
+download-url = "https://example.com/{download_file}"
+
+[resolve]
+versions = ["1.0.0", "2.0.0"]
+
+[resolve.aliases]
+latest = "1.0.0"

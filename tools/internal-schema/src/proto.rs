@@ -1,4 +1,4 @@
-use crate::schema::{ExecutableSchema, PlatformMapper, Schema, SchemaType};
+use crate::schema::{Schema, interpolate_tokens, v1::SchemaType};
 use extism_pdk::*;
 use proto_pdk::*;
 use regex::Captures;
@@ -6,6 +6,32 @@ use serde_json::Value as JsonValue;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use tool_common::enable_tracing;
+
+macro_rules! override_option {
+    ($prev:ident, $next:ident, [ $($prop:ident),* ]) => {
+        $(
+            override_option!($prev, $next, $prop);
+        )*
+    };
+    ($prev:ident, $next:ident, $prop:ident) => {
+        if let Some(value) = &$next.$prop {
+            $prev.$prop = Some(value.to_owned());
+        }
+    };
+}
+
+macro_rules! override_value {
+    ($prev:ident, $next:ident, [ $($prop:ident),* ]) => {
+        $(
+            override_value!($prev, $next, $prop);
+        )*
+    };
+    ($prev:ident, $next:ident, $prop:ident) => {
+        if !$next.$prop.is_empty() {
+            $prev.$prop = $next.$prop.clone();
+        }
+    };
+}
 
 #[host_fn]
 extern "ExtismHost" {
@@ -15,76 +41,90 @@ extern "ExtismHost" {
 
 fn get_schema() -> Result<Schema, Error> {
     let data = config::get("proto_schema")?.expect("Missing schema!");
-    let schema: Schema = json::from_str(&data)?;
+    let value: JsonValue = json::from_str(&data)?;
+
+    let schema = if value.get("format").is_some_and(|format| {
+        format.is_string() && format == "2" || format.is_number() && format == 2
+    }) {
+        Schema::V2(json::from_value(value)?)
+    } else {
+        Schema::V1(json::from_value(value)?)
+    };
 
     Ok(schema)
-}
-
-fn get_platform<'schema>(
-    schema: &'schema Schema,
-    env: &HostEnvironment,
-) -> Result<&'schema PlatformMapper, PluginError> {
-    let mut platform = schema.platform.get(&env.os);
-
-    // Fallback to linux for other OSes
-    if platform.is_none() && env.os.is_bsd() {
-        platform = schema.platform.get(&HostOS::Linux);
-    }
-
-    platform.ok_or_else(|| PluginError::UnsupportedOS {
-        tool: schema.name.clone(),
-        os: env.os.to_rust_os(),
-    })
 }
 
 #[plugin_fn]
 pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {
     enable_tracing();
 
-    let env = get_host_environment()?;
     let schema = get_schema()?;
-    let platform = get_platform(&schema, env)?;
-    let mut deprecations = schema.deprecations.clone();
 
-    #[allow(deprecated)]
-    if platform.bin_path.is_some() {
-        deprecations.push(
-            format!("The <property>platform.{os}.bin-path</property> setting is deprecated, use <property>platform.{os}.exe-path</property> instead.", os = env.os)
-        );
-    }
+    Ok(Json(match schema {
+        Schema::V1(schema) => {
+            let mut deprecations = schema.deprecations.clone();
 
-    #[allow(deprecated)]
-    if schema.install.primary.is_some() {
-        deprecations.push(
-            "The <property>install.primary</property> setting is deprecated, use <property>install.exes</property> and the <symbol>primary</symbol> flag instead.".into()
-        );
-    }
+            #[allow(deprecated)]
+            let mut bin_path_oses = schema
+                .platform
+                .iter()
+                .filter_map(|(os, platform)| platform.bin_path.as_ref().map(|_| os))
+                .collect::<Vec<_>>();
 
-    #[allow(deprecated)]
-    if !schema.install.secondary.is_empty() {
-        deprecations.push(
-            "The <property>install.secondary</property> setting is deprecated, use <property>install.exes</property> instead.".into()
-        );
-    }
+            bin_path_oses.sort();
 
-    Ok(Json(RegisterToolOutput {
-        name: schema.name,
-        type_of: match schema.type_of {
-            SchemaType::CommandLine => PluginType::CommandLine,
-            SchemaType::DependencyManager => PluginType::DependencyManager,
-            SchemaType::Language => PluginType::Language,
-            SchemaType::VersionManager => PluginType::VersionManager,
+            for os in bin_path_oses {
+                deprecations.push(format!(
+                    "The <property>platform.{os}.bin-path</property> setting is deprecated, use <property>platform.{os}.exe-path</property> instead."
+                ));
+            }
+
+            #[allow(deprecated)]
+            if schema.install.primary.is_some() {
+                deprecations.push(
+                    "The <property>install.primary</property> setting is deprecated, use <property>install.exes</property> and the <symbol>primary</symbol> flag instead.".into()
+                );
+            }
+
+            #[allow(deprecated)]
+            if !schema.install.secondary.is_empty() {
+                deprecations.push(
+                    "The <property>install.secondary</property> setting is deprecated, use <property>install.exes</property> instead.".into()
+                );
+            }
+
+            RegisterToolOutput {
+                name: schema.name,
+                type_of: match schema.type_of {
+                    SchemaType::CommandLine => PluginType::CommandLine,
+                    SchemaType::DependencyManager => PluginType::DependencyManager,
+                    SchemaType::Language => PluginType::Language,
+                    SchemaType::VersionManager => PluginType::VersionManager,
+                },
+                minimum_proto_version: Some(Version::new(0, 60, 0)),
+                default_version: schema.metadata.default_version,
+                plugin_version: match schema.metadata.plugin_version {
+                    Some(version) => Some(version),
+                    None => Version::parse(env!("CARGO_PKG_VERSION")).ok(),
+                },
+                self_upgrade_commands: schema.metadata.self_upgrade_commands,
+                deprecations,
+                requires: schema.metadata.requires,
+                ..Default::default()
+            }
+        }
+
+        Schema::V2(schema) => RegisterToolOutput {
+            minimum_proto_version: schema
+                .metadata
+                .minimum_proto_version
+                .or_else(|| Some(Version::new(0, 60, 0))),
+            plugin_version: schema
+                .metadata
+                .plugin_version
+                .or_else(|| Version::parse(env!("CARGO_PKG_VERSION")).ok()),
+            ..schema.metadata
         },
-        minimum_proto_version: Some(Version::new(0, 60, 0)),
-        default_version: schema.metadata.default_version,
-        plugin_version: match schema.metadata.plugin_version {
-            Some(version) => Some(version),
-            None => Version::parse(env!("CARGO_PKG_VERSION")).ok(),
-        },
-        self_upgrade_commands: schema.metadata.self_upgrade_commands,
-        deprecations,
-        requires: schema.metadata.requires,
-        ..Default::default()
     }))
 }
 
@@ -136,19 +176,30 @@ fn create_version(cap: Captures) -> String {
 }
 
 #[plugin_fn]
-pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
+pub fn detect_version_files(
+    Json(_): Json<DetectVersionInput>,
+) -> FnResult<Json<DetectVersionOutput>> {
     let schema = get_schema()?;
-    let mut versions: HashSet<VersionSpec> = HashSet::from_iter(schema.resolve.versions);
+
+    Ok(Json(match schema {
+        Schema::V1(schema) => DetectVersionOutput {
+            files: schema.detect.version_files,
+            ignore: schema.detect.ignore,
+        },
+        Schema::V2(schema) => schema.detect,
+    }))
+}
+
+#[plugin_fn]
+pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
+    let schema = get_schema()?;
+    let resolve = schema.get_resolve(&input.initial);
+    let mut versions: HashSet<VersionSpec> = HashSet::from_iter(schema.source_versions());
+    let aliases = schema.source_aliases();
 
     // Git tags
-    if let Some(repository) = schema.resolve.git_url {
-        let pattern = regex::Regex::new(
-            schema
-                .resolve
-                .git_tag_pattern
-                .as_ref()
-                .unwrap_or(&schema.resolve.version_pattern),
-        )?;
+    if let Some(repository) = resolve.git_url.as_deref() {
+        let pattern = regex::Regex::new(resolve.get_git_tag_pattern())?;
 
         for tag in load_git_tags(repository)? {
             if let Some(cap) = pattern.captures(&tag) {
@@ -157,9 +208,9 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
         }
     }
     // URL endpoint
-    else if let Some(endpoint) = schema.resolve.manifest_url {
-        let pattern = regex::Regex::new(&schema.resolve.version_pattern)?;
-        let version_key = &schema.resolve.manifest_version_key;
+    else if let Some(endpoint) = resolve.index_url.as_deref() {
+        let pattern = regex::Regex::new(resolve.get_version_pattern())?;
+        let version_key = resolve.get_index_version_key();
         let response: Vec<JsonValue> = fetch_json(endpoint)?;
 
         for row in response {
@@ -182,110 +233,24 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
     }
 
     let mut output = LoadVersionsOutput::from_versions(versions.into_iter().collect());
-    output.aliases.extend(schema.resolve.aliases);
+    output.aliases.extend(aliases);
+
+    if let Some(latest) = schema.source_latest() {
+        output.aliases.insert("latest".into(), latest);
+    }
+
+    // proto prefers this field over the alias, so keep them in sync,
+    // otherwise a configured latest is replaced with the highest version
+    output.latest = output.aliases.get("latest").cloned();
 
     if output.versions.is_empty() {
         return Err(plugin_err!(
-            "Unable to resolve versions for {}. Schema either requires a <property>resolve.git-url</property> or <property>resolve.manifest-url</property>.",
-            schema.name
+            "Unable to resolve versions for {}. Schema requires either a Git repository or registry index URL.",
+            schema.get_name()
         ));
     }
 
     Ok(Json(output))
-}
-
-#[plugin_fn]
-pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
-    let schema = get_schema()?;
-
-    Ok(Json(DetectVersionOutput {
-        files: schema.detect.version_files,
-        ignore: schema.detect.ignore,
-    }))
-}
-
-fn interpolate_tokens(
-    value: &str,
-    version: &VersionSpec,
-    schema: &Schema,
-    platform: &PlatformMapper,
-    env: &HostEnvironment,
-) -> String {
-    let arch = env.arch.to_rust_arch();
-    let os = env.os.to_string();
-
-    let mut value = value
-        .replace("{version}", &version.to_string())
-        .replace(
-            "{arch}",
-            platform
-                .arch
-                .get(&env.arch)
-                .or_else(|| schema.install.arch.get(&env.arch))
-                .unwrap_or(&arch),
-        )
-        .replace("{os}", &os);
-
-    // Avoid detecting musl unless requested
-    if value.contains("{libc}") {
-        let libc = env.libc.to_string();
-
-        value = value.replace(
-            "{libc}",
-            platform
-                .libc
-                .get(&env.libc)
-                .or_else(|| schema.install.libc.get(&env.libc))
-                .unwrap_or(&libc),
-        );
-    }
-
-    if let Some(v) = version.as_version() {
-        let major = v.major.to_string();
-        let minor = v.minor.to_string();
-        let patch = v.patch.to_string();
-        let year = format!("{:0>4}", v.major);
-        let month = format!("{:0>2}", v.minor);
-        let day = format!("{:0>2}", v.patch);
-        let major_minor = format!("{}.{}", v.major, v.minor); // Deprecated, remains for backwards compatibility
-        let year_month = format!("{:0>4}-{:0>2}", v.major, v.minor); // Deprecated, remains for backwards compatibility
-        let pre = v
-            .prerelease
-            .as_ref()
-            .map(|pre| pre.to_string())
-            .unwrap_or_default();
-        let build = v
-            .build
-            .as_ref()
-            .map(|build| build.to_string())
-            .unwrap_or_default();
-
-        value = value
-            .replace("{versionMajor}", &major)
-            .replace("{versionMinor}", &minor)
-            .replace("{versionPatch}", &patch)
-            .replace("{versionMajorMinor}", &major_minor) // Deprecated, remains for backwards compatibility
-            .replace("{versionYear}", &year)
-            .replace("{versionMonth}", &month)
-            .replace("{versionDay}", &day)
-            .replace("{versionYearMonth}", &year_month) // Deprecated, remains for backwards compatibility
-            .replace("{versionPrerelease}", &pre)
-            .replace("{versionBuild}", &build);
-    } else {
-        value = value
-            .replace("{versionMajor}", "")
-            .replace("{versionMinor}", "")
-            .replace("{versionPatch}", "")
-            .replace("{versionMajorMinor}", "") // Deprecated, remains for backwards compatibility
-            .replace("{versionYear}", "")
-            .replace("{versionMonth}", "")
-            .replace("{versionDay}", "")
-            .replace("{versionYearMonth}", "") // Deprecated, remains for backwards compatibility
-            .replace("{versionPrerelease}", "")
-            .replace("{versionBuild}", "");
-    }
-
-    value
 }
 
 #[plugin_fn]
@@ -294,217 +259,347 @@ pub fn download_prebuilt(
 ) -> FnResult<Json<DownloadPrebuiltOutput>> {
     let env = get_host_environment()?;
     let schema = get_schema()?;
-    let platform = get_platform(&schema, env)?;
+    let platform = schema.get_platform(env, Some(&input.context.version))?;
 
     if !platform.archs.is_empty() {
         check_supported_os_and_arch(
-            &schema.name,
+            schema.get_name(),
             env,
             HashMap::from_iter([(env.os, platform.archs.clone())]),
         )?;
     }
 
-    let version = &input.context.version;
-    let is_canary = version.is_canary();
+    let spec = &input.context.version;
+    let is_canary = spec.is_canary();
 
-    let download_file =
-        interpolate_tokens(&platform.download_file, version, &schema, platform, env);
+    let output: DownloadPrebuiltOutput = match schema {
+        Schema::V1(schema) => {
+            let download_file = interpolate_tokens(
+                &platform.download_name.clone().unwrap_or_default(),
+                env,
+                spec,
+                &platform,
+            );
 
-    let download_url = interpolate_tokens(
-        if is_canary {
-            schema
-                .install
-                .download_url_canary
+            let download_url = interpolate_tokens(
+                if is_canary {
+                    schema
+                        .install
+                        .download_url_canary
+                        .as_ref()
+                        .unwrap_or(&schema.install.download_url)
+                } else {
+                    &schema.install.download_url
+                },
+                env,
+                spec,
+                &platform,
+            )
+            .replace("{download_file}", &download_file);
+
+            let checksum_file = interpolate_tokens(
+                platform.checksum_name.as_deref().unwrap_or("CHECKSUM.txt"),
+                env,
+                spec,
+                &platform,
+            );
+
+            let checksum_url = if is_canary {
+                schema
+                    .install
+                    .checksum_url_canary
+                    .as_ref()
+                    .or(schema.install.checksum_url.as_ref())
+            } else {
+                schema.install.checksum_url.as_ref()
+            };
+
+            let checksum_url = checksum_url.map(|url| {
+                interpolate_tokens(url, env, spec, &platform)
+                    .replace("{checksum_file}", &checksum_file)
+            });
+
+            let archive_prefix = platform
+                .archive_prefix
                 .as_ref()
-                .unwrap_or(&schema.install.download_url)
-        } else {
-            &schema.install.download_url
-        },
-        version,
-        &schema,
-        platform,
-        env,
-    )
-    .replace("{download_file}", &download_file);
+                .map(|prefix| interpolate_tokens(prefix, env, spec, &platform));
 
-    let checksum_file = interpolate_tokens(
-        platform.checksum_file.as_deref().unwrap_or("CHECKSUM.txt"),
-        version,
-        &schema,
-        platform,
-        env,
-    );
+            DownloadPrebuiltOutput {
+                archive_prefix,
+                checksum_url,
+                checksum_name: Some(checksum_file),
+                checksum_public_key: schema.install.checksum_public_key,
+                download_url,
+                download_name: Some(download_file),
+                ..Default::default()
+            }
+        }
+        Schema::V2(schema) => {
+            let output =
+                schema.apply_layers(env, spec, |prev: &mut DownloadPrebuiltOutput, layer| {
+                    if let Some(next) = layer.install {
+                        override_option!(
+                            prev,
+                            next,
+                            [
+                                archive_prefix,
+                                checksum,
+                                checksum_name,
+                                checksum_public_key,
+                                checksum_url,
+                                download_name,
+                                post_script
+                            ]
+                        );
 
-    let checksum_url = if is_canary {
-        schema
-            .install
-            .checksum_url_canary
-            .as_ref()
-            .or(schema.install.checksum_url.as_ref())
-    } else {
-        schema.install.checksum_url.as_ref()
+                        override_value!(prev, next, [download_url, http_headers, post_script_args]);
+                    }
+
+                    // Platform settings beat install settings within the same layer
+                    if let Some(next) = layer.platform {
+                        override_option!(
+                            prev,
+                            next,
+                            [archive_prefix, checksum_name, download_name]
+                        );
+                    }
+                })?;
+
+            let archive_prefix = output
+                .archive_prefix
+                .map(|prefix| interpolate_tokens(&prefix, env, spec, &platform));
+
+            let download_name = output
+                .download_name
+                .map(|name| interpolate_tokens(&name, env, spec, &platform));
+
+            let checksum_name = output
+                .checksum_name
+                .map(|name| interpolate_tokens(&name, env, spec, &platform));
+
+            // Error for a missing name, instead of silently creating a broken URL
+            let replace_name = |url: String, key: &str, name: Option<&str>| -> FnResult<String> {
+                let tokens = [format!("{{{key}_name}}"), format!("{{{key}_file}}")];
+
+                if !tokens.iter().any(|token| url.contains(token)) {
+                    return Ok(url);
+                }
+
+                let Some(name) = name else {
+                    return Err(plugin_err!(
+                        "Unable to download {}, as <url>{url}</url> requires a <property>{key}_name</property>, but none is configured for {}.",
+                        schema.metadata.name,
+                        env.os,
+                    ));
+                };
+
+                Ok(tokens
+                    .iter()
+                    .fold(url, |url, token| url.replace(token, name)))
+            };
+
+            let download_url = replace_name(
+                interpolate_tokens(&output.download_url, env, spec, &platform),
+                "download",
+                download_name.as_deref(),
+            )?;
+
+            let checksum_url = output
+                .checksum_url
+                .map(|url| {
+                    let url = replace_name(
+                        interpolate_tokens(&url, env, spec, &platform),
+                        "download",
+                        download_name.as_deref(),
+                    )?;
+
+                    replace_name(url, "checksum", checksum_name.as_deref())
+                })
+                .transpose()?;
+
+            DownloadPrebuiltOutput {
+                archive_prefix,
+                checksum_name,
+                checksum_url,
+                download_name,
+                download_url,
+                ..output
+            }
+        }
     };
 
-    let checksum_url = checksum_url.map(|url| {
-        interpolate_tokens(url, version, &schema, platform, env)
-            .replace("{checksum_file}", &checksum_file)
-    });
-
-    let archive_prefix = platform
-        .archive_prefix
-        .as_ref()
-        .map(|prefix| interpolate_tokens(prefix, version, &schema, platform, env));
-
-    Ok(Json(DownloadPrebuiltOutput {
-        archive_prefix,
-        checksum_url,
-        checksum_name: Some(checksum_file),
-        checksum_public_key: schema.install.checksum_public_key,
-        download_url,
-        download_name: Some(download_file),
-        ..Default::default()
-    }))
-}
-
-fn create_executable_config(schema: ExecutableSchema) -> ExecutableConfig {
-    ExecutableConfig {
-        exe_path: schema.exe_path,
-        exe_link_path: schema.exe_link_path,
-        no_bin: schema.no_bin,
-        no_shim: schema.no_shim,
-        parent_exe_args: schema.parent_exe_args,
-        parent_exe_name: schema.parent_exe_name,
-        primary: schema.primary,
-        shim_before_args: schema.shim_before_args.map(StringOrVec::Vec),
-        shim_after_args: schema.shim_after_args.map(StringOrVec::Vec),
-        shim_env_vars: schema.shim_env_vars.map(HashMap::from_iter),
-        update_perms: false,
-    }
+    Ok(Json(output))
 }
 
 #[plugin_fn]
 pub fn locate_executables(
     Json(input): Json<LocateExecutablesInput>,
 ) -> FnResult<Json<LocateExecutablesOutput>> {
+    let id = get_plugin_id()?;
     let env = get_host_environment()?;
     let schema = get_schema()?;
-    let platform = get_platform(&schema, env)?;
-    let id = get_plugin_id()?;
+    let platform = schema.get_platform(env, Some(&input.context.version))?;
 
-    // On Windows, automatically add the `.exe` extension to all executables.
-    // But only if there is no extension, so that we don't overwrite `.js` and others!
-    let append_exe_ext = |mut path: PathBuf| -> PathBuf {
+    let prepare_exe_path = |mut path: PathBuf| -> PathBuf {
+        // On Windows, automatically add the `.exe` extension to all executables.
+        // But only if there is no extension, so that we don't overwrite `.js` and others!
         if env.os.is_windows() && path.extension().is_none() {
             path.set_extension("exe");
+        }
+
+        // If we can convert the path into a string, we should interpolate
+        // tokens, otherwise return it as-is
+        if let Some(inner) = path.to_str() {
+            return interpolate_tokens(inner, env, &input.context.version, &platform).into();
         }
 
         path
     };
 
-    let prepare_primary_exe = |config: &mut ExecutableConfig| {
-        config.primary = true;
-
-        #[allow(deprecated)]
-        let exe_path = append_exe_ext(
-            // Name from platform
-            platform
-                .exe_path
-                .as_ref()
-                .or(platform.bin_path.as_ref())
-                // Name from config
-                .or(config.exe_path.as_ref())
-                // Name from plugin ID
-                .map_or_else(|| PathBuf::from(id.as_str()), |path| path.to_owned()),
-        );
-
-        config.exe_path = Some(
-            interpolate_tokens(
-                exe_path.to_str().unwrap_or("<invalidpath>"),
-                &input.context.version,
-                &schema,
-                platform,
-                env,
-            )
-            .into(),
-        );
-
-        if let Some(no_bin) = schema.install.no_bin {
-            config.no_bin = no_bin;
-        }
-
-        if let Some(no_shim) = schema.install.no_shim {
-            config.no_shim = no_shim;
-        }
-    };
-
-    let prepare_secondary_exe = |config: &mut ExecutableConfig| {
+    let prepare_exe_config = |config: &mut ExecutableConfig| {
         if let Some(exe_path) = config.exe_path.take() {
-            config.exe_path = Some(append_exe_ext(exe_path));
+            config.exe_path = Some(prepare_exe_path(exe_path));
         }
 
         if let Some(exe_link_path) = config.exe_link_path.take() {
-            config.exe_link_path = Some(append_exe_ext(exe_link_path));
+            config.exe_link_path = Some(prepare_exe_path(exe_link_path));
         }
     };
 
-    // Executables
-    let mut has_primary = false;
-    let mut exes = schema
-        .install
-        .exes
-        .iter()
-        .map(|(key, value)| {
-            let mut config = create_executable_config(value.to_owned());
+    let output: LocateExecutablesOutput = match schema {
+        Schema::V1(schema) => {
+            let prepare_primary_exe_config = |config: &mut ExecutableConfig| {
+                config.primary = true;
 
-            if config.primary {
-                has_primary = true;
-                prepare_primary_exe(&mut config);
-            } else {
-                prepare_secondary_exe(&mut config);
+                #[allow(deprecated)]
+                let exe_path =
+                    // Name from platform
+                    platform
+                    .exe_path.as_ref()
+                    // Name from config
+                    .or(config.exe_path.as_ref())
+                    // Name from plugin ID
+                    .map_or_else(|| PathBuf::from(id.as_str()), |path| path.to_owned());
+
+                config.exe_path = Some(exe_path);
+
+                if let Some(no_bin) = schema.install.no_bin {
+                    config.no_bin = no_bin;
+                }
+
+                if let Some(no_shim) = schema.install.no_shim {
+                    config.no_shim = no_shim;
+                }
+
+                prepare_exe_config(config);
+            };
+
+            // Executables
+            let mut has_primary = false;
+            let mut exes = schema
+                .install
+                .exes
+                .iter()
+                .map(|(key, value)| {
+                    let mut config = value.to_owned().into_config();
+
+                    if config.primary {
+                        has_primary = true;
+                        prepare_primary_exe_config(&mut config);
+                    } else {
+                        prepare_exe_config(&mut config);
+                    }
+
+                    (key.to_string(), config)
+                })
+                .collect::<HashMap<_, _>>();
+
+            // Primary & secondary exe's (deprecated)
+            if !has_primary {
+                #[allow(deprecated)]
+                let mut primary = schema
+                    .install
+                    .primary
+                    .clone()
+                    .map(|exe| exe.into_config())
+                    .unwrap_or_default();
+
+                prepare_primary_exe_config(&mut primary);
+
+                exes.insert(id.to_string(), primary.clone());
             }
 
-            (key.to_string(), config)
-        })
-        .collect::<HashMap<_, _>>();
-
-    // Primary & secondary exe's (deprecated)
-    if !has_primary {
-        #[allow(deprecated)]
-        let mut primary = schema
-            .install
-            .primary
-            .clone()
-            .map(create_executable_config)
-            .unwrap_or_default();
-
-        prepare_primary_exe(&mut primary);
-
-        exes.insert(id.to_string(), primary.clone());
-    }
-
-    #[allow(deprecated)]
-    schema.install.secondary.iter().for_each(|(key, value)| {
-        exes.entry(key.to_owned()).or_insert_with(|| {
-            let mut config = create_executable_config(value.to_owned());
-
-            prepare_secondary_exe(&mut config);
-
-            config
-        });
-    });
-
-    Ok(Json(LocateExecutablesOutput {
-        exes: HashMap::from_iter(exes),
-        exes_dirs: if platform.exes_dirs.is_empty() {
             #[allow(deprecated)]
-            match platform.exes_dir.as_ref() {
-                Some(dir) => vec![dir.into()],
-                None => vec![],
+            schema.install.secondary.iter().for_each(|(key, value)| {
+                exes.entry(key.to_owned()).or_insert_with(|| {
+                    let mut config = value.to_owned().into_config();
+
+                    prepare_exe_config(&mut config);
+
+                    config
+                });
+            });
+
+            LocateExecutablesOutput {
+                exes: HashMap::from_iter(exes),
+                exes_dirs: platform.exes_dirs.unwrap_or_default(),
+                globals_lookup_dirs: schema.packages.globals_lookup_dirs,
+                globals_prefix: schema.packages.globals_prefix,
             }
-        } else {
-            platform.exes_dirs.clone()
-        },
-        globals_lookup_dirs: schema.packages.globals_lookup_dirs,
-        globals_prefix: schema.packages.globals_prefix,
-    }))
+        }
+
+        Schema::V2(schema) => {
+            let mut output = schema.apply_layers(
+                env,
+                &input.context.version,
+                |prev: &mut LocateExecutablesOutput, layer| {
+                    if let Some(next) = layer.locate {
+                        override_option!(prev, next, globals_prefix);
+                        override_value!(prev, next, [exes, exes_dirs, globals_lookup_dirs]);
+                    }
+
+                    // Platform settings beat locate settings within the same layer
+                    if let Some(next) = layer.platform {
+                        if let Some(exe_path) = &next.exe_path {
+                            for config in prev.exes.values_mut().filter(|config| config.primary) {
+                                config.exe_path = Some(exe_path.to_owned());
+                            }
+                        }
+
+                        if let Some(dirs) = &next.exes_dirs
+                            && !dirs.is_empty()
+                        {
+                            prev.exes_dirs = dirs.to_owned();
+                        }
+                    }
+                },
+            )?;
+
+            // proto only creates bins and shims for configured executables, so like v1,
+            // fallback to a primary executable named after the plugin
+            if !output.exes.values().any(|config| config.primary) {
+                output.exes.insert(
+                    id.to_string(),
+                    ExecutableConfig {
+                        exe_path: Some(
+                            platform
+                                .exe_path
+                                .clone()
+                                .unwrap_or_else(|| id.as_str().into()),
+                        ),
+                        primary: true,
+                        ..Default::default()
+                    },
+                );
+            }
+
+            for config in output.exes.values_mut() {
+                prepare_exe_config(config);
+            }
+
+            output
+        }
+    };
+
+    Ok(Json(output))
 }
