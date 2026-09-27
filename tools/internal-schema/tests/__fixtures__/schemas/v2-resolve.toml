@@ -1,0 +1,22 @@
+format = "2"
+
+[metadata]
+name = "v2-test"
+type = "command-line"
+
+[install]
+download_url = "https://example.com/{download_name}"
+
+[platform.linux]
+download_name = "tool.tar.gz"
+
+# Tagged as `v1.2.3`
+[resolve]
+git_url = "https://github.com/moonrepo/moon"
+
+# Releases before 1.0 were tagged as `@moonrepo/cli@0.1.2`
+[[overrides]]
+range = "<1"
+
+[overrides.resolve]
+git_tag_pattern = '^@moonrepo/cli@((?<major>[0-9]+)\.(?<minor>[0-9]+)\.(?<patch>[0-9]+))$'

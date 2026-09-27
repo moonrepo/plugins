@@ -1,0 +1,39 @@
+name = "v1-test"
+type = "cli"
+
+[platform.linux]
+download-file = "tool-{os}-{arch}-{libc}.tar.gz"
+checksum-file = "tool-{arch}.sha256"
+archive-prefix = "tool-{version}-{arch}"
+exe-path = "lin/{version}/tool"
+exes-dir = "lin/old"
+exes-dirs = ["lin/new"]
+archs = ["x64", "arm64"]
+
+[platform.linux.arch]
+arm64 = "arm64"
+
+[platform.linux.libc]
+musl = "musl-static"
+
+[platform.macos]
+download-file = "tool-{os}-{arch}.tar.gz"
+
+[platform.windows]
+download-file = "tool-{os}-{arch}.zip"
+exe-path = "win/tool"
+
+[install]
+download-url = "https://example.com/v{version}/{download_file}"
+download-url-canary = "https://example.com/canary/{download_file}"
+checksum-url = "https://example.com/v{version}/{checksum_file}"
+
+[install.arch]
+x64 = "amd64"
+arm64 = "aarch64"
+
+[install.exes.helper]
+exe-path = "helpers/{version}/helper"
+
+[resolve]
+git-url = "https://github.com/example/tool"
