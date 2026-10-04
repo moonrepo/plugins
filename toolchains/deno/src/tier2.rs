@@ -163,6 +163,8 @@ pub fn setup_environment(
                         args.push("--force");
                     }
 
+                    // Must be before the module, otherwise they're script args
+                    args.extend(cfg.args.iter().map(|arg| arg.as_str()));
                     args.push(&cfg.bin);
                     &cfg.bin
                 }

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added `bins.*.args` support, which are passed to `deno install` before the module, for example to grant additional permissions.
+
 ## 1.1.2
 
 #### 🚀 Updates

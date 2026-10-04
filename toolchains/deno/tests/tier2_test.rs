@@ -352,6 +352,48 @@ mod deno_toolchain_tier2 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn can_pass_args() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("deno").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    toolchain_config: json!({
+                        "bins": [
+                            {
+                                "bin": "jsr:@std/http/file-server",
+                                "args": ["--allow-env", "--allow-sys"]
+                            }
+                        ]
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.commands,
+                [ExecCommand::new(
+                    ExecCommandInput::new(
+                        "deno",
+                        [
+                            "install",
+                            "--global",
+                            "--allow-net",
+                            "--allow-read",
+                            "--allow-env",
+                            "--allow-sys",
+                            "jsr:@std/http/file-server"
+                        ],
+                    )
+                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )
+                .cache(CacheStrategy::Memory)
+                .label("deno-bin-jsr:@std/http/file-server")]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn skips_local_bins_when_ci() {
             let sandbox = create_empty_moon_sandbox();
             let plugin = sandbox

@@ -82,6 +82,7 @@ pub fn setup_environment(
 
         let mut force_bins = vec![];
         let mut non_force_bins = vec![];
+        let mut args_bins = vec![];
 
         for bin in &config.bins {
             match bin {
@@ -91,18 +92,25 @@ pub fn setup_environment(
                     }
                 }
                 BinEntry::Object(cfg) => {
-                    if cfg.local && env.ci {
+                    if (cfg.local && env.ci)
+                        || (!cfg.force
+                            && is_bin_installed(env, input.globals_dir.as_ref(), &cfg.bin))
+                    {
                         continue;
+                    }
+
+                    if !cfg.args.is_empty() {
+                        args_bins.push(cfg);
                     } else if cfg.force {
                         force_bins.push(cfg.bin.as_str());
-                    } else if !is_bin_installed(env, input.globals_dir.as_ref(), &cfg.bin) {
+                    } else {
                         non_force_bins.push(cfg.bin.as_str());
                     }
                 }
             };
         }
 
-        if !force_bins.is_empty() || !non_force_bins.is_empty() {
+        if !force_bins.is_empty() || !non_force_bins.is_empty() || !args_bins.is_empty() {
             // Only install if we can't find the binary
             if input
                 .globals_dir
@@ -145,6 +153,24 @@ pub fn setup_environment(
                     create_command("cargo", args, &input.root)
                         .cache(CacheStrategy::Memory)
                         .label("cargo-bins"),
+                );
+            }
+
+            // Args apply to all crates in a command, so install these individually
+            for cfg in args_bins {
+                let mut args = vec!["binstall", "--no-confirm", "--log-level", "info"];
+
+                if cfg.force {
+                    args.push("--force");
+                }
+
+                args.extend(cfg.args.iter().map(|arg| arg.as_str()));
+                args.push(&cfg.bin);
+
+                output.commands.push(
+                    create_command("cargo", args, &input.root)
+                        .cache(CacheStrategy::Memory)
+                        .label(format!("cargo-bin-{}", cfg.bin)),
                 );
             }
         }

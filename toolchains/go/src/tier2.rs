@@ -278,14 +278,14 @@ pub fn setup_environment(
         let mut bins_by_version = BTreeMap::default();
 
         for bin in &config.bins {
-            let (name, force) = match bin {
-                BinEntry::String(inner) => (inner.as_str(), false),
+            let (name, force, bin_args) = match bin {
+                BinEntry::String(inner) => (inner.as_str(), false, [].as_slice()),
                 BinEntry::Object(cfg) => {
                     if cfg.local && env.ci {
                         continue;
                     }
 
-                    (cfg.bin.as_str(), cfg.force)
+                    (cfg.bin.as_str(), cfg.force, cfg.args.as_slice())
                 }
             };
 
@@ -297,14 +297,17 @@ pub fn setup_environment(
 
             let base_module = get_base_module(module);
 
+            // Build flags apply to all packages in a command,
+            // so only group bins that share the same args
             bins_by_version
-                .entry(format!("{base_module}@{version}"))
+                .entry((format!("{base_module}@{version}"), bin_args))
                 .or_insert_with(Vec::new)
                 .push(name);
         }
 
-        for (version, bins) in bins_by_version {
+        for ((version, bin_args), bins) in bins_by_version {
             let mut args = vec!["install", "-v"];
+            args.extend(bin_args.iter().map(|arg| arg.as_str()));
             args.extend(bins);
 
             output.commands.push(
