@@ -17,6 +17,7 @@ projects:
   example-tool: tools/example
   go-tool: tools/go
   java-tool: tools/java
+  kotlin-tool: tools/kotlin
   moon-tool: tools/moon
   node-tool: tools/node
   node-depman-tool: tools/node-depman
