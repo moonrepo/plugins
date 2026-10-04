@@ -428,7 +428,7 @@ dependencies = [
 
 [[package]]
 name = "bun_toolchain"
-version = "1.0.4"
+version = "1.0.5"
 dependencies = [
  "bun_tool",
  "extism-pdk",
