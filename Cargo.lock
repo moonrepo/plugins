@@ -7146,7 +7146,7 @@ dependencies = [
 
 [[package]]
 name = "unpack_extension"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "extension_common",
  "extism-pdk",
