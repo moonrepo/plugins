@@ -4971,7 +4971,7 @@ dependencies = [
 
 [[package]]
 name = "python_uv_toolchain"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "extism-pdk",
  "moon_config",
