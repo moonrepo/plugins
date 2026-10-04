@@ -4878,7 +4878,7 @@ dependencies = [
 
 [[package]]
 name = "python_pip_toolchain"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "extism-pdk",
  "moon_config",
