@@ -3875,7 +3875,7 @@ dependencies = [
 
 [[package]]
 name = "node_toolchain"
-version = "1.0.4"
+version = "1.0.5"
 dependencies = [
  "extism-pdk",
  "moon_common",
