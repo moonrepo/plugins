@@ -5462,7 +5462,7 @@ dependencies = [
 
 [[package]]
 name = "ruby_toolchain"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "extism-pdk",
  "moon_common",
