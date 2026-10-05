@@ -1,0 +1,14 @@
+---
+source: tools/kotlin/tests/shims_test.rs
+expression: "std :: fs ::\nread_to_string(sandbox.path().join(\".proto/shims/registry.json\")).unwrap()"
+---
+{
+  "kotlin": {
+    "alt_exe": true,
+    "context": "kotlin-test"
+  },
+  "kotlinc": {
+    "alt_exe": true,
+    "context": "kotlin-test"
+  }
+}

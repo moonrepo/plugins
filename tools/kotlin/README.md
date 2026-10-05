@@ -1,6 +1,6 @@
 # Kotlin plugin
 
-[Kotlin](https://kotlinlang.org/) WASM plugin for [proto](https://github.com/moonrepo/proto).
+[Kotlin](https://kotlinlang.org/) compiler WASM plugin for [proto](https://github.com/moonrepo/proto).
 
 ## Installation
 
