@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added `bins.*.args` support, which are passed to `go install` as build flags. Bins with different args are installed in separate commands.
+
 ## 1.5.2
 
 #### 🚀 Updates

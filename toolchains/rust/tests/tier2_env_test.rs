@@ -736,5 +736,113 @@ mod rust_toolchain_tier2 {
                 .label("cargo-bins-forced")]
             );
         }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn installs_bins_with_args_individually() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(".cargo/bin/cargo-binstall", "");
+            sandbox.create_file(".cargo/bin/cargo-binstall.exe", "");
+
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    globals_dir: Some(VirtualPath::new(sandbox.path().join(".cargo/bin"))),
+                    toolchain_config: json!({
+                        "bins": [
+                            "just",
+                            {
+                                "bin": "cargo-nextest",
+                                "args": ["--locked"]
+                            },
+                            {
+                                "bin": "cargo-insta",
+                                "args": ["--locked", "--min-tls-version", "1.3"],
+                                "force": true
+                            }
+                        ]
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.commands,
+                [
+                    ExecCommand::new(
+                        ExecCommandInput::new(
+                            "cargo",
+                            ["binstall", "--no-confirm", "--log-level", "info", "just"],
+                        )
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
+                    .cache(CacheStrategy::Memory)
+                    .label("cargo-bins"),
+                    ExecCommand::new(
+                        ExecCommandInput::new(
+                            "cargo",
+                            [
+                                "binstall",
+                                "--no-confirm",
+                                "--log-level",
+                                "info",
+                                "--locked",
+                                "cargo-nextest",
+                            ],
+                        )
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
+                    .cache(CacheStrategy::Memory)
+                    .label("cargo-bin-cargo-nextest"),
+                    ExecCommand::new(
+                        ExecCommandInput::new(
+                            "cargo",
+                            [
+                                "binstall",
+                                "--no-confirm",
+                                "--log-level",
+                                "info",
+                                "--force",
+                                "--locked",
+                                "--min-tls-version",
+                                "1.3",
+                                "cargo-insta",
+                            ],
+                        )
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
+                    .cache(CacheStrategy::Memory)
+                    .label("cargo-bin-cargo-insta"),
+                ]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn skips_installed_bins_with_args() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(".cargo/bin/cargo-nextest", "");
+            sandbox.create_file(".cargo/bin/cargo-nextest.exe", "");
+
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    globals_dir: Some(VirtualPath::new(sandbox.path().join(".cargo/bin"))),
+                    toolchain_config: json!({
+                        "bins": [
+                            {
+                                "bin": "cargo-nextest",
+                                "args": ["--locked"]
+                            }
+                        ]
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.commands.is_empty());
+        }
     }
 }

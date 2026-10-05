@@ -1184,6 +1184,60 @@ mod go_toolchain_tier2 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn separates_commands_by_args() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    toolchain_config: json!({
+                        "bins": [
+                            "golang.org/x/tools/gopls",
+                            {
+                                "bin": "golang.org/x/tools/cmd/goimports",
+                                "args": ["-tags", "netgo"]
+                            },
+                            {
+                                "bin": "golang.org/x/tools/cmd/stringer",
+                                "args": ["-tags", "netgo"]
+                            }
+                        ]
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.commands,
+                [
+                    ExecCommand::new(
+                        ExecCommandInput::new("go", ["install", "-v", "golang.org/x/tools/gopls"],)
+                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
+                    .cache(CacheStrategy::Memory)
+                    .label("go-bins-golang.org/x/tools@latest"),
+                    ExecCommand::new(
+                        ExecCommandInput::new(
+                            "go",
+                            [
+                                "install",
+                                "-v",
+                                "-tags",
+                                "netgo",
+                                "golang.org/x/tools/cmd/goimports",
+                                "golang.org/x/tools/cmd/stringer"
+                            ],
+                        )
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
+                    .cache(CacheStrategy::Memory)
+                    .label("go-bins-golang.org/x/tools@latest"),
+                ]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn skips_local_bins_when_ci() {
             let sandbox = create_empty_moon_sandbox();
             let plugin = sandbox

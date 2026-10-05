@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added `bins.*.args` support, which are passed to `cargo binstall`. Bins with args are installed in separate commands.
+
 ## 1.0.10
 
 #### 🚀 Updates
