@@ -3261,7 +3261,6 @@ dependencies = [
  "extism-pdk",
  "proto_pdk",
  "proto_pdk_test_utils",
- "regex",
  "schematic",
  "serde",
  "starbase_sandbox",

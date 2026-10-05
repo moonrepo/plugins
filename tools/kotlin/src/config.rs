@@ -7,8 +7,7 @@ pub struct KotlinToolConfig {
 impl Default for KotlinToolConfig {
     fn default() -> Self {
         Self {
-            dist_url: "https://github.com/JetBrains/kotlin/releases/download/v{version}/{file}"
-                .into(),
+            dist_url: "https://github.com/JetBrains/kotlin/releases/download/{tag}/{file}".into(),
         }
     }
 }

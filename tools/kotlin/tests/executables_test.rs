@@ -67,6 +67,37 @@ async fn omits_optional_launchers_when_absent() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn supports_compiler_only_historical_archives() {
+    for os in [HostOS::Linux, HostOS::MacOS, HostOS::Windows] {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("kotlin-test", |config| {
+                config.host(os, HostArch::X64);
+            })
+            .await;
+        let suffix = if os.is_windows() { ".bat" } else { "" };
+        for name in ["kotlinc-jvm", "kotlinc-js"] {
+            sandbox.create_file(format!("install/bin/{name}{suffix}"), "launcher");
+        }
+        let output = plugin
+            .locate_executables(LocateExecutablesInput {
+                install_dir: VirtualPath::new(sandbox.path().join("install")),
+                ..Default::default()
+            })
+            .await;
+
+        for name in ["kotlin", "kotlinc", "kotlinc-jvm"] {
+            assert_eq!(
+                output.exes[name].exe_path,
+                Some(format!("bin/kotlinc-jvm{suffix}").into())
+            );
+        }
+        assert_eq!(output.exes.len(), 4);
+        assert!(output.exes["kotlin"].primary);
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn activates_the_selected_installation_without_overriding_java() {
     let sandbox = create_empty_proto_sandbox();
     let plugin = sandbox.create_plugin("kotlin-test").await;

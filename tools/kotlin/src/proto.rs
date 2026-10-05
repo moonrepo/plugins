@@ -1,5 +1,6 @@
 use crate::config::KotlinToolConfig;
-use crate::version::versions_from_tags;
+use crate::legacy::LEGACY_RELEASES;
+use crate::version::{download_names, versions_from_tags};
 use extism_pdk::*;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
@@ -96,6 +97,36 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
 }
 
 #[plugin_fn]
+pub fn resolve_version(
+    Json(input): Json<ResolveVersionInput>,
+) -> FnResult<Json<ResolveVersionOutput>> {
+    // A two-part preview otherwise behaves like a minor-version range and can
+    // select a newer stable release. Keep plain minor versions as ranges.
+    let candidate = if matches!(
+        &input.initial,
+        UnresolvedVersionSpec::Requirement(req)
+            if req.op == Op::Tilde && req.patch.is_none() && req.prerelease.is_some()
+    ) {
+        let requested = input.initial.to_partial_string();
+
+        LEGACY_RELEASES
+            .iter()
+            .find(|(version, tag, _)| {
+                *version != requested && tag.strip_prefix('v') == Some(requested.as_str())
+            })
+            .map(|(version, _, _)| UnresolvedVersionSpec::parse(version))
+            .transpose()?
+    } else {
+        None
+    };
+
+    Ok(Json(ResolveVersionOutput {
+        candidate,
+        ..Default::default()
+    }))
+}
+
+#[plugin_fn]
 pub fn download_prebuilt(
     Json(input): Json<DownloadPrebuiltInput>,
 ) -> FnResult<Json<DownloadPrebuiltOutput>> {
@@ -122,10 +153,11 @@ pub fn download_prebuilt(
     };
 
     let config = get_tool_config::<KotlinToolConfig>()?;
-    let filename = format!("kotlin-compiler-{version}.zip");
+    let (tag, filename) = download_names(version);
     let download_url = config
         .dist_url
         .replace("{version}", &version.to_string())
+        .replace("{tag}", &tag)
         .replace("{file}", &filename);
 
     // SHA-256 files first appeared in 1.9.0-RC; 1.9.0-Beta and older
@@ -158,17 +190,24 @@ pub fn locate_executables(
         }
     };
 
+    let compiler = if input.install_dir.join(launcher("kotlinc")).exists() {
+        "kotlinc"
+    } else {
+        "kotlinc-jvm"
+    };
     let runner = if input.install_dir.join(launcher("kotlinr")).exists() {
         "kotlinr"
-    } else {
+    } else if input.install_dir.join(launcher("kotlin")).exists() {
         "kotlin"
+    } else {
+        compiler
     };
     let mut exes = HashMap::from_iter([
         (
             "kotlin".into(),
             ExecutableConfig::new_primary(launcher(runner)),
         ),
-        ("kotlinc".into(), ExecutableConfig::new(launcher("kotlinc"))),
+        ("kotlinc".into(), ExecutableConfig::new(launcher(compiler))),
     ]);
 
     for name in [

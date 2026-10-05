@@ -44,6 +44,10 @@ async fn handles_legacy_checksums_and_preserves_prerelease_names() {
     let plugin = sandbox.create_plugin("kotlin-test").await;
 
     for (version, checksum) in [
+        ("1.0.5-2", false),
+        ("1.1.4-3", false),
+        ("1.3.70-eap-274", false),
+        ("1.4.0-rc", false),
         ("1.3.0", false),
         ("1.8.22", false),
         ("1.9.0-Beta", false),
@@ -60,6 +64,48 @@ async fn handles_legacy_checksums_and_preserves_prerelease_names() {
         );
         assert_eq!(output.checksum_url.is_some(), checksum, "{version}");
     }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn downloads_historical_releases_with_irregular_names() {
+    let sandbox = create_empty_proto_sandbox();
+    let plugin = sandbox.create_plugin("kotlin-test").await;
+
+    for (version, tag, archive_version) in [
+        ("0.6.31", "build-0.6.31", "0.6.31"),
+        ("0.11.91+1", "M11.1-bootstrap", "0.11.91.1"),
+        ("1.0.0", "build-1.0.0", "1.0.0"),
+        ("1.0.1-2", "1.0.1-2", "1.0.1-2"),
+        ("1.1.0", "v1.1", "1.1"),
+        ("1.2.0-M1", "v1.2-M1", "1.2-M1"),
+        ("1.3.0-rc4", "v1.3-rc4", "1.3.0-rc-190"),
+    ] {
+        let output = plugin.download_prebuilt(input(version)).await;
+        let filename = format!("kotlin-compiler-{archive_version}.zip");
+        assert_eq!(
+            output.download_url,
+            format!("https://github.com/JetBrains/kotlin/releases/download/{tag}/{filename}")
+        );
+        assert_eq!(output.download_name, Some(filename));
+        assert!(output.checksum_url.is_none());
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn supports_release_tag_placeholders_in_mirrors() {
+    let sandbox = create_empty_proto_sandbox();
+    let plugin = sandbox
+        .create_plugin_with_config("kotlin-test", |config| {
+            config.tool_config(KotlinToolConfig {
+                dist_url: "https://mirror.example/{version}/{tag}/{file}".into(),
+            });
+        })
+        .await;
+    let output = plugin.download_prebuilt(input("1.1.0")).await;
+    assert_eq!(
+        output.download_url,
+        "https://mirror.example/1.1.0/v1.1/kotlin-compiler-1.1.zip"
+    );
 }
 
 #[tokio::test(flavor = "multi_thread")]

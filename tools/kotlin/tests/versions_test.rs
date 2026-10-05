@@ -1,6 +1,21 @@
 use proto_pdk_test_utils::*;
 
 generate_resolve_versions_tests!("kotlin-test", {
+    "0.6.31" => "0.6.31",
+    "0.11.91+1" => "0.11.91+1",
+    "1.0.0" => "1.0.0",
+    "1.0.1-2" => "1.0.1-2",
+    "1.0.5-2" => "1.0.5-2",
+    "1.1.0" => "1.1.0",
+    "1.1" => "1.1.61",
+    "1.1.4-3" => "1.1.4-3",
+    "1.2-M1" => "1.2.0-M1",
+    "~1.2" => "1.2.71",
+    "1.2-beta2" => "1.2.0-beta2",
+    "1.3-rc4" => "1.3.0-rc4",
+    "1.3.0-rc-190" => "1.3.0-rc-190",
+    "1.3.70-eap-274" => "1.3.70-eap-274",
+    "1.4.0-rc" => "1.4.0-rc",
     "1.9" => "1.9.25",
     "2.0" => "2.0.21",
     "1.8.22" => "1.8.22",
@@ -53,6 +68,8 @@ async fn parses_version_files() {
         (".kotlin-version", "  ^2.0 # range", Some("^2.0")),
         (".kotlin-version", "latest", Some("latest")),
         (".kotlin-version", "2.4.20-RC", Some("2.4.20-RC")),
+        (".kotlin-version", "1.1.4-3", Some("1.1.4-3")),
+        (".sdkmanrc", "kotlin=1.3.0-rc-190", Some("1.3.0-rc-190")),
         (".kotlin-version", "# no version\n\n", None),
         (
             ".sdkmanrc",
