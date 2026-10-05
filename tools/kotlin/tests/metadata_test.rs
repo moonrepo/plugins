@@ -15,7 +15,6 @@ mod kotlin_tool {
 
         assert_eq!(output.name, "Kotlin");
         assert!(matches!(output.type_of, PluginType::Language));
-        assert_eq!(output.requires, ["java"]);
         assert!(output.lock_options.ignore_os_arch);
         assert_eq!(output.minimum_proto_version, Some(Version::new(0, 60, 0)));
         assert_eq!(

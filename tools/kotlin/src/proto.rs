@@ -23,11 +23,11 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
         type_of: PluginType::Language,
         minimum_proto_version: Some(Version::new(0, 60, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
-        requires: vec!["java".into()],
         lock_options: ToolLockOptions {
             ignore_os_arch: true,
             ..Default::default()
         },
+        unstable: Switch::Toggle(true),
         ..Default::default()
     }))
 }
