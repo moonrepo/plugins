@@ -1,5 +1,5 @@
 use crate::legacy::LEGACY_RELEASES;
-use proto_pdk::*;
+use proto_pdk_api::{AnyResult, LoadVersionsOutput, Version, anyhow};
 
 pub fn versions_from_tags(tags: Vec<String>) -> AnyResult<LoadVersionsOutput> {
     let mut versions = vec![];
@@ -56,9 +56,7 @@ pub fn versions_from_tags(tags: Vec<String>) -> AnyResult<LoadVersionsOutput> {
         spec.as_version()
             .is_some_and(|version| version.prerelease.is_none() && version.build.is_none())
     }) {
-        return Err(extism_pdk::Error::msg(
-            "No stable Kotlin releases were found.",
-        ));
+        return Err(anyhow!("No stable Kotlin releases were found."));
     }
 
     Ok(output)
@@ -86,6 +84,7 @@ pub fn download_names(version: &Version) -> (String, String) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use proto_pdk_api::UnresolvedVersionSpec;
 
     #[test]
     fn filters_internal_tags_and_keeps_release_spelling() {
