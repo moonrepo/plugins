@@ -1,6 +1,26 @@
 use kotlin_tool::KotlinToolConfig;
 use proto_pdk_test_utils::*;
 
+mod install {
+    use super::*;
+
+    generate_download_install_tests!("kotlin-test", "2.4.20");
+
+    mod legacy {
+        use super::*;
+
+        // No checksum, a build-prefixed tag, and only kotlinc-jvm/kotlinc-js launchers.
+        generate_download_install_tests!("kotlin-test", "0.6.31");
+    }
+
+    mod legacy_preview {
+        use super::*;
+
+        // The resolved version differs from the upstream tag and archive name.
+        generate_download_install_tests!("kotlin-test", "1.2.0-M1");
+    }
+}
+
 fn input(version: &str) -> DownloadPrebuiltInput {
     DownloadPrebuiltInput {
         context: PluginContext {
