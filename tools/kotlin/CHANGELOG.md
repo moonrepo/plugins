@@ -1,6 +1,6 @@
 # Kotlin plugin
 
-## Unreleased
+## 0.1.0
 
 #### 🚀 Updates
 
