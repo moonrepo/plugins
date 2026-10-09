@@ -7,7 +7,7 @@ use extism_pdk::*;
 use moon_pdk::{HostLogInput, host_log};
 use moon_pdk_api::{AnyResult, toml_config};
 use pep508_rs::Requirement;
-use pyproject_toml::PyProjectToml as BasePyProjectToml;
+use pyproject_toml::{Project, PyProjectToml as BasePyProjectToml};
 use serde::{Deserialize, Serialize};
 use starbase_utils::toml::{self, TomlValue};
 use std::collections::BTreeMap;
@@ -128,6 +128,7 @@ impl PyProjectTomlWithTools {
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct PyProjectTomlWithToolsInner {
+    pub project: Option<Project>,
     pub tool: Option<Tool>,
 }
 

@@ -1,6 +1,6 @@
 use crate::config::*;
 use crate::managers::*;
-use crate::pyproject_toml::{PyProjectToml, PyProjectTomlWithTools, normalize_distribution_name};
+use crate::pyproject_toml::{PyProjectTomlWithTools, normalize_distribution_name};
 use extism_pdk::*;
 use moon_config::DependencyScope;
 use moon_pdk::VirtualPathExt;
@@ -49,14 +49,11 @@ pub fn extend_project_graph(
         let manifest_path = project_root.join("pyproject.toml");
 
         if manifest_path.exists() {
-            let mut manifest = PyProjectToml::load(manifest_path)?;
-
-            // Remove fields we don't need to avoid eating a ton of memory
-            manifest.build_system = None;
-            manifest.dependency_groups = None;
+            let mut manifest = PyProjectTomlWithTools::load(manifest_path)?;
 
             // We need to track all packages, even those without a name
             if let Some(project) = &mut manifest.project {
+                // Remove fields we don't need to avoid eating a ton of memory
                 project.description = None;
                 project.authors = None;
                 project.maintainers = None;
@@ -74,7 +71,7 @@ pub fn extend_project_graph(
             config.package_manager,
             Some(PythonPackageManager::Uv | PythonPackageManager::UvPip)
         ) {
-            Some(PyProjectTomlWithTools::load(manifest.path.clone())?)
+            manifest.tool.as_ref()
         } else {
             None
         };
@@ -88,16 +85,14 @@ pub fn extend_project_graph(
 
                     let is_local = match &req.version_or_url {
                         None => true,
-                        Some(VersionOrUrl::VersionSpecifier(_)) => tools
-                            .as_ref()
-                            .and_then(|tools| tools.tool.as_ref())
-                            .and_then(|tool| tool.uv.as_ref())
-                            .is_some_and(|uv| {
+                        Some(VersionOrUrl::VersionSpecifier(_)) => {
+                            tools.and_then(|tool| tool.uv.as_ref()).is_some_and(|uv| {
                                 uv.sources.iter().any(|(name, source)| {
                                     normalize_distribution_name(name) == req_name
                                         && source.is_workspace()
                                 })
-                            }),
+                            })
+                        }
                         Some(VersionOrUrl::Url(_)) => false,
                     };
 
