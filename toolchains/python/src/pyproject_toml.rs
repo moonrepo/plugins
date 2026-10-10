@@ -7,9 +7,10 @@ use extism_pdk::*;
 use moon_pdk::{HostLogInput, host_log};
 use moon_pdk_api::{AnyResult, toml_config};
 use pep508_rs::Requirement;
-use pyproject_toml::PyProjectToml as BasePyProjectToml;
+use pyproject_toml::{Project, PyProjectToml as BasePyProjectToml};
 use serde::{Deserialize, Serialize};
 use starbase_utils::toml::{self, TomlValue};
+use std::collections::BTreeMap;
 
 #[cfg(feature = "wasm")]
 #[host_fn]
@@ -127,6 +128,7 @@ impl PyProjectTomlWithTools {
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct PyProjectTomlWithToolsInner {
+    pub project: Option<Project>,
     pub tool: Option<Tool>,
 }
 
@@ -140,7 +142,41 @@ pub struct Tool {
 #[serde(default, rename_all = "kebab-case")]
 pub struct ToolUv {
     pub dev_dependencies: Vec<Requirement>,
+    pub sources: BTreeMap<String, ToolUvSource>,
     pub workspace: Option<ToolUvWorkspace>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(untagged)]
+pub enum ToolUvSource {
+    Single(ToolUvSourceOptions),
+    Multiple(Vec<ToolUvSourceOptions>),
+}
+
+impl ToolUvSource {
+    pub fn is_workspace(&self) -> bool {
+        let is_workspace = |source: &ToolUvSourceOptions| {
+            matches!(source.workspace, Some(ToolUvWorkspaceSource::Boolean(true)))
+        };
+
+        match self {
+            Self::Single(source) => is_workspace(source),
+            Self::Multiple(sources) => sources.iter().any(is_workspace),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(default)]
+pub struct ToolUvSourceOptions {
+    pub workspace: Option<ToolUvWorkspaceSource>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(untagged)]
+pub enum ToolUvWorkspaceSource {
+    Boolean(bool),
+    Path(String),
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]

@@ -146,6 +146,160 @@ dependencies = ["internal-lib"]
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn resolves_uv_workspace_requirements() {
+            let sandbox = create_moon_sandbox("projects");
+            sandbox.create_file(
+                "c/pyproject.toml",
+                r#"[project]
+name = "c"
+dependencies = ["a>=1,<2", "b[server]>=1,<2"]
+
+[tool.uv.sources]
+a = { workspace = true }
+B = [{ workspace = true }]
+"#,
+            );
+            let plugin = sandbox.create_toolchain("python").await;
+
+            for package_manager in ["uv", "uv-pip"] {
+                let mut input = ExtendProjectGraphInput {
+                    toolchain_config: json!({ "packageManager": package_manager }),
+                    ..Default::default()
+                };
+                input.project_sources.insert(Id::raw("a"), "a".into());
+                input.project_sources.insert(Id::raw("b"), "b".into());
+                input.project_sources.insert(Id::raw("c"), "c".into());
+
+                let output = plugin.extend_project_graph(input).await;
+
+                assert_eq!(
+                    output.extended_projects.get("c").unwrap().dependencies,
+                    vec![
+                        ProjectDependency {
+                            id: Id::raw("a"),
+                            scope: DependencyScope::Production,
+                            via: Some("requirement a".into()),
+                        },
+                        ProjectDependency {
+                            id: Id::raw("b"),
+                            scope: DependencyScope::Production,
+                            via: Some("requirement b".into()),
+                        }
+                    ]
+                );
+            }
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn ignores_registry_and_url_requirements() {
+            let sandbox = create_moon_sandbox("projects");
+            sandbox.create_file(
+                "c/pyproject.toml",
+                r#"[project]
+name = "c"
+dependencies = ["a>=1,<2", "b @ https://example.com/b.whl"]
+
+[tool.uv.sources]
+a = { index = "custom" }
+b = { workspace = true }
+"#,
+            );
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let mut input = ExtendProjectGraphInput {
+                toolchain_config: json!({ "packageManager": "uv" }),
+                ..Default::default()
+            };
+            input.project_sources.insert(Id::raw("a"), "a".into());
+            input.project_sources.insert(Id::raw("b"), "b".into());
+            input.project_sources.insert(Id::raw("c"), "c".into());
+
+            let output = plugin.extend_project_graph(input).await;
+
+            assert!(
+                output
+                    .extended_projects
+                    .get("c")
+                    .unwrap()
+                    .dependencies
+                    .is_empty()
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn ignores_self_requirements() {
+            let sandbox = create_moon_sandbox("projects");
+            sandbox.create_file(
+                "c/pyproject.toml",
+                r#"[project]
+name = "c"
+version = "1.0.0"
+
+[project.optional-dependencies]
+foo = []
+all = ["c[foo]>=1"]
+
+[tool.uv.sources]
+c = { workspace = true }
+"#,
+            );
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let mut input = ExtendProjectGraphInput {
+                toolchain_config: json!({ "packageManager": "uv" }),
+                ..Default::default()
+            };
+            input.project_sources.insert(Id::raw("c"), "c".into());
+
+            let output = plugin.extend_project_graph(input).await;
+
+            assert!(
+                output
+                    .extended_projects
+                    .get("c")
+                    .unwrap()
+                    .dependencies
+                    .is_empty()
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn ignores_uv_sources_for_pip() {
+            let sandbox = create_moon_sandbox("projects");
+            sandbox.create_file(
+                "c/pyproject.toml",
+                r#"[project]
+name = "c"
+dependencies = ["a", "b>=1,<2"]
+
+[tool.uv.sources]
+a = { index = "custom" }
+b = { workspace = true }
+"#,
+            );
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let mut input = ExtendProjectGraphInput {
+                toolchain_config: json!({ "packageManager": "pip" }),
+                ..Default::default()
+            };
+            input.project_sources.insert(Id::raw("a"), "a".into());
+            input.project_sources.insert(Id::raw("b"), "b".into());
+            input.project_sources.insert(Id::raw("c"), "c".into());
+
+            let output = plugin.extend_project_graph(input).await;
+
+            assert_eq!(
+                output.extended_projects.get("c").unwrap().dependencies,
+                vec![ProjectDependency {
+                    id: Id::raw("a"),
+                    scope: DependencyScope::Production,
+                    via: Some("requirement a".into()),
+                }]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn skips_projects_without_a_manifest() {
             let sandbox = create_moon_sandbox("projects");
             let plugin = sandbox.create_toolchain("python").await;

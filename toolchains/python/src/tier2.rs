@@ -1,6 +1,6 @@
 use crate::config::*;
 use crate::managers::*;
-use crate::pyproject_toml::{PyProjectToml, PyProjectTomlWithTools, normalize_distribution_name};
+use crate::pyproject_toml::{PyProjectTomlWithTools, normalize_distribution_name};
 use extism_pdk::*;
 use moon_config::DependencyScope;
 use moon_pdk::VirtualPathExt;
@@ -9,7 +9,7 @@ use moon_pdk::{
     locate_root_many_with_check, parse_toolchain_config_schema,
 };
 use moon_pdk_api::*;
-use pep508_rs::Requirement;
+use pep508_rs::{Requirement, VersionOrUrl};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
@@ -38,6 +38,7 @@ pub fn define_requirements(
 pub fn extend_project_graph(
     Json(input): Json<ExtendProjectGraphInput>,
 ) -> FnResult<Json<ExtendProjectGraphOutput>> {
+    let config = parse_toolchain_config_schema::<PythonToolchainConfig>(input.toolchain_config)?;
     let mut output = ExtendProjectGraphOutput::default();
 
     // First pass, gather all packages and their manifests.
@@ -48,14 +49,11 @@ pub fn extend_project_graph(
         let manifest_path = project_root.join("pyproject.toml");
 
         if manifest_path.exists() {
-            let mut manifest = PyProjectToml::load(manifest_path)?;
-
-            // Remove fields we don't need to avoid eating a ton of memory
-            manifest.build_system = None;
-            manifest.dependency_groups = None;
+            let mut manifest = PyProjectTomlWithTools::load(manifest_path)?;
 
             // We need to track all packages, even those without a name
             if let Some(project) = &mut manifest.project {
+                // Remove fields we don't need to avoid eating a ton of memory
                 project.description = None;
                 project.authors = None;
                 project.maintainers = None;
@@ -69,6 +67,14 @@ pub fn extend_project_graph(
 
     // Second pass, extract packages and their relationships
     for (id, manifest) in packages.values() {
+        let tools = if matches!(
+            config.package_manager,
+            Some(PythonPackageManager::Uv | PythonPackageManager::UvPip)
+        ) {
+            manifest.tool.as_ref()
+        } else {
+            None
+        };
         let mut project_output = ExtendProjectOutput::default();
 
         let mut extract_implicit_deps =
@@ -77,9 +83,23 @@ pub fn extend_project_graph(
                     let req_label = req.name.as_ref().to_owned();
                     let req_name = normalize_distribution_name(req.name.as_ref());
 
-                    if req.version_or_url.is_none()
+                    let is_local = match &req.version_or_url {
+                        None => true,
+                        Some(VersionOrUrl::VersionSpecifier(_)) => {
+                            tools.and_then(|tool| tool.uv.as_ref()).is_some_and(|uv| {
+                                uv.sources.iter().any(|(name, source)| {
+                                    normalize_distribution_name(name) == req_name
+                                        && source.is_workspace()
+                                })
+                            })
+                        }
+                        Some(VersionOrUrl::Url(_)) => false,
+                    };
+
+                    if is_local
                         && req.origin.is_none()
                         && let Some((dep_id, _)) = packages.get(&req_name)
+                        && dep_id != id
                     {
                         project_output.dependencies.push(ProjectDependency {
                             id: dep_id.to_owned(),
