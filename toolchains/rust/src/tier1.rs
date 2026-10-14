@@ -86,27 +86,29 @@ pub fn scaffold_docker(
     Json(input): Json<ScaffoldDockerInput>,
 ) -> FnResult<Json<ScaffoldDockerOutput>> {
     let mut output = ScaffoldDockerOutput::default();
-    let lib_file = input.output_dir.join("src/lib.rs");
-    let main_file = input.output_dir.join("src/main.rs");
 
     // Cargo requires either `lib.rs` or `main.rs` during
     // the workspace/configs phase, which isn't copied till the
     // sources phase. Because scaffolding may attempt to run
     // Cargo commands, it will fail without these files!
+    //
+    // The sources phase only overlays files and can't remove them,
+    // so only stub the files that exist, otherwise an empty `main.rs`
+    // becomes a binary without `fn main`. If neither exist (`src/bin`,
+    // custom paths), fallback to an empty `lib.rs`, which is valid.
     if input.phase == ScaffoldDockerPhase::Configs && input.project.is_some() {
-        fs::write_file(&lib_file, "")?;
-        fs::write_file(&main_file, "")?;
+        let has_lib = input.input_dir.join("src/lib.rs").exists();
+        let has_main = input.input_dir.join("src/main.rs").exists();
 
-        output.copied_files.push(lib_file.clone());
-        output.copied_files.push(main_file.clone());
-    }
+        for (path, stub) in [
+            ("src/lib.rs", has_lib || !has_main),
+            ("src/main.rs", has_main),
+        ] {
+            if stub {
+                let file = input.output_dir.join(path);
 
-    // When we copy sources, we then need to remove these files
-    // if they are empty, as to not cause Cargo build issues
-    if input.phase == ScaffoldDockerPhase::Sources && input.project.is_some() {
-        for file in [lib_file, main_file] {
-            if file.exists() && fs::metadata(&file).is_ok_and(|meta| meta.len() == 0) {
-                let _ = fs::remove_file(file);
+                fs::write_file(&file, "")?;
+                output.copied_files.push(file);
             }
         }
     }

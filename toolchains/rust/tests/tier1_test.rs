@@ -41,13 +41,67 @@ mod rust_toolchain_tier1 {
         use super::*;
 
         #[tokio::test(flavor = "multi_thread")]
-        async fn creates_files_in_config_phase() {
+        async fn creates_lib_file_in_config_phase() {
             let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("in/src/lib.rs", "pub fn lib() {}");
+
             let plugin = sandbox.create_toolchain("rust").await;
             let output_dir = sandbox.path().join("out");
 
-            assert!(!output_dir.join("src/lib.rs").exists());
+            let output = plugin
+                .scaffold_docker(ScaffoldDockerInput {
+                    input_dir: VirtualPath::new(sandbox.path().join("in")),
+                    output_dir: VirtualPath::new(output_dir.clone()),
+                    phase: ScaffoldDockerPhase::Configs,
+                    project: Some(ProjectFragment::default()),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output_dir.join("src/lib.rs").exists());
             assert!(!output_dir.join("src/main.rs").exists());
+
+            assert_eq!(
+                output.copied_files,
+                [VirtualPath::new("/workspace/out/src/lib.rs")]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn creates_main_file_in_config_phase() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("in/src/main.rs", "fn main() {}");
+
+            let plugin = sandbox.create_toolchain("rust").await;
+            let output_dir = sandbox.path().join("out");
+
+            let output = plugin
+                .scaffold_docker(ScaffoldDockerInput {
+                    input_dir: VirtualPath::new(sandbox.path().join("in")),
+                    output_dir: VirtualPath::new(output_dir.clone()),
+                    phase: ScaffoldDockerPhase::Configs,
+                    project: Some(ProjectFragment::default()),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(!output_dir.join("src/lib.rs").exists());
+            assert!(output_dir.join("src/main.rs").exists());
+
+            assert_eq!(
+                output.copied_files,
+                [VirtualPath::new("/workspace/out/src/main.rs")]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn creates_lib_and_main_files_in_config_phase() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("in/src/lib.rs", "pub fn lib() {}");
+            sandbox.create_file("in/src/main.rs", "fn main() {}");
+
+            let plugin = sandbox.create_toolchain("rust").await;
+            let output_dir = sandbox.path().join("out");
 
             let output = plugin
                 .scaffold_docker(ScaffoldDockerInput {
@@ -68,6 +122,31 @@ mod rust_toolchain_tier1 {
                     VirtualPath::new("/workspace/out/src/lib.rs"),
                     VirtualPath::new("/workspace/out/src/main.rs")
                 ]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn creates_lib_file_when_no_entry_files_in_config_phase() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("rust").await;
+            let output_dir = sandbox.path().join("out");
+
+            let output = plugin
+                .scaffold_docker(ScaffoldDockerInput {
+                    input_dir: VirtualPath::new(sandbox.path().join("in")),
+                    output_dir: VirtualPath::new(output_dir.clone()),
+                    phase: ScaffoldDockerPhase::Configs,
+                    project: Some(ProjectFragment::default()),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output_dir.join("src/lib.rs").exists());
+            assert!(!output_dir.join("src/main.rs").exists());
+
+            assert_eq!(
+                output.copied_files,
+                [VirtualPath::new("/workspace/out/src/lib.rs")]
             );
         }
 
@@ -93,30 +172,6 @@ mod rust_toolchain_tier1 {
             assert!(!output_dir.join("src/main.rs").exists());
 
             assert!(output.copied_files.is_empty());
-        }
-
-        #[tokio::test(flavor = "multi_thread")]
-        async fn removes_empty_files_in_sources_phase() {
-            let sandbox = create_empty_moon_sandbox();
-            let plugin = sandbox.create_toolchain("rust").await;
-            let output_dir = sandbox.path().join("out");
-
-            fs::create_dir_all(output_dir.join("src")).unwrap();
-            fs::write(output_dir.join("src/lib.rs"), "").unwrap();
-            fs::write(output_dir.join("src/main.rs"), "fn main() {}").unwrap();
-
-            plugin
-                .scaffold_docker(ScaffoldDockerInput {
-                    input_dir: VirtualPath::new(sandbox.path().join("in")),
-                    output_dir: VirtualPath::new(output_dir.clone()),
-                    phase: ScaffoldDockerPhase::Sources,
-                    project: Some(ProjectFragment::default()),
-                    ..Default::default()
-                })
-                .await;
-
-            assert!(!output_dir.join("src/lib.rs").exists());
-            assert!(output_dir.join("src/main.rs").exists());
         }
     }
 
