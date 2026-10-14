@@ -69,7 +69,7 @@ pub fn native_install(
     let backend_config = get_backend_config::<CargoBackendConfig>()?;
     let tool_config = get_tool_config::<CargoToolConfig>()?;
 
-    // Detect `cargo-binstall`
+    // Detect `cargo-binstall` in cargo home, or anywhere on `PATH`
     let binstall_path = get_cargo_home(env)?
         .join("bin")
         .join(env.os.get_exe_name("cargo-binstall"));
@@ -78,8 +78,8 @@ pub fn native_install(
         && tool_config.bin.is_none()
         && tool_config.features.is_empty()
         && !tool_config.no_default_features
-        && binstall_path.exists()
-        && binstall_path.is_file();
+        && ((binstall_path.exists() && binstall_path.is_file())
+            || command_exists(env, "cargo-binstall"));
 
     // Create the command
     let mut command =

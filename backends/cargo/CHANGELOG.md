@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Updated `cargo-binstall` detection to also find the executable on `PATH`, not just in `CARGO_HOME/bin`.
+
 ## 0.1.6
 
 #### 🚀 Updates
