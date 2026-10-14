@@ -34,6 +34,9 @@ pub enum PackageTargetKind {
     Bin,
     Lib,
     Test,
+    // custom-build, example, bench, proc-macro, etc
+    #[serde(other)]
+    Unknown,
 }
 
 #[derive(Deserialize, PartialEq)]
@@ -47,4 +50,6 @@ pub enum PackageTargetCrateType {
     StaticLib,
     #[serde(rename = "proc-macro")]
     ProcMacro,
+    #[serde(other)]
+    Unknown,
 }

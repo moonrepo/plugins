@@ -393,6 +393,38 @@ mod typescript_toolchain_tier1 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn doesnt_prune_root_config_for_root_level_project() {
+            let sandbox = create_moon_sandbox("refs");
+            sandbox.create_file(
+                "tsconfig.json",
+                r#"{ "files": [], "references": [{ "path": "./a" }, { "path": "./b" }] }"#,
+            );
+
+            let plugin = sandbox.create_toolchain("typescript").await;
+
+            let mut project = create_project("root");
+            project.source = ".".into();
+
+            let output = plugin
+                .sync_project(SyncProjectInput {
+                    project,
+                    toolchain_config: json!({
+                        "pruneProjectReferences": true,
+                        "syncProjectReferences": true,
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(!has_changed_file(&output, "/workspace/./tsconfig.json"));
+            assert!(
+                fs::read_file(sandbox.path().join("tsconfig.json"))
+                    .unwrap()
+                    .contains("./b")
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn skips_invalid_deps() {
             let sandbox = create_moon_sandbox("refs");
             let plugin = sandbox.create_toolchain("typescript").await;

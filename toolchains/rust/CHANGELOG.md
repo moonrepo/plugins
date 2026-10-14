@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed `docker prune` failing with "unknown variant `custom-build`" when a crate has a build
+  script, example, bench, or other unsupported target kind.
+
 ## 1.0.11
 
 #### 🚀 Updates
