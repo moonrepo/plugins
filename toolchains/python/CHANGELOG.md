@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed missing project dependencies for versioned requirements using `workspace = true` in the project's `[tool.uv.sources]` with uv.
+- Prevented self-dependency cycles from optional requirements.
+
 ## 0.3.1
 
 #### 🚀 Updates
