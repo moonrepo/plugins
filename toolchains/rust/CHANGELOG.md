@@ -6,6 +6,9 @@
 
 - Fixed `docker prune` failing with "unknown variant `custom-build`" when a crate has a build
   script, example, bench, or other unsupported target kind.
+- Fixed `docker scaffold` leaving an empty `src/main.rs` in library crates, which failed builds
+  with "`main` function not found". Only the crate's existing lib and bin targets (including
+  `src/bin`) are now stubbed.
 
 ## 1.0.11
 
