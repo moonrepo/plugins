@@ -1,4 +1,5 @@
 use crate::cargo_metadata::{CargoMetadata, PackageTargetCrateType, PackageTargetKind};
+use crate::cargo_toml::BaseCargoToml;
 use crate::config::RustToolchainConfig;
 use extism_pdk::*;
 use moon_config::LanguageType;
@@ -87,33 +88,55 @@ pub fn scaffold_docker(
 ) -> FnResult<Json<ScaffoldDockerOutput>> {
     let mut output = ScaffoldDockerOutput::default();
 
-    // Cargo requires either `lib.rs` or `main.rs` during
-    // the workspace/configs phase, which isn't copied till the
+    // Cargo requires the lib/bin target files during
+    // the workspace/configs phase, which aren't copied till the
     // sources phase. Because scaffolding may attempt to run
     // Cargo commands, it will fail without these files!
     //
     // The sources phase only overlays files and can't remove them,
-    // so only stub the files that exist, otherwise an empty `main.rs`
-    // becomes a binary without `fn main`. If neither exist (`src/bin`,
-    // custom paths), fallback to an empty `lib.rs`, which is valid.
+    // so only stub the targets that exist, otherwise an empty `main.rs`
+    // becomes a binary without `fn main`.
     if input.phase == ScaffoldDockerPhase::Configs && input.project.is_some() {
-        let has_lib = input.input_dir.join("src/lib.rs").exists();
-        let has_main = input.input_dir.join("src/main.rs").exists();
+        for path in get_target_stub_paths(&input.input_dir) {
+            let file = input.output_dir.join(path);
 
-        for (path, stub) in [
-            ("src/lib.rs", has_lib || !has_main),
-            ("src/main.rs", has_main),
-        ] {
-            if stub {
-                let file = input.output_dir.join(path);
-
-                fs::write_file(&file, "")?;
-                output.copied_files.push(file);
-            }
+            fs::write_file(&file, "")?;
+            output.copied_files.push(file);
         }
     }
 
     Ok(Json(output))
+}
+
+fn get_target_stub_paths(input_dir: &VirtualPath) -> Vec<String> {
+    // Loading from a path discovers targets on the file system, like Cargo.
+    // Explicit paths outside of `src` are skipped, as Cargo doesn't
+    // require them to exist when loading the manifest.
+    if let Ok(manifest) = BaseCargoToml::from_path(input_dir.join("Cargo.toml")) {
+        return manifest
+            .lib
+            .iter()
+            .chain(&manifest.bin)
+            .filter_map(|target| target.path.clone())
+            .filter(|path| path.starts_with("src/"))
+            .collect();
+    }
+
+    // Otherwise fallback to the default entry files, with
+    // an empty `lib.rs` being a valid target on its own
+    let has_lib = input_dir.join("src/lib.rs").exists();
+    let has_main = input_dir.join("src/main.rs").exists();
+    let mut paths = vec![];
+
+    if has_lib || !has_main {
+        paths.push("src/lib.rs".into());
+    }
+
+    if has_main {
+        paths.push("src/main.rs".into());
+    }
+
+    paths
 }
 
 #[plugin_fn]
