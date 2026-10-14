@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed `pruneProjectReferences` removing references from the root `tsconfig.json` when a root-level
+  project uses it as its project config.
+
 ## 1.1.5
 
 #### 🚀 Updates

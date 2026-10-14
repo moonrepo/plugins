@@ -73,6 +73,11 @@ pub fn sync_project_options(
     let types_root = context.workspace_root.join(&config.root);
     let mut managed_project_refs = vec![];
 
+    // A root-level project's config may be the root config, which other
+    // projects add themselves to, so we can't prune it
+    let prune_project_references =
+        config.prune_project_references && context.project_config != context.root_config;
+
     if !context.project_config.exists() {
         return Ok(None);
     }
@@ -91,7 +96,7 @@ pub fn sync_project_options(
                 .join(&config.project_config_file_name)
                 .exists()
         {
-            if config.prune_project_references {
+            if prune_project_references {
                 managed_project_refs.push(shared_types_root.clone());
             } else {
                 tsconfig.add_project_ref(&shared_types_root, &config.project_config_file_name)?;
@@ -102,7 +107,7 @@ pub fn sync_project_options(
     // Sync project dependencies as project `references`
     if config.sync_project_references {
         for project_ref in project_refs.values() {
-            if config.prune_project_references {
+            if prune_project_references {
                 managed_project_refs.push(project_ref.path.clone());
             } else {
                 tsconfig.add_project_ref(&project_ref.path, &config.project_config_file_name)?;
@@ -152,7 +157,7 @@ pub fn sync_project_options(
             }
         }
 
-        if config.prune_project_references {
+        if prune_project_references {
             tsconfig.sync_project_refs(&managed_project_refs, &config.project_config_file_name)?;
         }
     }
