@@ -1964,6 +1964,7 @@ dependencies = [
  "moon_pdk",
  "rustc-hash",
  "serde",
+ "serde_json",
  "starbase_utils",
 ]
 
