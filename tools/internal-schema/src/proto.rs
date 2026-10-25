@@ -175,6 +175,31 @@ fn create_version(cap: Captures) -> String {
     version
 }
 
+fn select_index_rows(response: JsonValue, array_key: Option<&str>) -> FnResult<Vec<JsonValue>> {
+    match response {
+        JsonValue::Array(rows) => Ok(rows),
+        JsonValue::Object(mut object) => {
+            let key = array_key.ok_or_else(|| {
+                plugin_err!(
+                    "Version index returned an object; configure manifest-array-key (v1) or index_array_key (v2)."
+                )
+            })?;
+
+            match object.remove(key) {
+                Some(JsonValue::Array(rows)) => Ok(rows),
+                Some(_) => Err(plugin_err!(
+                    "Version index key '{}' must contain an array.",
+                    key
+                )),
+                None => Err(plugin_err!("Version index key '{}' was not found.", key)),
+            }
+        }
+        _ => Err(plugin_err!(
+            "Version index must return an array or an object containing an array."
+        )),
+    }
+}
+
 #[plugin_fn]
 pub fn detect_version_files(
     Json(_): Json<DetectVersionInput>,
@@ -211,9 +236,10 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
     else if let Some(endpoint) = resolve.index_url.as_deref() {
         let pattern = regex::Regex::new(resolve.get_version_pattern())?;
         let version_key = resolve.get_index_version_key();
-        let response: Vec<JsonValue> = fetch_json(endpoint)?;
+        let response: JsonValue = fetch_json(endpoint)?;
+        let rows = select_index_rows(response, resolve.index_array_key.as_deref())?;
 
-        for row in response {
+        for row in rows {
             match row {
                 JsonValue::String(v) => {
                     if let Some(cap) = pattern.captures(&v) {
@@ -251,6 +277,56 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
     }
 
     Ok(Json(output))
+}
+
+#[cfg(test)]
+mod index_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn accepts_top_level_arrays_with_or_without_a_configured_key() {
+        let rows = json!(["1.2.3", { "version": "2.0.0" }]);
+
+        let expected = rows.as_array().unwrap().clone();
+
+        assert_eq!(select_index_rows(rows.clone(), None).unwrap(), expected);
+        assert_eq!(select_index_rows(rows, Some("versions")).unwrap(), expected);
+    }
+
+    #[test]
+    fn selects_nested_strings_and_objects() {
+        let rows = json!(["1.2.3", { "version": "2.0.0" }]);
+        let response = json!({ "versions": rows, "latest": "2.0.0" });
+
+        assert_eq!(
+            select_index_rows(response, Some("versions")).unwrap(),
+            rows.as_array().unwrap().clone()
+        );
+    }
+
+    #[test]
+    fn rejects_missing_or_invalid_nested_arrays() {
+        let missing = select_index_rows(json!({ "other": [] }), Some("versions"))
+            .unwrap_err()
+            .to_string();
+        assert!(missing.contains("'versions' was not found"), "{missing}");
+
+        let wrong_type = select_index_rows(json!({ "versions": "1.2.3" }), Some("versions"))
+            .unwrap_err()
+            .to_string();
+        assert!(
+            wrong_type.contains("'versions' must contain an array"),
+            "{wrong_type}"
+        );
+
+        let no_key = select_index_rows(json!({ "versions": [] }), None)
+            .unwrap_err()
+            .to_string();
+        assert!(no_key.contains("configure manifest-array-key"), "{no_key}");
+
+        assert!(select_index_rows(json!("1.2.3"), None).is_err());
+    }
 }
 
 #[plugin_fn]
