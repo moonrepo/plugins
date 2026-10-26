@@ -309,11 +309,13 @@ mod index_tests {
     fn rejects_missing_or_invalid_nested_arrays() {
         let missing = select_index_rows(json!({ "other": [] }), Some("versions"))
             .unwrap_err()
+            .0
             .to_string();
         assert!(missing.contains("'versions' was not found"), "{missing}");
 
         let wrong_type = select_index_rows(json!({ "versions": "1.2.3" }), Some("versions"))
             .unwrap_err()
+            .0
             .to_string();
         assert!(
             wrong_type.contains("'versions' must contain an array"),
@@ -322,6 +324,7 @@ mod index_tests {
 
         let no_key = select_index_rows(json!({ "versions": [] }), None)
             .unwrap_err()
+            .0
             .to_string();
         assert!(no_key.contains("configure manifest-array-key"), "{no_key}");
 
