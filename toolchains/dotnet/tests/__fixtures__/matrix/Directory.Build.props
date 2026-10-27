@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>12</LangVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="RootPkg" Version="1.0.0" />
+  </ItemGroup>
+</Project>

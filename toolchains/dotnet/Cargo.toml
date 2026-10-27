@@ -1,0 +1,42 @@
+[package]
+name = "dotnet_toolchain"
+version = "0.1.0"
+edition = "2024"
+description = ".NET toolchain WASM plugin for moon."
+authors = ["Wouter Tiben"]
+license = "MIT"
+repository = "https://github.com/moonrepo/plugins"
+documentation = "https://github.com/moonrepo/plugins/tree/master/toolchains/dotnet"
+publish = false
+
+[package.metadata.release]
+pre-release-replacements = [
+    { file = "./CHANGELOG.md", search = "Unreleased", replace = "{{version}}" },
+]
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+dotnet_tool = { path = "../../tools/dotnet", default-features = false }
+toolchain_common = { path = "../../crates/toolchain-common" }
+extism-pdk = { workspace = true }
+moon_common = { workspace = true }
+moon_config = { workspace = true }
+moon_pdk = { workspace = true, features = ["schematic"] }
+moon_pdk_api = { workspace = true }
+moon_target = { workspace = true }
+schematic = { workspace = true, features = ["config"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+starbase_utils = { workspace = true, features = ["yaml"] }
+
+[dev-dependencies]
+moon_pdk_test_utils = { workspace = true }
+serde_json = { workspace = true }
+starbase_sandbox = { workspace = true }
+tokio = { workspace = true }
+
+[features]
+default = ["wasm"]
+wasm = ["dotnet_tool/wasm"]
