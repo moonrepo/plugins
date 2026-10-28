@@ -28,6 +28,7 @@ pub fn register_toolchain(
             "uv.*".into(),
             ".python-version".into(),
             ".venv".into(),
+            "uv.toml".into(),
         ],
         manifest_file_names: vec![
             "pyproject.toml".into(),
@@ -36,8 +37,6 @@ pub fn register_toolchain(
             "Pipfile".into(),
             // poetry
             "poetry.toml".into(),
-            // uv
-            "uv.toml".into(),
         ],
         lock_file_names: vec![
             "pylock.toml".into(),
@@ -64,6 +63,7 @@ pub fn register_toolchain(
             // uv
             "uv".into(),
         ],
+        inject_task_inputs: false,
         ..Default::default()
     }))
 }

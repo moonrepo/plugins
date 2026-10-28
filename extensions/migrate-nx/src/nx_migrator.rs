@@ -6,8 +6,8 @@ use moon_config::EnvMap;
 use moon_config::{
     FilePath, GlobInput, GlobPath, Input, LayerType, OneOrMany, Output, PartialProjectDependsOn,
     PartialProjectMetadataConfig, PartialTaskArgs, PartialTaskConfig, PartialTaskDependency,
-    PartialTaskOptionsConfig, PartialVcsConfig, PartialWorkspaceProjects, TaskOptionCache,
-    TaskOptionEnvFile,
+    PartialTaskOptionEnvFile, PartialTaskOptionsConfig, PartialVcsConfig, PartialWorkspaceProjects,
+    TaskOptionCache,
 };
 use moon_pdk::{AnyResult, map_miette_error};
 use moon_pdk_api::MoonContext;
@@ -451,7 +451,9 @@ fn migrate_run_commands_task(nx_target: &NxTargetOptions) -> AnyResult<PartialTa
             config
                 .options
                 .get_or_insert(PartialTaskOptionsConfig::default())
-                .env_file = Some(TaskOptionEnvFile::File(FilePath::from_str(env_file)?));
+                .env_file = Some(PartialTaskOptionEnvFile::File(FilePath::from_str(
+                env_file,
+            )?));
         }
     }
 
