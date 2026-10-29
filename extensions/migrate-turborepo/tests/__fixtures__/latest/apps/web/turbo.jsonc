@@ -1,0 +1,21 @@
+{
+  "extends": ["//"],
+  "tags": ["frontend"],
+  "tasks": {
+    "build": {
+      // Append to the inherited values
+      "outputs": ["$TURBO_EXTENDS$", ".next/**", "!.next/cache/**"],
+      "tags": ["$TURBO_EXTENDS$", "web"],
+    },
+    "dev": {
+      "with": ["api#dev"],
+    },
+    "lint": {
+      "extends": false,
+    },
+    "test": {
+      "extends": false,
+      "env": ["CI"],
+    },
+  },
+}

@@ -1,0 +1,46 @@
+{
+  "$schema": "https://turborepo.dev/schema.json",
+  "futureFlags": {
+    "globalConfiguration": true,
+  },
+  // Global settings are nested under `global`
+  "global": {
+    "inputs": ["tsconfig.json", "!.env.example"],
+    "env": ["NODE_ENV", "MY_API_*"],
+    "passThroughEnv": ["AWS_SECRET_KEY"],
+    "ui": "stream-with-experimental-timestamps",
+  },
+  "tasks": {
+    "build": {
+      "description": "Builds the package",
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.base.json",
+        { "mode": "jit", "globs": ["src/generated/**"] },
+      ],
+      "outputs": ["dist/**", "!dist/cache/**", "$TURBO_ROOT$/reports/**"],
+      "tags": ["ci"],
+    },
+    "check-types": {
+      "dependsOn": ["^check-types"],
+      "inputs": [
+        { "mode": "startup", "globs": ["src/**/*.ts"], "withDefaults": true },
+        {
+          "mode": "dependencyOutputs",
+          "globs": ["dist/**/*.d.ts"],
+          "from": ["^check-types"],
+        },
+      ],
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true,
+      "interruptible": true,
+    },
+    "lint": {},
+    "test": {
+      "outputs": ["coverage/**"],
+    },
+  },
+}
