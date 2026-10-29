@@ -1,0 +1,25 @@
+{
+  "name": "web-e2e",
+  "targets": {
+    "e2e": {
+      "command": "playwright test",
+      "dependsOn": [
+        {
+          "projects": "@acme/web",
+          "target": "serve",
+          "waitFor": "ready",
+          "inputs": false
+        },
+        { "projects": "{dependencies}", "target": "build" },
+        { "projects": "{self}", "target": "setup", "options": "forward" }
+      ]
+    },
+    "e2e-local": {
+      "command": "playwright test --ui",
+      "dependsOn": [{ "projects": ["@acme/web"], "target": "serve" }]
+    },
+    "setup": {
+      "command": "playwright install"
+    }
+  }
+}
