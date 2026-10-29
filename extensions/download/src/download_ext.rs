@@ -1,4 +1,4 @@
-use extension_common::download::download_from_url;
+use extension_common::download::{download_from_url, is_url};
 use extension_common::enable_tracing;
 use extension_common::paths::get_absolute_path;
 use extism_pdk::*;
@@ -39,7 +39,7 @@ pub struct DownloadExtensionArgs {
 pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<()> {
     let args = parse_args::<DownloadExtensionArgs>(&input.args)?;
 
-    if !args.url.starts_with("http") {
+    if !is_url(&args.url) {
         return Err(plugin_err!("A valid URL is required for downloading."));
     }
 

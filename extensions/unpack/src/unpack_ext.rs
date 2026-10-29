@@ -1,4 +1,4 @@
-use extension_common::download::download_from_url;
+use extension_common::download::{download_from_url, is_url};
 use extension_common::enable_tracing;
 use extension_common::paths::get_absolute_path;
 use extism_pdk::*;
@@ -41,9 +41,23 @@ pub struct UnpackExtensionArgs {
 pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<()> {
     let args = parse_args::<UnpackExtensionArgs>(&input.args)?;
 
+    // Convert the provided output into a virtual file path. Do this first,
+    // so that we don't download the source unnecessarily.
+    let dest_dir = get_absolute_path(
+        &input.context.working_dir,
+        args.dest.as_deref().unwrap_or_default(),
+    );
+
+    if dest_dir.exists() && dest_dir.is_file() {
+        return Err(plugin_err!(
+            "Destination <path>{dest_dir}</path> must be a directory, found a file.",
+        ));
+    }
+
     // Determine the correct input. If the input is a URL, attempt to download
-    // the file, otherwise use the file directly (if within our whitelist).
-    let src_file = if args.src.starts_with("http") {
+    // the file, otherwise use the file directly.
+    let src_is_url = is_url(&args.src);
+    let src_file = if src_is_url {
         debug!("Received a URL as the input source");
 
         download_from_url(&args.src, VirtualPath::new("/moon/temp"), None)?
@@ -62,22 +76,25 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
         ));
     }
 
-    // Convert the provided output into a virtual file path.
-    let dest_dir = get_absolute_path(
-        &input.context.working_dir,
-        args.dest.as_deref().unwrap_or_default(),
-    );
-
-    if dest_dir.exists() && dest_dir.is_file() {
-        return Err(plugin_err!(
-            "Destination <path>{dest_dir}</path> must be a directory, found a file.",
-        ));
-    }
-
     host_log!(stdout, "Unpacking archive to <path>{dest_dir}</path>",);
 
     fs::create_dir_all(&dest_dir)?;
 
+    let result = unpack(&src_file, &dest_dir, args.components);
+
+    // Downloaded archives are not reused, so remove them
+    if src_is_url {
+        fs::remove_file(&src_file)?;
+    }
+
+    result?;
+
+    host_log!(stdout, "Unpacked archive!");
+
+    Ok(())
+}
+
+fn unpack(src_file: &VirtualPath, dest_dir: &VirtualPath, components: usize) -> AnyResult<()> {
     let is_zip = src_file
         .extension()
         .is_some_and(|ext| ext.eq_ignore_ascii_case("zip"));
@@ -85,23 +102,19 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
     let env = get_host_environment()?;
 
     if is_zip && command_exists(env, "unzip") {
-        unzip(&src_file, &dest_dir, args.components)?;
+        unzip(src_file, dest_dir, components)
     } else {
         exec_unpack(
             "tar",
             [
                 "-xf".into(),
-                to_real_path(&src_file)?,
+                to_real_path(src_file)?,
                 "-C".into(),
-                to_real_path(&dest_dir)?,
-                format!("--strip-components={}", args.components),
+                to_real_path(dest_dir)?,
+                format!("--strip-components={components}"),
             ],
-        )?;
+        )
     }
-
-    host_log!(stdout, "Unpacked archive!");
-
-    Ok(())
 }
 
 fn unzip(src_file: &VirtualPath, dest_dir: &VirtualPath, components: usize) -> AnyResult<()> {
