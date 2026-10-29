@@ -38,10 +38,17 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
     let mut migrator = TurboMigrator::new(&input.context, args.bun)?;
 
     // Migrate the workspace root config first
-    let root_config_path = workspace_root.join("turbo.json");
+    let root_config_path = ["turbo.json", "turbo.jsonc"]
+        .into_iter()
+        .map(|name| workspace_root.join(name))
+        .find(|path| path.exists());
 
-    if root_config_path.exists() {
-        host_log!(stdout, "Migrating root config <file>turbo.json</file>");
+    if let Some(root_config_path) = root_config_path {
+        host_log!(
+            stdout,
+            "Migrating root config <file>{}</file>",
+            fs::file_name(&root_config_path)
+        );
 
         migrator.migrate_root_config(json::read_file(&root_config_path)?)?;
 
@@ -51,9 +58,14 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
     }
 
     // Then migrate project configs
-    for project_config_path in
-        glob::walk_files(workspace_root, ["**/*/turbo.json", "!**/node_modules/**/*"])?
-    {
+    for project_config_path in glob::walk_files(
+        workspace_root,
+        [
+            "**/*/turbo.json",
+            "**/*/turbo.jsonc",
+            "!**/node_modules/**/*",
+        ],
+    )? {
         let rel_config_path = project_config_path.strip_prefix(workspace_root).unwrap();
         let project_source = rel_config_path.parent().unwrap().to_string_lossy();
 
