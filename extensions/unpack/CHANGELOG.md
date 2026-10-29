@@ -2,14 +2,22 @@
 
 ## Unreleased
 
+#### 💥 Breaking
+
+- Replaced `--prefix` (which was ignored) with `--components`, which strips the provided number of leading directories from unpacked files.
+
 #### 🚀 Updates
 
 - Panics now report their message, instead of an `unreachable` WASM trap error.
 
 #### 🐞 Fixes
 
+- Fixed failed unpacks (invalid archives, etc) being reported as successful.
+- Fixed existing files not being overwritten when unpacking zip archives.
+- Fixed zip archives not being detected when the URL has a query string, or the extension is uppercase.
+- Fixed zip archives requiring `unzip` on Windows. Will now use the built-in `tar` when `unzip` is not available.
+- Fixed absolute `--src` and `--dest` paths failing.
 - Fixed a URL without a `/`, like `http:file.zip`, panicking instead of returning an error.
-- Fixed a failed `tar` or `unzip` reporting the archive as unpacked. It now returns an error.
 
 ## 1.0.4
 

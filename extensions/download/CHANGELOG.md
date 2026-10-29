@@ -8,6 +8,8 @@
 
 #### 🐞 Fixes
 
+- Fixed the URL's query string and fragment being included in the file name.
+- Fixed absolute `--dest` paths failing.
 - Fixed a URL without a `/`, like `http:file.zip`, panicking instead of returning an error.
 
 ## 1.0.4
