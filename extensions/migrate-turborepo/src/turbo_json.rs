@@ -11,7 +11,7 @@ pub enum TurboEnvMode {
     Strict,
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub enum TurboOutputMode {
     #[default]
@@ -27,26 +27,67 @@ pub enum TurboOutputMode {
 pub enum TurboUi {
     #[default]
     Stream,
+    StreamWithExperimentalTimestamps,
     Tui,
 }
 
-// Future: interruptible, with
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub enum TurboInputMode {
+    Startup,
+    Jit,
+    DependencyOutputs,
+}
+
+#[derive(Debug, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct TurboStructuredInput {
+    pub from: Option<Vec<String>>,
+    pub globs: Option<Vec<String>>,
+    pub mode: TurboInputMode,
+    pub with_defaults: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, PartialEq)]
+#[serde(untagged)]
+pub enum TurboTaskInput {
+    Glob(String),
+    Structured(TurboStructuredInput),
+}
+
+#[derive(Debug, Default, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct TurboTask {
     pub cache: Option<bool>,
     pub depends_on: Option<Vec<String>>,
     pub env: Option<Vec<String>>,
-    pub inputs: Option<Vec<String>>,
+    pub inputs: Option<Vec<TurboTaskInput>>,
     pub outputs: Option<Vec<String>>,
     pub pass_through_env: Option<Vec<String>>,
     pub persistent: Option<bool>,
     // v2
+    pub description: Option<String>,
+    pub extends: Option<bool>,
     pub interactive: Option<bool>,
+    pub interruptible: Option<bool>,
     pub output_logs: Option<TurboOutputMode>,
+    pub tags: Option<Vec<String>>,
+    pub with: Option<Vec<String>>,
     // v1 (removed)
     pub dot_env: Option<Vec<String>>,
     pub output_mode: Option<TurboOutputMode>,
+}
+
+// Requires `futureFlags.globalConfiguration`
+#[derive(Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TurboGlobal {
+    pub cache_dir: Option<String>,
+    pub env: Option<Vec<String>>,
+    pub env_mode: Option<TurboEnvMode>,
+    pub inputs: Option<Vec<String>>,
+    pub pass_through_env: Option<Vec<String>>,
+    pub ui: Option<TurboUi>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -61,6 +102,7 @@ pub struct TurboJson {
     pub daemon: Option<bool>,
     pub dangerously_disable_package_manager_check: Option<bool>,
     pub env_mode: Option<TurboEnvMode>,
+    pub global: Option<TurboGlobal>,
     pub no_update_notifier: Option<bool>,
     pub tags: Option<Vec<String>>,
     pub tasks: Option<FxHashMap<String, TurboTask>>,
