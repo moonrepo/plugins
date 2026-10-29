@@ -1,0 +1,41 @@
+---
+source: extensions/migrate-nx/tests/migrate_nx_test.rs
+expression: "fs::read_to_string(sandbox.path().join(\"apps/web/moon.yml\")).unwrap()"
+---
+id: acme/web
+language: javascript
+project:
+  owner: team-web
+  description: The web application
+tasks:
+  build:
+    description: Builds the application
+    command: js tsc
+    args:
+    - --tsConfig
+    - $projectRoot/tsconfig.json
+    inputs:
+    - '@group(production)'
+    outputs:
+    - file: types
+    options:
+      cache: true
+  build.production:
+    extends: build
+    args:
+    - --minify
+  lint:
+    command: eslint .
+    deps:
+    - ^:lint.types
+    inputs:
+    - file: /eslint.config.js
+    options:
+      cache: false
+  serve:
+    command: vite dev
+    options:
+      persistent: true
+      runInCI: true
+toolchains:
+  default: node

@@ -1,0 +1,35 @@
+{
+  "name": "@acme/web",
+  "metadata": {
+    "description": "The web application",
+    "owner": "team-web"
+  },
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["...", "{projectRoot}/types"],
+      "options": {
+        "...": true,
+        "tsConfig": "{projectRoot}/tsconfig.json"
+      },
+      "configurations": {
+        "production": { "minify": true },
+        "...": true
+      },
+      "metadata": {
+        "description": "Builds the application"
+      }
+    },
+    "serve": {
+      "command": "vite dev",
+      "continuous": true,
+      "readyWhen": { "url": "http://localhost:4200" }
+    },
+    "lint": {
+      "command": "eslint .",
+      "cache": false,
+      "inputs": ["...", "{workspaceRoot}/eslint.config.js"],
+      "dependsOn": ["...", "build-*", "^lint:types"]
+    }
+  }
+}
