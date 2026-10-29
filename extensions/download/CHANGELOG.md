@@ -4,13 +4,15 @@
 
 #### 🚀 Updates
 
+- Files are now downloaded directly to disk, instead of being loaded into memory.
 - Panics now report their message, instead of an `unreachable` WASM trap error.
 
 #### 🐞 Fixes
 
 - Fixed the URL's query string and fragment being included in the file name.
 - Fixed absolute `--dest` paths failing.
-- Fixed a URL without a `/`, like `http:file.zip`, panicking instead of returning an error.
+- Fixed values starting with `http` (without `://`), like `http:file.zip`, being accepted as URLs,
+  and crashing.
 
 ## 1.0.4
 

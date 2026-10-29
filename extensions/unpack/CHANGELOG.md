@@ -8,6 +8,8 @@
 
 #### 🚀 Updates
 
+- Archives are now downloaded directly to disk, instead of being loaded into memory.
+- Downloaded archives are now removed after unpacking.
 - Panics now report their message, instead of an `unreachable` WASM trap error.
 
 #### 🐞 Fixes
@@ -17,7 +19,8 @@
 - Fixed zip archives not being detected when the URL has a query string, or the extension is uppercase.
 - Fixed zip archives requiring `unzip` on Windows. Will now use the built-in `tar` when `unzip` is not available.
 - Fixed absolute `--src` and `--dest` paths failing.
-- Fixed a URL without a `/`, like `http:file.zip`, panicking instead of returning an error.
+- Fixed local files starting with `http` being treated as URLs.
+- Fixed the source being downloaded before the destination was validated.
 
 ## 1.0.4
 
