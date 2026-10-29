@@ -1,0 +1,41 @@
+{
+  "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "defaultBase": "main",
+  "namedInputs": {
+    "default": ["{projectRoot}/**/*", "sharedGlobals"],
+    "sharedGlobals": [
+      { "json": "{workspaceRoot}/package.json", "fields": ["dependencies"] },
+      { "workingDirectory": "relative" }
+    ],
+    "production": [
+      "default",
+      "!{projectRoot}/**/*.spec.ts",
+      {
+        "fileset": "{projectRoot}/dist/**",
+        "dependencies": true,
+        "includeIgnored": true
+      }
+    ]
+  },
+  "targetDefaults": {
+    "build": [
+      { "cache": true, "dependsOn": ["^build"] },
+      { "outputs": ["{projectRoot}/dist"] },
+      {
+        "filter": { "plugin": "@nx/vite" },
+        "inputs": ["production", "^production"]
+      }
+    ],
+    "@nx/js:tsc": {
+      "cache": true,
+      "inputs": ["production", "^production"],
+      "options": { "main": "{projectRoot}/src/index.ts" }
+    },
+    "e2e-ci--**/**": {
+      "options": { "headless": true }
+    },
+    "serve": {
+      "continuous": true
+    }
+  }
+}

@@ -15,7 +15,11 @@ pub fn register_toolchain(
         name: "Deno".into(),
         plugin_version: env!("CARGO_PKG_VERSION").into(),
         exe_names: vec!["deno".into()],
-        manifest_file_names: vec!["deno.json".into(), "deno.jsonc".into()],
+        manifest_file_names: vec![
+            "deno.json".into(),
+            "deno.jsonc".into(),
+            "package.json".into(),
+        ],
         lock_file_names: vec!["deno.lock".into()],
         vendor_dir_name: Some("node_modules".into()),
         ..Default::default()

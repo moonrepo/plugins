@@ -47,6 +47,7 @@ pub fn register_toolchain(
             "irb".into(),
         ],
         vendor_dir_name: Some(config.bundle_path),
+        ..Default::default()
     }))
 }
 

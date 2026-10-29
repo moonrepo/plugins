@@ -41,6 +41,22 @@ mod migrate_nx_extension {
         assert_snapshot!(fs::read_to_string(sandbox.path().join("moon.yml")).unwrap());
     }
 
+    #[tokio::test(flavor = "multi_thread")]
+    async fn supports_latest_features() {
+        let sandbox = create_moon_sandbox("latest");
+        let plugin = sandbox.create_extension("test").await;
+
+        plugin.execute_extension(create_input()).await;
+
+        assert!(!sandbox.path().join("nx.json").exists());
+        assert!(!sandbox.path().join("apps/web/project.json").exists());
+        assert!(!sandbox.path().join("apps/web-e2e/project.json").exists());
+
+        assert_snapshot!(fs::read_to_string(sandbox.path().join(".moon/tasks/node.yml")).unwrap());
+        assert_snapshot!(fs::read_to_string(sandbox.path().join("apps/web/moon.yml")).unwrap());
+        assert_snapshot!(fs::read_to_string(sandbox.path().join("apps/web-e2e/moon.yml")).unwrap());
+    }
+
     mod nx_json {
         use super::*;
 

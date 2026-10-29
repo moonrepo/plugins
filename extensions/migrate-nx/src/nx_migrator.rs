@@ -6,18 +6,22 @@ use moon_config::EnvMap;
 use moon_config::{
     FilePath, GlobInput, GlobPath, Input, LayerType, OneOrMany, Output, PartialProjectDependsOn,
     PartialProjectMetadataConfig, PartialTaskArgs, PartialTaskConfig, PartialTaskDependency,
-    PartialTaskOptionsConfig, PartialVcsConfig, PartialWorkspaceProjects, TaskOptionCache,
-    TaskOptionEnvFile,
+    PartialTaskDependencyConfig, PartialTaskOptionEnvFile, PartialTaskOptionsConfig,
+    PartialVcsConfig, PartialWorkspaceProjects, TaskDependencyType, TaskOptionCache,
+    TaskOptionRunInCI,
 };
 use moon_pdk::{AnyResult, map_miette_error};
 use moon_pdk_api::MoonContext;
 use moon_target::Target;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use starbase_utils::json::JsonValue;
 use std::collections::BTreeMap;
 use std::str::FromStr;
 
+const SPREAD: &str = "...";
+
 pub struct NxMigrator {
+    pub executor_defaults: FxHashMap<String, NxTargetOptions>,
     pub inner: Migrator,
     pub package_manager: String,
 }
@@ -31,6 +35,7 @@ impl NxMigrator {
         }
 
         Ok(Self {
+            executor_defaults: FxHashMap::default(),
             package_manager: migrator.detect_package_manager(),
             inner: migrator,
         })
@@ -67,6 +72,56 @@ impl NxMigrator {
         Ok(())
     }
 
+    // Continuous tasks never exit, so dependents can only wait for them to start
+    pub fn wait_for_continuous_deps(&mut self) -> AnyResult<()> {
+        let mut continuous = FxHashSet::default();
+
+        for tasks in self
+            .inner
+            .tasks_configs
+            .values()
+            .filter_map(|config| config.tasks.as_ref())
+            .chain(
+                self.inner
+                    .project_configs
+                    .values()
+                    .filter_map(|config| config.tasks.as_ref()),
+            )
+        {
+            for (id, task) in tasks {
+                if task.options.as_ref().and_then(|options| options.persistent) == Some(true) {
+                    continuous.insert(id.to_string());
+                }
+            }
+        }
+
+        for tasks in self
+            .inner
+            .tasks_configs
+            .values_mut()
+            .filter_map(|config| config.tasks.as_mut())
+            .chain(
+                self.inner
+                    .project_configs
+                    .values_mut()
+                    .filter_map(|config| config.tasks.as_mut()),
+            )
+        {
+            for dep in tasks
+                .values_mut()
+                .flat_map(|task| task.deps.iter_mut().flatten())
+            {
+                if let PartialTaskDependency::Target(target) = dep
+                    && continuous.contains(target.get_task_id().map_err(map_miette_error)?)
+                {
+                    *dep = create_wait_dep(target.clone());
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     pub fn migrate_root_config(&mut self, nx_json: NxJson) -> AnyResult<()> {
         if let Some(default_branch) = nx_json
             .default_base
@@ -98,17 +153,29 @@ impl NxMigrator {
         }
 
         if let Some(target_defaults) = nx_json.target_defaults {
-            let tasks = self
-                .inner
-                .load_tasks_platform_config()?
-                .tasks
-                .get_or_insert(BTreeMap::default());
+            for (key, defaults) in target_defaults {
+                let Some(target_config) = defaults.resolve() else {
+                    continue;
+                };
 
-            for (name, target_config) in target_defaults {
-                tasks.insert(
-                    create_id(name)?,
-                    migrate_task(&target_config, &self.package_manager)?,
-                );
+                // Applied to project targets that use the executor
+                if is_executor(&key) {
+                    self.executor_defaults.insert(key, target_config);
+                    continue;
+                }
+
+                // Globs match targets inferred by plugins (task atomizer)
+                if key.contains('*') {
+                    continue;
+                }
+
+                let task = migrate_task(&target_config, &self.package_manager)?;
+
+                self.inner
+                    .load_tasks_platform_config()?
+                    .tasks
+                    .get_or_insert(BTreeMap::default())
+                    .insert(create_id(key)?, task);
             }
         }
 
@@ -195,8 +262,16 @@ impl NxMigrator {
         if let Some(targets) = project_json.targets {
             let tasks = config.tasks.get_or_insert(BTreeMap::default());
 
-            for (name, target) in targets {
+            for (name, mut target) in targets {
                 let task_id = create_id(name)?;
+
+                if let Some(defaults) = target
+                    .executor
+                    .as_ref()
+                    .and_then(|executor| self.executor_defaults.get(executor))
+                {
+                    target.inherit(defaults);
+                }
 
                 tasks.insert(
                     task_id.clone(),
@@ -206,6 +281,10 @@ impl NxMigrator {
                 // https://nx.dev/concepts/executors-and-configurations#use-task-configurations
                 if let Some(configurations) = target.configurations {
                     for (config_name, config_options) in configurations {
+                        let NxTargetConfiguration::Options(config_options) = config_options else {
+                            continue;
+                        };
+
                         tasks.insert(
                             create_id(format!("{task_id}.{config_name}"))?,
                             PartialTaskConfig {
@@ -244,6 +323,13 @@ impl NxMigrator {
 
         Ok(())
     }
+}
+
+// Executors are in the format of `package:executor`
+fn is_executor(value: &str) -> bool {
+    value.split_once(':').is_some_and(|(package, _)| {
+        package == "nx" || package.starts_with('@') || package.contains('/')
+    })
 }
 
 fn is_path_or_glob(value: &str) -> bool {
@@ -303,13 +389,31 @@ fn migrate_inputs(raw_inputs: &[NxInput], for_file_groups: bool) -> AnyResult<Ve
             NxInput::Env { env } => {
                 inputs.push(Input::EnvVar(env.to_owned()));
             }
-            NxInput::Fileset { fileset } => {
-                inputs.push(Input::parse(replace_tokens(fileset, true))?);
+            NxInput::Fileset {
+                dependencies,
+                fileset,
+            } => {
+                // Files from dependencies are not supported
+                if *dependencies != Some(true) {
+                    inputs.push(Input::parse(replace_tokens(fileset, true))?);
+                }
+            }
+            NxInput::Json { json } => {
+                // Field filtering is not supported, so use the entire file
+                inputs.push(Input::parse(replace_tokens(json, true))?);
             }
             NxInput::Runtime { .. } => {
                 // Not supported, moon includes tool version automatically
             }
+            NxInput::WorkingDirectory { .. } => {
+                // Not supported
+            }
             NxInput::Source(source) => {
+                // Spread token, moon merges inherited inputs by default
+                if source == SPREAD {
+                    continue;
+                }
+
                 // File path or glob
                 if is_path_or_glob(source) {
                     let path = replace_tokens(source, true);
@@ -348,7 +452,7 @@ fn migrate_options_to_args(options: &FxHashMap<String, JsonValue>) -> Vec<String
     let mut args = vec![];
 
     for (key, value) in options {
-        if matches!(value, JsonValue::Null) {
+        if key == SPREAD || matches!(value, JsonValue::Null) {
             continue;
         }
 
@@ -440,6 +544,10 @@ fn migrate_run_commands_task(nx_target: &NxTargetOptions) -> AnyResult<PartialTa
             let env = config.env.get_or_insert(EnvMap::default());
 
             for (key, value) in envs {
+                if key == SPREAD {
+                    continue;
+                }
+
                 env.insert(
                     key.to_owned(),
                     Some(convert_value_to_string_without_quotes(value)),
@@ -451,7 +559,9 @@ fn migrate_run_commands_task(nx_target: &NxTargetOptions) -> AnyResult<PartialTa
             config
                 .options
                 .get_or_insert(PartialTaskOptionsConfig::default())
-                .env_file = Some(TaskOptionEnvFile::File(FilePath::from_str(env_file)?));
+                .env_file = Some(PartialTaskOptionEnvFile::File(FilePath::from_str(
+                env_file,
+            )?));
         }
     }
 
@@ -529,10 +639,16 @@ fn migrate_task(
         inject_args_into_task(nx_target, &mut config);
     }
 
+    // Description
+    config.description = nx_target
+        .metadata
+        .as_ref()
+        .and_then(|metadata| metadata.description.clone());
+
     // Dependencies
     // - https://nx.dev/reference/project-configuration#dependson
     if let Some(depends_on) = &nx_target.depends_on {
-        let mut deps: Vec<Target> = vec![];
+        let mut deps = vec![];
 
         for dep in depends_on {
             match dep {
@@ -540,58 +656,66 @@ fn migrate_task(
                     dependencies,
                     target,
                     projects,
+                    wait_for,
                     ..
                 } => {
+                    if is_target_pattern(target) {
+                        continue;
+                    }
+
+                    let mut targets = vec![];
+
                     if let Some(projects) = projects {
                         match projects {
                             StringOrList::List(ids) => {
                                 for id in ids {
-                                    deps.push(Target::new(id, target).map_err(map_miette_error)?);
+                                    targets.push(create_target(create_id(id)?.as_str(), target)?);
                                 }
                             }
                             StringOrList::String(scope) => {
-                                deps.push(
-                                    Target::parse(
-                                        format!(
-                                            "{}:{target}",
-                                            if scope == "self" { "~" } else { "^" }
-                                        )
-                                        .as_str(),
-                                    )
-                                    .map_err(map_miette_error)?,
-                                );
+                                targets.push(match scope.as_str() {
+                                    "self" | "{self}" => create_target("~", target)?,
+                                    "dependencies" | "{dependencies}" => {
+                                        create_target("^", target)?
+                                    }
+                                    id => create_target(create_id(id)?.as_str(), target)?,
+                                });
                             }
                         };
                     } else if let Some(dependencies) = dependencies {
                         if *dependencies {
-                            deps.push(
-                                Target::parse(format!("^:{target}").as_str())
-                                    .map_err(map_miette_error)?,
-                            );
+                            targets.push(create_target("^", target)?);
                         }
                     } else {
-                        deps.push(Target::new_self(target).map_err(map_miette_error)?);
+                        targets.push(create_target("~", target)?);
+                    }
+
+                    for target in targets {
+                        deps.push(if wait_for.is_some() {
+                            create_wait_dep(target)
+                        } else {
+                            PartialTaskDependency::Target(target)
+                        });
                     }
                 }
                 NxDependsOn::String(target) => {
-                    if let Some(target) = target.strip_prefix('^') {
-                        deps.push(
-                            Target::parse(format!("^:{target}").as_str())
-                                .map_err(map_miette_error)?,
-                        );
-                    } else {
-                        deps.push(Target::new_self(target).map_err(map_miette_error)?);
+                    if is_target_pattern(target) {
+                        continue;
                     }
+
+                    deps.push(PartialTaskDependency::Target(
+                        if let Some(target) = target.strip_prefix('^') {
+                            create_target("^", target)?
+                        } else {
+                            create_target("~", target)?
+                        },
+                    ));
                 }
             };
         }
 
         if !deps.is_empty() {
-            config.deps = Some(
-                deps.into_iter()
-                    .map(PartialTaskDependency::Target)
-                    .collect(),
-            );
+            config.deps = Some(deps);
         }
     }
 
@@ -614,7 +738,9 @@ fn migrate_task(
         let mut outputs = vec![];
 
         for output in raw_outputs {
-            outputs.push(Output::parse(replace_tokens(output, true))?);
+            if output != SPREAD {
+                outputs.push(Output::parse(replace_tokens(output, true))?);
+            }
         }
 
         if !outputs.is_empty() {
@@ -622,19 +748,39 @@ fn migrate_task(
         }
     }
 
-    if nx_target.cache == Some(true) {
+    if let Some(cache) = nx_target.cache {
         config
             .options
             .get_or_insert(PartialTaskOptionsConfig::default())
-            .cache = nx_target.cache.map(TaskOptionCache::Enabled);
+            .cache = Some(TaskOptionCache::Enabled(cache));
     }
 
+    // Only runs in CI for the tasks that depend on it, like in Nx
     if nx_target.continuous == Some(true) {
-        config
+        let options = config
             .options
-            .get_or_insert(PartialTaskOptionsConfig::default())
-            .persistent = Some(true);
+            .get_or_insert(PartialTaskOptionsConfig::default());
+
+        options.persistent = Some(true);
+        options.run_in_ci = Some(TaskOptionRunInCI::Enabled(true));
     }
 
     Ok(config)
+}
+
+// Wildcards and the spread token are not supported
+fn is_target_pattern(target: &str) -> bool {
+    target == SPREAD || target.contains('*')
+}
+
+fn create_target(scope: &str, task: &str) -> AnyResult<Target> {
+    Target::parse(format!("{scope}:{}", create_id(task)?).as_str()).map_err(map_miette_error)
+}
+
+fn create_wait_dep(target: Target) -> PartialTaskDependency {
+    PartialTaskDependency::Object(PartialTaskDependencyConfig {
+        target: Some(target),
+        type_of: Some(TaskDependencyType::Wait),
+        ..Default::default()
+    })
 }

@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added support for the latest Nx features:
+  - `targetDefaults` array entries (unfiltered entries only).
+  - `targetDefaults` keyed by executor (applied to project targets with that executor).
+  - `targets.*.metadata.description`.
+  - `targets.*.dependsOn[].waitFor` (maps to `wait` dependencies).
+  - `json` and `workingDirectory` inputs.
+  - The `...` spread token.
+- Dependencies on continuous targets are now `wait` dependencies, and continuous targets enable `runInCI`, so that they're valid in moon.
+
+#### 🐞 Fixes
+
+- Fixed `dependsOn[].projects` being mapped to `^` when set to a project name, `{self}`, or `{dependencies}`.
+- Fixed `dependsOn` wildcards (`build-*`) and `targetDefaults` globs failing or creating invalid tasks.
+- Fixed `dependsOn` not cleaning project and target names (`@scope/name`, `build:prod`) like other identifiers.
+- Fixed `cache: false` not disabling the cache.
+- Fixed `fileset` inputs with `dependencies: true` being migrated as project inputs.
+
 ## 1.0.5
 
 #### 🚀 Updates

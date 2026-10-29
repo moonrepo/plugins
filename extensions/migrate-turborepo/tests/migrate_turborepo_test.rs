@@ -94,6 +94,22 @@ mod migrate_turborepo_extension {
     }
 
     #[tokio::test(flavor = "multi_thread")]
+    async fn supports_latest_features() {
+        let sandbox = create_moon_sandbox("latest");
+        let plugin = sandbox.create_extension("test").await;
+
+        plugin.execute_extension(create_input()).await;
+
+        assert!(!sandbox.path().join("turbo.jsonc").exists());
+        assert!(!sandbox.path().join("apps/web/turbo.jsonc").exists());
+        assert!(sandbox.path().join(".moon/tasks/node.yml").exists());
+        assert!(sandbox.path().join("apps/web/moon.yml").exists());
+
+        assert_snapshot!(fs::read_to_string(sandbox.path().join(".moon/tasks/node.yml")).unwrap());
+        assert_snapshot!(fs::read_to_string(sandbox.path().join("apps/web/moon.yml")).unwrap());
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
     async fn supports_no_pipeline() {
         let sandbox = create_moon_sandbox("missing-pipeline");
         let plugin = sandbox.create_extension("test").await;
