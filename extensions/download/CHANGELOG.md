@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed the URL's query string and fragment being included in the file name.
+- Fixed absolute `--dest` paths failing.
+
 ## 1.0.4
 
 #### 🚀 Updates

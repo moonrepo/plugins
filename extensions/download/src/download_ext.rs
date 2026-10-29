@@ -1,5 +1,6 @@
 use extension_common::download::download_from_url;
 use extension_common::enable_tracing;
+use extension_common::paths::get_absolute_path;
 use extism_pdk::*;
 use moon_pdk::*;
 use moon_pdk_api::{ExecuteExtensionInput, RegisterExtensionInput, RegisterExtensionOutput};
@@ -45,9 +46,10 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
     // Determine destination directory
     debug!("Determining destination directory");
 
-    let dest_dir = input
-        .context
-        .get_absolute_path(args.dest.as_deref().unwrap_or_default());
+    let dest_dir = get_absolute_path(
+        &input.context.working_dir,
+        args.dest.as_deref().unwrap_or_default(),
+    );
 
     if dest_dir.exists() && dest_dir.is_file() {
         return Err(plugin_err!(
