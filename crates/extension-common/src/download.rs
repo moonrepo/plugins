@@ -1,6 +1,10 @@
 use extism_pdk::debug;
-use moon_pdk::{AnyResult, VirtualPath, fetch_bytes};
+use moon_pdk::{AnyResult, VirtualPath};
 use starbase_utils::fs;
+
+pub fn is_url(value: &str) -> bool {
+    value.starts_with("http://") || value.starts_with("https://")
+}
 
 pub fn download_from_url<U: AsRef<str>, P: AsRef<VirtualPath>>(
     src_url: U,
@@ -16,17 +20,14 @@ pub fn download_from_url<U: AsRef<str>, P: AsRef<VirtualPath>>(
     let file_name = file_name.unwrap_or_else(|| {
         let path = url.split(['?', '#']).next().unwrap_or_default();
 
-        &path[path.rfind('/').unwrap() + 1..]
+        path.rsplit('/').next().unwrap_or_default()
     });
 
-    // Fetch the bytes of the URL
-    let bytes = fetch_bytes(url)?;
-
-    // Write the to the provided file
+    // Download on the host, so the file isn't loaded into memory
     let file = dir.join(file_name);
 
     fs::create_dir_all(dir)?;
-    fs::write_file(&file, bytes)?;
+    moon_pdk::download_from_url(url, &file)?;
 
     debug!("Downloaded to <path>{file}</path>");
 

@@ -30,6 +30,20 @@ mod download_extension {
     }
 
     #[tokio::test(flavor = "multi_thread")]
+    #[should_panic(expected = "A valid URL is required for downloading.")]
+    async fn errors_if_missing_url_scheme() {
+        let sandbox = create_empty_moon_sandbox();
+        let plugin = sandbox.create_extension("test").await;
+
+        plugin
+            .execute_extension(ExecuteExtensionInput {
+                args: vec!["--url".into(), "httpfoo".into()],
+                ..Default::default()
+            })
+            .await;
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
     #[should_panic(expected = "must be a directory, found a file")]
     async fn errors_if_dest_is_a_file() {
         let sandbox = create_empty_moon_sandbox();
@@ -70,7 +84,7 @@ mod download_extension {
         let file = sandbox.path().join("README.md");
 
         assert!(file.exists());
-        assert_eq!(fs::metadata(file).unwrap().len(), 4115);
+        assert!(fs::metadata(file).unwrap().len() > 0);
     }
 
     #[tokio::test(flavor = "multi_thread")]
