@@ -24,7 +24,8 @@ config_struct!(
         pub components: Vec<String>,
 
         /// When `version` is defined, syncs the version to `rust-toolchain.toml`
-        /// under the `toolchain.channel` field.
+        /// under the `toolchain.channel` field. Also merges `components` and
+        /// `targets` into the `toolchain.components` and `toolchain.targets` fields.
         pub sync_toolchain_config: bool,
 
         /// List of Rust targets to automatically install with `rustup`.

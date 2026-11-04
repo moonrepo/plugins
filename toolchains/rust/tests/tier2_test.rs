@@ -686,12 +686,14 @@ mod rust_toolchain_tier2 {
                 BTreeMap::from_iter([
                     (
                         "a".into(),
-                        ManifestDependency::Version(UnresolvedVersionSpec::parse("1.2.3").unwrap())
+                        ManifestDependency::Version(
+                            UnresolvedVersionSpec::parse("^1.2.3").unwrap()
+                        )
                     ),
                     (
                         "b".into(),
                         ManifestDependency::Config(ManifestDependencyConfig {
-                            version: Some(UnresolvedVersionSpec::parse("4.5.6").unwrap()),
+                            version: Some(UnresolvedVersionSpec::parse("^4.5.6").unwrap()),
                             ..Default::default()
                         })
                     ),
@@ -699,11 +701,61 @@ mod rust_toolchain_tier2 {
                         "c".into(),
                         ManifestDependency::Config(ManifestDependencyConfig {
                             features: vec!["on".into()],
-                            version: Some(UnresolvedVersionSpec::parse("7.8.9").unwrap()),
+                            version: Some(UnresolvedVersionSpec::parse("^7.8.9").unwrap()),
                             ..Default::default()
                         })
                     )
                 ])
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn parses_target_deps_and_caret_requirements() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "Cargo.toml",
+                r#"[package]
+name = "pkg"
+version = "1.0.0"
+
+[dependencies]
+both = "1"
+exact = "=1.2.3"
+tokio = "1.40"
+
+[target.'cfg(unix)'.dependencies]
+both = { version = "2", features = ["x"] }
+libc = "0.2"
+
+[target.'cfg(windows)'.dev-dependencies]
+winapi = "0.3.9"
+"#,
+            );
+
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            let output = plugin
+                .parse_manifest(ParseManifestInput {
+                    path: VirtualPath::new(sandbox.path().join("Cargo.toml")),
+                    ..Default::default()
+                })
+                .await;
+
+            let version =
+                |req: &str| ManifestDependency::Version(UnresolvedVersionSpec::parse(req).unwrap());
+
+            assert_eq!(
+                output.dependencies,
+                BTreeMap::from_iter([
+                    ("both".into(), version("^1")),
+                    ("exact".into(), version("=1.2.3")),
+                    ("libc".into(), version("^0.2")),
+                    ("tokio".into(), version("^1.40")),
+                ])
+            );
+            assert_eq!(
+                output.dev_dependencies,
+                BTreeMap::from_iter([("winapi".into(), version("^0.3.9"))])
             );
         }
 
@@ -728,13 +780,15 @@ mod rust_toolchain_tier2 {
                 BTreeMap::from_iter([
                     (
                         "a".into(),
-                        ManifestDependency::Version(UnresolvedVersionSpec::parse("1.2.3").unwrap())
+                        ManifestDependency::Version(
+                            UnresolvedVersionSpec::parse("^1.2.3").unwrap()
+                        )
                     ),
                     (
                         "e".into(),
                         ManifestDependency::Config(ManifestDependencyConfig {
                             features: vec!["on".into()],
-                            version: Some(UnresolvedVersionSpec::parse("7.8.9").unwrap()),
+                            version: Some(UnresolvedVersionSpec::parse("^7.8.9").unwrap()),
                             ..Default::default()
                         })
                     )
@@ -747,7 +801,7 @@ mod rust_toolchain_tier2 {
                     (
                         "b".into(),
                         ManifestDependency::Config(ManifestDependencyConfig {
-                            version: Some(UnresolvedVersionSpec::parse("4.5.6").unwrap()),
+                            version: Some(UnresolvedVersionSpec::parse("^4.5.6").unwrap()),
                             ..Default::default()
                         })
                     ),

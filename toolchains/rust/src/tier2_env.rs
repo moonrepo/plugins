@@ -1,3 +1,4 @@
+use crate::binstall::{get_binstall_archive, get_binstall_url};
 use crate::cargo_toml::CargoToml;
 use crate::config::RustToolchainConfig;
 use crate::tier2::get_pinned_toolchain;
@@ -5,9 +6,10 @@ use crate::toolchain_toml::ToolchainToml;
 use crate::version::{to_channel, to_msrv};
 use extism_pdk::*;
 use moon_config::BinEntry;
-use moon_pdk::{get_host_environment, host_log, parse_toolchain_config_schema};
+use moon_pdk::{exec, fetch_bytes, get_host_environment, host_log, parse_toolchain_config_schema};
 use moon_pdk_api::*;
 use starbase_utils::fs;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -133,21 +135,43 @@ pub fn setup_environment(
                 .as_ref()
                 .is_none_or(|dir| !dir.join(env.os.get_exe_name("cargo-binstall")).exists())
             {
-                let binstall_package = if let Some(version) = &config.binstall_version {
-                    format!("cargo-binstall@{version}")
-                } else {
-                    "cargo-binstall".into()
-                };
+                let mut installed = false;
 
-                output.commands.push(
-                    create_command(
-                        "cargo",
-                        vec!["install", &binstall_package, "--force", "--locked"],
-                        &input.root,
-                    )
-                    .cache(CacheStrategy::Memory)
-                    .label("cargo-binstall"),
-                );
+                if let Some(globals_dir) = &input.globals_dir
+                    && let Some(archive) = get_binstall_archive(env.os, env.arch)
+                {
+                    let (op, result) =
+                        Operation::track_with_error("install-cargo-binstall", || {
+                            install_prebuilt_binstall(
+                                env,
+                                globals_dir,
+                                &archive,
+                                config.binstall_version.as_ref(),
+                            )
+                        })?;
+
+                    installed = result.is_some();
+                    output.operations.push(op);
+                }
+
+                // Otherwise compile it from source
+                if !installed {
+                    let binstall_package = if let Some(version) = &config.binstall_version {
+                        format!("cargo-binstall@{version}")
+                    } else {
+                        "cargo-binstall".into()
+                    };
+
+                    output.commands.push(
+                        create_command(
+                            "cargo",
+                            vec!["install", &binstall_package, "--force", "--locked"],
+                            &input.root,
+                        )
+                        .cache(CacheStrategy::Memory)
+                        .label("cargo-binstall"),
+                    );
+                }
             }
 
             if !force_bins.is_empty() {
@@ -193,6 +217,82 @@ pub fn setup_environment(
     }
 
     Ok(Json(output))
+}
+
+// `cargo install cargo-binstall` compiles from source, which takes minutes on
+// a cold CI runner, so install the prebuilt release, like binstall's own installer
+fn install_prebuilt_binstall(
+    env: &HostEnvironment,
+    globals_dir: &VirtualPath,
+    archive: &str,
+    version: Option<&Version>,
+) -> AnyResult<()> {
+    let temp_dir = VirtualPath::new("/moon/temp/rust").join(format!(
+        "cargo-binstall-{}",
+        SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos()
+    ));
+
+    fs::create_dir_all(&temp_dir)?;
+
+    let result = unpack_prebuilt_binstall(env, globals_dir, &temp_dir, archive, version);
+
+    // Leftovers in the temp dir are harmless, so don't fail an install
+    let _ = fs::remove_dir_all(&temp_dir);
+
+    result
+}
+
+fn unpack_prebuilt_binstall(
+    env: &HostEnvironment,
+    globals_dir: &VirtualPath,
+    temp_dir: &VirtualPath,
+    archive: &str,
+    version: Option<&Version>,
+) -> AnyResult<()> {
+    let url = get_binstall_url(archive, version);
+
+    host_log!(
+        debug,
+        "Downloading prebuilt <shell>cargo-binstall</shell> from <url>{url}</url>",
+    );
+
+    fs::write_file(temp_dir.join(archive), fetch_bytes(&url)?)?;
+
+    // GNU tar reads `.tgz`, while bsdtar (macOS, Windows 10+) also reads `.zip`
+    let unpack = exec(ExecCommandInput::pipe("tar", ["-xf", archive]).cwd(temp_dir.to_owned()))?;
+
+    if unpack.exit_code != 0 {
+        return Err(anyhow!(
+            "Failed to unpack <file>{archive}</file>: {}",
+            unpack.stderr.trim()
+        ));
+    }
+
+    // WASI can't set permissions, so copy next to the final path, and let
+    // the host make it executable while checking that it runs
+    let exe_name = env.os.get_exe_name("cargo-binstall");
+    let bin_path = globals_dir.join(&exe_name);
+    let partial_path = globals_dir.join(env.os.get_exe_name("cargo-binstall-partial"));
+
+    fs::copy_file(temp_dir.join(&exe_name), &partial_path)?;
+
+    let mut check = ExecCommandInput::pipe(partial_path.to_string(), ["-V"]);
+    check.set_executable = true;
+
+    let check = exec(check)?;
+
+    if check.exit_code != 0 {
+        fs::remove_file(&partial_path)?;
+
+        return Err(anyhow!(
+            "Prebuilt <shell>cargo-binstall</shell> failed to run: {}",
+            check.stderr.trim()
+        ));
+    }
+
+    fs::rename(&partial_path, &bin_path)?;
+
+    Ok(())
 }
 
 fn sync_package_msrv(
@@ -251,24 +351,44 @@ fn sync_toolchain_toml(
         changed_files.push(legacy_toolchain_path);
     }
 
-    if let Some(version) = &config.version {
-        let Some(channel) = to_channel(version) else {
-            host_log!(
-                warn,
-                "Unable to sync <file>rust-toolchain.toml</file>, as <version>{version}</version> is not a valid <property>channel</property> (expected stable, beta, nightly, or 1.80.0)",
-            );
+    let channel = config.version.as_ref().and_then(to_channel);
 
-            return Ok(changed_files);
-        };
+    if let Some(version) = &config.version
+        && channel.is_none()
+    {
+        host_log!(
+            warn,
+            "Unable to sync <property>channel</property> to <file>rust-toolchain.toml</file>, as <version>{version}</version> is not a valid channel (expected stable, beta, nightly, or 1.80.0)",
+        );
+    }
 
-        let mut contents = ToolchainToml::load(toolchain_path)?;
+    // Only create the file when there's a channel to pin
+    if channel.is_none()
+        && (!toolchain_path.exists() || (config.components.is_empty() && config.targets.is_empty()))
+    {
+        return Ok(changed_files);
+    }
+
+    // Saving merges into the existing file, so it must exist
+    if !toolchain_path.exists() {
+        fs::write_file(&toolchain_path, "[toolchain]\n")?;
+    }
+
+    // Rustup installs missing components and targets for whichever
+    // channel the file uses, so editors and ad-hoc `cargo` get them too
+    let mut contents = ToolchainToml::load(toolchain_path)?;
+
+    if let Some(channel) = channel {
         contents.set_channel(channel)?;
+    }
 
-        if let Some(file) = contents.save()?
-            && !changed_files.contains(&file)
-        {
-            changed_files.push(file);
-        }
+    contents.add_components(&config.components)?;
+    contents.add_targets(&config.targets)?;
+
+    if let Some(file) = contents.save()?
+        && !changed_files.contains(&file)
+    {
+        changed_files.push(file);
     }
 
     Ok(changed_files)

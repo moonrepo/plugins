@@ -412,9 +412,10 @@ pub fn parse_manifest(
             out_deps.insert(
                 name.to_owned(),
                 match in_dep {
-                    Dependency::Simple(req) => {
-                        ManifestDependency::Version(UnresolvedVersionSpec::parse(req)?)
-                    }
+                    Dependency::Simple(req) => match parse_requirement(req) {
+                        Some(version) => ManifestDependency::Version(version),
+                        None => continue,
+                    },
                     Dependency::Inherited(cfg) => {
                         if cfg.features.is_empty() {
                             ManifestDependency::Inherited(true)
@@ -439,10 +440,7 @@ pub fn parse_manifest(
                                 features: cfg.features.clone(),
                                 path: cfg.path.as_ref().map(PathBuf::from),
                                 url: cfg.git.clone(),
-                                version: match &cfg.version {
-                                    Some(version) => Some(UnresolvedVersionSpec::parse(version)?),
-                                    None => None,
-                                },
+                                version: cfg.version.as_deref().and_then(parse_requirement),
                                 ..Default::default()
                             })
                         }
@@ -471,11 +469,30 @@ pub fn parse_manifest(
         extract_deps(&workspace.dependencies, &mut output.dependencies)?;
     }
 
+    // Extracted before the main tables, so those take precedence
+    for target in manifest.target.values() {
+        extract_deps(&target.dependencies, &mut output.dependencies)?;
+        extract_deps(&target.dev_dependencies, &mut output.dev_dependencies)?;
+        extract_deps(&target.build_dependencies, &mut output.build_dependencies)?;
+    }
+
     extract_deps(&manifest.dependencies, &mut output.dependencies)?;
     extract_deps(&manifest.dev_dependencies, &mut output.dev_dependencies)?;
     extract_deps(&manifest.build_dependencies, &mut output.build_dependencies)?;
 
     Ok(Json(output))
+}
+
+// Cargo treats bare requirements (`1.2.3`) as caret, so they can match the
+// resolved version in the lockfile. Unsupported syntax is skipped.
+fn parse_requirement(req: &str) -> Option<UnresolvedVersionSpec> {
+    let req = req.trim();
+
+    if req.starts_with(|ch: char| ch.is_ascii_digit()) {
+        UnresolvedVersionSpec::parse(format!("^{req}")).ok()
+    } else {
+        UnresolvedVersionSpec::parse(req).ok()
+    }
 }
 
 #[plugin_fn]

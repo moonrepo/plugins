@@ -1,3 +1,4 @@
+pub mod binstall;
 pub mod cargo_metadata;
 pub mod cargo_toml;
 pub mod config;

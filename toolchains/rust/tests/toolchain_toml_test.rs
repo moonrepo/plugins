@@ -46,6 +46,7 @@ mod toolchain_toml {
                 data: BaseToolchainToml {
                     toolchain: ToolchainSection {
                         channel: Some("stable".into()),
+                        ..Default::default()
                     },
                 },
                 ..Default::default()
@@ -90,6 +91,49 @@ mod toolchain_toml {
             tc.save_field("toolchain.channel", &mut root).unwrap();
 
             assert!(root.as_table().unwrap().is_empty());
+        }
+    }
+
+    mod add_components {
+        use super::*;
+
+        #[test]
+        fn merges_missing_items() {
+            let mut tc = ToolchainToml {
+                path: VirtualPath::new(PathBuf::from("/base/rust-toolchain.toml")),
+                data: BaseToolchainToml {
+                    toolchain: ToolchainSection {
+                        components: vec!["rustfmt".into(), "rust-src".into()],
+                        ..Default::default()
+                    },
+                },
+                ..Default::default()
+            };
+
+            assert!(
+                tc.add_components(&["clippy".into(), "rustfmt".into()])
+                    .unwrap()
+            );
+            assert!(!tc.add_components(&["clippy".into()]).unwrap());
+
+            assert_eq!(
+                tc.data.toolchain.components,
+                ["rustfmt", "rust-src", "clippy"]
+            );
+            assert_eq!(tc.dirty, ["toolchain.components"]);
+
+            let mut root = TomlValue::Table(Default::default());
+
+            tc.save_field("toolchain.components", &mut root).unwrap();
+
+            assert_eq!(
+                root["toolchain"]["components"],
+                TomlValue::Array(vec![
+                    TomlValue::String("rustfmt".into()),
+                    TomlValue::String("rust-src".into()),
+                    TomlValue::String("clippy".into()),
+                ])
+            );
         }
     }
 }

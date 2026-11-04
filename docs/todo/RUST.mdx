@@ -299,7 +299,13 @@ cases for a crate with a differently named binary and for a missing `.crates2.js
 
 ### #11 Let rustup own components and targets
 
-- [ ] Sync `components` and `targets` into rust-toolchain.toml
+- [x] Sync `components` and `targets` into rust-toolchain.toml
+- [x] Keep the `rustup … add` commands (see below)
+
+**Done differently:** rustup ignores the file's `components` and `targets` when `RUSTUP_TOOLCHAIN`
+is set (confirmed with rustup 1.29), so tasks pinned by #3 would miss them if the commands were
+dropped. #3's `--toolchain` argument already changes the setup fingerprint on a channel bump. The
+original idea follows:
 
 When `syncToolchainConfig` is on, merge `components` and `targets` into rust-toolchain.toml and drop
 the `rustup … add` commands. Rustup then installs them for whichever channel the file names, so a
@@ -308,21 +314,30 @@ setup fingerprint. When syncing is off, keep the commands with `--toolchain` (#3
 
 ### #12 `parse_manifest` fidelity
 
-- [ ] Check how moon consumes this output first; if it's only hashed, this is cosmetic.
-- [ ] Bare Cargo requirements are caret: prefix `^` when a simple or detailed `version` starts with
+- [x] Check how moon consumes this output first. The task hasher matches each requirement against
+      `Cargo.lock` and records the checksum on a match, otherwise the requirement string, so the
+      exact-version misparse kept lockfile-only bumps from invalidating hashes in accuracy mode.
+      `version` and `publishable` aren't read anywhere.
+- [x] Bare Cargo requirements are caret: prefix `^` when a simple or detailed `version` starts with
       a digit (`tier2.rs:271`, `:299`).
 - [ ] Resolve `version.workspace = true` from the root's `[workspace.package]`, reusing #4's root
-      lookup.
-- [ ] Include `[target.*]` dependencies.
+      lookup. Skipped: moon doesn't read `version`.
+- [x] Include `[target.*]` dependencies.
 
 ### #14 Faster cargo-binstall bootstrap
 
-- [ ] Download the prebuilt binstall release
+- [x] Download the prebuilt binstall release
 
 `cargo install cargo-binstall --force --locked` (`tier2_env.rs:126`) compiles from source, which
 takes minutes on a cold CI runner. binstall publishes prebuilt archives per host triple: unpack the
-right one into the globals directory, and fall back to `cargo install`. Defer unless CI time becomes
-a complaint.
+right one into the globals directory, and fall back to `cargo install`.
+
+**Done:** `fetch_bytes` downloads the archive into `/moon/temp`, and the host's `tar` unpacks it.
+`.tgz` is used on Linux; bsdtar on macOS and Windows 10+ also reads `.zip`. WASI can't set
+permissions, so the binary is copied next to its final path, run with `-V` through `exec` with
+`set_executable` (which also checks it works), and renamed into place. Any failure falls back to
+`cargo install`. The release's minisign signature isn't verified, matching `cargo install`'s trust in
+its source. The `download_file` host function was avoided, as older moon hosts may not provide it.
 
 ## Outside this repo (moon)
 
@@ -331,6 +346,10 @@ a complaint.
 - [ ] `website/docs/guides/rust/handbook.mdx`: revise the claim that every task is executed "using
       the exact version" once #3 lands.
 - [ ] `crates/pdk-api/src/macros.rs`: D1 option B.
+- [ ] `crates/task-hasher/src/task_hashing.rs` (`apply_toolchain_dependencies_by_scope`): an
+      inherited dependency is looked up in the workspace manifest under its own scope, but
+      `[workspace.dependencies]` is reported as production, so `workspace = true` dev and build
+      dependencies never resolve. Fall back to the production scope for inherited lookups.
 
 ## Release
 
