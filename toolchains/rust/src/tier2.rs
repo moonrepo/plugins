@@ -6,6 +6,7 @@ use moon_pdk::{
     VirtualPathExt, get_host_env_var, get_host_environment, locate_root, locate_root_with_check,
 };
 use moon_pdk_api::*;
+use rustc_hash::FxHashMap;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
@@ -31,49 +32,130 @@ pub fn extend_project_graph(
     }
 
     // Second pass, extract packages and their relationships
+    let mut workspaces = FxHashMap::default();
+
     for (id, manifest) in packages.values() {
-        let mut project_output = ExtendProjectOutput::default();
+        let Some(package) = &manifest.package else {
+            continue;
+        };
 
-        let mut extract_implicit_deps =
-            |package_deps: &DepsSet, scope: DependencyScope| -> AnyResult<()> {
-                for (dep_name, dep) in package_deps {
-                    let Some((dep_id, _)) = packages.get(dep_name) else {
-                        continue;
-                    };
+        let mut project_output = ExtendProjectOutput {
+            alias: Some(package.name.clone()),
+            ..Default::default()
+        };
 
-                    // Only inherit if the dependency is using the local `path = "..."` syntax,
-                    // is not a self-dependency and the package name exists in our gathered map
-                    if dep
-                        .detail()
-                        .is_some_and(|det| det.path.as_ref().is_some_and(|path| path != "."))
-                    {
-                        project_output.dependencies.push(ProjectDependency {
-                            id: dep_id.to_owned(),
-                            scope,
-                            via: Some(format!("crate {dep_name}")),
-                        });
+        let mut deps_sets = vec![
+            (&manifest.dependencies, DependencyScope::Production),
+            (&manifest.dev_dependencies, DependencyScope::Development),
+            (&manifest.build_dependencies, DependencyScope::Build),
+        ];
+
+        for target in manifest.target.values() {
+            deps_sets.push((&target.dependencies, DependencyScope::Production));
+            deps_sets.push((&target.dev_dependencies, DependencyScope::Development));
+            deps_sets.push((&target.build_dependencies, DependencyScope::Build));
+        }
+
+        // `workspace = true` dependencies are defined in the workspace root
+        let workspace_deps = if deps_sets.iter().any(|(deps, _)| {
+            deps.values()
+                .any(|dep| matches!(dep, Dependency::Inherited(_)))
+        }) {
+            locate_workspace_deps(manifest, &mut workspaces)?
+        } else {
+            None
+        };
+
+        if let Some((root_manifest_path, _)) = &workspace_deps
+            && !output.input_files.contains(root_manifest_path)
+        {
+            output.input_files.push(root_manifest_path.to_owned());
+        }
+
+        for (deps, scope) in deps_sets {
+            for (dep_name, dep) in deps {
+                let dep = match dep {
+                    Dependency::Inherited(_) => {
+                        match workspace_deps
+                            .as_ref()
+                            .and_then(|(_, deps)| deps.get(dep_name))
+                        {
+                            Some(dep) => dep,
+                            None => continue,
+                        }
                     }
+                    _ => dep,
+                };
+
+                // Only inherit if the dependency is using the local `path = "..."` syntax,
+                // and the package (which may be renamed) exists in our gathered map
+                let Some(detail) = dep.detail().filter(|detail| detail.path.is_some()) else {
+                    continue;
+                };
+
+                let package_name = detail.package.as_deref().unwrap_or(dep_name);
+
+                let Some((dep_id, _)) = packages.get(package_name) else {
+                    continue;
+                };
+
+                // Skip self-dependencies and duplicates across target tables
+                if dep_id == id
+                    || project_output
+                        .dependencies
+                        .iter()
+                        .any(|existing| &existing.id == dep_id && existing.scope == scope)
+                {
+                    continue;
                 }
 
-                Ok(())
-            };
-
-        if let Some(package) = &manifest.package {
-            project_output.alias = Some(package.name.clone());
-
-            extract_implicit_deps(&manifest.dependencies, DependencyScope::Production)?;
-            extract_implicit_deps(&manifest.dev_dependencies, DependencyScope::Development)?;
-            extract_implicit_deps(&manifest.build_dependencies, DependencyScope::Build)?;
-
-            output
-                .extended_projects
-                .insert(id.to_owned(), project_output);
-
-            output.input_files.push(manifest.path.clone());
+                project_output.dependencies.push(ProjectDependency {
+                    id: dep_id.to_owned(),
+                    scope,
+                    via: Some(format!("crate {package_name}")),
+                });
+            }
         }
+
+        output
+            .extended_projects
+            .insert(id.to_owned(), project_output);
+
+        output.input_files.push(manifest.path.clone());
     }
 
     Ok(Json(output))
+}
+
+/// Find the `[workspace.dependencies]` of the Cargo workspace that the manifest
+/// belongs to, by traversing upwards. Roots are cached as members share them.
+fn locate_workspace_deps<'cache>(
+    manifest: &CargoToml,
+    cache: &'cache mut FxHashMap<VirtualPath, DepsSet>,
+) -> AnyResult<Option<(VirtualPath, &'cache DepsSet)>> {
+    let Some(starting_dir) = manifest.path.parent() else {
+        return Ok(None);
+    };
+
+    let mut root_manifest_path = None;
+
+    locate_root_with_check(&starting_dir, "Cargo.toml", |dir| {
+        let manifest_path = dir.join("Cargo.toml");
+
+        if !cache.contains_key(&manifest_path) {
+            let Some(workspace) = CargoToml::load(manifest_path.clone())?.workspace.take() else {
+                return Ok(false);
+            };
+
+            cache.insert(manifest_path.clone(), workspace.dependencies);
+        }
+
+        root_manifest_path = Some(manifest_path);
+
+        Ok(true)
+    })?;
+
+    Ok(root_manifest_path.and_then(|path| cache.get(&path).map(|deps| (path, deps))))
 }
 
 fn gather_shared_paths(
@@ -89,29 +171,35 @@ fn gather_shared_paths(
         return Ok(());
     }
 
-    if let Some(dir) = var::get::<String>("bin_dir")? {
-        paths.push(PathBuf::from(dir));
-    } else {
-        let maybe_dir = if let Some(value) = get_host_env_var("CARGO_INSTALL_ROOT")? {
-            Some(PathBuf::from(value).join("bin"))
-        } else if let Some(value) = get_host_env_var("CARGO_HOME")? {
-            Some(PathBuf::from(value).join("bin"))
-        } else {
-            env.home_dir
-                .join(".cargo")
-                .join("bin")
-                .to_real_path()?
-                .map(|path| path.to_path_buf())
-        };
+    if let Some(dirs) = var::get::<String>("bin_dirs")? {
+        paths.extend(dirs.lines().map(PathBuf::from));
 
-        if let Some(dir) = maybe_dir {
-            if let Some(dir_str) = dir.to_str() {
-                var::set("bin_dir", dir_str)?;
-            }
-
-            paths.push(dir);
-        }
+        return Ok(());
     }
+
+    let mut dirs = vec![];
+
+    // Binaries from `cargo install` are written to the install root,
+    // while the rustup proxies (`cargo`, `rustc`, etc) remain in the home
+    if let Some(value) = get_host_env_var("CARGO_INSTALL_ROOT")? {
+        dirs.push(PathBuf::from(value).join("bin"));
+    }
+
+    if let Some(value) = get_host_env_var("CARGO_HOME")? {
+        dirs.push(PathBuf::from(value).join("bin"));
+    } else if let Some(dir) = env.home_dir.join(".cargo").join("bin").to_real_path()? {
+        dirs.push(dir.to_path_buf());
+    }
+
+    var::set(
+        "bin_dirs",
+        dirs.iter()
+            .filter_map(|dir| dir.to_str())
+            .collect::<Vec<_>>()
+            .join("\n"),
+    )?;
+
+    paths.extend(dirs);
 
     Ok(())
 }

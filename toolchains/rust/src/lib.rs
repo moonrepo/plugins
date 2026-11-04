@@ -2,6 +2,7 @@ pub mod cargo_metadata;
 pub mod cargo_toml;
 pub mod config;
 pub mod toolchain_toml;
+pub mod version;
 
 #[cfg(feature = "wasm")]
 mod tier1;

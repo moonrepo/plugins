@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed `addMsrvConstraint` and `syncToolchainConfig` writing values that Cargo and rustup reject,
+  like `rust-version = "stable"` or `channel = "~1.80"`. Versions that can't be written are now
+  skipped with a warning, including partial versions like `1.80` for `syncToolchainConfig`, as
+  rustup treats them as a separate toolchain.
+- Fixed `addMsrvConstraint` only setting `package.rust-version` when the root `Cargo.toml` has both
+  `[workspace]` and `[package]`.
+- Fixed project relationships not being inferred from `workspace = true`, renamed
+  (`package = "..."`), and `[target.*]` path dependencies.
+- Fixed `docker prune` deleting binaries in target triple and custom profile directories, and
+  ignoring `CARGO_TARGET_DIR` and `build.target-dir`. A separate `build-dir` is now removed too.
+- Fixed the default Docker image for channels, as `rust:stable` and others don't exist. Stable and
+  beta now use `rust:latest`, and nightly uses `rustlang/rust:nightly`.
+- Fixed `.cargo/config` (without an extension) not being detected as a config file.
+- Fixed `CARGO_HOME/bin` not being added to `PATH` when `CARGO_INSTALL_ROOT` is set.
+- Includes `rust_tool` fixes for toolchain file precedence and Windows ARM64.
+
 ## 1.0.12
 
 #### 🐞 Fixes

@@ -223,5 +223,30 @@ mod cargo_toml {
 
             assert!(root.as_table().unwrap().is_empty());
         }
+
+        #[test]
+        fn adds_to_both_if_root_package() {
+            let mut manifest = CargoToml {
+                path: VirtualPath::new(PathBuf::from("/base/Cargo.toml")),
+                data: {
+                    let mut ws = CargoTomlInner::new_workspace();
+                    ws.package = CargoTomlInner::new_package().package.take();
+                    ws
+                },
+                ..Default::default()
+            };
+
+            assert!(manifest.set_msrv("1.69.0").unwrap());
+
+            assert_eq!(get_msrv(&manifest), Some("1.69.0"));
+            assert_eq!(
+                manifest.data.package.as_ref().unwrap().rust_version,
+                Some(Inheritable::Set("1.69.0".into()))
+            );
+            assert_eq!(
+                manifest.dirty,
+                ["workspace.package.rust-version", "package.rust-version"]
+            );
+        }
     }
 }

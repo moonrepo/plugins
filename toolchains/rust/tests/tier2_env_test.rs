@@ -1,5 +1,5 @@
 use moon_pdk_api::*;
-use moon_pdk_test_utils::{create_empty_moon_sandbox, create_moon_sandbox};
+use moon_pdk_test_utils::{MoonWasmSandbox, create_empty_moon_sandbox, create_moon_sandbox};
 use serde_json::json;
 use std::fs;
 
@@ -91,6 +91,80 @@ mod rust_toolchain_tier2 {
                     .contains("rust-version = \"1.69.0\"")
             );
         }
+
+        async fn sync_msrv(sandbox: &MoonWasmSandbox, version: &str) -> SetupEnvironmentOutput {
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    toolchain_config: json!({
+                        "addMsrvConstraint": true,
+                        "version": version
+                    }),
+                    ..Default::default()
+                })
+                .await
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn writes_partial_version() {
+            for version in ["1.80", "~1.80"] {
+                let sandbox = create_moon_sandbox("files");
+                let output = sync_msrv(&sandbox, version).await;
+
+                assert_eq!(
+                    output.changed_files,
+                    [VirtualPath::new("/workspace/Cargo.toml")]
+                );
+                assert!(
+                    fs::read_to_string(sandbox.path().join("Cargo.toml"))
+                        .unwrap()
+                        .contains("rust-version = \"1.80\"")
+                );
+            }
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn skips_channels() {
+            for version in ["stable", "nightly", "nightly-2024-01-01"] {
+                let sandbox = create_moon_sandbox("files");
+                let output = sync_msrv(&sandbox, version).await;
+
+                assert!(output.changed_files.is_empty());
+                assert!(
+                    !fs::read_to_string(sandbox.path().join("Cargo.toml"))
+                        .unwrap()
+                        .contains("rust-version")
+                );
+            }
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn writes_workspace_and_package_versions() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "Cargo.toml",
+                "[workspace]\nmembers = []\n\n[package]\nname = \"root\"\nversion = \"1.0.0\"\n",
+            );
+
+            let output = sync_msrv(&sandbox, "1.80.0").await;
+
+            assert_eq!(
+                output.changed_files,
+                [VirtualPath::new("/workspace/Cargo.toml")]
+            );
+
+            let manifest: toml::Table =
+                toml::from_str(&fs::read_to_string(sandbox.path().join("Cargo.toml")).unwrap())
+                    .unwrap();
+
+            assert_eq!(
+                manifest["workspace"]["package"]["rust-version"].as_str(),
+                Some("1.80.0")
+            );
+            assert_eq!(manifest["package"]["rust-version"].as_str(), Some("1.80.0"));
+        }
     }
 
     mod sync_toolchain_config {
@@ -177,6 +251,54 @@ mod rust_toolchain_tier2 {
                     .unwrap()
                     .contains("channel = \"1.69.0\"")
             );
+        }
+
+        async fn sync_channel(sandbox: &MoonWasmSandbox, version: &str) -> SetupEnvironmentOutput {
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    toolchain_config: json!({
+                        "syncToolchainConfig": true,
+                        "version": version
+                    }),
+                    ..Default::default()
+                })
+                .await
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn writes_channels() {
+            for version in ["stable", "beta", "nightly", "nightly-2024-01-01"] {
+                let sandbox = create_moon_sandbox("tc-cfg");
+                let output = sync_channel(&sandbox, version).await;
+
+                assert_eq!(
+                    output.changed_files,
+                    [VirtualPath::new("/workspace/rust-toolchain.toml")]
+                );
+                assert!(
+                    fs::read_to_string(sandbox.path().join("rust-toolchain.toml"))
+                        .unwrap()
+                        .contains(&format!("channel = \"{version}\""))
+                );
+            }
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn skips_partial_versions() {
+            for version in ["1.80", "~1.80"] {
+                let sandbox = create_moon_sandbox("tc-cfg");
+                let output = sync_channel(&sandbox, version).await;
+
+                assert!(output.changed_files.is_empty());
+                assert!(
+                    !fs::read_to_string(sandbox.path().join("rust-toolchain.toml"))
+                        .unwrap()
+                        .contains("channel")
+                );
+            }
         }
 
         #[tokio::test(flavor = "multi_thread")]

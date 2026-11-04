@@ -1,11 +1,17 @@
 use crate::cargo_toml::CargoToml;
 use crate::config::RustToolchainConfig;
 use crate::toolchain_toml::ToolchainToml;
+use crate::version::{to_channel, to_msrv};
 use extism_pdk::*;
 use moon_config::BinEntry;
-use moon_pdk::{get_host_environment, parse_toolchain_config_schema};
+use moon_pdk::{get_host_environment, host_log, parse_toolchain_config_schema};
 use moon_pdk_api::*;
 use starbase_utils::fs;
+
+#[host_fn]
+extern "ExtismHost" {
+    fn host_log(input: Json<HostLogInput>);
+}
 
 fn create_command(bin: &str, args: Vec<&str>, cwd: &VirtualPath) -> ExecCommand {
     ExecCommand::new(ExecCommandInput::new(bin, args).cwd(cwd.to_owned()))
@@ -189,8 +195,17 @@ fn sync_package_msrv(
     if let Some(version) = &config.version
         && manifest_path.exists()
     {
+        let Some(msrv) = to_msrv(version) else {
+            host_log!(
+                warn,
+                "Unable to add an MSRV constraint, as <version>{version}</version> is not a valid <property>rust-version</property> (expected 1.80 or 1.80.0)",
+            );
+
+            return Ok(changed_files);
+        };
+
         let mut manifest = CargoToml::load(manifest_path)?;
-        manifest.set_msrv(version.to_string())?;
+        manifest.set_msrv(msrv)?;
 
         if let Some(file) = manifest.save()? {
             changed_files.push(file);
@@ -227,8 +242,17 @@ fn sync_toolchain_toml(
     }
 
     if let Some(version) = &config.version {
+        let Some(channel) = to_channel(version) else {
+            host_log!(
+                warn,
+                "Unable to sync <file>rust-toolchain.toml</file>, as <version>{version}</version> is not a valid <property>channel</property> (expected stable, beta, nightly, or 1.80.0)",
+            );
+
+            return Ok(changed_files);
+        };
+
         let mut contents = ToolchainToml::load(toolchain_path)?;
-        contents.set_channel(version.to_string())?;
+        contents.set_channel(channel)?;
 
         if let Some(file) = contents.save()?
             && !changed_files.contains(&file)

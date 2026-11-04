@@ -1,0 +1,8 @@
+[workspace]
+resolver = "2"
+members = ["*"]
+
+[workspace.dependencies]
+core = { path = "core" }
+serde = "1"
+versioned = "1.0.0" # Not using `path`

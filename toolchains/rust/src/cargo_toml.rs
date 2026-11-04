@@ -30,7 +30,7 @@ impl CargoToml {
         #[cfg(feature = "wasm")]
         {
             host_log!(
-                "Setting <property>{field}</file> in <path>{}</path>",
+                "Setting <property>{field}</property> in <path>{}</path>",
                 self.path,
             );
         }
@@ -97,7 +97,7 @@ impl CargoToml {
     /// update `workspace.package.rust-version`, otherwise update `package.rust-version`.
     pub fn set_msrv(&mut self, version: impl AsRef<str>) -> AnyResult<bool> {
         let version = version.as_ref();
-        let mut dirty = None;
+        let dirty_count = self.dirty.len();
 
         if version.is_empty() {
             return Ok(false);
@@ -113,7 +113,7 @@ impl CargoToml {
                     .is_some_and(|rv| version != rv)
             {
                 package.rust_version = Some(version.into());
-                dirty = Some("workspace.package.rust-version");
+                self.dirty.push("workspace.package.rust-version".into());
             }
         }
 
@@ -125,16 +125,10 @@ impl CargoToml {
                 }))
         {
             package.set_rust_version(Some(version.into()));
-            dirty = Some("package.rust-version");
+            self.dirty.push("package.rust-version".into());
         }
 
-        if let Some(field) = dirty {
-            self.dirty.push(field.into());
-
-            return Ok(true);
-        }
-
-        Ok(false)
+        Ok(self.dirty.len() > dirty_count)
     }
 }
 

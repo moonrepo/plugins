@@ -65,9 +65,69 @@ mod rust_toolchain_tier2 {
             assert_eq!(
                 output.input_files,
                 [
+                    VirtualPath::new("/workspace/Cargo.toml"),
                     VirtualPath::new("/workspace/a/Cargo.toml"),
                     VirtualPath::new("/workspace/b/Cargo.toml"),
                     VirtualPath::new("/workspace/c/Cargo.toml"),
+                ]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn links_inherited_renamed_and_target_deps() {
+            let sandbox = create_moon_sandbox("projects-inherited");
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            let mut input = ExtendProjectGraphInput::default();
+            input.project_sources.insert(Id::raw("app"), "app".into());
+            input.project_sources.insert(Id::raw("core"), "core".into());
+            input
+                .project_sources
+                .insert(Id::raw("real"), "real-name".into());
+            input
+                .project_sources
+                .insert(Id::raw("unix"), "unix-only".into());
+            input
+                .project_sources
+                .insert(Id::raw("versioned"), "versioned".into());
+
+            let output = plugin.extend_project_graph(input).await;
+
+            assert_eq!(
+                output.extended_projects.get("app").unwrap().dependencies,
+                [
+                    ProjectDependency {
+                        id: Id::raw("core"),
+                        scope: DependencyScope::Production,
+                        via: Some("crate core".into()),
+                    },
+                    ProjectDependency {
+                        id: Id::raw("real"),
+                        scope: DependencyScope::Production,
+                        via: Some("crate real-name".into()),
+                    },
+                    ProjectDependency {
+                        id: Id::raw("unix"),
+                        scope: DependencyScope::Production,
+                        via: Some("crate unix-only".into()),
+                    },
+                    ProjectDependency {
+                        id: Id::raw("core"),
+                        scope: DependencyScope::Development,
+                        via: Some("crate core".into()),
+                    },
+                ]
+            );
+
+            assert_eq!(
+                output.input_files,
+                [
+                    VirtualPath::new("/workspace/Cargo.toml"),
+                    VirtualPath::new("/workspace/app/Cargo.toml"),
+                    VirtualPath::new("/workspace/core/Cargo.toml"),
+                    VirtualPath::new("/workspace/real-name/Cargo.toml"),
+                    VirtualPath::new("/workspace/unix-only/Cargo.toml"),
+                    VirtualPath::new("/workspace/versioned/Cargo.toml"),
                 ]
             );
         }
@@ -95,7 +155,10 @@ mod rust_toolchain_tier2 {
 
             assert_eq!(
                 output.input_files,
-                [VirtualPath::new("/workspace/a/Cargo.toml")]
+                [
+                    VirtualPath::new("/workspace/Cargo.toml"),
+                    VirtualPath::new("/workspace/a/Cargo.toml")
+                ]
             );
         }
 
@@ -143,6 +206,32 @@ mod rust_toolchain_tier2 {
             assert_eq!(
                 output.paths,
                 [sandbox.path().join(".home").join(".cargo").join("bin")]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn includes_cargo_home_with_install_root() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            unsafe {
+                env::set_var("CARGO_INSTALL_ROOT", sandbox.path().join("install"));
+                env::remove_var("CARGO_HOME");
+            }
+
+            let output = plugin
+                .extend_task_command(ExtendTaskCommandInput {
+                    command: "unknown".into(),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.paths,
+                [
+                    sandbox.path().join("install").join("bin"),
+                    sandbox.path().join(".home").join(".cargo").join("bin")
+                ]
             );
         }
 

@@ -25,7 +25,7 @@ impl ToolchainToml {
         #[cfg(feature = "wasm")]
         {
             host_log!(
-                "Setting <property>{field}</file> in <path>{}</path>",
+                "Setting <property>{field}</property> in <path>{}</path>",
                 self.path,
             );
         }

@@ -1,0 +1,15 @@
+[package]
+name = "app"
+version = "1.0.0"
+
+[dependencies]
+core = { workspace = true }
+renamed = { path = "../real-name", package = "real-name" }
+serde.workspace = true
+versioned.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+unix-only = { path = "../unix-only" }
+
+[target.'cfg(windows)'.dev-dependencies]
+core.workspace = true
