@@ -4,7 +4,7 @@ use moon_pdk_test_utils::{MoonWasmSandbox, create_empty_moon_sandbox, create_moo
 use serde_json::json;
 use std::env;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 mod rust_toolchain_tier1 {
     use super::*;
@@ -303,6 +303,17 @@ mod rust_toolchain_tier1 {
             );
         }
 
+        // Cargo reports the workspace root from the current directory, which
+        // resolves symlinks on macOS (`/var` -> `/private/var`), while
+        // Windows `canonicalize` adds a `\\?\` prefix that Cargo doesn't use
+        fn real_path(path: &Path) -> PathBuf {
+            if cfg!(windows) {
+                path.to_path_buf()
+            } else {
+                path.canonicalize().unwrap()
+            }
+        }
+
         fn create_bin(sandbox: &MoonWasmSandbox, dir: &str) {
             sandbox.create_file(format!("{dir}/rust_tc_test"), "");
             sandbox.create_file(format!("{dir}/rust_tc_test.exe"), "");
@@ -378,7 +389,7 @@ mod rust_toolchain_tier1 {
 
             let output = prune(
                 &sandbox,
-                Some(sandbox.path().canonicalize().unwrap().join("build/cargo")),
+                Some(real_path(sandbox.path()).join("build/cargo")),
             )
             .await;
 
@@ -397,11 +408,7 @@ mod rust_toolchain_tier1 {
             let sandbox = create_moon_sandbox("prune");
             let outside = create_empty_moon_sandbox();
 
-            let output = prune(
-                &sandbox,
-                Some(outside.path().canonicalize().unwrap().join("target")),
-            )
-            .await;
+            let output = prune(&sandbox, Some(real_path(outside.path()).join("target"))).await;
 
             assert!(sandbox.path().join("target/other-file").exists());
             assert!(output.changed_files.is_empty());
