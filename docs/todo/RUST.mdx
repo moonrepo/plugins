@@ -337,7 +337,8 @@ right one into the globals directory, and fall back to `cargo install`.
 permissions, so the binary is copied next to its final path, run with `-V` through `exec` with
 `set_executable` (which also checks it works), and renamed into place. Any failure falls back to
 `cargo install`. The release's minisign signature isn't verified, matching `cargo install`'s trust in
-its source. The `download_file` host function was avoided, as older moon hosts may not provide it.
+its source. `fetch_bytes` is used instead of the `download_file` host function, because a failed host download
+(a 404, offline) aborts the entire plugin call and skips the fallback.
 
 ## Outside this repo (moon)
 

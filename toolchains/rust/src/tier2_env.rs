@@ -256,6 +256,8 @@ fn unpack_prebuilt_binstall(
         "Downloading prebuilt <shell>cargo-binstall</shell> from <url>{url}</url>",
     );
 
+    // Not `download_from_url`, as a failed host download aborts the entire
+    // plugin call, which would skip the `cargo install` fallback
     fs::write_file(temp_dir.join(archive), fetch_bytes(&url)?)?;
 
     // GNU tar reads `.tgz`, while bsdtar (macOS, Windows 10+) also reads `.zip`
