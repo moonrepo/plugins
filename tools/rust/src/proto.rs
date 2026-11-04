@@ -9,6 +9,7 @@ use tool_common::enable_tracing;
 #[host_fn]
 extern "ExtismHost" {
     fn exec_command(input: Json<ExecCommandInput>) -> Json<ExecCommandOutput>;
+    fn host_log(input: Json<HostLogInput>);
     fn set_env_var(name: String, value: String);
 }
 
@@ -101,7 +102,19 @@ pub fn parse_version_file(
     };
 
     if let Some(channel) = channel {
-        output.version = Some(UnresolvedVersionSpec::parse(channel)?);
+        let version = UnresolvedVersionSpec::parse(&channel)?;
+
+        // Rustup installs `1.80` as its own toolchain, separate
+        // from the `1.80.x` that proto resolves and installs
+        if matches!(version, UnresolvedVersionSpec::Requirement(_)) {
+            host_log!(
+                warn,
+                "<file>{}</file> uses the partial version <version>{channel}</version>, which rustup installs as a separate toolchain. Use a fully-qualified version, like 1.80.0, to avoid installing Rust twice.",
+                input.file,
+            );
+        }
+
+        output.version = Some(version);
     }
 
     Ok(Json(output))

@@ -414,6 +414,40 @@ mod rust_toolchain_tier2 {
                 .label("rustup-component-add")]
             );
         }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn targets_configured_toolchain() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            unsafe {
+                std::env::remove_var("RUSTUP_TOOLCHAIN");
+            }
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    toolchain_config: json!({
+                        "components": ["clippy"],
+                        "targets": ["wasm32-wasip1"],
+                        "version": "1.80.0"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output
+                    .commands
+                    .iter()
+                    .map(|cmd| cmd.command.args.join(" "))
+                    .collect::<Vec<_>>(),
+                [
+                    "component add --toolchain 1.80.0 clippy",
+                    "target add --toolchain 1.80.0 wasm32-wasip1"
+                ]
+            );
+        }
     }
 
     mod targets {

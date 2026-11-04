@@ -1,9 +1,12 @@
 use crate::cargo_toml::CargoToml;
+use crate::config::RustToolchainConfig;
+use crate::version::to_channel;
 use cargo_toml::{Dependency, DepsSet, Publish};
 use extism_pdk::*;
 use moon_config::DependencyScope;
 use moon_pdk::{
-    VirtualPathExt, get_host_env_var, get_host_environment, locate_root, locate_root_with_check,
+    VirtualPathExt, command_exists, get_host_env_var, get_host_environment, locate_root,
+    locate_root_with_check, parse_toolchain_config,
 };
 use moon_pdk_api::*;
 use rustc_hash::FxHashMap;
@@ -204,6 +207,46 @@ fn gather_shared_paths(
     Ok(())
 }
 
+/// The channel to pin with `RUSTUP_TOOLCHAIN`, as rustup ignores moon's
+/// `PROTO_RUST_VERSION`. Partial versions are skipped (rustup treats them as
+/// another toolchain), and a `RUSTUP_TOOLCHAIN` set on the host still wins.
+pub(crate) fn get_pinned_toolchain(config: &RustToolchainConfig) -> AnyResult<Option<String>> {
+    let Some(channel) = config.version.as_ref().and_then(to_channel) else {
+        return Ok(None);
+    };
+
+    if get_host_env_var("RUSTUP_TOOLCHAIN")?.is_some_and(|value| !value.is_empty()) {
+        return Ok(None);
+    }
+
+    Ok(Some(channel))
+}
+
+// Bare commands may be binaries of their own, like `make` instead of
+// `cargo make`, or `fmt` instead of rustup's `cargo fmt` proxy
+fn is_command_installed(
+    env: &HostEnvironment,
+    globals_dir: &VirtualPath,
+    command: &str,
+) -> AnyResult<bool> {
+    if globals_dir.join(env.os.get_exe_name(command)).exists() {
+        return Ok(true);
+    }
+
+    // Checking the `PATH` spawns a process, so cache it
+    let key = format!("installed:{command}");
+
+    if let Some(value) = var::get::<String>(&key)? {
+        return Ok(value == "true");
+    }
+
+    let installed = command_exists(env, command);
+
+    var::set(&key, if installed { "true" } else { "false" })?;
+
+    Ok(installed)
+}
+
 #[plugin_fn]
 pub fn extend_task_command(
     Json(input): Json<ExtendTaskCommandInput>,
@@ -225,10 +268,18 @@ pub fn extend_task_command(
             globals_dir.join(env.os.get_exe_name(format!("cargo-{cargo_bin_name}")));
 
         // Is a cargo executable, shift over arguments
-        if cargo_bin_path.exists() {
+        if cargo_bin_path.exists()
+            && (command.starts_with("cargo-") || !is_command_installed(env, globals_dir, command)?)
+        {
             output.command = Some("cargo".into());
             output.args = Some(Extend::Prepend(vec![cargo_bin_name.into()]));
         }
+    }
+
+    let config = parse_toolchain_config::<RustToolchainConfig>(input.toolchain_config)?;
+
+    if let Some(channel) = get_pinned_toolchain(&config)? {
+        output.env.insert("RUSTUP_TOOLCHAIN".into(), channel);
     }
 
     // Always include Cargo specific paths for all commands
@@ -243,6 +294,11 @@ pub fn extend_task_script(
 ) -> FnResult<Json<ExtendTaskScriptOutput>> {
     let mut output = ExtendTaskScriptOutput::default();
     let env = get_host_environment()?;
+    let config = parse_toolchain_config::<RustToolchainConfig>(input.toolchain_config)?;
+
+    if let Some(channel) = get_pinned_toolchain(&config)? {
+        output.env.insert("RUSTUP_TOOLCHAIN".into(), channel);
+    }
 
     // Always include Cargo specific paths for all commands
     gather_shared_paths(env, input.globals_dir.as_ref(), &mut output.paths)?;

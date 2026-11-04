@@ -34,6 +34,12 @@ If you're familiar with Rust, you most likely use [rustup](https://rustup.rs), a
 Since we don't create shims for `cargo`, `rustup`, etc, we can't detect Rust versions at runtime. However, `rustup` supports this through the
 [`rust-toolchain.toml`](https://rust-lang.github.io/rustup/overrides.html#the-toolchain-file) file. We suggest using this file.
 
+When detecting a version, `rust-toolchain` takes precedence over `rust-toolchain.toml`, like it does in rustup.
+
+Use a fully-qualified version (`1.80.0`) or a channel (`stable`, `nightly-2024-01-01`) in toolchain files, not a partial version
+(`1.80`). Rustup installs a partial version as its own toolchain, separate from the `1.80.x` toolchain that proto resolves and
+installs, so Rust is installed twice.
+
 ## Contributing
 
 Build the plugin:

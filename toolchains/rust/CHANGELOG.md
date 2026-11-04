@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+#### 🚀 Updates
+
+- **Behavior change:** When `version` is a fully-qualified version or channel, tasks now run with
+  that toolchain by setting `RUSTUP_TOOLCHAIN`, as rustup ignores moon's `PROTO_RUST_VERSION`. This
+  overrides `rust-toolchain.toml` and `rustup override` for moon tasks; enable
+  `syncToolchainConfig` to keep editors and ad-hoc `cargo` in step. A `RUSTUP_TOOLCHAIN` set in
+  your shell still takes precedence, but one set in a task's `env` is overwritten.
+- **Behavior change:** Bare task commands are no longer rewritten to `cargo <command>` when the
+  command exists on its own. For example, `make` stays `make` when `cargo-make` is installed, while
+  `nextest` still becomes `cargo nextest`.
+- `components` and `targets` are now installed for the configured toolchain with `--toolchain`.
+
 #### 🐞 Fixes
 
 - Fixed `addMsrvConstraint` and `syncToolchainConfig` writing values that Cargo and rustup reject,

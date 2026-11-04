@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+#### 🚀 Updates
+
+- Added a warning when a toolchain file uses a partial version like `1.80`, which rustup installs as a
+  separate toolchain from proto's.
+
 #### 🐞 Fixes
 
 - Fixed `rust-toolchain.toml` taking precedence over `rust-toolchain` when both exist. Rustup uses

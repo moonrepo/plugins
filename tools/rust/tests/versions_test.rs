@@ -122,6 +122,26 @@ mod rust_tool {
     }
 
     #[tokio::test(flavor = "multi_thread")]
+    async fn parses_partial_version() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("rust-test").await;
+
+        // Logs a warning, but still resolves
+        assert_eq!(
+            plugin
+                .parse_version_file(ParseVersionFileInput {
+                    content: "[toolchain]\nchannel = \"1.70\"".into(),
+                    file: "rust-toolchain.toml".into(),
+                    ..Default::default()
+                })
+                .await,
+            ParseVersionFileOutput {
+                version: Some(UnresolvedVersionSpec::parse("1.70").unwrap()),
+            }
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
     async fn ignores_empty_rust_toolchain_toml() {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox.create_plugin("rust-test").await;

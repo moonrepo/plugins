@@ -200,9 +200,9 @@ survive.
 
 ### #3 Make `rust.version` control which Rust runs tasks (D2)
 
-- [ ] Set `RUSTUP_TOOLCHAIN` for tasks
-- [ ] Add `--toolchain` to setup commands
-- [ ] Docs and changelog
+- [x] Set `RUSTUP_TOOLCHAIN` for tasks
+- [x] Add `--toolchain` to setup commands
+- [x] Changelog (handbook docs are under "Outside this repo")
 
 **Problem:** moon sets `PROTO_RUST_VERSION`, which rustup ignores, and the plugin exposes no shims or
 executable directories. `cargo` therefore resolves through rust-toolchain.toml or `rustup default`,
@@ -219,15 +219,18 @@ honor `RUSTUP_TOOLCHAIN` over a toolchain file.
 - Document that a moon-configured version overrides rust-toolchain.toml and `rustup override` for
   moon tasks, and recommend `syncToolchainConfig` to keep editors and ad-hoc `cargo` in step.
 
-**Open question:** when the version is pinned only in `.prototools`, does moon put it into
-`toolchain_config`? Check this before implementing.
+**Answered:** yes. moon's `versionFromPrototools` (on by default) copies the root `.prototools`
+version into `toolchain_config.version` when toolchains.yml leaves it unset. A pin that only lives in
+rust-toolchain.toml isn't copied, so rustup keeps reading that file. moon applies plugin `env` after
+the task's own `env`, and `TaskFragment` has no env, so a task-level `RUSTUP_TOOLCHAIN` is
+overwritten; only a host-level one is respected.
 
 **Changelog:** this changes which toolchain tasks run with, so it needs a minor bump and a callout.
 
 ### #6 Partial channels (D3)
 
-- [ ] Warn on partial channels
-- [ ] Document in the README
+- [x] Warn on partial channels
+- [x] Document in the README
 
 **Problem:** rustup treats `channel = "1.80"` as its own toolchain, `1.80-<triple>`. proto resolves
 the same file to `1.80.x` and installs `1.80.x-<triple>`. The result is two downloads (this machine
@@ -246,8 +249,8 @@ resolved version, so that requires proto changes.
 
 ### #5 Bare command rewrite (D4)
 
-- [ ] Skip the rewrite when the bare command exists
-- [ ] Tests
+- [x] Skip the rewrite when the bare command exists
+- [x] Tests
 
 **Problem:** `extend_task_command` (`tier2.rs:129-144`) turns any command `X` into `cargo X` when a
 `cargo-X` binary is in the globals directory. Tasks with no detected toolchain inherit `rust` from

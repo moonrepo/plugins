@@ -1,5 +1,6 @@
 use crate::cargo_toml::CargoToml;
 use crate::config::RustToolchainConfig;
+use crate::tier2::get_pinned_toolchain;
 use crate::toolchain_toml::ToolchainToml;
 use crate::version::{to_channel, to_msrv};
 use extism_pdk::*;
@@ -58,9 +59,17 @@ pub fn setup_environment(
         output.changed_files.extend(files);
     }
 
+    // Target the configured toolchain, not the default
+    let toolchain = get_pinned_toolchain(&config)?;
+    let toolchain_args = match &toolchain {
+        Some(channel) => vec!["--toolchain", channel.as_str()],
+        None => vec![],
+    };
+
     // Install components
     if !config.components.is_empty() {
         let mut args = vec!["component", "add"];
+        args.extend(&toolchain_args);
         args.extend(config.components.iter().map(|c| c.as_str()));
 
         output.commands.push(
@@ -73,6 +82,7 @@ pub fn setup_environment(
     // Install targets
     if !config.targets.is_empty() {
         let mut args = vec!["target", "add"];
+        args.extend(&toolchain_args);
         args.extend(config.targets.iter().map(|c| c.as_str()));
 
         output.commands.push(

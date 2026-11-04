@@ -2,6 +2,7 @@ use moon_common::Id;
 use moon_config::DependencyScope;
 use moon_pdk_api::*;
 use moon_pdk_test_utils::{create_empty_moon_sandbox, create_moon_sandbox};
+use serde_json::json;
 use std::collections::BTreeMap;
 use std::env;
 
@@ -296,6 +297,92 @@ mod rust_toolchain_tier2 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn doesnt_prefix_with_cargo_if_command_exists() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(".home/.cargo/bin/cargo-git", "");
+            sandbox.create_file(".home/.cargo/bin/cargo-git.exe", "");
+
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            let output = plugin
+                .extend_task_command(ExtendTaskCommandInput {
+                    command: "git".into(),
+                    args: vec!["status".into()],
+                    globals_dir: Some(VirtualPath::new(sandbox.path().join(".home/.cargo/bin"))),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.command.is_none());
+            assert!(output.args.is_none());
+
+            // Explicit `cargo-*` commands are still prefixed
+            let output = plugin
+                .extend_task_command(ExtendTaskCommandInput {
+                    command: "cargo-git".into(),
+                    globals_dir: Some(VirtualPath::new(sandbox.path().join(".home/.cargo/bin"))),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.command.unwrap(), "cargo");
+            assert_eq!(output.args.unwrap(), Extend::Prepend(vec!["git".into()]));
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn pins_toolchain_for_versions_and_channels() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            unsafe {
+                env::remove_var("RUSTUP_TOOLCHAIN");
+            }
+
+            for (version, channel) in [
+                ("1.80.0", Some("1.80.0")),
+                ("stable", Some("stable")),
+                ("nightly-2024-01-01", Some("nightly-2024-01-01")),
+                ("1.80", None),
+            ] {
+                let output = plugin
+                    .extend_task_command(ExtendTaskCommandInput {
+                        command: "cargo".into(),
+                        toolchain_config: json!({ "version": version }),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert_eq!(
+                    output
+                        .env
+                        .get("RUSTUP_TOOLCHAIN")
+                        .map(|value| value.as_str()),
+                    channel
+                );
+            }
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn doesnt_pin_toolchain_if_set_on_host() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            unsafe {
+                env::set_var("RUSTUP_TOOLCHAIN", "nightly");
+            }
+
+            let output = plugin
+                .extend_task_command(ExtendTaskCommandInput {
+                    command: "cargo".into(),
+                    toolchain_config: json!({ "version": "1.80.0" }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.env.is_empty());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn doesnt_prefix_if_already_rust_or_cargo() {
             let sandbox = create_empty_moon_sandbox();
             sandbox.create_file(".home/.cargo/bin/cargo-nextest", "");
@@ -353,6 +440,32 @@ mod rust_toolchain_tier2 {
             assert_eq!(
                 output.paths,
                 [sandbox.path().join(".home").join(".cargo").join("bin")]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn pins_toolchain() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            unsafe {
+                env::remove_var("RUSTUP_TOOLCHAIN");
+            }
+
+            let output = plugin
+                .extend_task_script(ExtendTaskScriptInput {
+                    script: "cargo build && cargo test".into(),
+                    toolchain_config: json!({ "version": "1.80.0" }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output
+                    .env
+                    .get("RUSTUP_TOOLCHAIN")
+                    .map(|value| value.as_str()),
+                Some("1.80.0")
             );
         }
     }
