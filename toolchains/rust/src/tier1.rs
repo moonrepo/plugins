@@ -7,7 +7,7 @@ use moon_pdk::{exec, get_host_environment, parse_toolchain_config};
 use moon_pdk_api::*;
 use schematic::SchemaBuilder;
 use starbase_utils::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use toolchain_common::enable_tracing;
 
 #[plugin_fn]
@@ -21,6 +21,7 @@ pub fn register_toolchain(
         plugin_version: env!("CARGO_PKG_VERSION").into(),
         language: Some(LanguageType::Rust),
         config_file_globs: vec![
+            ".cargo/config".into(),
             ".cargo/*.toml".into(),
             "rust-toolchain".into(),
             "rust-toolchain.toml".into(),
@@ -70,16 +71,27 @@ pub fn define_docker_metadata(
     let config = parse_toolchain_config::<RustToolchainConfig>(input.toolchain_config)?;
 
     Ok(Json(DefineDockerMetadataOutput {
-        default_image: Some(format!(
-            "rust:{}",
-            config
-                .version
-                .as_ref()
-                .map(|version| version.to_partial_string())
-                .unwrap_or_else(|| "latest".into())
-        )),
+        default_image: Some(get_docker_image(config.version.as_ref())),
         ..Default::default()
     }))
+}
+
+// The official image has no channel tags, and a synced
+// `rust-toolchain.toml` selects the exact toolchain anyways
+fn get_docker_image(version: Option<&UnresolvedVersionSpec>) -> String {
+    match version {
+        Some(version)
+            if version.is_canary()
+                || version.is_alias("nightly")
+                || version.get_scope() == Some("nightly") =>
+        {
+            "rustlang/rust:nightly".into()
+        }
+        Some(version) if !version.is_alias("stable") && !version.is_alias("beta") => {
+            format!("rust:{}", version.to_partial_string())
+        }
+        _ => "rust:latest".into(),
+    }
 }
 
 #[plugin_fn]
@@ -142,16 +154,15 @@ fn get_target_stub_paths(input_dir: &VirtualPath) -> Vec<String> {
 #[plugin_fn]
 pub fn prune_docker(Json(input): Json<PruneDockerInput>) -> FnResult<Json<PruneDockerOutput>> {
     let mut output = PruneDockerOutput::default();
-    let target_dir = input.root.join("target");
 
-    if !target_dir.exists() || !input.docker_config.delete_vendor_directories {
+    if !input.docker_config.delete_vendor_directories || !input.root.join("Cargo.toml").exists() {
         return Ok(Json(output));
     }
 
     let env = get_host_environment()?;
 
-    // Before we can remove the target directory, we need
-    // to find a list of binaries to preserve
+    // Before we can remove the target directory, we need to find it,
+    // as it may be relocated, and a list of binaries to preserve
     let metadata = exec(
         ExecCommandInput::pipe(
             "cargo",
@@ -166,6 +177,31 @@ pub fn prune_docker(Json(input): Json<PruneDockerInput>) -> FnResult<Json<PruneD
         .cwd(input.root.clone()),
     )?;
     let metadata: CargoMetadata = json::from_str(&metadata.stdout)?;
+
+    // Directories outside of the root are not in the Docker context
+    let to_root_dir = |dir: &PathBuf| {
+        get_relative_path(dir, &metadata.workspace_root).map(|rel| input.root.join(rel))
+    };
+
+    let Some(target_dir) = to_root_dir(&metadata.target_directory) else {
+        return Ok(Json(output));
+    };
+
+    // The `build-dir` setting splits intermediate artifacts from the
+    // target directory, so remove it as well
+    if let Some(build_dir) = metadata.build_directory.as_ref().and_then(to_root_dir)
+        && build_dir != target_dir
+        && !target_dir.starts_with(&build_dir)
+        && build_dir.exists()
+    {
+        fs::remove_dir_all(&build_dir)?;
+        output.changed_files.push(build_dir);
+    }
+
+    if !target_dir.exists() {
+        return Ok(Json(output));
+    }
+
     let mut bin_names = vec![];
 
     for package in metadata.packages {
@@ -178,16 +214,39 @@ pub fn prune_docker(Json(input): Json<PruneDockerInput>) -> FnResult<Json<PruneD
         }
     }
 
-    // We then need to scan the target directory and each
-    // build profile for any existing binaries
+    // We then need to scan each profile directory (`release`, custom
+    // profiles, etc), and each target triple's profile directories, for
+    // any existing binaries. Hashed artifacts in `deps` won't match.
     let mut bin_paths = vec![];
 
-    for bin_name in bin_names {
-        for profile_name in ["release", "debug"] {
-            let bin_path = PathBuf::from(profile_name).join(&bin_name);
+    if !bin_names.is_empty() {
+        let mut profile_dirs = vec![];
 
-            if target_dir.join(&bin_path).exists() {
-                bin_paths.push(bin_path);
+        for entry in fs::read_dir(&target_dir)? {
+            let dir = entry.path();
+
+            if dir.is_dir() {
+                for inner_entry in fs::read_dir(&dir)? {
+                    let inner_dir = inner_entry.path();
+
+                    if inner_dir.is_dir() {
+                        profile_dirs.push(inner_dir);
+                    }
+                }
+
+                profile_dirs.push(dir);
+            }
+        }
+
+        for profile_dir in profile_dirs {
+            for bin_name in &bin_names {
+                let bin_path = profile_dir.join(bin_name);
+
+                if bin_path.is_file()
+                    && let Ok(rel_path) = bin_path.strip_prefix(&target_dir)
+                {
+                    bin_paths.push(rel_path.to_path_buf());
+                }
             }
         }
     }
@@ -211,4 +270,18 @@ pub fn prune_docker(Json(input): Json<PruneDockerInput>) -> FnResult<Json<PruneD
     output.changed_files.push(target_dir);
 
     Ok(Json(output))
+}
+
+// Paths from the host aren't split into components in WASM on Windows,
+// so compare them as strings instead
+fn get_relative_path(path: &Path, base: &Path) -> Option<String> {
+    let rel = path.to_str()?.strip_prefix(base.to_str()?)?;
+    let child = rel.trim_start_matches(['/', '\\']);
+
+    // Must be a child, and never the base itself
+    if child.is_empty() || child.len() == rel.len() {
+        return None;
+    }
+
+    Some(child.replace('\\', "/"))
 }

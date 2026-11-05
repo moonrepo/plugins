@@ -5534,6 +5534,7 @@ dependencies = [
  "moon_pdk",
  "moon_pdk_api",
  "moon_pdk_test_utils",
+ "proto_pdk_api",
  "rust_tool",
  "rustc-hash",
  "schematic",
@@ -5542,6 +5543,7 @@ dependencies = [
  "starbase_sandbox",
  "starbase_utils",
  "tokio",
+ "toml 1.1.6+spec-1.1.0",
  "toolchain_common",
 ]
 

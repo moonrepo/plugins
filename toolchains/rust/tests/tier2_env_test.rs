@@ -1,5 +1,5 @@
 use moon_pdk_api::*;
-use moon_pdk_test_utils::{create_empty_moon_sandbox, create_moon_sandbox};
+use moon_pdk_test_utils::{MoonWasmSandbox, create_empty_moon_sandbox, create_moon_sandbox};
 use serde_json::json;
 use std::fs;
 
@@ -91,6 +91,80 @@ mod rust_toolchain_tier2 {
                     .contains("rust-version = \"1.69.0\"")
             );
         }
+
+        async fn sync_msrv(sandbox: &MoonWasmSandbox, version: &str) -> SetupEnvironmentOutput {
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    toolchain_config: json!({
+                        "addMsrvConstraint": true,
+                        "version": version
+                    }),
+                    ..Default::default()
+                })
+                .await
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn writes_partial_version() {
+            for version in ["1.80", "~1.80"] {
+                let sandbox = create_moon_sandbox("files");
+                let output = sync_msrv(&sandbox, version).await;
+
+                assert_eq!(
+                    output.changed_files,
+                    [VirtualPath::new("/workspace/Cargo.toml")]
+                );
+                assert!(
+                    fs::read_to_string(sandbox.path().join("Cargo.toml"))
+                        .unwrap()
+                        .contains("rust-version = \"1.80\"")
+                );
+            }
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn skips_channels() {
+            for version in ["stable", "nightly", "nightly-2024-01-01"] {
+                let sandbox = create_moon_sandbox("files");
+                let output = sync_msrv(&sandbox, version).await;
+
+                assert!(output.changed_files.is_empty());
+                assert!(
+                    !fs::read_to_string(sandbox.path().join("Cargo.toml"))
+                        .unwrap()
+                        .contains("rust-version")
+                );
+            }
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn writes_workspace_and_package_versions() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "Cargo.toml",
+                "[workspace]\nmembers = []\n\n[package]\nname = \"root\"\nversion = \"1.0.0\"\n",
+            );
+
+            let output = sync_msrv(&sandbox, "1.80.0").await;
+
+            assert_eq!(
+                output.changed_files,
+                [VirtualPath::new("/workspace/Cargo.toml")]
+            );
+
+            let manifest: toml::Table =
+                toml::from_str(&fs::read_to_string(sandbox.path().join("Cargo.toml")).unwrap())
+                    .unwrap();
+
+            assert_eq!(
+                manifest["workspace"]["package"]["rust-version"].as_str(),
+                Some("1.80.0")
+            );
+            assert_eq!(manifest["package"]["rust-version"].as_str(), Some("1.80.0"));
+        }
     }
 
     mod sync_toolchain_config {
@@ -176,6 +250,176 @@ mod rust_toolchain_tier2 {
                 fs::read_to_string(sandbox.path().join("rust-toolchain.toml"))
                     .unwrap()
                     .contains("channel = \"1.69.0\"")
+            );
+        }
+
+        async fn sync_channel(sandbox: &MoonWasmSandbox, version: &str) -> SetupEnvironmentOutput {
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    toolchain_config: json!({
+                        "syncToolchainConfig": true,
+                        "version": version
+                    }),
+                    ..Default::default()
+                })
+                .await
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn writes_channels() {
+            for version in ["stable", "beta", "nightly", "nightly-2024-01-01"] {
+                let sandbox = create_moon_sandbox("tc-cfg");
+                let output = sync_channel(&sandbox, version).await;
+
+                assert_eq!(
+                    output.changed_files,
+                    [VirtualPath::new("/workspace/rust-toolchain.toml")]
+                );
+                assert!(
+                    fs::read_to_string(sandbox.path().join("rust-toolchain.toml"))
+                        .unwrap()
+                        .contains(&format!("channel = \"{version}\""))
+                );
+            }
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn skips_partial_versions() {
+            for version in ["1.80", "~1.80"] {
+                let sandbox = create_moon_sandbox("tc-cfg");
+                let output = sync_channel(&sandbox, version).await;
+
+                assert!(output.changed_files.is_empty());
+                assert!(
+                    !fs::read_to_string(sandbox.path().join("rust-toolchain.toml"))
+                        .unwrap()
+                        .contains("channel")
+                );
+            }
+        }
+
+        fn read_toolchain(sandbox: &MoonWasmSandbox) -> toml::Table {
+            toml::from_str(&fs::read_to_string(sandbox.path().join("rust-toolchain.toml")).unwrap())
+                .unwrap()
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn merges_components_and_targets() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "rust-toolchain.toml",
+                "[toolchain]\nchannel = \"1.70.0\"\ncomponents = [\"rustfmt\"]\n",
+            );
+
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    toolchain_config: json!({
+                        "components": ["clippy", "rustfmt"],
+                        "syncToolchainConfig": true,
+                        "targets": ["wasm32-wasip1"],
+                        "version": "1.80.0"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.changed_files,
+                [VirtualPath::new("/workspace/rust-toolchain.toml")]
+            );
+
+            let toolchain = read_toolchain(&sandbox);
+
+            assert_eq!(toolchain["toolchain"]["channel"].as_str(), Some("1.80.0"));
+            assert_eq!(
+                toolchain["toolchain"]["components"],
+                toml::Value::Array(vec!["rustfmt".into(), "clippy".into()])
+            );
+            assert_eq!(
+                toolchain["toolchain"]["targets"],
+                toml::Value::Array(vec!["wasm32-wasip1".into()])
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn merges_components_without_version() {
+            let sandbox = create_moon_sandbox("tc-cfg");
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    toolchain_config: json!({
+                        "components": ["clippy"],
+                        "syncToolchainConfig": true
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.changed_files,
+                [VirtualPath::new("/workspace/rust-toolchain.toml")]
+            );
+
+            let toolchain = read_toolchain(&sandbox);
+
+            assert!(toolchain["toolchain"].get("channel").is_none());
+            assert_eq!(
+                toolchain["toolchain"]["components"],
+                toml::Value::Array(vec!["clippy".into()])
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn doesnt_create_file_without_version() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    toolchain_config: json!({
+                        "components": ["clippy"],
+                        "syncToolchainConfig": true
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.changed_files.is_empty());
+            assert!(!sandbox.path().join("rust-toolchain.toml").exists());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn creates_file_with_version() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    toolchain_config: json!({
+                        "syncToolchainConfig": true,
+                        "version": "1.80.0"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.changed_files,
+                [VirtualPath::new("/workspace/rust-toolchain.toml")]
+            );
+            assert_eq!(
+                read_toolchain(&sandbox)["toolchain"]["channel"].as_str(),
+                Some("1.80.0")
             );
         }
 
@@ -290,6 +534,40 @@ mod rust_toolchain_tier2 {
                 )
                 .cache(CacheStrategy::Memory)
                 .label("rustup-component-add")]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn targets_configured_toolchain() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            unsafe {
+                std::env::remove_var("RUSTUP_TOOLCHAIN");
+            }
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    toolchain_config: json!({
+                        "components": ["clippy"],
+                        "targets": ["wasm32-wasip1"],
+                        "version": "1.80.0"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output
+                    .commands
+                    .iter()
+                    .map(|cmd| cmd.command.args.join(" "))
+                    .collect::<Vec<_>>(),
+                [
+                    "component add --toolchain 1.80.0 clippy",
+                    "target add --toolchain 1.80.0 wasm32-wasip1"
+                ]
             );
         }
     }
@@ -605,6 +883,8 @@ mod rust_toolchain_tier2 {
         #[tokio::test(flavor = "multi_thread")]
         async fn only_installs_missing_bins() {
             let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(".cargo/bin/cargo-binstall", "");
+            sandbox.create_file(".cargo/bin/cargo-binstall.exe", "");
             sandbox.create_file(".cargo/bin/cargo-nextest", "");
             sandbox.create_file(".cargo/bin/cargo-nextest.exe", "");
 
@@ -623,26 +903,107 @@ mod rust_toolchain_tier2 {
 
             assert_eq!(
                 output.commands,
-                [
-                    ExecCommand::new(
-                        ExecCommandInput::new(
-                            "cargo",
-                            ["install", "cargo-binstall", "--force", "--locked"],
-                        )
-                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                [ExecCommand::new(
+                    ExecCommandInput::new(
+                        "cargo",
+                        ["binstall", "--no-confirm", "--log-level", "info", "just"],
                     )
-                    .cache(CacheStrategy::Memory)
-                    .label("cargo-binstall"),
-                    ExecCommand::new(
-                        ExecCommandInput::new(
-                            "cargo",
-                            ["binstall", "--no-confirm", "--log-level", "info", "just"],
-                        )
-                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )
+                .cache(CacheStrategy::Memory)
+                .label("cargo-bins")]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn installs_prebuilt_binstall() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    globals_dir: Some(VirtualPath::new(sandbox.path().join(".cargo/bin"))),
+                    toolchain_config: json!({
+                        "binstallVersion": "1.26.2",
+                        "bins": ["just"]
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            let bin_dir = sandbox.path().join(".cargo/bin");
+
+            assert!(
+                bin_dir
+                    .join(if cfg!(windows) {
+                        "cargo-binstall.exe"
+                    } else {
+                        "cargo-binstall"
+                    })
+                    .exists()
+            );
+            assert!(
+                !bin_dir
+                    .join(if cfg!(windows) {
+                        "cargo-binstall-partial.exe"
+                    } else {
+                        "cargo-binstall-partial"
+                    })
+                    .exists()
+            );
+
+            let op = output
+                .operations
+                .iter()
+                .find(|op| op.id == "install-cargo-binstall")
+                .unwrap();
+
+            assert_eq!(op.status, OperationStatus::Passed);
+            assert!(
+                output
+                    .commands
+                    .iter()
+                    .all(|cmd| cmd.label.as_deref() != Some("cargo-binstall"))
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn falls_back_to_cargo_install_if_prebuilt_fails() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            // This release does not exist
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    globals_dir: Some(VirtualPath::new(sandbox.path().join(".cargo/bin"))),
+                    toolchain_config: json!({
+                        "binstallVersion": "0.0.1",
+                        "bins": ["just"]
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            let op = output
+                .operations
+                .iter()
+                .find(|op| op.id == "install-cargo-binstall")
+                .unwrap();
+
+            assert_eq!(op.status, OperationStatus::Failed);
+            assert_eq!(
+                output.commands[0],
+                ExecCommand::new(
+                    ExecCommandInput::new(
+                        "cargo",
+                        ["install", "cargo-binstall@0.0.1", "--force", "--locked"],
                     )
-                    .cache(CacheStrategy::Memory)
-                    .label("cargo-bins")
-                ]
+                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )
+                .cache(CacheStrategy::Memory)
+                .label("cargo-binstall")
             );
         }
 

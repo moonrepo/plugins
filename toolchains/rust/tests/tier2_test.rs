@@ -2,6 +2,7 @@ use moon_common::Id;
 use moon_config::DependencyScope;
 use moon_pdk_api::*;
 use moon_pdk_test_utils::{create_empty_moon_sandbox, create_moon_sandbox};
+use serde_json::json;
 use std::collections::BTreeMap;
 use std::env;
 
@@ -65,9 +66,69 @@ mod rust_toolchain_tier2 {
             assert_eq!(
                 output.input_files,
                 [
+                    VirtualPath::new("/workspace/Cargo.toml"),
                     VirtualPath::new("/workspace/a/Cargo.toml"),
                     VirtualPath::new("/workspace/b/Cargo.toml"),
                     VirtualPath::new("/workspace/c/Cargo.toml"),
+                ]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn links_inherited_renamed_and_target_deps() {
+            let sandbox = create_moon_sandbox("projects-inherited");
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            let mut input = ExtendProjectGraphInput::default();
+            input.project_sources.insert(Id::raw("app"), "app".into());
+            input.project_sources.insert(Id::raw("core"), "core".into());
+            input
+                .project_sources
+                .insert(Id::raw("real"), "real-name".into());
+            input
+                .project_sources
+                .insert(Id::raw("unix"), "unix-only".into());
+            input
+                .project_sources
+                .insert(Id::raw("versioned"), "versioned".into());
+
+            let output = plugin.extend_project_graph(input).await;
+
+            assert_eq!(
+                output.extended_projects.get("app").unwrap().dependencies,
+                [
+                    ProjectDependency {
+                        id: Id::raw("core"),
+                        scope: DependencyScope::Production,
+                        via: Some("crate core".into()),
+                    },
+                    ProjectDependency {
+                        id: Id::raw("real"),
+                        scope: DependencyScope::Production,
+                        via: Some("crate real-name".into()),
+                    },
+                    ProjectDependency {
+                        id: Id::raw("unix"),
+                        scope: DependencyScope::Production,
+                        via: Some("crate unix-only".into()),
+                    },
+                    ProjectDependency {
+                        id: Id::raw("core"),
+                        scope: DependencyScope::Development,
+                        via: Some("crate core".into()),
+                    },
+                ]
+            );
+
+            assert_eq!(
+                output.input_files,
+                [
+                    VirtualPath::new("/workspace/Cargo.toml"),
+                    VirtualPath::new("/workspace/app/Cargo.toml"),
+                    VirtualPath::new("/workspace/core/Cargo.toml"),
+                    VirtualPath::new("/workspace/real-name/Cargo.toml"),
+                    VirtualPath::new("/workspace/unix-only/Cargo.toml"),
+                    VirtualPath::new("/workspace/versioned/Cargo.toml"),
                 ]
             );
         }
@@ -95,7 +156,10 @@ mod rust_toolchain_tier2 {
 
             assert_eq!(
                 output.input_files,
-                [VirtualPath::new("/workspace/a/Cargo.toml")]
+                [
+                    VirtualPath::new("/workspace/Cargo.toml"),
+                    VirtualPath::new("/workspace/a/Cargo.toml")
+                ]
             );
         }
 
@@ -143,6 +207,32 @@ mod rust_toolchain_tier2 {
             assert_eq!(
                 output.paths,
                 [sandbox.path().join(".home").join(".cargo").join("bin")]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn includes_cargo_home_with_install_root() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            unsafe {
+                env::set_var("CARGO_INSTALL_ROOT", sandbox.path().join("install"));
+                env::remove_var("CARGO_HOME");
+            }
+
+            let output = plugin
+                .extend_task_command(ExtendTaskCommandInput {
+                    command: "unknown".into(),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.paths,
+                [
+                    sandbox.path().join("install").join("bin"),
+                    sandbox.path().join(".home").join(".cargo").join("bin")
+                ]
             );
         }
 
@@ -207,6 +297,92 @@ mod rust_toolchain_tier2 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn doesnt_prefix_with_cargo_if_command_exists() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(".home/.cargo/bin/cargo-git", "");
+            sandbox.create_file(".home/.cargo/bin/cargo-git.exe", "");
+
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            let output = plugin
+                .extend_task_command(ExtendTaskCommandInput {
+                    command: "git".into(),
+                    args: vec!["status".into()],
+                    globals_dir: Some(VirtualPath::new(sandbox.path().join(".home/.cargo/bin"))),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.command.is_none());
+            assert!(output.args.is_none());
+
+            // Explicit `cargo-*` commands are still prefixed
+            let output = plugin
+                .extend_task_command(ExtendTaskCommandInput {
+                    command: "cargo-git".into(),
+                    globals_dir: Some(VirtualPath::new(sandbox.path().join(".home/.cargo/bin"))),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.command.unwrap(), "cargo");
+            assert_eq!(output.args.unwrap(), Extend::Prepend(vec!["git".into()]));
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn pins_toolchain_for_versions_and_channels() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            unsafe {
+                env::remove_var("RUSTUP_TOOLCHAIN");
+            }
+
+            for (version, channel) in [
+                ("1.80.0", Some("1.80.0")),
+                ("stable", Some("stable")),
+                ("nightly-2024-01-01", Some("nightly-2024-01-01")),
+                ("1.80", None),
+            ] {
+                let output = plugin
+                    .extend_task_command(ExtendTaskCommandInput {
+                        command: "cargo".into(),
+                        toolchain_config: json!({ "version": version }),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert_eq!(
+                    output
+                        .env
+                        .get("RUSTUP_TOOLCHAIN")
+                        .map(|value| value.as_str()),
+                    channel
+                );
+            }
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn doesnt_pin_toolchain_if_set_on_host() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            unsafe {
+                env::set_var("RUSTUP_TOOLCHAIN", "nightly");
+            }
+
+            let output = plugin
+                .extend_task_command(ExtendTaskCommandInput {
+                    command: "cargo".into(),
+                    toolchain_config: json!({ "version": "1.80.0" }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.env.is_empty());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn doesnt_prefix_if_already_rust_or_cargo() {
             let sandbox = create_empty_moon_sandbox();
             sandbox.create_file(".home/.cargo/bin/cargo-nextest", "");
@@ -264,6 +440,32 @@ mod rust_toolchain_tier2 {
             assert_eq!(
                 output.paths,
                 [sandbox.path().join(".home").join(".cargo").join("bin")]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn pins_toolchain() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            unsafe {
+                env::remove_var("RUSTUP_TOOLCHAIN");
+            }
+
+            let output = plugin
+                .extend_task_script(ExtendTaskScriptInput {
+                    script: "cargo build && cargo test".into(),
+                    toolchain_config: json!({ "version": "1.80.0" }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output
+                    .env
+                    .get("RUSTUP_TOOLCHAIN")
+                    .map(|value| value.as_str()),
+                Some("1.80.0")
             );
         }
     }
@@ -484,12 +686,14 @@ mod rust_toolchain_tier2 {
                 BTreeMap::from_iter([
                     (
                         "a".into(),
-                        ManifestDependency::Version(UnresolvedVersionSpec::parse("1.2.3").unwrap())
+                        ManifestDependency::Version(
+                            UnresolvedVersionSpec::parse("^1.2.3").unwrap()
+                        )
                     ),
                     (
                         "b".into(),
                         ManifestDependency::Config(ManifestDependencyConfig {
-                            version: Some(UnresolvedVersionSpec::parse("4.5.6").unwrap()),
+                            version: Some(UnresolvedVersionSpec::parse("^4.5.6").unwrap()),
                             ..Default::default()
                         })
                     ),
@@ -497,11 +701,61 @@ mod rust_toolchain_tier2 {
                         "c".into(),
                         ManifestDependency::Config(ManifestDependencyConfig {
                             features: vec!["on".into()],
-                            version: Some(UnresolvedVersionSpec::parse("7.8.9").unwrap()),
+                            version: Some(UnresolvedVersionSpec::parse("^7.8.9").unwrap()),
                             ..Default::default()
                         })
                     )
                 ])
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn parses_target_deps_and_caret_requirements() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "Cargo.toml",
+                r#"[package]
+name = "pkg"
+version = "1.0.0"
+
+[dependencies]
+both = "1"
+exact = "=1.2.3"
+tokio = "1.40"
+
+[target.'cfg(unix)'.dependencies]
+both = { version = "2", features = ["x"] }
+libc = "0.2"
+
+[target.'cfg(windows)'.dev-dependencies]
+winapi = "0.3.9"
+"#,
+            );
+
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            let output = plugin
+                .parse_manifest(ParseManifestInput {
+                    path: VirtualPath::new(sandbox.path().join("Cargo.toml")),
+                    ..Default::default()
+                })
+                .await;
+
+            let version =
+                |req: &str| ManifestDependency::Version(UnresolvedVersionSpec::parse(req).unwrap());
+
+            assert_eq!(
+                output.dependencies,
+                BTreeMap::from_iter([
+                    ("both".into(), version("^1")),
+                    ("exact".into(), version("=1.2.3")),
+                    ("libc".into(), version("^0.2")),
+                    ("tokio".into(), version("^1.40")),
+                ])
+            );
+            assert_eq!(
+                output.dev_dependencies,
+                BTreeMap::from_iter([("winapi".into(), version("^0.3.9"))])
             );
         }
 
@@ -526,13 +780,15 @@ mod rust_toolchain_tier2 {
                 BTreeMap::from_iter([
                     (
                         "a".into(),
-                        ManifestDependency::Version(UnresolvedVersionSpec::parse("1.2.3").unwrap())
+                        ManifestDependency::Version(
+                            UnresolvedVersionSpec::parse("^1.2.3").unwrap()
+                        )
                     ),
                     (
                         "e".into(),
                         ManifestDependency::Config(ManifestDependencyConfig {
                             features: vec!["on".into()],
-                            version: Some(UnresolvedVersionSpec::parse("7.8.9").unwrap()),
+                            version: Some(UnresolvedVersionSpec::parse("^7.8.9").unwrap()),
                             ..Default::default()
                         })
                     )
@@ -545,7 +801,7 @@ mod rust_toolchain_tier2 {
                     (
                         "b".into(),
                         ManifestDependency::Config(ManifestDependencyConfig {
-                            version: Some(UnresolvedVersionSpec::parse("4.5.6").unwrap()),
+                            version: Some(UnresolvedVersionSpec::parse("^4.5.6").unwrap()),
                             ..Default::default()
                         })
                     ),

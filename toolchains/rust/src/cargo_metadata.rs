@@ -6,6 +6,7 @@ use std::path::PathBuf;
 #[derive(Default, Deserialize)]
 #[serde(default)]
 pub struct CargoMetadata {
+    pub build_directory: Option<PathBuf>,
     pub packages: Vec<PackageMetadata>,
     pub target_directory: PathBuf,
     pub workspace_root: PathBuf,

@@ -25,25 +25,49 @@ impl ToolchainToml {
         #[cfg(feature = "wasm")]
         {
             host_log!(
-                "Setting <property>{field}</file> in <path>{}</path>",
+                "Setting <property>{field}</property> in <path>{}</path>",
                 self.path,
             );
         }
 
-        if field == "toolchain.channel"
-            && let Some(channel) = &self.toolchain.channel
-        {
-            let toolchain = root
-                .entry("toolchain")
-                .or_insert_with(|| TomlValue::Table(TomlTable::new()));
+        let (key, value) = match field {
+            "toolchain.channel" => match &self.toolchain.channel {
+                Some(channel) => ("channel", TomlValue::String(channel.to_owned())),
+                None => return Ok(()),
+            },
+            "toolchain.components" => ("components", to_toml_list(&self.toolchain.components)),
+            "toolchain.targets" => ("targets", to_toml_list(&self.toolchain.targets)),
+            _ => return Ok(()),
+        };
 
-            if let Some(inner) = toolchain.as_table_mut() {
-                inner.insert("channel".into(), TomlValue::String(channel.to_owned()));
-            }
+        let toolchain = root
+            .entry("toolchain")
+            .or_insert_with(|| TomlValue::Table(TomlTable::new()));
+
+        if let Some(inner) = toolchain.as_table_mut() {
+            inner.insert(key.into(), value);
         }
 
         Ok(())
     }
+}
+
+fn to_toml_list(list: &[String]) -> TomlValue {
+    TomlValue::Array(list.iter().cloned().map(TomlValue::String).collect())
+}
+
+// Add missing items, but keep those added manually
+fn merge_list(list: &mut Vec<String>, items: &[String]) -> bool {
+    let mut changed = false;
+
+    for item in items {
+        if !list.contains(item) {
+            list.push(item.to_owned());
+            changed = true;
+        }
+    }
+
+    changed
 }
 
 impl ToolchainToml {
@@ -62,6 +86,26 @@ impl ToolchainToml {
 
         self.toolchain.channel = Some(channel.into());
         self.dirty.push("toolchain.channel".into());
+
+        Ok(true)
+    }
+
+    pub fn add_components(&mut self, components: &[String]) -> AnyResult<bool> {
+        if !merge_list(&mut self.toolchain.components, components) {
+            return Ok(false);
+        }
+
+        self.dirty.push("toolchain.components".into());
+
+        Ok(true)
+    }
+
+    pub fn add_targets(&mut self, targets: &[String]) -> AnyResult<bool> {
+        if !merge_list(&mut self.toolchain.targets, targets) {
+            return Ok(false);
+        }
+
+        self.dirty.push("toolchain.targets".into());
 
         Ok(true)
     }

@@ -26,6 +26,7 @@ extism-pdk = { workspace = true }
 moon_config = { workspace = true }
 moon_pdk = { workspace = true, features = ["schematic"] }
 moon_pdk_api = { workspace = true }
+proto_pdk_api = { workspace = true }
 rustc-hash = { workspace = true }
 schematic = { workspace = true, features = ["config"] }
 serde = { workspace = true }
@@ -37,6 +38,7 @@ moon_pdk_test_utils = { workspace = true }
 serde_json = { workspace = true }
 starbase_sandbox = { workspace = true }
 tokio = { workspace = true }
+toml = { workspace = true }
 
 [features]
 default = ["wasm"]

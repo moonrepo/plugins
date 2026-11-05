@@ -2,7 +2,9 @@ use moon_config::DockerPruneConfig;
 use moon_pdk_api::*;
 use moon_pdk_test_utils::{MoonWasmSandbox, create_empty_moon_sandbox, create_moon_sandbox};
 use serde_json::json;
+use std::env;
 use std::fs;
+use std::path::{Path, PathBuf};
 
 mod rust_toolchain_tier1 {
     use super::*;
@@ -34,6 +36,31 @@ mod rust_toolchain_tier1 {
                 .await;
 
             assert_eq!(output.default_image.unwrap(), "rust:1.69.0");
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn handles_image_channels() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            for (version, image) in [
+                ("stable", "rust:latest"),
+                ("beta", "rust:latest"),
+                ("nightly", "rustlang/rust:nightly"),
+                ("nightly-2024-01-01", "rustlang/rust:nightly"),
+                ("1.69", "rust:1.69"),
+            ] {
+                let output = plugin
+                    .define_docker_metadata(DefineDockerMetadataInput {
+                        toolchain_config: json!({
+                            "version": version
+                        }),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert_eq!(output.default_image.unwrap(), image);
+            }
         }
     }
 
@@ -236,20 +263,10 @@ mod rust_toolchain_tier1 {
         #[tokio::test(flavor = "multi_thread")]
         async fn removes_target_dir_if_no_exes() {
             let sandbox = create_moon_sandbox("prune");
-            let plugin = sandbox.create_toolchain("rust").await;
 
             fs::remove_dir_all(sandbox.path().join("target/release")).unwrap();
 
-            let output = plugin
-                .prune_docker(PruneDockerInput {
-                    docker_config: DockerPruneConfig {
-                        delete_vendor_directories: true,
-                        ..Default::default()
-                    },
-                    root: VirtualPath::new(sandbox.path()),
-                    ..Default::default()
-                })
-                .await;
+            let output = prune(&sandbox, None).await;
 
             assert!(!sandbox.path().join("target").exists());
             assert!(!sandbox.path().join("target/other-file").exists());
@@ -263,18 +280,8 @@ mod rust_toolchain_tier1 {
         #[tokio::test(flavor = "multi_thread")]
         async fn preserves_target_dir_if_has_exes() {
             let sandbox = create_moon_sandbox("prune");
-            let plugin = sandbox.create_toolchain("rust").await;
 
-            let output = plugin
-                .prune_docker(PruneDockerInput {
-                    docker_config: DockerPruneConfig {
-                        delete_vendor_directories: true,
-                        ..Default::default()
-                    },
-                    root: VirtualPath::new(sandbox.path()),
-                    ..Default::default()
-                })
-                .await;
+            let output = prune(&sandbox, None).await;
 
             assert!(sandbox.path().join("target").exists());
             assert!(!sandbox.path().join("target/other-file").exists());
@@ -294,6 +301,117 @@ mod rust_toolchain_tier1 {
                 output.changed_files,
                 [VirtualPath::new("/workspace/target")]
             );
+        }
+
+        // Cargo reports the workspace root from the current directory, which
+        // resolves symlinks on macOS (`/var` -> `/private/var`), while
+        // Windows `canonicalize` adds a `\\?\` prefix that Cargo doesn't use
+        fn real_path(path: &Path) -> PathBuf {
+            if cfg!(windows) {
+                path.to_path_buf()
+            } else {
+                path.canonicalize().unwrap()
+            }
+        }
+
+        fn create_bin(sandbox: &MoonWasmSandbox, dir: &str) {
+            sandbox.create_file(format!("{dir}/rust_tc_test"), "");
+            sandbox.create_file(format!("{dir}/rust_tc_test.exe"), "");
+        }
+
+        fn has_bin(sandbox: &MoonWasmSandbox, dir: &str) -> bool {
+            sandbox
+                .path()
+                .join(dir)
+                .join(if cfg!(windows) {
+                    "rust_tc_test.exe"
+                } else {
+                    "rust_tc_test"
+                })
+                .exists()
+        }
+
+        // The host may relocate the target directory for all projects
+        async fn prune(
+            sandbox: &MoonWasmSandbox,
+            target_dir: Option<PathBuf>,
+        ) -> PruneDockerOutput {
+            unsafe {
+                match target_dir {
+                    Some(dir) => env::set_var("CARGO_TARGET_DIR", dir),
+                    None => env::remove_var("CARGO_TARGET_DIR"),
+                };
+            }
+
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            plugin
+                .prune_docker(PruneDockerInput {
+                    docker_config: DockerPruneConfig {
+                        delete_vendor_directories: true,
+                        ..Default::default()
+                    },
+                    root: VirtualPath::new(sandbox.path()),
+                    ..Default::default()
+                })
+                .await
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn preserves_exes_in_target_triple_and_custom_profile_dirs() {
+            let sandbox = create_moon_sandbox("prune");
+            create_bin(&sandbox, "target/x86_64-unknown-linux-musl/release");
+            create_bin(&sandbox, "target/dist");
+            sandbox.create_file("target/release/deps/rust_tc_test-abc123", "");
+
+            let output = prune(&sandbox, None).await;
+
+            assert!(has_bin(&sandbox, "target/release"));
+            assert!(has_bin(
+                &sandbox,
+                "target/x86_64-unknown-linux-musl/release"
+            ));
+            assert!(has_bin(&sandbox, "target/dist"));
+            assert!(!sandbox.path().join("target/other-file").exists());
+            assert!(!sandbox.path().join("target/release/deps").exists());
+
+            assert_eq!(
+                output.changed_files,
+                [VirtualPath::new("/workspace/target")]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn uses_relocated_target_dir() {
+            let sandbox = create_moon_sandbox("prune");
+            create_bin(&sandbox, "build/cargo/release");
+            sandbox.create_file("build/cargo/other-file", "");
+
+            let output = prune(
+                &sandbox,
+                Some(real_path(sandbox.path()).join("build/cargo")),
+            )
+            .await;
+
+            assert!(has_bin(&sandbox, "build/cargo/release"));
+            assert!(!sandbox.path().join("build/cargo/other-file").exists());
+            assert!(sandbox.path().join("target/other-file").exists());
+
+            assert_eq!(
+                output.changed_files,
+                [VirtualPath::new("/workspace/build/cargo")]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn does_nothing_if_target_dir_outside_root() {
+            let sandbox = create_moon_sandbox("prune");
+            let outside = create_empty_moon_sandbox();
+
+            let output = prune(&sandbox, Some(real_path(outside.path()).join("target"))).await;
+
+            assert!(sandbox.path().join("target/other-file").exists());
+            assert!(output.changed_files.is_empty());
         }
     }
 }

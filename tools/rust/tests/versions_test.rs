@@ -53,6 +53,39 @@ mod rust_tool {
     }
 
     #[tokio::test(flavor = "multi_thread")]
+    async fn detects_legacy_file_first() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("rust-test").await;
+
+        assert_eq!(
+            plugin
+                .detect_version_files(DetectVersionInput::default())
+                .await
+                .files,
+            ["rust-toolchain", "rust-toolchain.toml"]
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn parses_rust_toolchain_as_toml() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("rust-test").await;
+
+        assert_eq!(
+            plugin
+                .parse_version_file(ParseVersionFileInput {
+                    content: "[toolchain]\nchannel = \"1.70.0\"\ncomponents = [\"clippy\"]".into(),
+                    file: "rust-toolchain".into(),
+                    ..Default::default()
+                })
+                .await,
+            ParseVersionFileOutput {
+                version: Some(UnresolvedVersionSpec::parse("1.70.0").unwrap()),
+            }
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
     async fn ignores_empty_rust_toolchain() {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox.create_plugin("rust-test").await;
@@ -84,6 +117,26 @@ mod rust_tool {
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("1.70.0").unwrap()),
+            }
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn parses_partial_version() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("rust-test").await;
+
+        // Logs a warning, but still resolves
+        assert_eq!(
+            plugin
+                .parse_version_file(ParseVersionFileInput {
+                    content: "[toolchain]\nchannel = \"1.70\"".into(),
+                    file: "rust-toolchain.toml".into(),
+                    ..Default::default()
+                })
+                .await,
+            ParseVersionFileOutput {
+                version: Some(UnresolvedVersionSpec::parse("1.70").unwrap()),
             }
         );
     }

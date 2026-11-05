@@ -9,6 +9,7 @@ use tool_common::enable_tracing;
 #[host_fn]
 extern "ExtismHost" {
     fn exec_command(input: Json<ExecCommandInput>) -> Json<ExecCommandOutput>;
+    fn host_log(input: Json<HostLogInput>);
     fn set_env_var(name: String, value: String);
 }
 
@@ -79,7 +80,8 @@ pub fn resolve_version(
 #[plugin_fn]
 pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
     Ok(Json(DetectVersionOutput {
-        files: vec!["rust-toolchain.toml".into(), "rust-toolchain".into()],
+        // Rustup prefers the legacy file when both exist
+        files: vec!["rust-toolchain".into(), "rust-toolchain.toml".into()],
         ignore: vec![],
     }))
 }
@@ -90,16 +92,29 @@ pub fn parse_version_file(
 ) -> FnResult<Json<ParseVersionFileOutput>> {
     let mut output = ParseVersionFileOutput::default();
 
-    if input.file == "rust-toolchain" {
-        if !input.content.is_empty() {
-            output.version = Some(UnresolvedVersionSpec::parse(input.content)?);
-        }
-    } else if input.file == "rust-toolchain.toml" {
-        let config: ToolchainToml = toml::from_str(&input.content)?;
+    // The legacy file may only contain the channel, or be TOML
+    let channel = if input.file == "rust-toolchain" && !input.content.contains("[toolchain]") {
+        Some(input.content.trim().to_owned()).filter(|channel| !channel.is_empty())
+    } else {
+        toml::from_str::<ToolchainToml>(&input.content)?
+            .toolchain
+            .channel
+    };
 
-        if let Some(channel) = config.toolchain.channel {
-            output.version = Some(UnresolvedVersionSpec::parse(channel)?);
+    if let Some(channel) = channel {
+        let version = UnresolvedVersionSpec::parse(&channel)?;
+
+        // Rustup installs `1.80` as its own toolchain, separate
+        // from the `1.80.x` that proto resolves and installs
+        if matches!(version, UnresolvedVersionSpec::Requirement(_)) {
+            host_log!(
+                warn,
+                "<file>{}</file> uses the partial version <version>{channel}</version>, which rustup installs as a separate toolchain. Use a fully-qualified version, like 1.80.0, to avoid installing Rust twice.",
+                input.file,
+            );
         }
+
+        output.version = Some(version);
     }
 
     Ok(Json(output))
@@ -125,10 +140,12 @@ pub fn native_install(
         if !script_path.exists() {
             fs::write_file(
                 &script_path,
-                fetch_bytes(if is_windows {
-                    "https://win.rustup.rs"
-                } else {
+                fetch_bytes(if !is_windows {
                     "https://sh.rustup.rs"
+                } else if env.arch == HostArch::Arm64 {
+                    "https://win.rustup.rs/aarch64"
+                } else {
+                    "https://win.rustup.rs/x86_64"
                 })?,
             )?;
         }

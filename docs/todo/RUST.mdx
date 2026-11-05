@@ -1,0 +1,360 @@
+# Rust toolchain fix plan
+
+Fixes from the Rust toolchain audit (2026-11-04, branch `moon-v3`). Covers `toolchains/rust`
+(`rust_toolchain` 1.0.12) and `tools/rust` (`rust_tool` 0.13.12), which the toolchain re-exports as
+its tier 3 API. Item numbers (#1–#15) match the audit findings.
+
+## Testing
+
+Build the WASM first. The test sandbox loads the prebuilt `.wasm`, so rebuild after every source
+change; `moon run :build` can replay a stale cached build.
+
+```bash
+cargo build -p rust_toolchain -p rust_tool --target wasm32-wasip1 --release
+```
+
+```bash
+cargo nextest run -p rust_toolchain -p rust_tool --no-default-features
+```
+
+In agent sessions, unset `AI_AGENT` and `CLAUDECODE` first, or wrapper banners can break JSON tests.
+
+## Decisions needed
+
+| Decision                                                   | Recommendation                                                                 |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| D1 (#2): where to preserve TOML formatting                 | Plugin-local `toml_edit` save now; move into moon's `toml_config!` for v3      |
+| D2 (#3): pin the task toolchain with `RUSTUP_TOOLCHAIN`?   | Yes, for exact versions and channels; document that it overrides toolchain files |
+| D3 (#6): partial channels like `1.80`                      | Never write them; warn when reading them; no proto changes                     |
+| D4 (#5): bare `X` → `cargo X` rewrite                      | Keep it, but skip when `X` itself is on PATH                                   |
+| D5 (#9): should pinned bins upgrade?                       | Yes, by reading `.crates2.json`                                                |
+
+## Phase 1: clear-cut fixes
+
+### #1 Only write valid versions to Cargo.toml and rust-toolchain.toml
+
+- [x] Add version helpers
+- [x] Use them in both sync operations
+- [x] Tests
+
+**Problem:** `sync_package_msrv` and `sync_toolchain_toml` (`tier2_env.rs:193`, `:231`) call
+`version.to_string()`, so `1.80` becomes `~1.80` and channels pass through unchanged. Cargo rejects
+`stable`, `~1.80` and `nightly-2024-01-01` as `rust-version`, which breaks the whole workspace.
+Rustup treats `channel = "~1.80"` as an uninstalled custom toolchain.
+
+**Change:**
+
+- Add `src/version.rs` with two helpers over `UnresolvedVersionSpec`:
+  - `to_msrv(spec) -> Option<String>`: a semantic `Version` → `major.minor.patch`; a `Requirement`
+    with a minor → `major.minor`; anything else (aliases, dated channels, ranges, major-only) →
+    `None`.
+  - `to_channel(spec) -> Option<String>`: `stable`/`beta`/`nightly` aliases, dated channels and
+    semantic versions → `to_string()`; requirements and ranges → `None` (see D3).
+- Dated channels parse as `UnresolvedVersionSpec::Version` with `kind: Calendar` and
+  `scope: Some("nightly")`, so match on kind and scope, not only the variant.
+- When a helper returns `None`, skip the write and `host_log!` a warning naming the setting.
+
+**Tests** (`tier2_env_test.rs`): `stable`, `1.80`, `~1.80` and `nightly-2024-01-01` for both
+`addMsrvConstraint` and `syncToolchainConfig`. Each should leave the file untouched or write a valid
+value (`rust-version = "1.80"`).
+
+### #4 Link workspace-inherited, renamed and target-specific path deps
+
+- [x] Look up by real package name
+- [x] Walk `[target.*]` tables
+- [x] Resolve `workspace = true` entries
+- [x] Fixture and tests
+
+**Problem:** `extend_project_graph` (`tier2.rs:37-59`) only links `Dependency::Detailed` entries
+that have a `path`, looked up by table key. A probe confirmed it skips:
+
+- `core = { workspace = true }`, the standard workspace pattern, whose path lives in the root's
+  `[workspace.dependencies]`. Internal edges silently disappear, which breaks `^:` task deps and
+  affected detection.
+- Renamed deps: `renamed = { path = "../real-name", package = "real-name" }`.
+- `[target.'cfg(unix)'.dependencies]` and the other target tables.
+
+**Change:**
+
+- Look up packages by `dep.package().unwrap_or(dep_name)`.
+- Also iterate `manifest.target.values()` for `dependencies`, `dev_dependencies` and
+  `build_dependencies`.
+- For `Dependency::Inherited`, read the same key from the Cargo workspace root's
+  `[workspace.dependencies]` and use that entry's `path` and `package`. Find the root once with the
+  walk-up `locate_dependencies_root` already does; factor it into a shared helper.
+- Push the workspace root `Cargo.toml` into `input_files` so edits there invalidate the graph.
+
+**Tests** (`tier2_test.rs`): new fixture `__fixtures__/projects-inherited` covering all three shapes,
+plus a non-path workspace dependency that must stay unlinked.
+
+### #7 docker prune: find binaries wherever Cargo put them
+
+- [x] Use `cargo metadata`'s target directory
+- [x] Scan profile and triple directories
+- [x] Tests
+
+**Problem:** `prune_docker` hardcodes `<root>/target` (`tier1.rs:145`) and only checks
+`debug`/`release` (`tier1.rs:186`). It deletes binaries under `target/<triple>/release` (the usual
+musl Docker build) and custom `[profile.*]` directories. It also ignores `CARGO_TARGET_DIR` and
+`build.target-dir`. `CargoMetadata.target_directory` is already parsed but never used.
+
+**Change:**
+
+- Check `delete_vendor_directories` first, then run `cargo metadata`, then check that the directory
+  exists.
+- Use `target_directory`: strip the real path of `input.root` to map it back into the virtual root.
+  If it's outside the root, return early, since there's nothing in the Docker context to delete.
+- Preserve a bin found at `<target>/<profile>/<bin>` or `<target>/<triple>/<profile>/<bin>` for any
+  child directory, instead of the fixed profile list. Exact filename matches already skip the hashed
+  artifacts in `deps/`.
+- Newer Cargo also emits `build_directory` (the `build-dir` setting). Add it as an optional field and
+  delete it too when it differs from the target directory and sits inside the root.
+
+**Tests** (`tier1_test.rs`): a binary under `target/x86_64-unknown-linux-musl/release/`, one under a
+custom `target/dist/` profile, and a target directory outside the root.
+
+### #8 Docker default image for channels
+
+- [x] Map channels to real images
+- [x] Tests
+
+**Problem:** `define_docker_metadata` (`tier1.rs:73-80`) emits `rust:stable`, `rust:beta` or
+`rust:nightly`. Docker Hub returns 404 for all three.
+
+**Change:**
+
+| Configured version                  | Image                               |
+| ----------------------------------- | ----------------------------------- |
+| unset, `stable`, `beta`             | `rust:latest`                       |
+| `nightly`, `nightly-YYYY-MM-DD`     | `rustlang/rust:nightly`             |
+| versions and requirements           | `rust:` + `to_partial_string()` (unchanged) |
+
+A synced rust-toolchain.toml still selects the exact toolchain inside the container.
+
+**Tests:** extend `handles_image_version` in `tier1_test.rs` with the channel cases.
+
+### #10 Keep both MSRV fields on root-package workspaces
+
+- [x] Track each dirty field
+- [x] Test
+
+**Problem:** `set_msrv` (`cargo_toml.rs:116`, `:128`) writes both fields into one `dirty` slot. A
+root manifest with both `[workspace]` and `[package]` therefore saves only `package.rust-version`
+and drops `workspace.package.rust-version`, as a probe confirmed.
+
+**Change:** push each changed field into `self.dirty` instead of keeping a single `Option`.
+
+**Tests** (`cargo_toml_test.rs`): a root with both `[workspace]` and `[package]` and no
+`rust-version`; assert both fields are dirty and saved.
+
+### #13 Match rustup's toolchain-file precedence
+
+- [x] Swap detection order
+- [x] Parse TOML in legacy files
+- [x] Tests
+
+**Problem:** when both files exist, rustup uses `rust-toolchain` and warns; this was confirmed with
+rustup 1.29. `detect_version_files` (`tools/rust/src/proto.rs:82`) checks `rust-toolchain.toml`
+first. `parse_version_file` (`proto.rs:93-96`) also reads the legacy file as a bare version, but
+rustup allows TOML in it.
+
+**Change:** list `rust-toolchain` first. In `parse_version_file`, parse the legacy file as TOML when
+it contains `[toolchain]`.
+
+**Tests:** `tools/rust/tests/versions_test.rs`.
+
+### #15 Small fixes
+
+- [x] Add the legacy `.cargo/config` (no extension, still read by Cargo) to `config_file_globs`
+      (`tier1.rs:23`).
+- [x] Windows ARM64: download `https://win.rustup.rs/aarch64` when the host arch is arm64
+      (`proto.rs:128`). Untested on hardware.
+- [x] `gather_shared_paths` (`tier2.rs:95-99`): when `CARGO_INSTALL_ROOT` is set, also add
+      `CARGO_HOME/bin`, where the rustup proxies live.
+- [x] Fix the mismatched `<property>…</file>` log tags in `cargo_toml.rs:33` and
+      `toolchain_toml.rs:28`.
+
+## Phase 2: after decisions
+
+### #2 Preserve formatting when saving TOML (D1)
+
+- [ ] Add a `toml_edit` save path
+- [ ] Switch both sync operations to it
+- [ ] Round-trip tests
+
+**Problem:** moon's `toml_config!` (`crates/pdk-api/src/macros.rs`) saves through
+`starbase_utils::toml::write_file`, which uses serde `toml`. A probe showed that saving strips
+comments, sorts keys alphabetically, and expands `serde = { … }` and `edition.workspace = true` into
+separate sub-tables. This affects both Cargo.toml and rust-toolchain.toml.
+
+**Option A (recommended now):** add `toml_edit` as a direct dependency; 0.25 is already in the
+lockfile. Give `CargoToml` and `ToolchainToml` a save method that loads a `toml_edit::DocumentMut`,
+sets only the dirty keys, and writes it back. Call it from `sync_package_msrv` and
+`sync_toolchain_toml`.
+
+**Option B (moon v3):** switch `toml_config!` itself to `toml_edit`. This also fixes
+`toolchains/python/src/pyproject_toml.rs`, but changes the `save_field` signature for every caller.
+
+**Tests:** round-trip a commented fixture and assert that comments, key order and inline tables
+survive.
+
+### #3 Make `rust.version` control which Rust runs tasks (D2)
+
+- [x] Set `RUSTUP_TOOLCHAIN` for tasks
+- [x] Add `--toolchain` to setup commands
+- [x] Changelog (handbook docs are under "Outside this repo")
+
+**Problem:** moon sets `PROTO_RUST_VERSION`, which rustup ignores, and the plugin exposes no shims or
+executable directories. `cargo` therefore resolves through rust-toolchain.toml or `rustup default`,
+so the configured version only applies when `syncToolchainConfig` is on. Rustup was confirmed to
+honor `RUSTUP_TOOLCHAIN` over a toolchain file.
+
+**Change:**
+
+- In `extend_task_command` and `extend_task_script`, set `RUSTUP_TOOLCHAIN` in `output.env` when
+  `toolchain_config.version` passes `to_channel` (#1). Project-level version overrides already arrive
+  through the merged config.
+- Add `--toolchain` with the same channel to the `rustup component add` and `rustup target add` setup
+  commands.
+- Document that a moon-configured version overrides rust-toolchain.toml and `rustup override` for
+  moon tasks, and recommend `syncToolchainConfig` to keep editors and ad-hoc `cargo` in step.
+
+**Answered:** yes. moon's `versionFromPrototools` (on by default) copies the root `.prototools`
+version into `toolchain_config.version` when toolchains.yml leaves it unset. A pin that only lives in
+rust-toolchain.toml isn't copied, so rustup keeps reading that file. moon applies plugin `env` after
+the task's own `env`, and `TaskFragment` has no env, so a task-level `RUSTUP_TOOLCHAIN` is
+overwritten; only a host-level one is respected.
+
+**Changelog:** this changes which toolchain tasks run with, so it needs a minor bump and a callout.
+
+### #6 Partial channels (D3)
+
+- [x] Warn on partial channels
+- [x] Document in the README
+
+**Problem:** rustup treats `channel = "1.80"` as its own toolchain, `1.80-<triple>`. proto resolves
+the same file to `1.80.x` and installs `1.80.x-<triple>`. The result is two downloads (this machine
+has both `1.98-aarch64-apple-darwin` and `1.98.0-aarch64-apple-darwin`), or an error when
+`RUSTUP_AUTO_INSTALL=0`.
+
+**Recommended:**
+
+- #1 already stops moon from writing partial channels.
+- In `parse_version_file`, log a warning (`host_log!`) when a toolchain file's channel is a partial
+  version, suggesting a fully-qualified version.
+- Document the behavior in `tools/rust/README.md`.
+
+**Not recommended:** making proto install rustup's partial name. proto's inventory needs a concrete
+resolved version, so that requires proto changes.
+
+### #5 Bare command rewrite (D4)
+
+- [x] Skip the rewrite when the bare command exists
+- [x] Tests
+
+**Problem:** `extend_task_command` (`tier2.rs:129-144`) turns any command `X` into `cargo X` when a
+`cargo-X` binary is in the globals directory. Tasks with no detected toolchain inherit `rust` from
+the project (moon's `resolve_task_toolchains`). So a `make` task becomes `cargo make` when cargo-make
+is installed, and `fmt` matches rustup's always-installed `cargo-fmt` proxy.
+
+**Recommended:** keep rewriting `cargo-X` commands. For a bare `X`, rewrite only when `X` isn't
+itself on PATH, using `command_exists` (the tool plugin's `native_install` already uses it). Check it
+only after `cargo-X` is found, so most commands pay nothing. `make` and coreutils `fmt` stay as they
+are, and `nextest` still becomes `cargo nextest`, so `prefixes_with_cargo_if_a_cargo_bin` keeps
+passing.
+
+**Alternative:** only rewrite `cargo-X`. It's simpler, but breaks bare `nextest`.
+
+**Tests** (`tier2_test.rs`): with `cargo-make` in the globals directory and a `make` stub on PATH,
+the command stays as written.
+
+### #9 Track installed bins via `.crates2.json` (D5)
+
+- [ ] Read cargo's install registry
+- [ ] Keep the binary check as a fallback
+- [ ] Update tests
+
+**Problem:** `is_bin_installed` (`tier2_env.rs:14-26`) counts a crate as installed when a binary
+with the crate's name exists.
+
+- Pins never upgrade: `cargo-nextest@0.9.60` is skipped if any `cargo-nextest` exists. The
+  `skips_installed_versioned_bins` test currently asserts this.
+- Crates whose binaries have other names never count as installed: 10 of the 44 crates on this
+  machine, for example `typos-cli` (binary `typos`), `cargo-edit` and `tauri-cli` (binary
+  `cargo-tauri`).
+
+**Change:** read `.crates2.json` from the install root, which is the parent of `globals_dir`. Both
+Cargo and cargo-binstall write it. Its `installs` keys look like `"<name> <version> (<source>)"`.
+
+- A spec counts as installed when its name is present and, if pinned to an exact version, the
+  versions match.
+- Inexact pins (`@0.9`) fall through to `cargo binstall`, which skips crates that already satisfy
+  them unless `--force` is passed.
+- If the file is missing (bins installed some other way), fall back to the current binary check.
+
+**Tests:** flip `skips_installed_versioned_bins` to expect an install when versions differ. Add
+cases for a crate with a differently named binary and for a missing `.crates2.json`.
+
+## Phase 3: lower priority
+
+### #11 Let rustup own components and targets
+
+- [x] Sync `components` and `targets` into rust-toolchain.toml
+- [x] Keep the `rustup … add` commands (see below)
+
+**Done differently:** rustup ignores the file's `components` and `targets` when `RUSTUP_TOOLCHAIN`
+is set (confirmed with rustup 1.29), so tasks pinned by #3 would miss them if the commands were
+dropped. #3's `--toolchain` argument already changes the setup fingerprint on a channel bump. The
+original idea follows:
+
+When `syncToolchainConfig` is on, merge `components` and `targets` into rust-toolchain.toml and drop
+the `rustup … add` commands. Rustup then installs them for whichever channel the file names, so a
+channel bump no longer leaves the new toolchain without clippy; today that bump doesn't change the
+setup fingerprint. When syncing is off, keep the commands with `--toolchain` (#3).
+
+### #12 `parse_manifest` fidelity
+
+- [x] Check how moon consumes this output first. The task hasher matches each requirement against
+      `Cargo.lock` and records the checksum on a match, otherwise the requirement string, so the
+      exact-version misparse kept lockfile-only bumps from invalidating hashes in accuracy mode.
+      `version` and `publishable` aren't read anywhere.
+- [x] Bare Cargo requirements are caret: prefix `^` when a simple or detailed `version` starts with
+      a digit (`tier2.rs:271`, `:299`).
+- [ ] Resolve `version.workspace = true` from the root's `[workspace.package]`, reusing #4's root
+      lookup. Skipped: moon doesn't read `version`.
+- [x] Include `[target.*]` dependencies.
+
+### #14 Faster cargo-binstall bootstrap
+
+- [x] Download the prebuilt binstall release
+
+`cargo install cargo-binstall --force --locked` (`tier2_env.rs:126`) compiles from source, which
+takes minutes on a cold CI runner. binstall publishes prebuilt archives per host triple: unpack the
+right one into the globals directory, and fall back to `cargo install`.
+
+**Done:** `fetch_bytes` downloads the archive into `/moon/temp`, and the host's `tar` unpacks it.
+`.tgz` is used on Linux; bsdtar on macOS and Windows 10+ also reads `.zip`. WASI can't set
+permissions, so the binary is copied next to its final path, run with `-V` through `exec` with
+`set_executable` (which also checks it works), and renamed into place. Any failure falls back to
+`cargo install`. The release's minisign signature isn't verified, matching `cargo install`'s trust in
+its source. `fetch_bytes` is used instead of the `download_file` host function, because a failed host download
+(a 404, offline) aborts the entire plugin call and skips the fallback.
+
+## Outside this repo (moon)
+
+- [ ] `crates/toolchain-plugin/src/toolchain_plugin.rs:396`: `detect_task_usage` splits `exe`
+      instead of `command`, so the proto-binary match (`node-20`) can never fire.
+- [ ] `website/docs/guides/rust/handbook.mdx`: revise the claim that every task is executed "using
+      the exact version" once #3 lands.
+- [ ] `crates/pdk-api/src/macros.rs`: D1 option B.
+- [ ] `crates/task-hasher/src/task_hashing.rs` (`apply_toolchain_dependencies_by_scope`): an
+      inherited dependency is looked up in the workspace manifest under its own scope, but
+      `[workspace.dependencies]` is reported as production, so `workspace = true` dev and build
+      dependencies never resolve. Fall back to the production scope for inherited lookups.
+
+## Release
+
+- `rust_toolchain`: Phase 1 is a patch (1.0.13). #3 and #5 change which toolchain or command runs, so
+  ship them in 1.1.0 with changelog callouts.
+- `rust_tool`: #13, the #6 warning and the Windows ARM64 download are a patch (0.13.13). The
+  toolchain re-exports `rust_tool`, so tool fixes also need a toolchain release.

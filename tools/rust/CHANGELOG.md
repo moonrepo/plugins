@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added a warning when a toolchain file uses a partial version like `1.80`, which rustup installs as a
+  separate toolchain from proto's.
+- Added `components` and `targets` to the `rust-toolchain.toml` model.
+
+#### 🐞 Fixes
+
+- Fixed `rust-toolchain.toml` taking precedence over `rust-toolchain` when both exist. Rustup uses
+  the legacy file, so proto now does too.
+- Fixed a legacy `rust-toolchain` file with TOML content failing to parse.
+- Fixed Windows ARM64 downloading the x64 `rustup-init`.
+
 ## 0.13.12
 
 #### 🚀 Updates

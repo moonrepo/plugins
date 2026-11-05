@@ -1,5 +1,46 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- **Behavior change:** When `version` is a fully-qualified version or channel, tasks now run with
+  that toolchain by setting `RUSTUP_TOOLCHAIN`, as rustup ignores moon's `PROTO_RUST_VERSION`. This
+  overrides `rust-toolchain.toml` and `rustup override` for moon tasks; enable
+  `syncToolchainConfig` to keep editors and ad-hoc `cargo` in step. A `RUSTUP_TOOLCHAIN` set in
+  your shell still takes precedence, but one set in a task's `env` is overwritten.
+- **Behavior change:** Bare task commands are no longer rewritten to `cargo <command>` when the
+  command exists on its own. For example, `make` stays `make` when `cargo-make` is installed, while
+  `nextest` still becomes `cargo nextest`.
+- `components` and `targets` are now installed for the configured toolchain with `--toolchain`.
+- `syncToolchainConfig` now also merges `components` and `targets` into `rust-toolchain.toml`, so
+  rustup installs them for editors and ad-hoc `cargo` too. Existing entries are kept.
+- `cargo-binstall` is now installed from its prebuilt GitHub release instead of being compiled with
+  `cargo install`, which took minutes on cold CI runners. It falls back to `cargo install` when the
+  download or unpacking (with `tar`) fails, or on hosts other than x64 and arm64 Linux, macOS, and
+  Windows.
+
+#### 🐞 Fixes
+
+- Fixed `addMsrvConstraint` and `syncToolchainConfig` writing values that Cargo and rustup reject,
+  like `rust-version = "stable"` or `channel = "~1.80"`. Versions that can't be written are now
+  skipped with a warning, including partial versions like `1.80` for `syncToolchainConfig`, as
+  rustup treats them as a separate toolchain.
+- Fixed `addMsrvConstraint` only setting `package.rust-version` when the root `Cargo.toml` has both
+  `[workspace]` and `[package]`.
+- Fixed project relationships not being inferred from `workspace = true`, renamed
+  (`package = "..."`), and `[target.*]` path dependencies.
+- Fixed `docker prune` deleting binaries in target triple and custom profile directories, and
+  ignoring `CARGO_TARGET_DIR` and `build.target-dir`. A separate `build-dir` is now removed too.
+- Fixed the default Docker image for channels, as `rust:stable` and others don't exist. Stable and
+  beta now use `rust:latest`, and nightly uses `rustlang/rust:nightly`.
+- Fixed `.cargo/config` (without an extension) not being detected as a config file.
+- Fixed `CARGO_HOME/bin` not being added to `PATH` when `CARGO_INSTALL_ROOT` is set.
+- Fixed bare dependency requirements (`1.2.3`) being parsed as exact versions instead of caret
+  requirements, so task hashes with `hasher.optimization: accuracy` now track the resolved version
+  from `Cargo.lock`. `[target.*]` dependencies are now included as well.
+- Includes `rust_tool` fixes for toolchain file precedence and Windows ARM64.
+
 ## 1.0.12
 
 #### 🐞 Fixes
