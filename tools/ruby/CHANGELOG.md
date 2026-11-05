@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed `.ruby-version` files with the `ruby-` prefix (written by RVM, and accepted by rbenv and
+  chruby) failing to resolve, like `ruby-3.4.5`. Files for other engines, like `jruby-9.4.5.0`, are
+  now ignored with a warning instead of failing.
+
 ## 0.3.0
 
 #### 🚀 Updates

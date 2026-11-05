@@ -9,6 +9,7 @@ use tool_common::{enable_tracing, registry::*};
 #[host_fn]
 extern "ExtismHost" {
     fn exec_command(input: Json<ExecCommandInput>) -> Json<ExecCommandOutput>;
+    fn host_log(input: Json<HostLogInput>);
     fn send_request(input: Json<SendRequestInput>) -> Json<SendRequestOutput>;
 }
 
@@ -40,6 +41,28 @@ pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
         files: vec![".ruby-version".into()],
         ignore: vec!["vendor".into()],
     }))
+}
+
+#[plugin_fn]
+pub fn parse_version_file(
+    Json(input): Json<ParseVersionFileInput>,
+) -> FnResult<Json<ParseVersionFileOutput>> {
+    let mut output = ParseVersionFileOutput::default();
+
+    match parse_ruby_version_file(&input.content) {
+        Some(version) => {
+            output.version = Some(UnresolvedVersionSpec::parse(version)?);
+        }
+        None => {
+            host_log!(
+                warn,
+                "<file>{}</file> doesn't pin a CRuby version, ignoring it",
+                input.file,
+            );
+        }
+    };
+
+    Ok(Json(output))
 }
 
 #[plugin_fn]

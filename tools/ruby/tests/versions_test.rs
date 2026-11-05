@@ -170,4 +170,41 @@ mod ruby_tool {
         );
         assert_has_build(output.version, "4.0.0-preview.2");
     }
+
+    async fn parse_version_file(content: &str) -> Option<UnresolvedVersionSpec> {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("ruby-test").await;
+
+        plugin
+            .parse_version_file(ParseVersionFileInput {
+                content: content.into(),
+                file: ".ruby-version".into(),
+                ..Default::default()
+            })
+            .await
+            .version
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn parses_ruby_version_file() {
+        for (content, expected) in [
+            ("3.3.5", "3.3.5"),
+            ("3.3", "3.3"),
+            ("ruby-3.3.5\n", "3.3.5"),
+            ("# pinned for CI\n\n  3.4.1 \n", "3.4.1"),
+        ] {
+            assert_eq!(
+                parse_version_file(content).await,
+                Some(UnresolvedVersionSpec::parse(expected).unwrap()),
+                "for {content:?}"
+            );
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn ignores_other_engines_in_ruby_version_file() {
+        for content in ["jruby-9.4.5.0", "truffleruby-24.0.0", "system"] {
+            assert_eq!(parse_version_file(content).await, None, "for {content:?}");
+        }
+    }
 }

@@ -1,10 +1,13 @@
-use crate::config::RubyToolchainConfig;
+use crate::config::{DEFAULT_NON_PRODUCTION_GROUPS, RubyToolchainConfig};
 use crate::gemfile;
 use extism_pdk::*;
 use moon_config::{DependencyScope, VersionSpec};
-use moon_pdk::{VirtualPathExt, locate_root_many, parse_toolchain_config_schema};
+use moon_pdk::{
+    VirtualPathExt, get_host_env_var, locate_root, locate_root_many, parse_toolchain_config_schema,
+};
 use moon_pdk_api::*;
 use rubund::parser::{SourceType, parse_lockfile};
+use ruby_tool::parse_ruby_version_file;
 use starbase_utils::fs;
 use std::collections::HashMap;
 use std::path::{Component, Path, PathBuf};
@@ -12,7 +15,9 @@ use std::path::{Component, Path, PathBuf};
 // Files that mark a Bundler dependency root, lockfiles first (most precise),
 // then manifests. Includes Bundler's alternative `gems.rb`/`gems.locked` names.
 const ROOT_FILES: [&str; 4] = ["Gemfile.lock", "gems.locked", "Gemfile", "gems.rb"];
-const DEFAULT_NON_PRODUCTION_GROUPS: [&str; 2] = ["development", "test"];
+
+// Bundler prefers `gems.rb` when both exist
+const MANIFEST_FILES: [&str; 2] = ["gems.rb", "Gemfile"];
 
 #[plugin_fn]
 pub fn locate_dependencies_root(
@@ -35,38 +40,48 @@ pub fn setup_environment(
     let config = parse_toolchain_config_schema::<RubyToolchainConfig>(input.toolchain_config)?;
     let mut output = SetupEnvironmentOutput::default();
 
-    // If Bundler is already configured for this root, skip the overhead.
-    if input.root.join(".bundle/config").exists() {
-        return Ok(Json(output));
-    }
-
     // Install gems into a project-local directory (the Ruby analog of a venv /
     // node_modules) so installs are isolated, cacheable, and don't pollute a
     // shared Ruby. Persisted via `bundle config` rather than the deprecated
-    // `bundle install --path` flag.
-    let mut path_cmd = ExecCommandInput::new(
-        "bundler",
-        [
-            "config",
-            "set",
-            "--local",
-            "path",
-            config.bundle_path.as_str(),
-        ],
-    );
-    path_cmd.cwd = Some(input.root.clone());
-    output.commands.push(path_cmd.into());
-
-    // Frozen/deployment mode for reproducible installs: Bundler refuses to
-    // mutate Gemfile.lock and errors if it's out of sync with the Gemfile.
-    if config.frozen {
-        let mut frozen_cmd =
-            ExecCommandInput::new("bundler", ["config", "set", "--local", "frozen", "true"]);
-        frozen_cmd.cwd = Some(input.root.clone());
-        output.commands.push(frozen_cmd.into());
+    // `bundle install --path` flag, and only when it changed, as moon skips
+    // the setup when the commands match the previous run.
+    if get_local_bundle_setting(&input.root, "BUNDLE_PATH")?.as_deref()
+        != Some(config.bundle_path.as_str())
+    {
+        output.commands.push(
+            ExecCommandInput::new(
+                "bundle",
+                [
+                    "config",
+                    "set",
+                    "--local",
+                    "path",
+                    config.bundle_path.as_str(),
+                ],
+            )
+            .cwd(input.root.clone())
+            .into(),
+        );
     }
 
     Ok(Json(output))
+}
+
+/// Read a setting from the app's local Bundler config, which is flat YAML with one
+/// `BUNDLE_<KEY>: "<value>"` per line. Returns `None` when `BUNDLE_APP_CONFIG` moves
+/// the config outside the workspace, like `/usr/local/bundle` in the ruby image.
+fn get_local_bundle_setting(root: &VirtualPath, key: &str) -> AnyResult<Option<String>> {
+    let path = root.join(".bundle/config");
+
+    if !path.exists() || get_host_env_var("BUNDLE_APP_CONFIG")?.is_some() {
+        return Ok(None);
+    }
+
+    Ok(fs::read_file(&path)?.lines().find_map(|line| {
+        let (name, value) = line.split_once(':')?;
+
+        (name.trim() == key).then(|| value.trim().trim_matches('"').to_owned())
+    }))
 }
 
 #[plugin_fn]
@@ -76,21 +91,26 @@ pub fn install_dependencies(
     let config = parse_toolchain_config_schema::<RubyToolchainConfig>(input.toolchain_config)?;
     let mut output = InstallDependenciesOutput::default();
 
-    let mut command = ExecCommandInput::new("bundler", ["install"]);
-    command.args.extend(config.bundler_install_args);
+    let mut command = ExecCommandInput::new("bundle", ["install"]);
+    command
+        .args
+        .extend(config.bundler_install_args.iter().cloned());
     command.cwd = Some(input.root.clone());
+
+    // Not persisted with `bundle config`, so it doesn't block
+    // `bundle add` and `bundle update` outside of moon
+    if config.frozen {
+        command.env.insert("BUNDLE_FROZEN".into(), "true".into());
+    }
 
     // Production installs exclude dev/test groups. We use `BUNDLE_WITHOUT`
     // (colon-separated) rather than the `--without` flag, which is removed in
-    // modern Bundler.
+    // modern Bundler. Docker prune also persists it for `bundle exec`.
     if input.production {
-        let without = if config.production_without_groups.is_empty() {
-            DEFAULT_NON_PRODUCTION_GROUPS.join(":")
-        } else {
-            config.production_without_groups.join(":")
-        };
-
-        command.env.insert("BUNDLE_WITHOUT".into(), without);
+        command.env.insert(
+            "BUNDLE_WITHOUT".into(),
+            config.get_non_production_groups().join(":"),
+        );
     }
 
     // Bundler's resolver already produces a single flat gem set, so there is
@@ -100,20 +120,41 @@ pub fn install_dependencies(
     Ok(Json(output))
 }
 
-#[plugin_fn]
-pub fn extend_command(
-    Json(input): Json<ExtendCommandInput>,
-) -> FnResult<Json<ExtendCommandOutput>> {
-    let mut output = ExtendTaskCommandOutput::default();
-
-    // Put a project's binstubs dir (`bin/`, generated by `bundle binstubs`) on
-    // PATH so tasks can invoke e.g. `rspec` directly. `bundle exec <cmd>` works
-    // regardless, via the `bundle` binary provided by the toolchain (tier 3).
-    if let Some(root) = locate_root_many(&input.current_dir, &ROOT_FILES)
+/// Put the dependency root's binstubs directory (`bin/`, from Rails or
+/// `bundle binstubs`) on `PATH`, so tasks can run `rails` or `rspec` directly.
+fn gather_binstub_paths(
+    context: &MoonContext,
+    project: &ProjectFragment,
+    paths: &mut Vec<PathBuf>,
+) -> AnyResult<()> {
+    if let Some(root) = locate_root_many(&context.get_project_root(project), &ROOT_FILES)
+        && root.join("bin").exists()
         && let Some(real) = root.to_real_path()?
     {
-        output.paths.push(real.join("bin").to_path_buf());
+        paths.push(real.join("bin").to_path_buf());
     }
+
+    Ok(())
+}
+
+#[plugin_fn]
+pub fn extend_task_command(
+    Json(input): Json<ExtendTaskCommandInput>,
+) -> FnResult<Json<ExtendTaskCommandOutput>> {
+    let mut output = ExtendTaskCommandOutput::default();
+
+    gather_binstub_paths(&input.context, &input.project, &mut output.paths)?;
+
+    Ok(Json(output))
+}
+
+#[plugin_fn]
+pub fn extend_task_script(
+    Json(input): Json<ExtendTaskScriptInput>,
+) -> FnResult<Json<ExtendTaskScriptOutput>> {
+    let mut output = ExtendTaskScriptOutput::default();
+
+    gather_binstub_paths(&input.context, &input.project, &mut output.paths)?;
 
     Ok(Json(output))
 }
@@ -215,7 +256,7 @@ pub fn extend_project_graph(
     Json(input): Json<ExtendProjectGraphInput>,
 ) -> FnResult<Json<ExtendProjectGraphOutput>> {
     let config = parse_toolchain_config_schema::<RubyToolchainConfig>(input.toolchain_config)?;
-    let non_production_groups = non_production_groups(&config);
+    let non_production_groups = config.get_non_production_groups();
     let mut output = ExtendProjectGraphOutput::default();
 
     // Map each project's source directory to its id, so we can resolve a
@@ -226,14 +267,15 @@ pub fn extend_project_graph(
     }
 
     for (id, source) in &input.project_sources {
-        let gemfile_path = input
-            .context
-            .get_project_root_from_source(source)
-            .join("Gemfile");
+        let project_root = input.context.get_project_root_from_source(source);
 
-        if !gemfile_path.exists() {
+        let Some(gemfile_path) = MANIFEST_FILES
+            .iter()
+            .map(|name| project_root.join(name))
+            .find(|path| path.exists())
+        else {
             continue;
-        }
+        };
 
         let Ok(content) = fs::read_file(&gemfile_path) else {
             continue;
@@ -269,18 +311,6 @@ pub fn extend_project_graph(
     Ok(Json(output))
 }
 
-fn non_production_groups(config: &RubyToolchainConfig) -> Vec<&str> {
-    if config.production_without_groups.is_empty() {
-        DEFAULT_NON_PRODUCTION_GROUPS.to_vec()
-    } else {
-        config
-            .production_without_groups
-            .iter()
-            .map(String::as_str)
-            .collect()
-    }
-}
-
 fn groups_to_scope(groups: &[String], non_production_groups: &[&str]) -> DependencyScope {
     if groups
         .iter()
@@ -290,24 +320,6 @@ fn groups_to_scope(groups: &[String], non_production_groups: &[&str]) -> Depende
     } else {
         DependencyScope::Production
     }
-}
-
-#[plugin_fn]
-pub fn hash_task_contents(
-    Json(input): Json<HashTaskContentsInput>,
-) -> FnResult<Json<HashTaskContentsOutput>> {
-    let config = parse_toolchain_config_schema::<RubyToolchainConfig>(input.toolchain_config)?;
-
-    // Fold toolchain state that isn't already a hashed input file (the resolved
-    // Ruby version and install settings) into the task's cache key, so caches
-    // don't collide across Ruby versions / configs.
-    let contents = vec![serde_json::json!({
-        "version": config.version.map(|v| v.to_string()),
-        "bundlePath": config.bundle_path,
-        "frozen": config.frozen,
-    })];
-
-    Ok(Json(HashTaskContentsOutput { contents }))
 }
 
 /// Resolve `.`/`..` components in a relative path without touching the

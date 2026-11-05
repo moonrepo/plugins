@@ -1,8 +1,8 @@
 use moon_config::DependencyScope;
 use moon_pdk_api::*;
-use moon_pdk_test_utils::create_empty_moon_sandbox;
+use moon_pdk_test_utils::{ToolchainTestWrapper, create_empty_moon_sandbox};
 use serde_json::json;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 mod ruby_toolchain_tier2 {
     use super::*;
@@ -67,6 +67,13 @@ mod ruby_toolchain_tier2 {
     mod setup_environment {
         use super::*;
 
+        fn path_command(plugin: &ToolchainTestWrapper, root: &Path, path: &str) -> ExecCommand {
+            ExecCommand::new(
+                ExecCommandInput::new("bundle", ["config", "set", "--local", "path", path])
+                    .cwd(plugin.plugin.to_virtual_path(root)),
+            )
+        }
+
         #[tokio::test(flavor = "multi_thread")]
         async fn sets_local_bundle_path() {
             let sandbox = create_empty_moon_sandbox();
@@ -82,13 +89,7 @@ mod ruby_toolchain_tier2 {
 
             assert_eq!(
                 output.commands,
-                vec![ExecCommand::new(
-                    ExecCommandInput::new(
-                        "bundler",
-                        ["config", "set", "--local", "path", "vendor/bundle"]
-                    )
-                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                )]
+                vec![path_command(&plugin, sandbox.path(), "vendor/bundle")]
             );
         }
 
@@ -107,18 +108,12 @@ mod ruby_toolchain_tier2 {
 
             assert_eq!(
                 output.commands,
-                vec![ExecCommand::new(
-                    ExecCommandInput::new(
-                        "bundler",
-                        ["config", "set", "--local", "path", "vendor/gems"]
-                    )
-                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                )]
+                vec![path_command(&plugin, sandbox.path(), "vendor/gems")]
             );
         }
 
         #[tokio::test(flavor = "multi_thread")]
-        async fn adds_frozen_command_when_configured() {
+        async fn doesnt_persist_frozen() {
             let sandbox = create_empty_moon_sandbox();
             let plugin = sandbox.create_toolchain("ruby").await;
 
@@ -132,29 +127,14 @@ mod ruby_toolchain_tier2 {
 
             assert_eq!(
                 output.commands,
-                vec![
-                    ExecCommand::new(
-                        ExecCommandInput::new(
-                            "bundler",
-                            ["config", "set", "--local", "path", "vendor/bundle"]
-                        )
-                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    ),
-                    ExecCommand::new(
-                        ExecCommandInput::new(
-                            "bundler",
-                            ["config", "set", "--local", "frozen", "true"]
-                        )
-                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
-                ]
+                vec![path_command(&plugin, sandbox.path(), "vendor/bundle")]
             );
         }
 
         #[tokio::test(flavor = "multi_thread")]
-        async fn skips_if_already_configured() {
+        async fn skips_if_path_already_configured() {
             let sandbox = create_empty_moon_sandbox();
-            sandbox.create_file(".bundle/config", "");
+            sandbox.create_file(".bundle/config", "---\nBUNDLE_PATH: \"vendor/bundle\"\n");
             let plugin = sandbox.create_toolchain("ruby").await;
 
             let output = plugin
@@ -166,6 +146,46 @@ mod ruby_toolchain_tier2 {
                 .await;
 
             assert!(output.commands.is_empty());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn updates_a_changed_path() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(".bundle/config", "---\nBUNDLE_PATH: \"vendor/bundle\"\n");
+            let plugin = sandbox.create_toolchain("ruby").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    toolchain_config: json!({ "bundlePath": "vendor/gems" }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.commands,
+                vec![path_command(&plugin, sandbox.path(), "vendor/gems")]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn sets_path_when_config_has_other_settings() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(".bundle/config", "---\nBUNDLE_JOBS: \"4\"\n");
+            let plugin = sandbox.create_toolchain("ruby").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    toolchain_config: json!({}),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.commands,
+                vec![path_command(&plugin, sandbox.path(), "vendor/bundle")]
+            );
         }
     }
 
@@ -189,7 +209,7 @@ mod ruby_toolchain_tier2 {
             assert_eq!(
                 output.install_command.unwrap(),
                 ExecCommand::new(
-                    ExecCommandInput::new("bundler", ["install"])
+                    ExecCommandInput::new("bundle", ["install"])
                         .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                 )
             );
@@ -209,7 +229,7 @@ mod ruby_toolchain_tier2 {
                 })
                 .await;
 
-            let mut expected = ExecCommandInput::new("bundler", ["install"]);
+            let mut expected = ExecCommandInput::new("bundle", ["install"]);
             expected.cwd = Some(plugin.plugin.to_virtual_path(sandbox.path()));
             expected
                 .env
@@ -234,26 +254,46 @@ mod ruby_toolchain_tier2 {
             assert_eq!(
                 output.install_command.unwrap(),
                 ExecCommand::new(
-                    ExecCommandInput::new("bundler", ["install", "--jobs", "4"])
+                    ExecCommandInput::new("bundle", ["install", "--jobs", "4"])
                         .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                 )
             );
         }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn sets_frozen_env_when_configured() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("ruby").await;
+
+            let output = plugin
+                .install_dependencies(InstallDependenciesInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    toolchain_config: json!({ "frozen": true }),
+                    ..Default::default()
+                })
+                .await;
+
+            let mut expected = ExecCommandInput::new("bundle", ["install"]);
+            expected.cwd = Some(plugin.plugin.to_virtual_path(sandbox.path()));
+            expected.env.insert("BUNDLE_FROZEN".into(), "true".into());
+
+            assert_eq!(output.install_command.unwrap(), ExecCommand::new(expected));
+        }
     }
 
-    mod extend_command {
+    mod extend_task_command {
         use super::*;
 
         #[tokio::test(flavor = "multi_thread")]
         async fn adds_nothing_without_a_root() {
             let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("project/bin/rspec", "");
             let plugin = sandbox.create_toolchain("ruby").await;
 
             let output = plugin
-                .extend_command(ExtendCommandInput {
-                    command: "rake".into(),
+                .extend_task_command(ExtendTaskCommandInput {
+                    command: "rspec".into(),
                     toolchain_config: json!({}),
-                    current_dir: plugin.plugin.to_virtual_path(sandbox.path()),
                     ..Default::default()
                 })
                 .await;
@@ -262,23 +302,60 @@ mod ruby_toolchain_tier2 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
-        async fn adds_binstubs_dir_when_root_found() {
+        async fn adds_nothing_without_a_binstubs_dir() {
             let sandbox = create_empty_moon_sandbox();
             sandbox.create_file("Gemfile", "");
             let plugin = sandbox.create_toolchain("ruby").await;
 
             let output = plugin
-                .extend_command(ExtendCommandInput {
-                    command: "rake".into(),
+                .extend_task_command(ExtendTaskCommandInput {
+                    command: "rspec".into(),
                     toolchain_config: json!({}),
-                    current_dir: plugin
-                        .plugin
-                        .to_virtual_path(sandbox.path().join("sub/dir")),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.paths.is_empty());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn adds_binstubs_dir_of_the_root() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("Gemfile", "");
+            sandbox.create_file("bin/rspec", "");
+            let plugin = sandbox.create_toolchain("ruby").await;
+
+            let output = plugin
+                .extend_task_command(ExtendTaskCommandInput {
+                    command: "rspec".into(),
+                    toolchain_config: json!({}),
                     ..Default::default()
                 })
                 .await;
 
             assert_eq!(output.paths, vec![sandbox.path().join("bin")]);
+        }
+    }
+
+    mod extend_task_script {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn adds_binstubs_dir_of_the_root() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("project/Gemfile", "");
+            sandbox.create_file("project/bin/rails", "");
+            let plugin = sandbox.create_toolchain("ruby").await;
+
+            let output = plugin
+                .extend_task_script(ExtendTaskScriptInput {
+                    script: "bin/rails test".into(),
+                    toolchain_config: json!({}),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.paths, vec![sandbox.path().join("project/bin")]);
         }
     }
 }
@@ -446,6 +523,34 @@ end
         use super::*;
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn reads_gems_rb() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("app/gems.rb", r#"gem "billing", path: "../libs/billing""#);
+            let plugin = sandbox.create_toolchain("ruby").await;
+
+            let mut input = ExtendProjectGraphInput::default();
+            input.project_sources.insert(Id::raw("app"), "app".into());
+            input
+                .project_sources
+                .insert(Id::raw("billing"), "libs/billing".into());
+
+            let output = plugin.extend_project_graph(input).await;
+
+            assert_eq!(
+                output.extended_projects.get("app").unwrap().dependencies[0].id,
+                Id::raw("billing")
+            );
+            assert_eq!(
+                output.input_files,
+                vec![
+                    plugin
+                        .plugin
+                        .to_virtual_path(sandbox.path().join("app/gems.rb"))
+                ]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn infers_path_gem_edges() {
             let sandbox = create_empty_moon_sandbox();
             sandbox.create_file("app/Gemfile", r#"gem "billing", path: "../libs/billing""#);
@@ -534,8 +639,9 @@ end"#,
         use super::*;
 
         #[tokio::test(flavor = "multi_thread")]
-        async fn includes_resolved_version() {
+        async fn skips_configured_version() {
             let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(".ruby-version", "3.4.1");
             let plugin = sandbox.create_toolchain("ruby").await;
 
             let output = plugin
@@ -545,8 +651,39 @@ end"#,
                 })
                 .await;
 
-            assert_eq!(output.contents.len(), 1);
-            assert_eq!(output.contents[0].get("version").unwrap(), "3.3.5");
+            assert!(output.contents.is_empty());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn includes_nearest_ruby_version_file() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(".ruby-version", "ruby-3.4.1\n");
+            sandbox.create_file("project/Gemfile", "");
+            let plugin = sandbox.create_toolchain("ruby").await;
+
+            let output = plugin
+                .hash_task_contents(HashTaskContentsInput {
+                    toolchain_config: json!({}),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.contents, vec![json!({ "rubyVersion": "3.4.1" })]);
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn includes_nothing_without_a_version() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("ruby").await;
+
+            let output = plugin
+                .hash_task_contents(HashTaskContentsInput {
+                    toolchain_config: json!({}),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.contents.is_empty());
         }
     }
 }

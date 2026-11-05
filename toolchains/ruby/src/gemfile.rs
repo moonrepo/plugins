@@ -11,46 +11,65 @@ pub struct PathGem {
     pub groups: Vec<String>,
 }
 
+enum Block {
+    Group(Vec<String>),
+    Path(String),
+    Other,
+}
+
 /// Parse literal `path:` gem declarations from a `Gemfile`, preserving Bundler
 /// group names verbatim. The caller decides how to map groups onto moon scopes.
+/// Also includes gems within `path "<dir>" do` blocks, and `gemspec path:`.
 pub fn parse_path_gems(content: &str) -> Vec<PathGem> {
     let mut gems = vec![];
-    let mut block_stack: Vec<Vec<String>> = vec![];
+    let mut blocks: Vec<Block> = vec![];
 
-    for line in content.lines() {
-        let line = strip_comment(line).trim().to_owned();
-        if line.is_empty() {
-            continue;
-        }
-
+    for line in join_continued_lines(content) {
         if line == "end" {
-            block_stack.pop();
+            blocks.pop();
             continue;
         }
 
-        if line.ends_with(" do") {
-            if let Some(groups) = parse_group_call(&line) {
-                block_stack.push(groups);
+        // Keep non-group blocks on the stack too, so that their
+        // `end` doesn't accidentally pop an enclosing group
+        if let Some(call) = strip_block_opener(&line) {
+            blocks.push(if let Some(args) = after_bare_call(call, "group") {
+                Block::Group(parse_groups(args))
+            } else if let Some(args) = after_bare_call(call, "path")
+                && let Some(dir) = split_args(args).first().copied().and_then(quoted)
+            {
+                Block::Path(dir.to_owned())
             } else {
-                // Keep nested non-group blocks balanced so their `end` doesn't
-                // accidentally pop an enclosing group.
-                block_stack.push(vec![]);
-            }
+                Block::Other
+            });
             continue;
         }
 
         if starts_ruby_block(&line) {
-            block_stack.push(vec![]);
+            blocks.push(Block::Other);
             continue;
         }
 
-        if let Some(args) = after_bare_call(&line, "gem")
-            && let Some(mut gem) = parse_gem_call(args)
-        {
-            for groups in &block_stack {
-                for group in groups {
-                    if !gem.groups.contains(group) {
-                        gem.groups.push(group.clone());
+        let gem = if let Some(args) = after_bare_call(&line, "gem") {
+            let block_dir = blocks.iter().rev().find_map(|block| match block {
+                Block::Path(dir) => Some(dir.as_str()),
+                _ => None,
+            });
+
+            parse_gem_call(args, block_dir)
+        } else if let Some(args) = after_bare_call(&line, "gemspec") {
+            parse_gemspec_call(args)
+        } else {
+            None
+        };
+
+        if let Some(mut gem) = gem {
+            for block in &blocks {
+                if let Block::Group(groups) = block {
+                    for group in groups {
+                        if !gem.groups.contains(group) {
+                            gem.groups.push(group.clone());
+                        }
                     }
                 }
             }
@@ -62,13 +81,48 @@ pub fn parse_path_gems(content: &str) -> Vec<PathGem> {
     gems
 }
 
-fn parse_group_call(line: &str) -> Option<Vec<String>> {
-    let line = line.strip_suffix(" do")?.trim_end();
-    let args = after_bare_call(line, "group")?;
-    Some(parse_groups(args))
+/// Strip comments, and join calls that continue onto the next line
+/// (a trailing `,` or `\`) into a single line.
+fn join_continued_lines(content: &str) -> Vec<String> {
+    let mut lines = vec![];
+    let mut current = String::new();
+
+    for line in content.lines() {
+        let line = strip_comment(line).trim();
+
+        if line.is_empty() {
+            continue;
+        }
+
+        if !current.is_empty() {
+            current.push(' ');
+        }
+
+        current.push_str(line.trim_end_matches('\\').trim_end());
+
+        if !line.ends_with(',') && !line.ends_with('\\') {
+            lines.push(std::mem::take(&mut current));
+        }
+    }
+
+    if !current.is_empty() {
+        lines.push(current);
+    }
+
+    lines
 }
 
-fn parse_gem_call(args: &str) -> Option<PathGem> {
+/// Return the call before a trailing `do` or `do |args|`.
+fn strip_block_opener(line: &str) -> Option<&str> {
+    let call = match line.strip_suffix('|') {
+        Some(rest) => rest.rsplit_once(" do |")?.0,
+        None => line.strip_suffix(" do")?,
+    };
+
+    Some(call.trim_end())
+}
+
+fn parse_gem_call(args: &str, block_dir: Option<&str>) -> Option<PathGem> {
     let mut name = None;
     let mut path = None;
     let mut groups = vec![];
@@ -98,10 +152,44 @@ fn parse_gem_call(args: &str) -> Option<PathGem> {
         }
     }
 
+    let name = name?;
+
+    // Bundler finds gems in a path block by their gemspec name,
+    // which is typically a directory of the same name
+    let path = path.or_else(|| Some(format!("{}/{name}", block_dir?.trim_end_matches('/'))))?;
+
+    Some(PathGem { name, path, groups })
+}
+
+/// A bare `gemspec` is the current project, so only `gemspec path:`
+/// references another gem.
+fn parse_gemspec_call(args: &str) -> Option<PathGem> {
+    let mut name = None;
+    let mut path = None;
+
+    for part in split_args(args) {
+        if let Some((key, value)) = split_option(part.trim()) {
+            match key {
+                "name" => name = quoted(value).map(str::to_owned),
+                "path" => path = quoted(value).map(str::to_owned),
+                _ => {}
+            }
+        }
+    }
+
+    let path = path?;
+    let name = name.unwrap_or_else(|| {
+        path.trim_end_matches('/')
+            .rsplit('/')
+            .next()
+            .unwrap_or_default()
+            .to_owned()
+    });
+
     Some(PathGem {
-        name: name?,
-        path: path?,
-        groups,
+        name,
+        path,
+        groups: vec![],
     })
 }
 
@@ -208,7 +296,7 @@ fn strip_comment(line: &str) -> &str {
 
 fn starts_ruby_block(line: &str) -> bool {
     [
-        "if ", "unless ", "case ", "begin", "while ", "until ", "for ",
+        "if ", "unless ", "case ", "begin", "while ", "until ", "for ", "def ",
     ]
     .iter()
     .any(|prefix| line.starts_with(prefix))
@@ -347,5 +435,75 @@ gem "real", path: "../libs/#real" # trailing comment
 
         assert_eq!(gems.len(), 1);
         assert_eq!(gems[0].path, "../libs/#real");
+    }
+    #[test]
+    fn captures_multi_line_gem_calls() {
+        let gems = parse_path_gems(
+            r#"
+gem "billing",
+  path: "../libs/billing",
+  groups: [:test,
+    :ci]
+"#,
+        );
+
+        assert_eq!(gems.len(), 1);
+        assert_eq!(gems[0].path, "../libs/billing");
+        assert_eq!(gems[0].groups, ["test", "ci"]);
+    }
+
+    #[test]
+    fn captures_gems_in_path_blocks() {
+        let gems = parse_path_gems(
+            r#"
+path "components" do
+  gem "admin_ui"
+  gem "public_ui", path: "ui/public"
+end
+gem "rails"
+"#,
+        );
+
+        assert_eq!(gems.len(), 2);
+        assert_eq!(gems[0].name, "admin_ui");
+        assert_eq!(gems[0].path, "components/admin_ui");
+        assert_eq!(gems[1].path, "ui/public");
+    }
+
+    #[test]
+    fn captures_gemspec_paths() {
+        let gems = parse_path_gems(
+            r#"
+gemspec
+gemspec path: "../libs/billing"
+gemspec path: "../libs/core", name: "core-lib"
+"#,
+        );
+
+        assert_eq!(gems.len(), 2);
+        assert_eq!(gems[0].name, "billing");
+        assert_eq!(gems[0].path, "../libs/billing");
+        assert_eq!(gems[1].name, "core-lib");
+    }
+
+    #[test]
+    fn balances_blocks_with_arguments_and_methods() {
+        let gems = parse_path_gems(
+            r#"
+group :test do
+  def local(name)
+    "../libs/#{name}"
+  end
+  %w[a b].each do |name|
+    gem name
+  end
+  gem "fixtures", path: "../libs/fixtures"
+end
+gem "billing", path: "../libs/billing"
+"#,
+        );
+
+        assert_eq!(gems[0].groups, ["test"]);
+        assert!(gems[1].groups.is_empty());
     }
 }

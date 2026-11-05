@@ -30,7 +30,8 @@ config_struct!(
         /// Extra arguments appended to `bundle install`.
         pub bundler_install_args: Vec<String>,
 
-        /// Run installs in frozen/deployment mode (CI-friendly).
+        /// Run installs in frozen mode (CI-friendly), so that Bundler errors
+        /// instead of updating an out-of-date lockfile. Applied via `BUNDLE_FROZEN`.
         pub frozen: bool,
 
         /// Gem groups to exclude during a production install, applied via
@@ -41,3 +42,19 @@ config_struct!(
         pub version: Option<UnresolvedVersionSpec>,
     }
 );
+
+pub const DEFAULT_NON_PRODUCTION_GROUPS: [&str; 2] = ["development", "test"];
+
+impl RubyToolchainConfig {
+    /// Gem groups that are skipped by production installs.
+    pub fn get_non_production_groups(&self) -> Vec<&str> {
+        if self.production_without_groups.is_empty() {
+            DEFAULT_NON_PRODUCTION_GROUPS.to_vec()
+        } else {
+            self.production_without_groups
+                .iter()
+                .map(String::as_str)
+                .collect()
+        }
+    }
+}

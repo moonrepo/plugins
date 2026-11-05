@@ -17,7 +17,18 @@ ruby = "https://github.com/moonrepo/plugins/releases/download/ruby_tool-vX.Y.Z/r
 
 ## Configuration
 
-Ruby plugin does not support configuration.
+Ruby plugin can be configured with a `.prototools` file.
+
+- `use-latest-build` (bool) - When a fully-qualified version without a build is requested, like
+  `3.4.5`, resolve it to the latest available pre-built build, like `3.4.5+4`. Defaults to `false`.
+
+```toml
+[tools.ruby]
+use-latest-build = true
+```
+
+A `.ruby-version` file may contain the `ruby-` prefix used by RVM and chruby, like `ruby-3.4.5`.
+Files for other engines, like `jruby-9.4.5.0`, are ignored.
 
 ## Hooks
 
