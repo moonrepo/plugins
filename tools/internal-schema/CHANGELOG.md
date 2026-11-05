@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added `manifest-array-key` (format v1) and `index_array_key` (format v2) to load versions from a named array in a JSON index object.
+
 ## 0.19.0
 
 #### 🚀 Updates

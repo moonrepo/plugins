@@ -21,6 +21,7 @@ pub struct ResolveSchema {
     pub version_pattern: Option<String>,
     // Manifest
     pub index_url: Option<String>,
+    pub index_array_key: Option<String>,
     pub index_version_key: Option<String>,
     // Tags
     pub git_url: Option<String>,
@@ -55,6 +56,10 @@ impl ResolveSchema {
 
         if let Some(value) = &other.index_version_key {
             self.index_version_key = Some(value.to_owned());
+        }
+
+        if let Some(value) = &other.index_array_key {
+            self.index_array_key = Some(value.to_owned());
         }
 
         if let Some(value) = &other.version_pattern {

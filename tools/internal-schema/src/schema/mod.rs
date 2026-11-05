@@ -105,6 +105,7 @@ impl Schema {
             Self::V1(inner) => v2::ResolveSchema {
                 version_pattern: Some(inner.resolve.version_pattern.clone()),
                 index_url: inner.resolve.manifest_url.clone(),
+                index_array_key: inner.resolve.manifest_array_key.clone(),
                 index_version_key: Some(inner.resolve.manifest_version_key.clone()),
                 git_url: inner.resolve.git_url.clone(),
                 git_tag_pattern: inner.resolve.git_tag_pattern.clone(),
@@ -197,4 +198,71 @@ pub fn interpolate_tokens(
     }
 
     value
+}
+
+#[cfg(test)]
+mod index_key_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn maps_v1_manifest_array_key_to_shared_resolver() {
+        let v1 = serde_json::from_value(json!({
+            "name": "test",
+            "resolve": {
+                "manifest-url": "https://example.com/versions.json",
+                "manifest-array-key": "versions"
+            }
+        }))
+        .unwrap();
+        let resolve = Schema::V1(v1).get_resolve(&UnresolvedVersionSpec::parse("1.0.0").unwrap());
+
+        assert_eq!(resolve.index_array_key.as_deref(), Some("versions"));
+        assert_eq!(resolve.get_index_version_key(), "version");
+    }
+
+    #[test]
+    fn v2_overrides_can_change_index_array_key() {
+        let mut resolve: v2::ResolveSchema = serde_json::from_value(json!({
+            "index_url": "https://example.com/stable.json",
+            "index_array_key": "releases"
+        }))
+        .unwrap();
+        let next = serde_json::from_value(json!({
+            "index_url": "https://example.com/nightly.json",
+            "index_array_key": "versions"
+        }))
+        .unwrap();
+
+        resolve.override_with(&next);
+
+        assert_eq!(
+            resolve.index_url.as_deref(),
+            Some("https://example.com/nightly.json")
+        );
+        assert_eq!(resolve.index_array_key.as_deref(), Some("versions"));
+    }
+
+    #[test]
+    fn v2_url_override_without_array_key_keeps_base_key() {
+        let mut resolve: v2::ResolveSchema = serde_json::from_value(json!({
+            "index_url": "https://example.com/stable.json",
+            "index_array_key": "releases",
+            "index_version_key": "tag"
+        }))
+        .unwrap();
+        let next = serde_json::from_value(json!({
+            "index_url": "https://example.com/nightly.json"
+        }))
+        .unwrap();
+
+        resolve.override_with(&next);
+
+        assert_eq!(
+            resolve.index_url.as_deref(),
+            Some("https://example.com/nightly.json")
+        );
+        assert_eq!(resolve.index_array_key.as_deref(), Some("releases"));
+        assert_eq!(resolve.get_index_version_key(), "tag");
+    }
 }

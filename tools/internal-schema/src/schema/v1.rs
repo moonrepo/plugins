@@ -112,6 +112,7 @@ pub struct ResolveSchema {
     pub version_pattern: String,
     // Manifest
     pub manifest_url: Option<String>,
+    pub manifest_array_key: Option<String>,
     pub manifest_version_key: String,
     // Tags
     pub git_url: Option<String>,
@@ -123,6 +124,7 @@ impl Default for ResolveSchema {
         ResolveSchema {
             aliases: HashMap::new(),
             manifest_url: None,
+            manifest_array_key: None,
             manifest_version_key: "version".to_string(),
             git_url: None,
             git_tag_pattern: None,
