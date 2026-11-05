@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+  </PropertyGroup>
+  <!-- Deliberately malformed: the unclosed ItemGroup makes MSBuild refuse to
+       load the project (MSB4025), so neither the batch nor the per-project
+       fallback can evaluate it. -->
+  <ItemGroup>
+</Project>
