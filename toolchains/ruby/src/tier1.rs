@@ -27,6 +27,8 @@ pub fn register_toolchain(
             ".ruby-version".into(),
             "*.gemspec".into(),
             ".rubocop.yml".into(),
+            ".rspec".into(),
+            "Rakefile".into(),
         ],
         manifest_file_names: vec![
             "Gemfile".into(),
@@ -46,6 +48,9 @@ pub fn register_toolchain(
             "gem".into(),
             "rake".into(),
             "irb".into(),
+            "rails".into(),
+            "rspec".into(),
+            "rubocop".into(),
         ],
         vendor_dir_name: Some(config.bundle_path),
     }))

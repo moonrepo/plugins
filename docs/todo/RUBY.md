@@ -408,8 +408,8 @@ provenance file. When the registry records the digest (see "Outside this repo"),
 
 ### #18 Detection names
 
-- [ ] `exe_names` (`tier1.rs:41-48`): add `rails`, `rspec` and `rubocop`.
-- [ ] `config_file_globs` (`tier1.rs:25-29`): add `Rakefile` and `.rspec`.
+- [x] `exe_names` (`tier1.rs:41-48`): add `rails`, `rspec` and `rubocop`.
+- [x] `config_file_globs` (`tier1.rs:25-29`): add `Rakefile` and `.rspec`.
 
 ### #19 Inherited `GEM_HOME`
 

@@ -29,6 +29,8 @@ mod ruby_toolchain_tier1 {
             assert!(output.manifest_file_names.contains(&"Gemfile".to_string()));
             assert!(output.lock_file_names.contains(&"Gemfile.lock".to_string()));
             assert!(output.exe_names.contains(&"bundle".to_string()));
+            assert!(output.exe_names.contains(&"rspec".to_string()));
+            assert!(output.config_file_globs.contains(&"Rakefile".to_string()));
         }
 
         #[tokio::test(flavor = "multi_thread")]

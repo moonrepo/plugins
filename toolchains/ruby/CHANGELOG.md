@@ -31,6 +31,8 @@
 - Project graph inference now adds edges from gemspec dependencies, sets the gem name as the project
   alias, and finds `path` block gems by name.
 - Lockfile versions with RubyGems segments, like `7.1.3.4` or `1.0.0.pre`, are now parsed.
+- Task detection now includes `rails`, `rspec` and `rubocop`, and project detection includes
+  `Rakefile` and `.rspec`.
 - Added `prune_docker` support. `moon docker prune` now persists the skipped groups with
   `bundle config set --local without`, as `bundle exec` fails on the missing gems otherwise, and
   runs `bundle clean` to remove their gems when `deleteVendorDirectories` is enabled.
