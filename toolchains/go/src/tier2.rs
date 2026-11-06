@@ -11,7 +11,6 @@ use moon_pdk::{
 };
 use moon_pdk_api::*;
 use starbase_utils::fs;
-use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 #[plugin_fn]
@@ -57,11 +56,13 @@ fn gather_shared_paths(
     globals_dir: Option<&VirtualPath>,
     paths: &mut Vec<PathBuf>,
 ) -> AnyResult<()> {
+    // moon only adds the globals directory to `PATH` when a version
+    // is configured, so binaries from `bins` would be missing otherwise
     if let Some(globals_dir) = globals_dir
-        && globals_dir.to_real_path()?.is_some()
+        && let Some(dir) = globals_dir.to_real_path()?
     {
-        // Avoid the host env overhead if we already
-        // have a valid globals directory!
+        paths.push(dir.to_path_buf());
+
         return Ok(());
     }
 
@@ -71,7 +72,11 @@ fn gather_shared_paths(
         let maybe_dir = if let Some(value) = get_host_env_var("GOBIN")? {
             Some(PathBuf::from(value))
         } else if let Some(value) = get_host_env_var("GOPATH")? {
-            Some(PathBuf::from(value).join("bin"))
+            // A list of paths, where `go install` uses the first
+            value
+                .split(if env.os.is_windows() { ';' } else { ':' })
+                .next()
+                .map(|path| PathBuf::from(path).join("bin"))
         } else {
             env.home_dir
                 .join("go")
@@ -126,7 +131,7 @@ pub fn locate_dependencies_root(
     let mut output = LocateDependenciesRootOutput::default();
 
     // Find `go.work` first
-    if config.workspaces
+    if use_workspaces(&config)?
         && let Some(root) = locate_root(&input.starting_dir, "go.work")
     {
         let go_work = GoWork::parse(fs::read_file(root.join("go.work"))?)?;
@@ -138,12 +143,7 @@ pub fn locate_dependencies_root(
         output.root = Some(root);
     }
 
-    // Then `go.sum` second
-    if output.root.is_none() {
-        output.root = locate_root(&input.starting_dir, "go.sum");
-    }
-
-    // Otherwise assume `go.mod`
+    // Otherwise the nearest `go.mod`, as `go.sum` always sits beside it
     if output.root.is_none() {
         output.root = locate_root(&input.starting_dir, "go.mod");
     }
@@ -158,28 +158,30 @@ pub fn install_dependencies(
     let config = parse_toolchain_config_schema::<GoToolchainConfig>(input.toolchain_config)?;
     let mut output = InstallDependenciesOutput::default();
 
-    if config.workspaces && input.root.join("go.work").exists() {
-        output.install_command = Some(
-            ExecCommandInput::new("go", ["work", "sync"])
-                .cwd(input.root.clone())
-                .into(),
-        );
+    // Go 1.14+ builds from a committed `vendor` directory by default,
+    // so there's nothing to download
+    if input.root.join("vendor").join("modules.txt").exists() {
+        return Ok(Json(output));
     }
 
-    if output.install_command.is_none() && input.root.join("go.mod").exists() {
+    // In workspace mode, this downloads the workspace's build list.
+    // Unlike `go work sync`, it doesn't rewrite each member's `go.mod`
+    let in_workspace = use_workspaces(&config)? && input.root.join("go.work").exists();
+
+    if in_workspace || input.root.join("go.mod").exists() {
         output.install_command = Some(
             ExecCommandInput::new("go", ["mod", "download"])
                 .cwd(input.root.clone())
                 .into(),
         );
+    }
 
-        if config.tidy_on_change && input.root.join("go.sum").exists() {
-            output.dedupe_command = Some(
-                ExecCommandInput::new("go", ["mod", "tidy"])
-                    .cwd(input.root)
-                    .into(),
-            );
-        }
+    if !in_workspace && config.tidy_on_change && input.root.join("go.sum").exists() {
+        output.dedupe_command = Some(
+            ExecCommandInput::new("go", ["mod", "tidy"])
+                .cwd(input.root)
+                .into(),
+        );
     }
 
     Ok(Json(output))
@@ -190,19 +192,21 @@ pub fn parse_lock(Json(input): Json<ParseLockInput>) -> FnResult<Json<ParseLockO
     let mut output = ParseLockOutput::default();
     let go_sum = GoSum::parse(fs::read_file(input.path)?)?;
 
-    for (module, entry) in go_sum.dependencies {
-        output
-            .dependencies
-            .entry(module)
-            .or_default()
-            .push(LockDependency {
-                hash: entry
-                    .checksum
-                    .strip_prefix("h1:") // sha256
-                    .map(|hash| hash.to_owned()),
-                version: Some(entry.version),
-                ..Default::default()
-            });
+    for (module, entries) in go_sum.dependencies {
+        output.dependencies.insert(
+            module,
+            entries
+                .into_iter()
+                .map(|entry| LockDependency {
+                    hash: entry
+                        .checksum
+                        .strip_prefix("h1:") // sha256
+                        .map(|hash| hash.to_owned()),
+                    version: Some(entry.version),
+                    ..Default::default()
+                })
+                .collect(),
+        );
     }
 
     Ok(Json(output))
@@ -218,13 +222,9 @@ pub fn parse_manifest(
         Some("go.mod") => {
             let go_mod = parse_go_mod(fs::read_file(input.path)?)?;
 
+            // Indirect requires are part of the build too (Go 1.17+),
+            // so a bump to one must change task hashes
             for dep in go_mod.require {
-                // Ignore transitive deps, as we only care about
-                // direct project deps during task hashing
-                if dep.indirect {
-                    continue;
-                }
-
                 output.dependencies.insert(
                     dep.module.module_path,
                     ManifestDependency::Version(UnresolvedVersionSpec::parse(dep.module.version)?),
@@ -275,7 +275,12 @@ pub fn setup_environment(
     // https://pkg.go.dev/cmd/go#hdr-Compile_and_install_packages_and_dependencies
     if !config.bins.is_empty() {
         let env = get_host_environment()?;
-        let mut bins_by_version = BTreeMap::default();
+
+        // Install where we check for binaries, and where tasks find them
+        let gobin = match &input.globals_dir {
+            Some(dir) => dir.to_real_path()?.map(|dir| dir.to_string()),
+            None => None,
+        };
 
         for bin in &config.bins {
             let (name, force, bin_args) = match bin {
@@ -295,25 +300,21 @@ pub fn setup_environment(
                 continue;
             }
 
-            let base_module = get_base_module(module);
+            // One command per bin, as Go requires every package in a
+            // `go install` to come from the same module and version
+            let mut command = ExecCommandInput::new("go", ["install", "-v"]);
+            command.args.extend(bin_args.iter().cloned());
+            command.args.push(name.to_owned());
+            command.cwd = Some(input.root.clone());
 
-            // Build flags apply to all packages in a command,
-            // so only group bins that share the same args
-            bins_by_version
-                .entry((format!("{base_module}@{version}"), bin_args))
-                .or_insert_with(Vec::new)
-                .push(name);
-        }
-
-        for ((version, bin_args), bins) in bins_by_version {
-            let mut args = vec!["install", "-v"];
-            args.extend(bin_args.iter().map(|arg| arg.as_str()));
-            args.extend(bins);
+            if let Some(gobin) = &gobin {
+                command.env.insert("GOBIN".into(), gobin.to_owned());
+            }
 
             output.commands.push(
-                ExecCommand::new(ExecCommandInput::new("go", args).cwd(input.root.to_owned()))
+                ExecCommand::new(command)
                     .cache(CacheStrategy::Memory)
-                    .label(format!("go-bins-{version}")),
+                    .label(format!("go-bin-{name}")),
             );
         }
     }
@@ -337,22 +338,9 @@ pub fn hash_task_contents(
     }))
 }
 
-fn get_base_module(module: &str) -> String {
-    let mut parts = module.split('/');
-    let mut base = String::new();
-
-    // github.com
-    base.push_str(parts.next().unwrap_or_default());
-    base.push('/');
-
-    // moonrepo
-    base.push_str(parts.next().unwrap_or_default());
-    base.push('/');
-
-    // plugins
-    base.push_str(parts.next().unwrap_or_default());
-
-    base
+// `GOWORK=off` disables workspace mode, like `workspaces: false`
+fn use_workspaces(config: &GoToolchainConfig) -> AnyResult<bool> {
+    Ok(config.workspaces && get_host_env_var("GOWORK")?.is_none_or(|value| value != "off"))
 }
 
 // The executable is named after the last segment of the module path,

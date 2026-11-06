@@ -11,6 +11,8 @@ pub struct GoWork {
 
 impl GoWork {
     pub fn add_module(&mut self, path: &str) {
+        let path = path.trim_matches(['"', '`']);
+
         if path.starts_with("..") {
             // Ignore since we only support child members
         } else {
@@ -21,64 +23,37 @@ impl GoWork {
     // https://go.dev/ref/mod#go-work-file
     pub fn parse(content: impl AsRef<str>) -> AnyResult<Self> {
         let mut work = Self::default();
-        let mut in_use_block = false;
-        let mut in_replace_block = false;
-        let mut in_ignore_block = false;
+        let mut block = None;
 
-        for mut line in content.as_ref().lines() {
-            if line.starts_with("//") {
-                continue;
-            } else if let Some(index) = line.find("//") {
-                line = &line[0..index];
-            }
+        for line in content.as_ref().lines() {
+            let line = line.split("//").next().unwrap_or_default().trim();
 
-            // go 1.2.3
-            if let Some(version) = line.strip_prefix("go ") {
-                work.version = Some(from_go_version(version));
+            if line.is_empty() {
                 continue;
             }
 
-            // use (), replace (), ignore ()
-            if line.starts_with("use (") {
-                in_use_block = true;
-            } else if line.starts_with("replace (") {
-                in_replace_block = true;
-            } else if line.starts_with("ignore (") {
-                in_ignore_block = true;
-            } else if line.trim() == ")" {
-                if in_use_block {
-                    in_use_block = false;
-                } else if in_replace_block {
-                    in_replace_block = false;
-                } else if in_ignore_block {
-                    in_ignore_block = false;
+            // Within a `use (`, `replace (`, or `ignore (` block
+            if let Some(directive) = block {
+                if line == ")" {
+                    block = None;
+                } else if directive == "use" {
+                    work.add_module(line);
                 }
-            }
 
-            // use <path>
-            if !in_use_block && let Some(path) = line.strip_prefix("use ") {
-                work.add_module(path);
                 continue;
             }
 
-            // replace <path>
-            if !in_replace_block && line.starts_with("replace ") {
-                // Ignore for now!
-                continue;
-            }
+            let (directive, value) = match line.find(|c: char| c.is_whitespace() || c == '(') {
+                Some(index) => (&line[..index], line[index..].trim()),
+                None => (line, ""),
+            };
 
-            // ignore <path>
-            if !in_ignore_block && line.starts_with("ignore ") {
-                continue;
-            }
-
-            // <path>
-            if in_use_block {
-                if let Some(path) = line.strip_prefix("\t") {
-                    work.add_module(path.trim());
-                } else if let Some(path) = line.strip_prefix("    ") {
-                    work.add_module(path.trim());
-                }
+            if value == "(" {
+                block = Some(directive);
+            } else if directive == "use" {
+                work.add_module(value);
+            } else if directive == "go" {
+                work.version = Some(from_go_version(value));
             }
         }
 

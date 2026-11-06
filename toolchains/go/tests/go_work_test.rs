@@ -72,4 +72,14 @@ use ./b
         assert_eq!(go_work.version.unwrap(), "1.24.0");
         assert_eq!(go_work.modules, vec!["a", "b"]);
     }
+
+    #[test]
+    fn parses_any_indentation_and_quotes() {
+        let content = "go 1.24.0\n\nuse(\n  ./two-space\n\t\"./quoted\"\n\t./ok // Comment\n)\n\nuse \"./single\"\n";
+
+        let go_work = GoWork::parse(content).unwrap();
+
+        assert_eq!(go_work.version.unwrap(), "1.24.0");
+        assert_eq!(go_work.modules, vec!["two-space", "quoted", "ok", "single"]);
+    }
 }

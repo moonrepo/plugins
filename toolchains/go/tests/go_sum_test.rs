@@ -18,24 +18,24 @@ mod go_sum {
             BTreeMap::from_iter([
                 (
                     "github.com/atotto/clipboard".into(),
-                    GoSumDependency {
+                    vec![GoSumDependency {
                         checksum: "h1:EH0zSVneZPSuFR11BlR9YppQTVDbh5+16AmcJi4g1z4=".into(),
                         version: VersionSpec::parse("0.1.4").unwrap()
-                    }
+                    }]
                 ),
                 (
                     "github.com/charmbracelet/bubbles".into(),
-                    GoSumDependency {
+                    vec![GoSumDependency {
                         checksum: "h1:9TdC97SdRVg/1aaXNVWfFH3nnLAwOXr8Fn6u6mfQdFs=".into(),
                         version: VersionSpec::parse("0.21.0").unwrap()
-                    }
+                    }]
                 ),
                 (
                     "github.com/charmbracelet/bubbletea".into(),
-                    GoSumDependency {
+                    vec![GoSumDependency {
                         checksum: "h1:JAMNLTbqMOhSwoELIr0qyP4VidFq72/6E9j7HHmRKQc=".into(),
                         version: VersionSpec::parse("1.3.5").unwrap()
-                    }
+                    }]
                 )
             ])
         );
@@ -64,24 +64,24 @@ mod go_sum {
             BTreeMap::from_iter([
                 (
                     "github.com/atotto/clipboard".into(),
-                    GoSumDependency {
+                    vec![GoSumDependency {
                         checksum: "h1:EH0zSVneZPSuFR11BlR9YppQTVDbh5+16AmcJi4g1z4=".into(),
                         version: VersionSpec::parse("0.1.4").unwrap()
-                    }
+                    }]
                 ),
                 (
                     "github.com/charmbracelet/bubbles".into(),
-                    GoSumDependency {
+                    vec![GoSumDependency {
                         checksum: "h1:9TdC97SdRVg/1aaXNVWfFH3nnLAwOXr8Fn6u6mfQdFs=".into(),
                         version: VersionSpec::parse("0.21.0").unwrap()
-                    }
+                    }]
                 ),
                 (
                     "github.com/charmbracelet/bubbletea".into(),
-                    GoSumDependency {
+                    vec![GoSumDependency {
                         checksum: "h1:JAMNLTbqMOhSwoELIr0qyP4VidFq72/6E9j7HHmRKQc=".into(),
                         version: VersionSpec::parse("1.3.5-abc+123").unwrap()
-                    }
+                    }]
                 )
             ])
         );
@@ -97,5 +97,27 @@ mod go_sum {
                 .trim(),
         )
         .unwrap();
+    }
+
+    #[test]
+    fn keeps_every_version() {
+        let go_sum = GoSum::parse(
+            "example.com/a v1.0.0 h1:old=\nexample.com/a v1.0.0/go.mod h1:oldmod=\nexample.com/a v1.1.0 h1:new=\n",
+        )
+        .unwrap();
+
+        assert_eq!(
+            go_sum.dependencies["example.com/a"],
+            [
+                GoSumDependency {
+                    checksum: "h1:old=".into(),
+                    version: VersionSpec::parse("1.0.0").unwrap()
+                },
+                GoSumDependency {
+                    checksum: "h1:new=".into(),
+                    version: VersionSpec::parse("1.1.0").unwrap()
+                }
+            ]
+        );
     }
 }

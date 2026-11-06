@@ -12,7 +12,9 @@ pub struct GoSumDependency {
 
 #[derive(Debug)]
 pub struct GoSum {
-    pub dependencies: BTreeMap<String, GoSumDependency>,
+    /// Every version listed for a module, as an untidied
+    /// `go.sum` keeps checksums for older versions
+    pub dependencies: BTreeMap<String, Vec<GoSumDependency>>,
 }
 
 impl GoSum {
@@ -42,13 +44,13 @@ impl GoSum {
                 continue;
             }
 
-            sum.dependencies.insert(
-                module.into(),
-                GoSumDependency {
+            sum.dependencies
+                .entry(module.into())
+                .or_default()
+                .push(GoSumDependency {
                     checksum: hash.into(),
                     version: VersionSpec::parse(version)?,
-                },
-            );
+                });
         }
 
         Ok(sum)

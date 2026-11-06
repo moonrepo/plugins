@@ -32,7 +32,7 @@ config_struct!(
         /// If vendored with the default name of "vendor", this setting can be omitted.
         pub vendor_dir: Option<String>,
 
-        /// Configured version to download and install`.
+        /// Configured version to download and install.
         pub version: Option<UnresolvedVersionSpec>,
 
         /// Support Go workspaces by locating and parsing `go.work` and `go.work.sum`

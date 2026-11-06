@@ -1,5 +1,42 @@
 # Changelog
 
+## Unreleased
+
+#### 💥 Breaking
+
+- Removed the `vendor` vendor directory. moon treated a missing `vendor` as a first install, so in
+  repos that don't commit `go mod vendor` output, dependencies were installed on every run, the
+  `tidyOnChange` step never ran, and `moon docker scaffold` dropped a committed `vendor`. As a
+  result, `tidyOnChange` now runs `go mod tidy` after `go.mod` or `go.sum` changes outside of CI.
+- Go workspaces are now installed with `go mod download` instead of `go work sync`, which rewrote
+  the `go.mod` and `go.sum` of each workspace member.
+- Each `bins` entry is now installed with its own `go install`, with `GOBIN` set to the globals
+  directory. Entries were previously grouped by their first 3 path segments, but Go requires every
+  package in a command to come from the same module, so pairs like `golang.org/x/tools/gopls` and
+  `golang.org/x/tools/cmd/goimports` failed.
+- Task hashes now include indirect requires from `go.mod`, as they're part of the build.
+
+#### 🚀 Updates
+
+- Installs are skipped when `vendor/modules.txt` exists, as Go builds from `vendor`.
+- `GOWORK=off` now disables workspace support, as it does for Go.
+- Added `scaffold_docker` support. The configs phase now copies the `go.mod` and `go.sum` of
+  `go.work` members and local `replace` targets that aren't projects, which `go mod download`
+  requires.
+- `go list` now runs with `-e`, so a single import that can't be resolved no longer drops all of a
+  project's inferred relationships. Other failures are logged as a warning.
+
+#### 🐞 Fixes
+
+- Fixed the default Docker image for partial versions and requirements, like `1.24` or `^1.22.0`,
+  which became invalid tags like `golang:~1.24`.
+- Fixed the globals directory not being on `PATH` for tasks when no `version` is configured, so
+  binaries from `bins` weren't found.
+- Fixed a nested module without a `go.sum` resolving to its parent module's dependency root.
+- Fixed `go.work` parsing for quoted paths, `use(`, and indentation other than tabs or 4 spaces.
+- Fixed `go.sum` parsing keeping only the last version of a module.
+- Updated `go_tool` with the fixes below, which the toolchain uses for tier 3.
+
 ## 1.5.3
 
 #### 🚀 Updates

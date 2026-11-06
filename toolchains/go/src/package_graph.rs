@@ -1,16 +1,25 @@
 use crate::config::GoToolchainConfig;
 use crate::go_mod::{GoMod, ModuleReplacement, Replacement, parse_go_mod};
+use extism_pdk::*;
 use moon_config::DependencyScope;
-use moon_pdk::exec;
+use moon_pdk::{HostLogInput, HostLogTarget, exec, host_log};
 use moon_pdk_api::*;
 use starbase_utils::fs;
 use std::collections::{BTreeMap, BTreeSet};
 
+#[host_fn]
+extern "ExtismHost" {
+    fn host_log(input: Json<HostLogInput>);
+}
+
 // The `go list` half of the package graph: every package a directory's
 // packages depend on, as canonical import paths.
 fn execute_go_list(dir: &VirtualPath, packages: &[String], test: bool) -> AnyResult<Vec<String>> {
+    // `-e` reports packages that fail to load, like an import that can't
+    // be resolved, instead of failing the whole command
     let mut args = vec![
         "list",
+        "-e",
         "-deps",
         "-f",
         "{{if .Module}}{{.ImportPath}}{{end}}",
@@ -33,7 +42,12 @@ fn execute_go_list(dir: &VirtualPath, packages: &[String], test: bool) -> AnyRes
     let result = exec(ExecCommandInput::pipe("go", args).cwd(dir.to_owned()))?;
 
     if result.exit_code != 0 {
-        return Ok(vec![]);
+        host_log!(
+            warn,
+            "Failed to infer Go relationships for <path>{}</path>: {}",
+            dir,
+            result.stderr.lines().next().unwrap_or_default()
+        );
     }
 
     Ok(result
@@ -472,7 +486,7 @@ impl GoPackageGraph {
 
 // Lexically resolve a relative path (`./`, `../`) against a workspace
 // relative source, returning `None` when it escapes the workspace
-fn resolve_source_path(base: &str, path: &str) -> Option<String> {
+pub fn resolve_source_path(base: &str, path: &str) -> Option<String> {
     if path.starts_with('/') {
         return None;
     }
