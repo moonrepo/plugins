@@ -95,6 +95,12 @@ pub fn parse_version_file(
             }
         }
     } else if let Some(constraint) = extract_version_from_text(&input.content) {
+        // nvm's and fnm's latest LTS, which proto can't parse as an alias
+        let constraint = match constraint {
+            "lts/*" | "lts-*" => "lts",
+            other => other,
+        };
+
         version = Some(UnresolvedVersionSpec::parse(constraint)?);
     }
 
@@ -295,7 +301,10 @@ pub fn download_prebuilt(
         NAME,
         env,
         permutations! [
-            HostOS::Linux => [HostArch::X64, HostArch::Arm64, HostArch::Arm, HostArch::Powerpc64, HostArch::S390x],
+            HostOS::Linux => [
+                HostArch::X64, HostArch::Arm64, HostArch::Arm, HostArch::Powerpc64, HostArch::S390x,
+                HostArch::Riscv64, HostArch::LongArm64
+            ],
             HostOS::MacOS => [HostArch::X64, HostArch::Arm64],
             HostOS::Windows => [HostArch::X64, HostArch::X86, HostArch::Arm64],
         ],
@@ -303,12 +312,15 @@ pub fn download_prebuilt(
 
     let config = get_tool_config::<NodeToolConfig>()?;
     let mut version = input.context.version;
-    let mut host = config.dist_url;
     let mut channel = "release";
+
+    // Only built by https://github.com/nodejs/unofficial-builds
+    let mut unofficial = matches!(env.arch, HostArch::Riscv64 | HostArch::LongArm64);
 
     let mut arch: String = match env.arch {
         HostArch::Arm => "armv7l".into(),
         HostArch::Arm64 => "arm64".into(),
+        HostArch::LongArm64 => "loong64".into(),
         HostArch::Powerpc64 => {
             if env.os.is_linux() {
                 "ppc64le".into()
@@ -316,30 +328,32 @@ pub fn download_prebuilt(
                 "ppc64".into()
             }
         }
+        HostArch::Riscv64 => "riscv64".into(),
         HostArch::S390x => "s390x".into(),
         HostArch::X64 => "x64".into(),
         HostArch::X86 => "x86".into(),
         _ => unreachable!(),
     };
 
-    // Arm64 support was added after v16, but M1/M2 machines can
-    // run x64 binaries via Rosetta. This is a compat hack!
-    if env.arch == HostArch::Arm64 {
-        let m1_compat_version = Version::new(16, 0, 0);
-
-        if version.as_version().unwrap_or(&m1_compat_version).major < 16 {
-            arch = "x64".into();
-        }
+    // Arm64 builds start at v16 for macOS and v20 for Windows, but both
+    // can run x64 builds through Rosetta or emulation. Linux can't!
+    if env.arch == HostArch::Arm64
+        && let Some(version) = version.as_version()
+        && ((env.os.is_mac() && version.major < 16) || (env.os.is_windows() && version.major < 20))
+    {
+        arch = "x64".into();
     }
 
-    // Support unofficial MUSL builds
-    // https://github.com/nodejs/unofficial-builds
-    if env.os.is_linux()
-        && env.libc == HostLibc::Musl
-        && (env.arch == HostArch::X64 || env.arch == HostArch::Arm64)
-    {
+    if env.os.is_linux() && env.libc == HostLibc::Musl {
+        if !matches!(env.arch, HostArch::X64 | HostArch::Arm64) {
+            return Err(plugin_err!(
+                "No pre-built Node.js archive is available for musl Linux on {}.",
+                env.arch
+            ));
+        }
+
         arch.push_str("-musl");
-        host = config.dist_url_unofficial;
+        unofficial = true;
     }
 
     // When canary, extract the latest version from the index
@@ -360,7 +374,16 @@ pub fn download_prebuilt(
 
         channel = "nightly";
         version = VersionSpec::parse(&entry.version)?;
+
+        // Found in the official index, so it doesn't exist on the unofficial host
+        unofficial = false;
     }
+
+    let host = if unofficial {
+        config.dist_url_unofficial
+    } else {
+        config.dist_url
+    };
 
     let prefix = match env.os {
         HostOS::Linux => format!("node-v{version}-linux-{arch}"),
@@ -458,7 +481,16 @@ pub fn post_install(Json(input): Json<InstallHook>) -> FnResult<()> {
         args.extend(passthrough_args);
     }
 
-    exec_streamed("proto", args)?;
+    // The `bundled` alias resolves against this variable, and otherwise
+    // the `node` that's detected in the working directory
+    let mut command = ExecCommandInput::inherit("proto", args);
+
+    command.env.insert(
+        "PROTO_NODE_VERSION".into(),
+        input.context.version.to_string(),
+    );
+
+    exec(command)?;
 
     Ok(())
 }

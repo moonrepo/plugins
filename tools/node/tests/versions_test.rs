@@ -268,6 +268,31 @@ mod node_tool {
         );
     }
 
+    #[tokio::test(flavor = "multi_thread")]
+    async fn parses_latest_lts_wildcard() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("node-test").await;
+
+        for (file, content) in [
+            (".nvmrc", "lts/*"),
+            (".nvmrc", "lts-*\n"),
+            (".node-version", "lts/*"),
+        ] {
+            assert_eq!(
+                plugin
+                    .parse_version_file(ParseVersionFileInput {
+                        content: content.into(),
+                        file: file.into(),
+                        ..Default::default()
+                    })
+                    .await,
+                ParseVersionFileOutput {
+                    version: Some(UnresolvedVersionSpec::Alias("lts".into())),
+                }
+            );
+        }
+    }
+
     mod pin_version {
         use super::*;
 
