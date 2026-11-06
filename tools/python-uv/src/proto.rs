@@ -1,4 +1,5 @@
 use extism_pdk::*;
+use lang_python_common::parse_pep440_spec;
 use proto_pdk::*;
 use std::collections::HashMap;
 use toml::Value;
@@ -37,21 +38,11 @@ pub fn parse_version_file(
 ) -> FnResult<Json<ParseVersionFileOutput>> {
     let mut version = None;
 
-    // https://peps.python.org/pep-0440/#version-specifiers
-    fn parse_pep(version: &str) -> AnyResult<UnresolvedVersionSpec> {
-        Ok(UnresolvedVersionSpec::parse(
-            version
-                .replace("~=", "~")
-                .replace("===", "=")
-                .replace("==", "="),
-        )?)
-    }
-
     if input.file == "uv.toml" {
         if let Ok(uv_toml) = toml::from_str::<Value>(&input.content)
             && let Some(Value::String(constraint)) = uv_toml.get("required-version")
         {
-            version = Some(parse_pep(constraint)?);
+            version = Some(parse_pep440_spec(constraint)?);
         }
     } else if input.file == "pyproject.toml"
         && let Ok(project_toml) = toml::from_str::<Value>(&input.content)
@@ -59,7 +50,7 @@ pub fn parse_version_file(
         && let Some(uv_field) = tool_field.get("uv")
         && let Some(Value::String(constraint)) = uv_field.get("required-version")
     {
-        version = Some(parse_pep(constraint)?);
+        version = Some(parse_pep440_spec(constraint)?);
     }
 
     Ok(Json(ParseVersionFileOutput { version }))
