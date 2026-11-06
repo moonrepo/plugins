@@ -4,6 +4,10 @@
 //! evaluate them. It only extracts literal gem declarations, so moon can infer
 //! project-to-project edges and hash gem versions in Ruby monorepos.
 
+mod parser;
+
+use parser::{Call, Statement, Value};
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Gem {
     pub name: String,
@@ -24,182 +28,102 @@ pub struct GemspecDependency {
     pub development: bool,
 }
 
-enum Block {
-    Group(Vec<String>),
-    Path(String),
-    Other,
-}
-
 /// Parse literal gem declarations from a `Gemfile`, preserving Bundler group
 /// names verbatim. The caller decides how to map groups onto moon scopes.
 /// Local gems are declared with `path:`, `path "<dir>" do` blocks, and
 /// `gemspec path:`.
 pub fn parse_gems(content: &str) -> Vec<Gem> {
     let mut gems = vec![];
-    let mut blocks: Vec<Block> = vec![];
 
-    for line in join_continued_lines(content) {
-        if line == "end" {
-            blocks.pop();
-            continue;
-        }
-
-        // Keep non-group blocks on the stack too, so that their
-        // `end` doesn't accidentally pop an enclosing group
-        if let Some(call) = strip_block_opener(&line) {
-            blocks.push(if let Some(args) = after_bare_call(call, "group") {
-                Block::Group(parse_groups(args))
-            } else if let Some(args) = after_bare_call(call, "path")
-                && let Some(dir) = split_args(args).first().copied().and_then(quoted)
-            {
-                Block::Path(dir.to_owned())
-            } else {
-                Block::Other
-            });
-            continue;
-        }
-
-        if starts_ruby_block(&line) {
-            blocks.push(Block::Other);
-            continue;
-        }
-
-        let gem = if let Some(args) = after_bare_call(&line, "gem") {
-            let block_dir = blocks.iter().rev().find_map(|block| match block {
-                Block::Path(dir) => Some(dir.as_str()),
-                _ => None,
-            });
-
-            parse_gem_call(args, block_dir)
-        } else if let Some(args) = after_bare_call(&line, "gemspec") {
-            parse_gemspec_call(args)
-        } else {
-            None
-        };
-
-        if let Some(mut gem) = gem {
-            for block in &blocks {
-                if let Block::Group(groups) = block {
-                    for group in groups {
-                        if !gem.groups.contains(group) {
-                            gem.groups.push(group.clone());
-                        }
-                    }
-                }
-            }
-
-            gems.push(gem);
-        }
-    }
+    collect_gems(&parser::parse(content), &Scope::default(), &mut gems);
 
     gems
 }
 
-/// Strip comments, and join calls that continue onto the next line
-/// (a trailing `,` or `\`) into a single line.
-fn join_continued_lines(content: &str) -> Vec<String> {
-    let mut lines = vec![];
-    let mut current = String::new();
-
-    for line in content.lines() {
-        let line = strip_comment(line).trim();
-
-        if line.is_empty() {
-            continue;
-        }
-
-        if !current.is_empty() {
-            current.push(' ');
-        }
-
-        current.push_str(line.trim_end_matches('\\').trim_end());
-
-        if !line.ends_with(',') && !line.ends_with('\\') {
-            lines.push(std::mem::take(&mut current));
-        }
-    }
-
-    if !current.is_empty() {
-        lines.push(current);
-    }
-
-    lines
+/// The `group` and `path` blocks a gem is declared in.
+#[derive(Clone, Default)]
+struct Scope<'a> {
+    groups: Vec<String>,
+    path: Option<&'a str>,
 }
 
-/// Return the call before a trailing `do` or `do |args|`.
-fn strip_block_opener(line: &str) -> Option<&str> {
-    let call = match line.strip_suffix('|') {
-        Some(rest) => rest.rsplit_once(" do |")?.0,
-        None => line.strip_suffix(" do")?,
-    };
+fn collect_gems<'a>(statements: &'a [Statement], scope: &Scope<'a>, gems: &mut Vec<Gem>) {
+    for statement in statements {
+        let mut inner = scope.clone();
 
-    Some(call.trim_end())
+        // Gems in other blocks and conditionals are still declared
+        let body = match statement {
+            Statement::Call(call) => {
+                if call.receiver.is_none() {
+                    match call.name.as_str() {
+                        "gem" => gems.extend(parse_gem_call(call, scope)),
+                        "gemspec" => gems.extend(parse_gemspec_call(call)),
+                        "group" => {
+                            for arg in &call.args {
+                                push_group_names(&mut inner.groups, arg);
+                            }
+                        }
+                        "path" => inner.path = call.args.first().and_then(Value::as_string),
+                        _ => {}
+                    };
+                }
+
+                call.block.as_deref()
+            }
+            Statement::Other(body) => Some(body.as_slice()),
+            Statement::Assign { .. } => None,
+        };
+
+        if let Some(body) = body {
+            collect_gems(body, &inner, gems);
+        }
+    }
 }
 
-fn parse_gem_call(args: &str, block_dir: Option<&str>) -> Option<Gem> {
-    let mut name = None;
-    let mut path = None;
+fn parse_gem_call(call: &Call, scope: &Scope) -> Option<Gem> {
+    let name = call.args.first()?.as_string()?.to_owned();
     let mut groups = vec![];
 
-    for part in split_args(args) {
-        let part = part.trim();
-
-        if name.is_none()
-            && let Some(value) = quoted(part)
-        {
-            name = Some(value.to_owned());
-            continue;
-        }
-
-        if let Some((key, value)) = split_option(part) {
-            match key {
-                "path" => path = quoted(value.trim()).map(str::to_owned),
-                "group" | "groups" => {
-                    for group in parse_groups(value) {
-                        if !groups.contains(&group) {
-                            groups.push(group);
-                        }
-                    }
-                }
-                _ => {}
-            }
+    for key in ["group", "groups"] {
+        if let Some(value) = call.get_option(key) {
+            push_group_names(&mut groups, value);
         }
     }
 
-    let name = name?;
+    for group in &scope.groups {
+        if !groups.contains(group) {
+            groups.push(group.clone());
+        }
+    }
 
     // Bundler finds gems in a path block by their gemspec name,
     // which is typically a directory of the same name
-    let path =
-        path.or_else(|| block_dir.map(|dir| format!("{}/{name}", dir.trim_end_matches('/'))));
+    let path = call
+        .get_option("path")
+        .and_then(Value::as_string)
+        .map(str::to_owned)
+        .or_else(|| {
+            scope
+                .path
+                .map(|dir| format!("{}/{name}", dir.trim_end_matches('/')))
+        });
 
     Some(Gem { name, path, groups })
 }
 
 /// A bare `gemspec` is the current project, so only `gemspec path:`
 /// references another gem.
-fn parse_gemspec_call(args: &str) -> Option<Gem> {
-    let mut name = None;
-    let mut path = None;
-
-    for part in split_args(args) {
-        if let Some((key, value)) = split_option(part.trim()) {
-            match key {
-                "name" => name = quoted(value).map(str::to_owned),
-                "path" => path = quoted(value).map(str::to_owned),
-                _ => {}
-            }
-        }
-    }
-
-    let path = path?;
-    let name = name.unwrap_or_else(|| {
-        path.trim_end_matches('/')
+fn parse_gemspec_call(call: &Call) -> Option<Gem> {
+    let path = call.get_option("path")?.as_string()?.to_owned();
+    let name = match call.get_option("name").and_then(Value::as_string) {
+        Some(name) => name.to_owned(),
+        None => path
+            .trim_end_matches('/')
             .rsplit('/')
             .next()
             .unwrap_or_default()
-            .to_owned()
-    });
+            .to_owned(),
+    };
 
     Some(Gem {
         name,
@@ -208,187 +132,70 @@ fn parse_gemspec_call(args: &str) -> Option<Gem> {
     })
 }
 
+fn push_group_names(groups: &mut Vec<String>, value: &Value) {
+    match value {
+        Value::String(name) | Value::Symbol(name) => {
+            if !groups.contains(name) {
+                groups.push(name.clone());
+            }
+        }
+        Value::Array(values) => {
+            for value in values {
+                push_group_names(groups, value);
+            }
+        }
+        _ => {}
+    }
+}
+
 /// Parse the literal name and dependencies from a gemspec, which are
 /// set on the block variable, like `spec.add_dependency "billing"`.
 pub fn parse_gemspec(content: &str) -> Gemspec {
     let mut gemspec = Gemspec::default();
 
-    for line in join_continued_lines(content) {
-        let Some((var, call)) = line.split_once('.') else {
-            continue;
-        };
-
-        if var.is_empty() || !var.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
-            continue;
-        }
-
-        if let Some(value) = call
-            .strip_prefix("name")
-            .and_then(|rest| rest.trim_start().strip_prefix('='))
-            .filter(|value| !value.starts_with('='))
-        {
-            gemspec.name = quoted(value.trim().trim_end_matches(".freeze")).map(str::to_owned);
-            continue;
-        }
-
-        for (method, development) in [
-            ("add_dependency", false),
-            ("add_runtime_dependency", false),
-            ("add_development_dependency", true),
-        ] {
-            if let Some(args) = after_bare_call(call, method)
-                && let Some(name) = split_args(args).first().copied().and_then(quoted)
-            {
-                gemspec.dependencies.push(GemspecDependency {
-                    name: name.to_owned(),
-                    development,
-                });
-            }
-        }
-    }
+    collect_gemspec(&parser::parse(content), &mut gemspec);
 
     gemspec
 }
 
-fn parse_groups(args: &str) -> Vec<String> {
-    let args = args.trim();
-    let args = args
-        .strip_prefix('[')
-        .and_then(|args| args.strip_suffix(']'))
-        .unwrap_or(args);
-
-    split_args(args)
-        .into_iter()
-        .filter_map(|part| group_name(part.trim()))
-        .collect()
-}
-
-fn group_name(value: &str) -> Option<String> {
-    let value = value.trim().trim_end_matches(" do").trim();
-
-    if let Some(symbol) = value.strip_prefix(':') {
-        let symbol = symbol.trim();
-        if !symbol.is_empty()
-            && symbol
-                .chars()
-                .all(|c| c.is_ascii_alphanumeric() || c == '_')
-        {
-            return Some(symbol.to_owned());
-        }
-    }
-
-    quoted(value).map(str::to_owned)
-}
-
-fn after_bare_call<'a>(line: &'a str, name: &str) -> Option<&'a str> {
-    let rest = line.strip_prefix(name)?;
-
-    if let Some(args) = rest.strip_prefix('(') {
-        return Some(args.trim_end_matches(')').trim());
-    }
-
-    let first = rest.chars().next()?;
-    first.is_whitespace().then(|| rest.trim())
-}
-
-/// Recognize `key: value` and `:key => value` option tokens.
-fn split_option(part: &str) -> Option<(&str, &str)> {
-    if let Some((key, val)) = part.split_once(':') {
-        let key = key.trim();
-        if !key.is_empty() && key.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
-            return Some((key, val.trim()));
-        }
-    }
-
-    if let Some((key, val)) = part.split_once("=>") {
-        let key = key
-            .trim()
-            .trim_start_matches(':')
-            .trim_matches(|c| c == '\'' || c == '"');
-        if !key.is_empty() && key.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
-            return Some((key, val.trim()));
-        }
-    }
-
-    None
-}
-
-fn quoted(value: &str) -> Option<&str> {
-    let value = value.trim();
-    if value.len() < 2 {
-        return None;
-    }
-
-    let quote = value.as_bytes()[0] as char;
-    if quote != '\'' && quote != '"' {
-        return None;
-    }
-
-    value
-        .strip_prefix(quote)
-        .and_then(|value| value.strip_suffix(quote))
-}
-
-fn strip_comment(line: &str) -> &str {
-    let mut quote = None;
-    let mut escaped = false;
-
-    for (idx, ch) in line.char_indices() {
-        if escaped {
-            escaped = false;
-            continue;
-        }
-
-        match (quote, ch) {
-            (Some(_), '\\') => escaped = true,
-            (Some(q), c) if c == q => quote = None,
-            (None, '\'' | '"') => quote = Some(ch),
-            (None, '#') => return &line[..idx],
-            _ => {}
-        }
-    }
-
-    line
-}
-
-fn starts_ruby_block(line: &str) -> bool {
-    [
-        "if ", "unless ", "case ", "begin", "while ", "until ", "for ", "def ",
-    ]
-    .iter()
-    .any(|prefix| line.starts_with(prefix))
-}
-
-fn split_args(args: &str) -> Vec<&str> {
-    let mut parts = vec![];
-    let mut quote = None;
-    let mut escaped = false;
-    let mut depth = 0u32;
-    let mut start = 0;
-
-    for (idx, ch) in args.char_indices() {
-        if escaped {
-            escaped = false;
-            continue;
-        }
-
-        match (quote, ch) {
-            (Some(_), '\\') => escaped = true,
-            (Some(q), c) if c == q => quote = None,
-            (Some(_), _) => {}
-            (None, '\'' | '"') => quote = Some(ch),
-            (None, '[' | '(' | '{') => depth += 1,
-            (None, ']' | ')' | '}') => depth = depth.saturating_sub(1),
-            (None, ',') if depth == 0 => {
-                parts.push(args[start..idx].trim());
-                start = idx + ch.len_utf8();
+fn collect_gemspec(statements: &[Statement], gemspec: &mut Gemspec) {
+    for statement in statements {
+        match statement {
+            Statement::Assign {
+                receiver: Some(_),
+                name,
+                value: Value::String(value),
+            } if name == "name" => {
+                gemspec.name = Some(value.clone());
             }
-            _ => {}
+            Statement::Call(call) => {
+                let development = match call.name.as_str() {
+                    "add_dependency" | "add_runtime_dependency" => Some(false),
+                    "add_development_dependency" => Some(true),
+                    _ => None,
+                };
+
+                // Older generated gemspecs repeat dependencies in
+                // fallback branches, so the first one wins
+                if call.receiver.is_some()
+                    && let Some(development) = development
+                    && let Some(name) = call.args.first().and_then(Value::as_string)
+                    && !gemspec.dependencies.iter().any(|dep| dep.name == name)
+                {
+                    gemspec.dependencies.push(GemspecDependency {
+                        name: name.to_owned(),
+                        development,
+                    });
+                }
+
+                if let Some(body) = &call.block {
+                    collect_gemspec(body, gemspec);
+                }
+            }
+            Statement::Other(body) => collect_gemspec(body, gemspec),
+            Statement::Assign { .. } => {}
         }
     }
-
-    parts.push(args[start..].trim());
-    parts
 }
 
 #[cfg(test)]
@@ -572,6 +379,28 @@ gem "billing", path: "../libs/billing"
     }
 
     #[test]
+    fn captures_gems_in_conditionals_and_one_line_blocks() {
+        let gems = parse_path_gems(
+            r#"
+if ENV["EDGE"]
+  gem "edge", path: "../edge"
+end
+gem "modifier", path: "../modifier" if ENV["MODIFIER"]
+group :test do gem "inline", path: "../inline" end
+install_if -> { RUBY_PLATFORM =~ /darwin/ } do
+  gem "mac", path: "../mac"
+end
+"#,
+        );
+
+        assert_eq!(
+            gems.iter().map(|gem| gem.name.as_str()).collect::<Vec<_>>(),
+            ["edge", "modifier", "inline", "mac"]
+        );
+        assert_eq!(gems[2].groups, ["test"]);
+    }
+
+    #[test]
     fn captures_gems_without_paths() {
         let gems = parse_gems(
             r#"
@@ -620,6 +449,41 @@ end
                 },
                 GemspecDependency {
                     name: "money".into(),
+                    development: false,
+                },
+                GemspecDependency {
+                    name: "rspec".into(),
+                    development: true,
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn parses_generated_gemspecs() {
+        let gemspec = parse_gemspec(
+            r#"
+# -*- encoding: utf-8 -*-
+Gem::Specification.new do |s|
+  s.name = "billing".freeze
+  s.summary = %q{Bills things}
+  s.add_runtime_dependency(%q<core>.freeze, [">= 0".freeze])
+
+  if s.respond_to? :add_runtime_dependency then
+    s.add_development_dependency(%q<rspec>.freeze, ["~> 3".freeze])
+  else
+    s.add_dependency(%q<rspec>.freeze, ["~> 3".freeze])
+  end
+end
+"#,
+        );
+
+        assert_eq!(gemspec.name.as_deref(), Some("billing"));
+        assert_eq!(
+            gemspec.dependencies,
+            [
+                GemspecDependency {
+                    name: "core".into(),
                     development: false,
                 },
                 GemspecDependency {

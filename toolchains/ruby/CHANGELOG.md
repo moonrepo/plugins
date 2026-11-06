@@ -48,6 +48,12 @@
 - Fixed `moon init` pre-filling an invalid `version` from a `.ruby-version` for another engine, like
   `jruby-9.4.5.0`.
 
+#### ⚙️ Internal
+
+- Replaced the line-based Gemfile and gemspec scanner with a [winnow](https://docs.rs/winnow)
+  parser. It also finds gems in one-line blocks, like `group :test do gem "rspec" end`, local gems
+  with an `if` or `unless` modifier, and dependencies in generated gemspecs, like `%q<rake>`.
+
 ## 0.1.2
 
 #### 🚀 Updates

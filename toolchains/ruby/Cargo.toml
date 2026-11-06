@@ -29,6 +29,7 @@ schematic = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 starbase_utils = { workspace = true }
+winnow = "1.0.4"
 
 [dev-dependencies]
 moon_common = { workspace = true }
