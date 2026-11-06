@@ -53,6 +53,9 @@ checksum files exist for every archive.
 | D5 (#16): check pinned bins against the installed version?            | Yes, with `go version -m`, for exact semver pins only            |
 | D6 (#17): key the project graph cache on `.go` sources?               | Yes, together with #19 so that rebuilds stay cheap               |
 
+D1–D6 were accepted as recommended. Phase 2 was checked live with moon 2.6.4 in the single-module
+repo from "Testing"; the results are under each item.
+
 ## Phase 1: clear-cut fixes
 
 ### #1 Stop treating `vendor/` as the install directory
@@ -317,9 +320,9 @@ live in a project. Live check: `moon docker scaffold` copied a non-project `tool
 
 ### #13 Make `go.version` control which Go runs tasks (D2)
 
-- [ ] Set `GOTOOLCHAIN=local` for tasks
-- [ ] Set it on setup and install commands
-- [ ] Changelog
+- [x] Set `GOTOOLCHAIN=local` for tasks
+- [x] Set it on setup and install commands
+- [x] Changelog
 
 **Problem:** since Go 1.21, `go` switches toolchains on its own: when `go.mod` or `go.work` requires
 a newer Go, it downloads that release into the module cache and runs it. Confirmed: with `go 1.27.0`
@@ -338,11 +341,15 @@ proto user. That's broader than this audit.
 
 **Changelog:** needs a callout, since mismatched repos now fail instead of downloading.
 
+**Done:** live, with `version: '1.26.2'` and `go 1.27.0` in `go.mod`, the task failed with
+`go.mod requires go >= 1.27.0 (running go 1.26.2; GOTOOLCHAIN=local)`. A host `GOTOOLCHAIN=auto`
+was respected, and Go tried to download 1.27.0.
+
 ### #14 Single-module repos get no install or setup action (D3)
 
-- [ ] Report members for a lone module root
-- [ ] Make `parse_manifest` tolerate invalid files
-- [ ] Tests
+- [x] Report members for a lone module root
+- [x] Make `parse_manifest` tolerate invalid files
+- [x] Tests
 
 **Problem:** without a `go.work`, `locate_dependencies_root` reports no `members`. moon's
 `in_dependencies_workspace` then only accepts the root itself (moon `toolchain_plugin.rs:164`), so
@@ -363,10 +370,13 @@ so `parse_manifest` should log a warning and return nothing instead of failing t
 **Alternative:** a moon change that treats every directory under a member-less root as covered, for
 toolchains that opt in.
 
+**Done:** live, `moon run a:hello` now adds `SetupEnvironment(go)` and `InstallDependencies(go)`
+for `apps/a`, where before it only added `SetupToolchain(go)`.
+
 ### #15 Single-module task hashes miss dependency bumps (D4)
 
-- [ ] Hash the owning module's requires
-- [ ] Tests
+- [x] Hash the owning module's requires
+- [x] Tests
 
 **Problem:** moon only hashes dependencies from a manifest in the project's own directory (moon
 `task_hashing.rs:373`). Projects in a single-module repo have none, so `go get -u` changes nothing
@@ -382,10 +392,14 @@ through another member's requires.
 **Tests:** a project below the root module gets the root's requires; a project with its own
 `go.mod` gets none.
 
+**Done:** live, the task's inputs were only `**/*` and moon's configs, and downgrading
+`rsc.io/quote` in the root `go.mod` changed its hash; `moon hash` showed only that version
+changing.
+
 ### #16 Check pinned bins with `go version -m` (D5)
 
-- [ ] Compare installed module versions
-- [ ] Update tests
+- [x] Compare installed module versions
+- [x] Update tests
 
 **Problem:** `is_bin_installed` (`tier2.rs:243-264`) always includes bins pinned to a version. moon
 fingerprints the returned commands (`setup_environment.rs:101`), so an unchanged command list never
@@ -400,10 +414,16 @@ behavior. This is one process per pinned bin per setup.
 **Tests:** flip `always_installs_versioned_bins` to skip a matching install. Use a stub binary
 script, since `go version -m` needs a real Go binary, or skip without `go`.
 
+**Done:** the `mod` line is read by a grammar in `parsers/build_info.rs`, which has unit tests.
+Integration tests cover a missing binary, a file that isn't a Go binary, and a branch pin; a
+matching binary can't be built portably in CI. Live, `gopls@v0.21.1` with v0.21.1 installed ran no
+`go install`, while `@v0.20.0` emitted one. A `GOBIN` outside the workspace and home directory
+isn't visible to the plugin, so its bins are always installed, as before.
+
 ### #17 Go source edits don't refresh the project graph (D6)
 
-- [ ] Report Go sources as graph inputs when `go list` is used
-- [ ] Changelog
+- [x] Report Go sources as graph inputs when `go list` is used
+- [x] Changelog
 
 **Problem:** edges come from `import` statements, but moon caches the graph by moon configs,
 manifests and the plugin's `input_files` (moon `workspace_cache.rs:200`), which are only `go.mod` and
@@ -420,10 +440,15 @@ so land #19 first or together.
 **Not covered:** moon hashes the input list saved by the previous build, so a new `.go` file isn't
 seen until another input changes. That needs glob inputs from moon (see "Outside this repo").
 
+**Done:** instead of a directory walk, the inputs are the files `go list` reports for each package
+(`GoFiles` and `CgoFiles`, plus the test files when tests are inferred), which already skip nested
+modules, `vendor` and `testdata`. Live, after `apps/a/main.go` started importing `libs/c`,
+`moon project a` showed `c` right away, with `go.mod` untouched.
+
 ### #18 Leave committed `vendor/` alone in `docker prune` (D1)
 
-- [ ] Stop deleting `vendor/`
-- [ ] Deprecate `vendorDir`
+- [x] Stop deleting `vendor/`
+- [x] Deprecate `vendorDir`
 
 **Problem:** after #1, scaffolding keeps `vendor/`, but `prune_docker` still deletes it when
 `deleteVendorDirectories` is on (`tier1.rs:79-93`), which is moon's default. The production install
@@ -433,11 +458,13 @@ repos keep for offline, reproducible builds, and the module cache isn't any smal
 **Recommended:** make `prune_docker` a no-op and deprecate `vendorDir`. Go only builds from
 `vendor/` at the module root anyway, so the setting adds nothing.
 
+**Done:** `prune_docker` is removed, so moon skips it.
+
 ## Phase 3: lower priority
 
 ### #19 One `go list` per module
 
-- [ ] Batch inference per module root
+- [x] Batch inference per module root
 
 `dependencies_from_go_list` runs `go list -deps` once per project, and twice with test inference
 (`package_graph.rs:420-470`). Each call loads the whole module, and `-deps` gives transitive edges:
@@ -446,6 +473,13 @@ if A imports B and B imports C, A also gets an edge to C. A single
 module root gives every package's direct imports, production and test, in one call. Map each
 package to its project by the existing longest-prefix match. That's needed for #17, and makes edges
 direct, as in the other toolchains. `inferRelationshipsPackages` still sets the patterns.
+
+**Done with #17:** `go list -e -json=…` is parsed as a JSON stream. Packages are assigned to
+projects by directory rather than import path: the package's `Dir` relative to its `Module.Dir`,
+both from Go, so symlinks in the workspace path don't matter. A module in a `v2` folder without
+the suffix in its `module` directive shares its import paths with v1, but not its directory.
+Project patterns are scoped to each project's directory within the module. Projects outside every
+module (previously reached through a `go.work` root) get no inferred edges.
 
 ### #20 Hash the target platform, not just the host
 
@@ -483,8 +517,7 @@ doesn't change the hash. Add the ones that are set on the host.
 
 ## Release
 
-- `go_toolchain`: Phase 1 changes when installs run, stops `go.mod` rewrites, and makes
-  `tidyOnChange` work, so ship it as 1.6.0 with changelog callouts. Phase 2 changes which Go runs,
-  task hashes and graph inputs, so ship it as 1.7.0 with callouts.
+- `go_toolchain`: Phases 1 and 2 landed together. They change when installs run, which Go runs, task
+  hashes and graph inputs, so ship them as 1.6.0 with the changelog's callouts.
 - `go_tool`: #6, #7, #8 and #10 change installs and version detection, so ship them as 0.17.0. The
   toolchain re-exports `go_tool`, so tool fixes also need a toolchain release.
