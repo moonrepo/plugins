@@ -42,7 +42,7 @@ Versions without a prefix resolve against the default `openjdk` distribution. Ve
 | GraalVM Community Edition (JDK 19) | `graalvm-ce19`      |                             |
 | GraalVM Community Edition (JDK 20) | `graalvm-ce20`      |                             |
 | GraalVM Community                  | `graalvm-community` | `graalce`                   |
-| JetBrains Runtime                  | `jetbrains`         |                             |
+| JetBrains Runtime                  | `jetbrains`         | `jbr`                       |
 | Tencent Kona                       | `kona`              | `tencent`                   |
 | BellSoft Liberica                  | `liberica`          | `librca`                    |
 | BellSoft Liberica Native Image Kit | `liberica-native`   | `nik`                       |

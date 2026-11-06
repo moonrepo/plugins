@@ -32,7 +32,8 @@ pub fn from_java_version(version: &str) -> String {
     // A 4th "vendor" component (18.0.2.1) can't be represented in semver,
     // and the scope position is reserved for the distribution, so encode
     // it into the pre-release as `vN`. `to_java_version` decodes it back.
-    let vendor = parts.next();
+    // A 0 component (21.0.13.0, as SDKMAN writes) is the same version.
+    let vendor = parts.next().filter(|vendor| *vendor != "0");
 
     if pre.is_some() || vendor.is_some() {
         out.push('-');
@@ -124,6 +125,7 @@ mod tests {
         assert_eq!(from_java_version("1.2"), "1.2.0");
         assert_eq!(from_java_version("1.2.3"), "1.2.3");
         assert_eq!(from_java_version("1.2.3.4"), "1.2.3-v4");
+        assert_eq!(from_java_version("1.2.3.0"), "1.2.3");
 
         assert_eq!(from_java_version("1-ea"), "1.0.0-ea");
         assert_eq!(from_java_version("1.2-ea"), "1.2.0-ea");
@@ -148,6 +150,7 @@ mod tests {
         assert_eq!(from_java_version("21.0.11+10"), "21.0.11+10");
         assert_eq!(from_java_version("8.0.492+9"), "8.0.492+9");
         assert_eq!(from_java_version("18.0.2.1+1"), "18.0.2-v1+1");
+        assert_eq!(from_java_version("21.0.13.0"), "21.0.13");
     }
 
     #[test]
