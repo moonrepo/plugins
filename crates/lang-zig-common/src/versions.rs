@@ -23,7 +23,10 @@ impl ZigVersionSource<'_> {
             return Ok(UnresolvedVersionSpec::parse("canary")?);
         }
 
-        let version = Version::parse(raw_version)?;
+        // Partial versions and aliases already work as ZLS requirements
+        let Ok(version) = Version::parse(raw_version) else {
+            return Ok(UnresolvedVersionSpec::parse(raw_version)?);
+        };
 
         if version.prerelease.is_some() {
             return Ok(UnresolvedVersionSpec::parse("canary")?);
@@ -132,6 +135,20 @@ mod tests {
                 .unwrap()
                 .to_string(),
             ">=0.15"
+        );
+        assert_eq!(
+            ZigVersionSource::Exact("0.15")
+                .to_zls_requirement()
+                .unwrap()
+                .to_string(),
+            "~0.15"
+        );
+        assert_eq!(
+            ZigVersionSource::Exact("latest")
+                .to_zls_requirement()
+                .unwrap()
+                .to_string(),
+            "latest"
         );
         assert_eq!(
             ZigVersionSource::Exact("0.16.0-dev.123+abc")
