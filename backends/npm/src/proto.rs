@@ -1,6 +1,6 @@
 use crate::config::NpmBackendConfig;
 use crate::dist_tags::DistTags;
-use backend_common::enable_tracing;
+use backend_common::{enable_tracing, ensure_stable_latest};
 use extism_pdk::*;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
@@ -307,6 +307,8 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
 
         output.aliases.entry(alias).or_insert(version);
     }
+
+    ensure_stable_latest(&mut output);
 
     Ok(Json(output))
 }

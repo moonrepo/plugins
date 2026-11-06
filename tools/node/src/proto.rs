@@ -8,7 +8,7 @@ use nodejs_package_json::PackageJson;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
 use std::collections::HashMap;
-use tool_common::enable_tracing;
+use tool_common::{enable_tracing, ensure_stable_latest};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -183,9 +183,7 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
         output.versions.push(version.to_resolved_spec());
     }
 
-    output
-        .aliases
-        .insert("latest".into(), output.latest.clone().unwrap());
+    ensure_stable_latest(&mut output);
 
     Ok(Json(output))
 }

@@ -1,5 +1,5 @@
 use crate::config::AsdfToolConfig;
-use backend_common::enable_tracing;
+use backend_common::{enable_tracing, ensure_stable_latest};
 use extism_pdk::*;
 use proto_pdk::*;
 use rustc_hash::FxHashMap;
@@ -469,6 +469,8 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
             _ => continue,
         };
     }
+
+    ensure_stable_latest(&mut output);
 
     Ok(Json(output))
 }

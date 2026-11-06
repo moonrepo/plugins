@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed the `latest` version resolving to a pre-release when the `latest` dist-tag points to one. It now falls back to the highest stable version.
+
 ## 0.1.4
 
 #### 🐞 Fixes

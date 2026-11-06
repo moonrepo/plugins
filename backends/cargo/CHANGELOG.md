@@ -6,6 +6,10 @@
 
 - Updated `cargo-binstall` detection to also find the executable on `PATH`, not just in `CARGO_HOME/bin`.
 
+#### 🐞 Fixes
+
+- Fixed the `latest` version resolving to a pre-release, as it was not set and proto used the highest version.
+
 ## 0.1.6
 
 #### 🚀 Updates

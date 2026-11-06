@@ -5,7 +5,7 @@ use regex::Captures;
 use serde_json::Value as JsonValue;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
-use tool_common::enable_tracing;
+use tool_common::{enable_tracing, ensure_stable_latest};
 
 macro_rules! override_option {
     ($prev:ident, $next:ident, [ $($prop:ident),* ]) => {
@@ -242,6 +242,8 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
     // proto prefers this field over the alias, so keep them in sync,
     // otherwise a configured latest is replaced with the highest version
     output.latest = output.aliases.get("latest").cloned();
+
+    ensure_stable_latest(&mut output);
 
     if output.versions.is_empty() {
         return Err(plugin_err!(

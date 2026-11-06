@@ -73,7 +73,7 @@ mod node_tool {
             aliases,
             [
                 "argon", "boron", "carbon", "dubnium", "erbium", "fermium", "gallium", "hydrogen",
-                "iron", "jod", "krypton", "latest", "stable"
+                "iron", "jod", "krypton", "latest", "lithium", "stable"
             ]
         );
     }

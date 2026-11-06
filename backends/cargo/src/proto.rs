@@ -1,5 +1,5 @@
 use crate::config::{CargoBackendConfig, CargoToolConfig};
-use backend_common::enable_tracing;
+use backend_common::{enable_tracing, ensure_stable_latest};
 use extism_pdk::*;
 use lang_rust_common::get_cargo_home;
 use proto_pdk::*;
@@ -237,6 +237,8 @@ pub fn load_versions(Json(_input): Json<LoadVersionsInput>) -> FnResult<Json<Loa
             output.versions.push(VersionSpec::parse(version.num)?);
         }
     }
+
+    ensure_stable_latest(&mut output);
 
     Ok(Json(output))
 }

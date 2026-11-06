@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Updated the `latest` version to never be a pre-release or contain build metadata.
+
 ## 0.17.13
 
 #### 🚀 Updates
