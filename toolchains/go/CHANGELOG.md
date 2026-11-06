@@ -23,6 +23,10 @@
   newer toolchain when `go.mod` requires one, so tasks ran a Go that moon didn't install. A
   `go.mod` that needs a newer Go than `version` now fails with Go's error, and `version` should be
   bumped.
+- Inferred relationships are now direct imports only. With `go list -deps`, a project that imported
+  `b`, which imported `c`, also depended on `c`. A project's packages are now matched by directory,
+  so a parent project no longer picks up the imports of projects nested in it, and a project
+  outside every Go module gets no inferred relationships.
 - `moon docker prune` no longer deletes the `vendor` directory, and the `vendorDir` setting is
   deprecated. It's committed source that Go builds from, and deleting it made the production
   install download every module into the image.
@@ -38,6 +42,8 @@
   binary was built from a different version, as reported by `go version -m`. Before, they were
   only installed when the list of commands changed, so a deleted or replaced binary wasn't
   reinstalled. Bins pinned to a branch or commit work as before.
+- Relationships are now inferred with a single `go list -json` per module, instead of one or two
+  per project.
 - Installs are skipped when `vendor/modules.txt` exists, as Go builds from `vendor`.
 - `GOWORK=off` now disables workspace support, as it does for Go.
 - Added `scaffold_docker` support. The configs phase now copies the `go.mod` and `go.sum` of
@@ -50,6 +56,11 @@
 
 #### 🐞 Fixes
 
+- Fixed inferred relationships going stale when imports changed. moon caches the project graph by
+  its configs, manifests and the plugin's input files, which were only `go.mod` and `go.sum`, so a
+  new import between projects in one module wasn't seen until `go.mod` changed. The Go files that
+  `go list` read are now input files too, so editing one rebuilds the graph. A new file isn't seen
+  until another input changes.
 - Fixed the default Docker image for partial versions and requirements, like `1.24` or `^1.22.0`,
   which became invalid tags like `golang:~1.24`.
 - Fixed the globals directory not being on `PATH` for tasks when no `version` is configured, so

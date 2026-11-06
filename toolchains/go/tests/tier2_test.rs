@@ -278,12 +278,18 @@ mod go_toolchain_tier2 {
                     ])
                 );
 
+                // The Go files that imports were read from, so that a new
+                // import refreshes the cached graph
                 assert_eq!(
                     output.input_files,
                     [
                         VirtualPath::new("/workspace/a/go.mod"),
                         VirtualPath::new("/workspace/b/go.mod"),
                         VirtualPath::new("/workspace/c/go.mod"),
+                        VirtualPath::new("/workspace/a/lib.go"),
+                        VirtualPath::new("/workspace/a/pkg/pkg.go"),
+                        VirtualPath::new("/workspace/b/lib.go"),
+                        VirtualPath::new("/workspace/c/lib.go"),
                     ]
                 );
             }
@@ -370,7 +376,82 @@ mod go_toolchain_tier2 {
                     )])
                 );
 
-                assert_eq!(output.input_files, [VirtualPath::new("/workspace/go.mod")]);
+                assert_eq!(
+                    output.input_files,
+                    [
+                        VirtualPath::new("/workspace/go.mod"),
+                        VirtualPath::new("/workspace/apps/a/main.go"),
+                        VirtualPath::new("/workspace/apps/a/tool/tool.go"),
+                        VirtualPath::new("/workspace/libs/b/lib.go"),
+                    ]
+                );
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn infers_direct_relations_and_test_relations() {
+                let sandbox = create_empty_moon_sandbox();
+                sandbox.create_file("go.mod", "module example.com/org\n\ngo 1.24\n");
+                sandbox.create_file(
+                    "apps/a/main.go",
+                    "package main\n\nimport \"example.com/org/libs/b\"\n\nfunc main() { b.B() }\n",
+                );
+                sandbox.create_file(
+                    "libs/b/b.go",
+                    "package b\n\nimport \"example.com/org/libs/c\"\n\nfunc B() { c.C() }\n",
+                );
+                sandbox.create_file(
+                    "libs/b/b_test.go",
+                    "package b_test\n\nimport (\n\t\"testing\"\n\n\t\"example.com/org/libs/b\"\n\t\"example.com/org/libs/d\"\n)\n\nfunc TestB(t *testing.T) { b.B(); d.D() }\n",
+                );
+                sandbox.create_file("libs/c/c.go", "package c\n\nfunc C() {}\n");
+                sandbox.create_file("libs/d/d.go", "package d\n\nfunc D() {}\n");
+
+                let plugin = sandbox.create_toolchain("go").await;
+
+                let mut input = ExtendProjectGraphInput::default();
+                input.project_sources.insert(Id::raw("a"), "apps/a".into());
+                input.project_sources.insert(Id::raw("b"), "libs/b".into());
+                input.project_sources.insert(Id::raw("c"), "libs/c".into());
+                input.project_sources.insert(Id::raw("d"), "libs/d".into());
+                input.toolchain_config = json!({
+                    "inferRelationships": true,
+                    "inferRelationshipsFromTests": true
+                });
+
+                let output = plugin.extend_project_graph(input).await;
+
+                // Only direct imports: `a` reaches `c` through `b`
+                assert_eq!(
+                    output.extended_projects[&Id::raw("a")].dependencies,
+                    [ProjectDependency {
+                        id: Id::raw("b"),
+                        scope: DependencyScope::Production,
+                        via: Some("package example.com/org/libs/b".into()),
+                    }]
+                );
+
+                // The external `b_test` package importing `b` is ownership
+                assert_eq!(
+                    output.extended_projects[&Id::raw("b")].dependencies,
+                    [
+                        ProjectDependency {
+                            id: Id::raw("c"),
+                            scope: DependencyScope::Production,
+                            via: Some("package example.com/org/libs/c".into()),
+                        },
+                        ProjectDependency {
+                            id: Id::raw("d"),
+                            scope: DependencyScope::Development,
+                            via: Some("package example.com/org/libs/d".into()),
+                        }
+                    ]
+                );
+
+                assert!(
+                    output
+                        .input_files
+                        .contains(&VirtualPath::new("/workspace/libs/b/b_test.go"))
+                );
             }
 
             #[tokio::test(flavor = "multi_thread")]
