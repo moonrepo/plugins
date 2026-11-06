@@ -18,7 +18,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
         type_of: PluginType::CommandLine,
         minimum_proto_version: Some(Version::new(0, 60, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
-        self_upgrade_commands: vec!["self upgrade".into()],
+        self_upgrade_commands: vec!["self update".into()],
         ..Default::default()
     }))
 }
@@ -42,7 +42,7 @@ pub fn parse_version_file(
         Ok(UnresolvedVersionSpec::parse(
             version
                 .replace("~=", "~")
-                .replace("===", "^")
+                .replace("===", "=")
                 .replace("==", "="),
         )?)
     }
@@ -82,14 +82,22 @@ pub fn download_prebuilt(
         "uv",
         env,
         permutations! [
-            HostOS::Linux => [HostArch::X64, HostArch::Arm64],
+            HostOS::Linux => [
+                HostArch::X64, HostArch::Arm64, HostArch::X86, HostArch::Arm,
+                HostArch::Powerpc64, HostArch::S390x, HostArch::Riscv64
+            ],
             HostOS::MacOS => [HostArch::X64, HostArch::Arm64],
-            HostOS::Windows => [HostArch::X64],
+            HostOS::Windows => [HostArch::X64, HostArch::Arm64, HostArch::X86],
         ],
     )?;
 
     let version = input.context.version;
-    let arch = env.arch.to_rust_arch();
+    let arch = match env.arch {
+        HostArch::X86 => "i686".into(),
+        HostArch::Powerpc64 => "powerpc64le".into(), // Little endian, like most Linux hosts
+        HostArch::Riscv64 => "riscv64gc".into(),
+        arch => arch.to_rust_arch(),
+    };
 
     if version.is_canary() {
         return Err(plugin_err!(PluginError::UnsupportedCanary {
@@ -98,6 +106,8 @@ pub fn download_prebuilt(
     }
 
     let target = match env.os {
+        // The ARMv6 build is static, so it runs on ARMv7 and any libc
+        HostOS::Linux if env.arch == HostArch::Arm => format!("{arch}-unknown-linux-musleabihf"),
         HostOS::Linux => format!("{arch}-unknown-linux-{}", env.libc),
         HostOS::MacOS => format!("{arch}-apple-darwin"),
         HostOS::Windows => format!("{arch}-pc-windows-msvc"),
@@ -114,7 +124,8 @@ pub fn download_prebuilt(
     let base_url = format!("https://github.com/astral-sh/uv/releases/download/{version}");
 
     Ok(Json(DownloadPrebuiltOutput {
-        archive_prefix: Some(target_name),
+        // Windows zips have no top-level folder
+        archive_prefix: (!env.os.is_windows()).then_some(target_name),
         checksum_url: Some(format!("{base_url}/{checksum_file}")),
         checksum_name: Some(checksum_file),
         download_url: format!("{base_url}/{download_file}"),
