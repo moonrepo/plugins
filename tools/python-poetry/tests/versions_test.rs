@@ -63,7 +63,7 @@ mod python_poetry_tool {
                 })
                 .await,
             ParseVersionFileOutput {
-                version: Some(UnresolvedVersionSpec::parse(">=2.0").unwrap()),
+                version: Some(UnresolvedVersionSpec::parse(">=2.0.0").unwrap()),
             }
         );
     }
@@ -74,11 +74,13 @@ mod python_poetry_tool {
         let plugin = sandbox.create_plugin("poetry-test").await;
 
         for (constraint, expected) in [
-            ("~=2.1", "^2.1"),
-            ("~= 2.1.3", "~2.1.3"),
-            (">=2.0, ~=2.1", ">=2.0,^2.1"),
-            (">=2.0,<3.0", ">=2.0,<3.0"),
+            ("~=2.1", ">=2.1.0, =2.*"),
+            ("~= 2.1.3", ">=2.1.3, =2.1.*"),
+            (">=2.0, ~=2.1", ">=2.0.0, >=2.1.0, =2.*"),
+            (">=2.0,<3.0", ">=2.0.0, <3.0.0"),
             ("==2.1.*", "=2.1.*"),
+            ("==2.1", "=2.1.0"),
+            (">=2.0, !=2.1.0", ">=2.0.0"),
         ] {
             assert_eq!(
                 plugin

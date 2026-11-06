@@ -11,6 +11,10 @@
   failed, and through a shim it configured another version, or nothing when no version was pinned.
 - Fixed `~=X.Y` in `requires-poetry` only allowing `X.Y.*`. Per PEP 440 it allows `X.*`, so `~=2.1`
   now resolves to the latest 2.x.
+- Fixed `==X.Y` in `requires-poetry` resolving to the latest `X.Y` patch, instead of `X.Y.0`. Short
+  versions are now zero-padded, as PEP 440 compares them.
+- Fixed `!=` in `requires-poetry` failing version detection. proto can't exclude versions, so it's
+  now ignored.
 - Install failures now include the installer's output, instead of an empty error.
 
 ## 0.1.9

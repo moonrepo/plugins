@@ -4918,6 +4918,7 @@ name = "python_poetry_tool"
 version = "0.1.9"
 dependencies = [
  "extism-pdk",
+ "lang_python_common",
  "proto_pdk",
  "proto_pdk_test_utils",
  "serde",
