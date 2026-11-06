@@ -1,0 +1,18 @@
+name = "v1-test"
+type = "cli"
+
+[platform.linux]
+download-file = "tool-{arch}.tar.gz"
+
+[platform.macos]
+download-file = "tool-{arch}.zip"
+checksum-file = "SHASUMS256.txt"
+
+[install]
+download-url = "https://example.com/v{version}/{download_file}"
+# No checksum-file on linux, so the name is extracted from the URL
+checksum-url = "https://example.com/v{version}/{download_file}.minisig"
+checksum-public-key = "RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3"
+
+[resolve]
+versions = ["1.2.3"]
