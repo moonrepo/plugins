@@ -782,7 +782,7 @@ mod go_toolchain_tier2 {
                 })
                 .await;
 
-            assert!(output.env.get("GOTOOLCHAIN").is_none());
+            assert!(!output.env.contains_key("GOTOOLCHAIN"));
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -802,7 +802,7 @@ mod go_toolchain_tier2 {
 
             unsafe { env::remove_var("GOTOOLCHAIN") };
 
-            assert!(output.env.get("GOTOOLCHAIN").is_none());
+            assert!(!output.env.contains_key("GOTOOLCHAIN"));
         }
     }
 
