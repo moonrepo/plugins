@@ -3282,6 +3282,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "lang_python_common"
+version = "0.1.0"
+dependencies = [
+ "proto_pdk_api",
+]
+
+[[package]]
 name = "lang_rust_common"
 version = "0.1.0"
 dependencies = [
