@@ -1,8 +1,12 @@
 // `go.sum`, `go.work.sum`
 
+use crate::syntax::{field, line_end, parse_entries, ws, ws1};
 use moon_config::VersionSpec;
 use moon_pdk_api::AnyResult;
 use std::collections::BTreeMap;
+use winnow::Result;
+use winnow::combinator::alt;
+use winnow::prelude::*;
 
 #[derive(Debug, PartialEq)]
 pub struct GoSumDependency {
@@ -24,23 +28,11 @@ impl GoSum {
             dependencies: BTreeMap::new(),
         };
 
-        for mut line in content.as_ref().lines() {
-            if line.starts_with("//") {
-                continue;
-            } else if let Some(index) = line.find("//") {
-                line = &line[0..index];
-            }
-
-            let mut parts = line.trim().splitn(3, ' ');
-            let module = parts.next().unwrap_or_default().trim();
-            let version = parts.next().unwrap_or_default().trim();
-            let hash = parts.next().unwrap_or_default().trim();
-
-            if module.is_empty()
-                || version.is_empty()
-                || version.ends_with("/go.mod")
-                || hash.is_empty()
-            {
+        for (module, version, checksum) in
+            parse_entries(content.as_ref(), line).into_iter().flatten()
+        {
+            // Checksums of a version's `go.mod` file only
+            if version.ends_with("/go.mod") {
                 continue;
             }
 
@@ -48,11 +40,22 @@ impl GoSum {
                 .entry(module.into())
                 .or_default()
                 .push(GoSumDependency {
-                    checksum: hash.into(),
+                    checksum: checksum.into(),
                     version: VersionSpec::parse(version)?,
                 });
         }
 
         Ok(sum)
     }
+}
+
+/// `<module> <version>[/go.mod] <checksum>`, or a blank line. Go doesn't
+/// write comments, but they're allowed like in its other files.
+fn line<'i>(input: &mut &'i str) -> Result<Option<(&'i str, &'i str, &'i str)>> {
+    alt((
+        line_end.map(|()| None),
+        (ws, field, ws1, field, ws1, field, line_end)
+            .map(|(_, module, _, version, _, checksum, _)| Some((module, version, checksum))),
+    ))
+    .parse_next(input)
 }

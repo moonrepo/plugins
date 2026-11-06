@@ -2467,6 +2467,7 @@ dependencies = [
  "starbase_utils",
  "tokio",
  "toolchain_common",
+ "winnow 1.0.4",
 ]
 
 [[package]]

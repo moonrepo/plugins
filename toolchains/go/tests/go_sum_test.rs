@@ -120,4 +120,30 @@ mod go_sum {
             ]
         );
     }
+
+    #[test]
+    fn keeps_hashes_containing_double_slashes() {
+        let go_sum = GoSum::parse(
+            "golang.org/x/net v0.10.0 h1:X2//UzNDwYmtCLn7To6G58Wr6f5ahEAQgKNzv9Y951M= // Comment\n",
+        )
+        .unwrap();
+
+        assert_eq!(
+            go_sum.dependencies["golang.org/x/net"][0].checksum,
+            "h1:X2//UzNDwYmtCLn7To6G58Wr6f5ahEAQgKNzv9Y951M="
+        );
+    }
+
+    #[test]
+    fn skips_malformed_lines_and_handles_crlf() {
+        let go_sum = GoSum::parse(
+            "example.com/a v1.0.0\r\nexample.com/b v1.0.0 h1:b= extra\r\nexample.com/c v1.0.0 h1:c=\r\n",
+        )
+        .unwrap();
+
+        assert_eq!(
+            go_sum.dependencies.keys().collect::<Vec<_>>(),
+            ["example.com/c"]
+        );
+    }
 }

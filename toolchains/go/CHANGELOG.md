@@ -25,6 +25,8 @@
   requires.
 - `go list` now runs with `-e`, so a single import that can't be resolved no longer drops all of a
   project's inferred relationships. Other failures are logged as a warning.
+- `go.sum`, `go.work.sum` and `go.work` are now parsed with [winnow](https://docs.rs/winnow)
+  grammars. A line that can't be parsed is skipped instead of failing the file.
 
 #### 🐞 Fixes
 
@@ -35,6 +37,8 @@
 - Fixed a nested module without a `go.sum` resolving to its parent module's dependency root.
 - Fixed `go.work` parsing for quoted paths, `use(`, and indentation other than tabs or 4 spaces.
 - Fixed `go.sum` parsing keeping only the last version of a module.
+- Fixed `go.sum` checksums that contain `//`, like `golang.org/x/net v0.10.0`, being cut off as if
+  the rest were a comment.
 - Updated `go_tool` with the fixes below, which the toolchain uses for tier 3.
 
 ## 1.5.3

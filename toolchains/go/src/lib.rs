@@ -2,6 +2,7 @@ pub mod config;
 pub mod go_mod;
 pub mod go_sum;
 pub mod go_work;
+mod syntax;
 
 #[cfg(feature = "wasm")]
 mod package_graph;

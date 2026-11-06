@@ -82,4 +82,14 @@ use ./b
         assert_eq!(go_work.version.unwrap(), "1.24.0");
         assert_eq!(go_work.modules, vec!["two-space", "quoted", "ok", "single"]);
     }
+
+    #[test]
+    fn parses_raw_strings_and_crlf() {
+        let content = "go 1.24.0\r\n\r\nuse (\r\n\t`./raw`\r\n\t./b\r\n)\r\n";
+
+        let go_work = GoWork::parse(content).unwrap();
+
+        assert_eq!(go_work.version.unwrap(), "1.24.0");
+        assert_eq!(go_work.modules, vec!["raw", "b"]);
+    }
 }
