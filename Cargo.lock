@@ -5478,7 +5478,7 @@ dependencies = [
  "starbase_sandbox",
  "starbase_utils",
  "tokio",
- "toml 1.1.6+spec-1.1.0",
+ "toml 1.1.8+spec-1.1.0",
  "toolchain_common",
 ]
 

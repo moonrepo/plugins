@@ -16,10 +16,12 @@ pub fn define_requirements(
         requires: if PackageManager::detect()?.is_nub() {
             vec![]
         } else {
-            vec!["node".into()]
+            vec![ToolchainRequirement {
+                id: "node".into(),
+                setup_toolchain: Some(RequirementPhase::Before),
+                setup_environment: Some(RequirementPhase::Before),
+            }]
         },
-        for_setup_environment: false,
-        for_setup_toolchain: true,
     }))
 }
 
