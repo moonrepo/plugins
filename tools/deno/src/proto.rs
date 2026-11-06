@@ -58,11 +58,24 @@ pub fn parse_version_file(
         {
             version = Some(UnresolvedVersionSpec::parse(constraint)?);
         }
-    } else if let Some(constraint) = extract_version_from_text(&input.content) {
+    } else if let Some(constraint) = extract_dvmrc_version(&input.content) {
         version = Some(UnresolvedVersionSpec::parse(constraint)?);
     }
 
     Ok(Json(ParseVersionFileOutput { version }))
+}
+
+// dvm v1.8+ writes `key=value` lines (`deno_version=1.40.0`),
+// while older dvm and setup-deno read a bare version
+fn extract_dvmrc_version(content: &str) -> Option<&str> {
+    content
+        .lines()
+        .find_map(|line| {
+            let (key, value) = line.split_once('=')?;
+
+            (key.trim() == "deno_version").then_some(value.trim())
+        })
+        .or_else(|| extract_version_from_text(content))
 }
 
 #[plugin_fn]
@@ -125,7 +138,7 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
     Ok(Json(LoadVersionsOutput::from(tags)?))
 }
 
-// https://docs.deno.com/runtime/contributing/building_from_source/
+// https://github.com/denoland/deno/blob/main/.github/CONTRIBUTING.md#building-from-source
 #[plugin_fn]
 pub fn build_instructions(
     Json(input): Json<BuildInstructionsInput>,
@@ -154,7 +167,7 @@ pub fn build_instructions(
             prefix: Some(format!("deno-{version}")),
         })),
         help_url: Some(
-            "https://docs.deno.com/runtime/manual/references/contributing/building_from_source"
+            "https://github.com/denoland/deno/blob/main/.github/CONTRIBUTING.md#building-from-source"
                 .into(),
         ),
         system_dependencies: vec![
@@ -184,7 +197,7 @@ pub fn build_instructions(
             output.requirements.extend(vec![
                 BuildRequirement::GitConfigSetting("core.symlinks".into(), "true".into()),
                 BuildRequirement::ManualIntercept(
-                    "https://docs.deno.com/runtime/contributing/building_from_source/#windows"
+                    "https://github.com/denoland/deno/blob/main/.github/CONTRIBUTING.md#windows"
                         .into(),
                 ),
             ]);
@@ -278,7 +291,8 @@ pub fn download_prebuilt(
 
     Ok(Json(DownloadPrebuiltOutput {
         // Checksums were added in v2.0.1+ but were broken in v2.0.0
-        checksum_url: if version.is_latest()
+        checksum_url: if version.is_canary()
+            || version.is_latest()
             || version
                 .as_version()
                 .is_some_and(|v| checksum_req.matches(v))
@@ -299,13 +313,27 @@ pub fn locate_executables(
 ) -> FnResult<Json<LocateExecutablesOutput>> {
     let env = get_host_environment()?;
 
+    // https://docs.deno.com/runtime/reference/cli/install/
+    // Bins go in the root's `bin` dir, unless the root already is one (v2.2.11+)
+    let is_bin_root = get_host_env_var("DENO_INSTALL_ROOT")?.is_some_and(|root| {
+        root.trim_end_matches(['/', '\\'])
+            .rsplit(['/', '\\'])
+            .next()
+            == Some("bin")
+    });
+
     Ok(Json(LocateExecutablesOutput {
         exes: HashMap::from_iter([(
             "deno".into(),
             ExecutableConfig::new_primary(env.os.get_exe_name("deno")),
         )]),
         globals_lookup_dirs: vec![
-            "$DENO_INSTALL_ROOT/bin".into(),
+            if is_bin_root {
+                "$DENO_INSTALL_ROOT"
+            } else {
+                "$DENO_INSTALL_ROOT/bin"
+            }
+            .into(),
             "$DENO_HOME/bin".into(),
             "$HOME/.deno/bin".into(),
         ],

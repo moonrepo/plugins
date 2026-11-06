@@ -1,12 +1,11 @@
 use proto_pdk_test_utils::*;
+use std::env;
 
 mod deno_tool {
     use super::*;
 
     generate_download_install_tests!("deno-test", "1.30.0");
 
-    // Deno doesn't provide canary builds for MacOS M1
-    #[cfg(not(target_os = "macos"))]
     mod canary {
         use super::*;
 
@@ -262,5 +261,81 @@ mod deno_tool {
                 ..Default::default()
             }
         );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn supports_checksum_for_canary() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("deno-test", |config| {
+                config.host(HostOS::Linux, HostArch::X64);
+            })
+            .await;
+
+        let output = plugin
+            .download_prebuilt(DownloadPrebuiltInput {
+                context: PluginContext {
+                    version: VersionSpec::parse("canary").unwrap(),
+                    ..Default::default()
+                },
+                ..Default::default()
+            })
+            .await;
+
+        assert!(
+            output
+                .download_url
+                .starts_with("https://dl.deno.land/canary/")
+        );
+        assert_eq!(
+            output.checksum_url,
+            Some(format!("{}.sha256sum", output.download_url))
+        );
+    }
+
+    mod globals {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn uses_install_root_bin_dir() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox.create_plugin("deno-test").await;
+
+            unsafe { env::set_var("DENO_INSTALL_ROOT", "/opt/deno") };
+
+            let output = plugin
+                .locate_executables(LocateExecutablesInput::default())
+                .await;
+
+            unsafe { env::remove_var("DENO_INSTALL_ROOT") };
+
+            assert_eq!(
+                output.globals_lookup_dirs,
+                [
+                    "$DENO_INSTALL_ROOT/bin",
+                    "$DENO_HOME/bin",
+                    "$HOME/.deno/bin"
+                ]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn uses_install_root_as_is_when_a_bin_dir() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox.create_plugin("deno-test").await;
+
+            unsafe { env::set_var("DENO_INSTALL_ROOT", "/home/user/.deno/bin/") };
+
+            let output = plugin
+                .locate_executables(LocateExecutablesInput::default())
+                .await;
+
+            unsafe { env::remove_var("DENO_INSTALL_ROOT") };
+
+            assert_eq!(
+                output.globals_lookup_dirs,
+                ["$DENO_INSTALL_ROOT", "$DENO_HOME/bin", "$HOME/.deno/bin"]
+            );
+        }
     }
 }

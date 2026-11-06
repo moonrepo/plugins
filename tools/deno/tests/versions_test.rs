@@ -73,6 +73,25 @@ mod deno_tool {
         );
     }
 
+    #[tokio::test(flavor = "multi_thread")]
+    async fn parses_dvmrc_key_value() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("deno-test").await;
+
+        assert_eq!(
+            plugin
+                .parse_version_file(ParseVersionFileInput {
+                    content: "registry_binary=https://github.com/denoland/deno/releases/download/\ndeno_version = 1.40.0".into(),
+                    file: ".dvmrc".into(),
+                    ..Default::default()
+                })
+                .await,
+            ParseVersionFileOutput {
+                version: Some(UnresolvedVersionSpec::parse("1.40.0").unwrap()),
+            }
+        );
+    }
+
     mod pin_version {
         use super::*;
 
