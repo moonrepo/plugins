@@ -6,13 +6,14 @@ use crate::package_graph::{GoPackageGraph, is_version_segment};
 use extism_pdk::*;
 use moon_config::BinEntry;
 use moon_pdk::{
-    VirtualPathExt, command_exists, get_host_env_var, get_host_environment, locate_root,
+    VirtualPathExt, command_exists, get_host_env_var, get_host_environment,
     parse_toolchain_config_schema,
 };
 use moon_pdk_api::*;
 use starbase_utils::fs;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
+use toolchain_common::{DirCache, RootLocator};
 
 #[plugin_fn]
 pub fn extend_project_graph(
@@ -141,6 +142,8 @@ fn locate_roots(
     toolchain_config: json::Value,
 ) -> AnyResult<Vec<LocateDependenciesRootOutput>> {
     let config = parse_toolchain_config_schema::<GoToolchainConfig>(toolchain_config)?;
+    let mut locator = RootLocator::default();
+    let mut workspace_members = DirCache::default();
     let mut roots = vec![];
 
     for starting_dir in starting_dirs {
@@ -148,25 +151,26 @@ fn locate_roots(
 
         // Find `go.work` first
         if config.workspaces
-            && let Some(root) = locate_root(starting_dir, "go.work")
+            && let Some(root) = locator.locate(starting_dir, &["go.work"])
         {
-            let go_work = GoWork::parse(fs::read_file(root.join("go.work"))?)?;
+            output.members = workspace_members
+                .get_or_load(&root, |root| {
+                    let go_work = GoWork::parse(fs::read_file(root.join("go.work"))?)?;
 
-            if !go_work.modules.is_empty() {
-                output.members = Some(go_work.modules);
-            }
-
+                    Ok((!go_work.modules.is_empty()).then_some(go_work.modules))
+                })?
+                .clone();
             output.root = Some(root);
         }
 
         // Then `go.sum` second
         if output.root.is_none() {
-            output.root = locate_root(starting_dir, "go.sum");
+            output.root = locator.locate(starting_dir, &["go.sum"]);
         }
 
         // Otherwise assume `go.mod`
         if output.root.is_none() {
-            output.root = locate_root(starting_dir, "go.mod");
+            output.root = locator.locate(starting_dir, &["go.mod"]);
         }
 
         roots.push(output);

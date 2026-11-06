@@ -7,7 +7,7 @@ use moon_common::path::paths_are_equal;
 use moon_config::DependencyScope;
 use moon_pdk::{
     VirtualPathExt, get_host_environment, load_project_toolchain_config, load_toolchain_config,
-    locate_root_many, locate_root_many_with_check, parse_toolchain_config_schema,
+    parse_toolchain_config_schema,
 };
 use moon_pdk_api::*;
 use nodejs_package_json::{VersionProtocol, WorkspaceProtocol};
@@ -15,6 +15,7 @@ use rustc_hash::FxHashMap;
 use starbase_utils::yaml;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
+use toolchain_common::{DirCache, RootLocator};
 
 #[plugin_fn]
 pub fn extend_project_graph(
@@ -396,39 +397,34 @@ fn locate_roots(
         JavaScriptPackageManager::Yarn => vec!["yarn.lock"],
     };
 
+    let mut locator = RootLocator::default();
+    let mut workspace_members = DirCache::default();
     let mut roots = vec![];
+
+    let load_members =
+        |dir: &VirtualPath| extract_workspace_members_and_catalogs(package_manager, dir);
 
     for starting_dir in starting_dirs {
         let mut output = LocateDependenciesRootOutput::default();
 
         // First attempt: find lock files
-        if let Some(root) = locate_root_many(starting_dir, &lock_names) {
-            output.members = extract_workspace_members_and_catalogs(package_manager, &root)?;
+        if let Some(root) = locator.locate(starting_dir, &lock_names) {
+            output.members = workspace_members.get_or_load(&root, load_members)?.clone();
             output.root = Some(root);
         }
-
         // Second attempt: find workspace-compatible manifest files
-        if output.root.is_none() {
-            locate_root_many_with_check(starting_dir, &workspace_manifest_names, |root| {
-                let mut found = false;
-
-                if let Some(members) =
-                    extract_workspace_members_and_catalogs(package_manager, root)?
-                {
-                    output.root = Some(root.to_owned());
-                    output.members = Some(members);
-                    found = true;
-                }
-
-                Ok(found)
-            })?;
-        }
-
-        // Last attempt: find a manifest file (project only)
-        if output.root.is_none()
-            && let Some(root) = locate_root_many(starting_dir, &manifest_names)
+        else if let Some((root, members)) =
+            locator.locate_with_check(starting_dir, &workspace_manifest_names, |dir| {
+                Ok(workspace_members.get_or_load(dir, load_members)?.clone())
+            })?
         {
-            extract_workspace_members_and_catalogs(package_manager, &root)?;
+            output.members = Some(members);
+            output.root = Some(root);
+        }
+        // Last attempt: find a manifest file (project only)
+        else if let Some(root) = locator.locate(starting_dir, &manifest_names) {
+            // Caches its catalogs, if the second attempt didn't already
+            workspace_members.get_or_load(&root, load_members)?;
 
             output.root = Some(root);
         }
