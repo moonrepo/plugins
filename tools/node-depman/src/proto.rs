@@ -12,7 +12,7 @@ use proto_pdk::*;
 use rustc_hash::FxHashMap;
 use schematic::SchemaBuilder;
 use starbase_utils::fs;
-use tool_common::enable_tracing;
+use tool_common::{enable_tracing, ensure_stable_latest};
 
 const BASH_SHIM_TEMPLATE: &str = include_str!("../templates/bash-shim.sh");
 const CMD_SHIM_TEMPLATE: &str = include_str!("../templates/cmd-shim.cmd");
@@ -242,9 +242,7 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
         fetch_versions(format!("{registry_url}/{package_name}/"), false)?;
     }
 
-    output
-        .aliases
-        .insert("latest".into(), output.latest.clone().unwrap());
+    ensure_stable_latest(&mut output);
 
     Ok(Json(output))
 }

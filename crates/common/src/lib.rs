@@ -1,4 +1,7 @@
 pub mod registry;
+mod versions;
+
+pub use versions::*;
 
 use proto_pdk::{WarpgateTracingOptions, get_test_environment, initialize_tracing_with_options};
 use std::sync::atomic::{AtomicBool, Ordering};

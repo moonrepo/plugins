@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed the `latest` version resolving to a pre-release or a version with build metadata, when configured as such. It now falls back to the highest stable version.
+
 ## 0.19.0
 
 #### 🚀 Updates

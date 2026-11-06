@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed the `latest` version resolving to a pre-release, as it was not set and proto used the highest version.
+
 ## 0.3.5
 
 #### 🚀 Updates
