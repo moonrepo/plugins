@@ -11,6 +11,12 @@ mod moon_tool {
         generate_download_install_tests!("moon-test", "canary");
     }
 
+    mod v2 {
+        use super::*;
+
+        generate_download_install_tests!("moon-test", "2.6.5");
+    }
+
     #[tokio::test(flavor = "multi_thread")]
     async fn supports_linux_for_moon_v2() {
         let sandbox = create_empty_proto_sandbox();
@@ -132,6 +138,51 @@ mod moon_tool {
     }
 
     #[tokio::test(flavor = "multi_thread")]
+    async fn supports_macos_x64_for_moon_v2_2() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("moon-test", |config| {
+                config.host(HostOS::MacOS, HostArch::X64);
+            })
+            .await;
+
+        assert_eq!(
+            plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("2.2.0").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await
+                .download_url,
+            "https://github.com/moonrepo/moon/releases/download/v2.2.0/moon_cli-x86_64-apple-darwin.tar.xz"
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    #[should_panic(expected = "unsupported architecture x64 for macos.")]
+    async fn doesnt_support_macos_x64_for_moon_v2_0_and_v2_1() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("moon-test", |config| {
+                config.host(HostOS::MacOS, HostArch::X64);
+            })
+            .await;
+
+        plugin
+            .download_prebuilt(DownloadPrebuiltInput {
+                context: PluginContext {
+                    version: VersionSpec::parse("2.1.4").unwrap(),
+                    ..Default::default()
+                },
+                ..Default::default()
+            })
+            .await;
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
     async fn supports_macos_arm64() {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
@@ -207,7 +258,6 @@ mod moon_tool {
                 })
                 .await,
             DownloadPrebuiltOutput {
-                archive_prefix: Some("moon_cli-x86_64-pc-windows-msvc".into()),
                 checksum_name: Some("moon_cli-x86_64-pc-windows-msvc.zip.sha256".into()),
                 checksum_url: Some(
                     "https://github.com/moonrepo/moon/releases/download/v2.0.0/moon_cli-x86_64-pc-windows-msvc.zip.sha256".into()
