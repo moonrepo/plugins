@@ -1,5 +1,27 @@
 # Changelog
 
+## Unreleased
+
+#### 💥 Breaking
+
+- The `toolchain` line in `go.mod` and `go.work` now takes precedence over the `go` line when
+  detecting a version, as Go runs at least that toolchain and would otherwise download it itself.
+- Added `activate_environment`, which sets `GOROOT` to the installed Go. An inherited `GOROOT` for
+  another Go (set by goenv, for example) made builds fail with mismatched tool versions.
+- Removed `$GOROOT/bin` from the globals directories. It's a Go installation, not where `go install`
+  writes, and was placed before this tool's `bin` on `PATH`, so moon ran that Go instead.
+
+#### 🚀 Updates
+
+- Added Linux riscv64, ppc64le and loong64, and FreeBSD arm64 support.
+
+#### 🐞 Fixes
+
+- Fixed downloads of prereleases from 1.21 onward, like `1.27.0-rc1`, which used `go1.27.0-rc1`
+  instead of Go's `go1.27rc1` file names.
+- Fixed building from source, which ran Go's entire test suite with `all.bash`, and then deleted
+  everything except `bin`, which Go can't run without.
+
 ## 0.16.8
 
 #### 🚀 Updates

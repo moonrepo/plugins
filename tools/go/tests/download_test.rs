@@ -244,4 +244,84 @@ mod go_tool {
             Some("bin/go.exe".into())
         );
     }
+
+    async fn download_url(os: HostOS, arch: HostArch, version: &str) -> String {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("go-test", |config| {
+                config.host(os, arch);
+            })
+            .await;
+
+        plugin
+            .download_prebuilt(DownloadPrebuiltInput {
+                context: PluginContext {
+                    version: VersionSpec::parse(version).unwrap(),
+                    ..Default::default()
+                },
+                ..Default::default()
+            })
+            .await
+            .download_url
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn formats_prereleases_without_patch() {
+        assert_eq!(
+            download_url(HostOS::Linux, HostArch::X64, "1.27.0-rc1").await,
+            "https://dl.google.com/go/go1.27rc1.linux-amd64.tar.gz"
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn supports_more_linux_and_freebsd_arches() {
+        for (os, arch, file) in [
+            (HostOS::Linux, HostArch::Riscv64, "linux-riscv64"),
+            (HostOS::Linux, HostArch::Powerpc64, "linux-ppc64le"),
+            (HostOS::Linux, HostArch::LongArm64, "linux-loong64"),
+            (HostOS::FreeBSD, HostArch::Arm64, "freebsd-arm64"),
+        ] {
+            assert_eq!(
+                download_url(os, arch, "1.26.2").await,
+                format!("https://dl.google.com/go/go1.26.2.{file}.tar.gz")
+            );
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn doesnt_look_for_globals_in_goroot() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("go-test").await;
+
+        let output = plugin
+            .locate_executables(LocateExecutablesInput::default())
+            .await;
+
+        assert_eq!(
+            output.globals_lookup_dirs,
+            ["$GOBIN", "$GOPATH/bin", "$HOME/go/bin"]
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn sets_goroot_to_the_tool_dir() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("go-test").await;
+        let tool_dir = sandbox.path().join(".proto/tools/go-test/1.26.2");
+
+        let output = plugin
+            .activate_environment(ActivateEnvironmentInput {
+                context: PluginContext {
+                    tool_dir: VirtualPath::new(&tool_dir),
+                    ..Default::default()
+                },
+                ..Default::default()
+            })
+            .await;
+
+        assert_eq!(
+            output.env.get("GOROOT").unwrap(),
+            &tool_dir.to_string_lossy().to_string()
+        );
+    }
 }

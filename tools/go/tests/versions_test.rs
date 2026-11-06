@@ -127,4 +127,42 @@ use (
 
         assert_eq!(output.version, None);
     }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn prefers_toolchain_line() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("go-test").await;
+
+        let output = plugin
+            .parse_version_file(ParseVersionFileInput {
+                content: "module example.com/a\n\ngo 1.22\n\ntoolchain go1.26.0\n".into(),
+                file: "go.mod".into(),
+                ..Default::default()
+            })
+            .await;
+
+        assert_eq!(
+            output.version.unwrap(),
+            UnresolvedVersionSpec::parse("^1.26.0").unwrap()
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn ignores_non_version_toolchain_line() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("go-test").await;
+
+        let output = plugin
+            .parse_version_file(ParseVersionFileInput {
+                content: "go 1.22\n\ntoolchain default\n".into(),
+                file: "go.work".into(),
+                ..Default::default()
+            })
+            .await;
+
+        assert_eq!(
+            output.version.unwrap(),
+            UnresolvedVersionSpec::parse("^1.22.0").unwrap()
+        );
+    }
 }
