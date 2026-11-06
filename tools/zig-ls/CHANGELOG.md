@@ -1,5 +1,11 @@
 # ZLS plugin
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Removed the archive prefix from downloads, as ZLS archives have no top-level directory.
+
 ## 0.1.0
 
 #### 🎉 Release

@@ -4,9 +4,9 @@ mod zig_ls_tool {
     use super::*;
 
     generate_resolve_versions_tests!("zls-test", {
-        "0.16" => "0.16.0",
+        "0.16.0" => "0.16.0",
         "0.15" => "0.15.1",
-        "0.14.0" => "0.14.0",
+        "0.14" => "0.14.0",
     });
 
     #[tokio::test(flavor = "multi_thread")]
