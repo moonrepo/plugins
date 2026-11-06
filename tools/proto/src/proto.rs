@@ -126,17 +126,32 @@ pub fn download_prebuilt(
         HostOS::Windows => format!("{arch}-pc-windows-msvc"),
         _ => unreachable!(),
     };
-    let target_name = format!("proto_cli-{target}");
+    let is_older_than = |minor, patch| {
+        version
+            .as_version()
+            .is_some_and(|v| *v < Version::new(0, minor, patch))
+    };
+
+    // File names included the version before v0.8.3
+    let target_name = if is_older_than(8, 3) {
+        format!("proto_cli-v{version}-{target}")
+    } else {
+        format!("proto_cli-{target}")
+    };
     let target_ext = if env.os.is_windows() { "zip" } else { "tar.xz" };
 
     let download_file = format!("{target_name}.{target_ext}");
-    let checksum_file = format!("{download_file}.sha256");
     let base_url = format!("https://github.com/moonrepo/proto/releases/download/v{version}");
+
+    // Checksums were first published with v0.14.2
+    let checksum_file = (!is_older_than(14, 2)).then(|| format!("{download_file}.sha256"));
 
     Ok(Json(DownloadPrebuiltOutput {
         archive_prefix: Some(target_name),
-        checksum_url: Some(format!("{base_url}/{checksum_file}")),
-        checksum_name: Some(checksum_file),
+        checksum_url: checksum_file
+            .as_ref()
+            .map(|file| format!("{base_url}/{file}")),
+        checksum_name: checksum_file,
         download_url: format!("{base_url}/{download_file}"),
         download_name: Some(download_file),
         ..Default::default()

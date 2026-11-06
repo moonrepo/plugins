@@ -4851,7 +4851,9 @@ version = "0.5.8"
 dependencies = [
  "extism-pdk",
  "proto_pdk",
+ "proto_pdk_test_utils",
  "serde",
+ "tokio",
  "tool_common",
 ]
 
