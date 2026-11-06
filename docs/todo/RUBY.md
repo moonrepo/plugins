@@ -20,8 +20,8 @@ cargo nextest run -p ruby_toolchain -p ruby_tool --no-default-features
 
 In agent sessions, unset `AI_AGENT` and `CLAUDECODE` first, or wrapper banners can break JSON tests.
 
-The `prune_docker` tests run real Bundler commands and skip themselves without a working `bundle`.
-proto's shim needs a pinned Ruby for that, so run them with
+The `prune_docker` tests run real Bundler commands and skip themselves without Bundler 2.1 or later,
+which added `bundle config set`. proto's shim needs a pinned Ruby for that, so run them with
 `PROTO_RUBY_VERSION=<installed version>`.
 
 Bundler behavior was checked with proto's Ruby 3.4.10 (Bundler 2.6.9) in a scratch app: a `Gemfile`
@@ -164,8 +164,10 @@ Report `.bundle/config` and the bundle directory in `changed_files`. Keep the `B
 on the production install; it does no harm.
 
 **Tests:** the `exec` calls need a real Bundler, so the `prune_docker` tests in `tier1_test.rs` skip
-themselves unless `bundle -v` prints Bundler's version. Locally, run them with Ruby pinned
-(`PROTO_RUBY_VERSION=3.4.10`); GitHub's runners ship a system Ruby with Bundler.
+themselves unless `bundle -v` prints Bundler 2.1 or later. Locally, run them with Ruby pinned
+(`PROTO_RUBY_VERSION=3.4.10`). In CI, the Linux and Windows runners have no `bundle`, and macOS most
+likely runs the system Ruby's Bundler 1.17, which has no `bundle config set`, so they're skipped
+everywhere.
 
 ### #6 Docker scaffold: copy what `bundle install` needs
 

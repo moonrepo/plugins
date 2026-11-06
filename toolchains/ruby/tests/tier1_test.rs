@@ -149,8 +149,9 @@ mod ruby_toolchain_tier1 {
     mod prune_docker {
         use super::*;
 
-        // Requires a working Bundler (proto's shim runs the system `ruby` instead
-        // when no Ruby is pinned), and returns the gem directory of its Ruby ABI
+        // Requires Bundler 2.1+, which added `bundle config set`, as macOS ships
+        // 1.17 with its system Ruby, and proto's shim runs the system `ruby`
+        // instead when no Ruby is pinned. Returns the gem directory of its Ruby ABI.
         fn get_ruby_abi(dir: &Path) -> Option<String> {
             let run = |args: &[&str]| {
                 Command::new("bundle")
@@ -162,7 +163,16 @@ mod ruby_toolchain_tier1 {
                     .map(|out| String::from_utf8_lossy(&out.stdout).into_owned())
             };
 
-            run(&["-v"])?.starts_with("Bundler").then_some(())?;
+            // Like `Bundler version 2.6.9`, or only the version since Bundler 3
+            let output = run(&["-v"])?;
+            let mut version = output
+                .lines()
+                .last()?
+                .trim_start_matches("Bundler version ")
+                .split('.')
+                .map(|part| part.parse::<u32>().ok());
+
+            ((version.next()??, version.next()??) >= (2, 1)).then_some(())?;
 
             run(&[
                 "exec",
@@ -211,10 +221,11 @@ mod ruby_toolchain_tier1 {
                 return;
             };
 
+            let config = fs::read_to_string(sandbox.path().join(".bundle/config")).unwrap();
+
             assert!(
-                fs::read_to_string(sandbox.path().join(".bundle/config"))
-                    .unwrap()
-                    .contains("BUNDLE_WITHOUT: \"development:test\"")
+                config.contains("BUNDLE_WITHOUT: \"development:test\""),
+                "{config}"
             );
             assert!(
                 fs::read_dir(sandbox.path().join("vendor/bundle/ruby"))
@@ -230,10 +241,11 @@ mod ruby_toolchain_tier1 {
                 return;
             };
 
+            let config = fs::read_to_string(sandbox.path().join(".bundle/config")).unwrap();
+
             assert!(
-                fs::read_to_string(sandbox.path().join(".bundle/config"))
-                    .unwrap()
-                    .contains("BUNDLE_WITHOUT: \"development:test\"")
+                config.contains("BUNDLE_WITHOUT: \"development:test\""),
+                "{config}"
             );
             assert!(
                 fs::read_dir(sandbox.path().join("vendor/bundle/ruby"))
