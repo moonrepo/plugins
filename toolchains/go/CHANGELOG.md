@@ -15,6 +15,11 @@
   package in a command to come from the same module, so pairs like `golang.org/x/tools/gopls` and
   `golang.org/x/tools/cmd/goimports` failed.
 - Task hashes now include indirect requires from `go.mod`, as they're part of the build.
+- When `version` is configured, tasks and the plugin's `go` commands now run with
+  `GOTOOLCHAIN=local`, unless the host sets `GOTOOLCHAIN`. Go would otherwise download and run a
+  newer toolchain when `go.mod` requires one, so tasks ran a Go that moon didn't install. A
+  `go.mod` that needs a newer Go than `version` now fails with Go's error, and `version` should be
+  bumped.
 - `moon docker prune` no longer deletes the `vendor` directory, and the `vendorDir` setting is
   deprecated. It's committed source that Go builds from, and deleting it made the production
   install download every module into the image.

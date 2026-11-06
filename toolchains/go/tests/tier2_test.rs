@@ -674,6 +674,55 @@ mod go_toolchain_tier2 {
 
             assert_eq!(output.paths, [sandbox.path().join(".go/bin")]);
         }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn pins_toolchain_when_versioned() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .extend_task_command(ExtendTaskCommandInput {
+                    command: "go".into(),
+                    toolchain_config: json!({ "version": "1.26.2" }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.env.get("GOTOOLCHAIN").map(String::as_str),
+                Some("local")
+            );
+
+            let output = plugin
+                .extend_task_command(ExtendTaskCommandInput {
+                    command: "go".into(),
+                    toolchain_config: json!({}),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.env.get("GOTOOLCHAIN").is_none());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn doesnt_pin_toolchain_when_host_sets_it() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("go").await;
+
+            unsafe { env::set_var("GOTOOLCHAIN", "auto") };
+
+            let output = plugin
+                .extend_task_command(ExtendTaskCommandInput {
+                    command: "go".into(),
+                    toolchain_config: json!({ "version": "1.26.2" }),
+                    ..Default::default()
+                })
+                .await;
+
+            unsafe { env::remove_var("GOTOOLCHAIN") };
+
+            assert!(output.env.get("GOTOOLCHAIN").is_none());
+        }
     }
 
     mod extend_task_script {
@@ -718,6 +767,25 @@ mod go_toolchain_tier2 {
                 .await;
 
             assert_eq!(output.paths, [sandbox.path().join(".go/bin")]);
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn pins_toolchain_when_versioned() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .extend_task_script(ExtendTaskScriptInput {
+                    script: "go build".into(),
+                    toolchain_config: json!({ "version": "1.26.2" }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.env.get("GOTOOLCHAIN").map(String::as_str),
+                Some("local")
+            );
         }
     }
 
@@ -886,6 +954,38 @@ mod go_toolchain_tier2 {
                 )
             );
             assert!(output.dedupe_command.is_none());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn pins_toolchain_when_versioned() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("go.mod", "");
+            sandbox.create_file("go.sum", "");
+
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .install_dependencies(InstallDependenciesInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    toolchain_config: json!({
+                        "tidyOnChange": true,
+                        "version": "1.26.2"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            for command in [output.install_command, output.dedupe_command] {
+                assert_eq!(
+                    command
+                        .unwrap()
+                        .command
+                        .env
+                        .get("GOTOOLCHAIN")
+                        .map(String::as_str),
+                    Some("local")
+                );
+            }
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -1368,6 +1468,32 @@ mod go_toolchain_tier2 {
                     go_install(cwd, &["-tags", "netgo", "golang.org/x/tools/cmd/stringer"]),
                 ],
                 None,
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn pins_toolchain_when_versioned() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    toolchain_config: json!({
+                        "bins": ["golang.org/x/tools/gopls"],
+                        "version": "1.26.2"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.commands[0]
+                    .command
+                    .env
+                    .get("GOTOOLCHAIN")
+                    .map(String::as_str),
+                Some("local")
             );
         }
 

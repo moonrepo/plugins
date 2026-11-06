@@ -101,8 +101,13 @@ fn gather_shared_paths(
 pub fn extend_task_command(
     Json(input): Json<ExtendTaskCommandInput>,
 ) -> FnResult<Json<ExtendTaskCommandOutput>> {
+    let config = parse_toolchain_config_schema::<GoToolchainConfig>(input.toolchain_config)?;
     let mut output = ExtendTaskCommandOutput::default();
     let env = get_host_environment()?;
+
+    if let Some(mode) = get_toolchain_mode(&config)? {
+        output.env.insert("GOTOOLCHAIN".into(), mode);
+    }
 
     // Always include Go specific paths for all commands
     gather_shared_paths(env, input.globals_dir.as_ref(), &mut output.paths)?;
@@ -114,8 +119,13 @@ pub fn extend_task_command(
 pub fn extend_task_script(
     Json(input): Json<ExtendTaskScriptInput>,
 ) -> FnResult<Json<ExtendTaskScriptOutput>> {
+    let config = parse_toolchain_config_schema::<GoToolchainConfig>(input.toolchain_config)?;
     let mut output = ExtendTaskScriptOutput::default();
     let env = get_host_environment()?;
+
+    if let Some(mode) = get_toolchain_mode(&config)? {
+        output.env.insert("GOTOOLCHAIN".into(), mode);
+    }
 
     // Always include Go specific paths for all commands
     gather_shared_paths(env, input.globals_dir.as_ref(), &mut output.paths)?;
@@ -168,20 +178,24 @@ pub fn install_dependencies(
     // Unlike `go work sync`, it doesn't rewrite each member's `go.mod`
     let in_workspace = use_workspaces(&config)? && input.root.join("go.work").exists();
 
+    let mode = get_toolchain_mode(&config)?;
+
+    let create_command = |args: [&str; 2]| {
+        let mut command = ExecCommandInput::new("go", args).cwd(input.root.clone());
+
+        if let Some(mode) = &mode {
+            command.env.insert("GOTOOLCHAIN".into(), mode.to_owned());
+        }
+
+        ExecCommand::new(command)
+    };
+
     if in_workspace || input.root.join("go.mod").exists() {
-        output.install_command = Some(
-            ExecCommandInput::new("go", ["mod", "download"])
-                .cwd(input.root.clone())
-                .into(),
-        );
+        output.install_command = Some(create_command(["mod", "download"]));
     }
 
     if !in_workspace && config.tidy_on_change && input.root.join("go.sum").exists() {
-        output.dedupe_command = Some(
-            ExecCommandInput::new("go", ["mod", "tidy"])
-                .cwd(input.root)
-                .into(),
-        );
+        output.dedupe_command = Some(create_command(["mod", "tidy"]));
     }
 
     Ok(Json(output))
@@ -276,6 +290,8 @@ pub fn setup_environment(
     if !config.bins.is_empty() {
         let env = get_host_environment()?;
 
+        let mode = get_toolchain_mode(&config)?;
+
         // Install where we check for binaries, and where tasks find them
         let gobin = match &input.globals_dir {
             Some(dir) => dir.to_real_path()?.map(|dir| dir.to_string()),
@@ -311,6 +327,10 @@ pub fn setup_environment(
                 command.env.insert("GOBIN".into(), gobin.to_owned());
             }
 
+            if let Some(mode) = &mode {
+                command.env.insert("GOTOOLCHAIN".into(), mode.to_owned());
+            }
+
             output.commands.push(
                 ExecCommand::new(command)
                     .cache(CacheStrategy::Memory)
@@ -336,6 +356,19 @@ pub fn hash_task_contents(
     Ok(Json(HashTaskContentsOutput {
         contents: vec![json::Value::Object(map)],
     }))
+}
+
+// Since Go 1.21, `go` downloads and runs a newer toolchain when `go.mod`
+// requires one, so pin it to the configured version, unless the host
+// chose a mode itself. A `go.mod` that needs a newer Go then fails
+fn get_toolchain_mode(config: &GoToolchainConfig) -> AnyResult<Option<String>> {
+    if config.version.is_none()
+        || get_host_env_var("GOTOOLCHAIN")?.is_some_and(|value| !value.is_empty())
+    {
+        return Ok(None);
+    }
+
+    Ok(Some("local".into()))
 }
 
 // `GOWORK=off` disables workspace mode, like `workspaces: false`
