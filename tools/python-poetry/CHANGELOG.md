@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed installing prereleases, like `1.2.0-rc2`, which the installer rejected as it only accepts
+  PyPI's `1.2.0rc2` form.
+- Fixed the post-install hook running whichever `poetry` was on `PATH` instead of the version that
+  was just installed. Without proto's bins on `PATH` (a fresh CI machine, for example) the install
+  failed, and through a shim it configured another version, or nothing when no version was pinned.
+- Fixed `~=X.Y` in `requires-poetry` only allowing `X.Y.*`. Per PEP 440 it allows `X.*`, so `~=2.1`
+  now resolves to the latest 2.x.
+- Install failures now include the installer's output, instead of an empty error.
+
 ## 0.1.9
 
 #### 🚀 Updates

@@ -67,4 +67,32 @@ mod python_poetry_tool {
             }
         );
     }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn parses_pyproject_toml_pep_specifiers() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("poetry-test").await;
+
+        for (constraint, expected) in [
+            ("~=2.1", "^2.1"),
+            ("~= 2.1.3", "~2.1.3"),
+            (">=2.0, ~=2.1", ">=2.0,^2.1"),
+            (">=2.0,<3.0", ">=2.0,<3.0"),
+            ("==2.1.*", "=2.1.*"),
+        ] {
+            assert_eq!(
+                plugin
+                    .parse_version_file(ParseVersionFileInput {
+                        content: format!("[tool.poetry]\nrequires-poetry = \"{constraint}\""),
+                        file: "pyproject.toml".into(),
+                        ..Default::default()
+                    })
+                    .await,
+                ParseVersionFileOutput {
+                    version: Some(UnresolvedVersionSpec::parse(expected).unwrap()),
+                },
+                "{constraint}"
+            );
+        }
+    }
 }
