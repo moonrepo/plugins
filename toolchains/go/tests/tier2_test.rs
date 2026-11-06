@@ -5,7 +5,7 @@ use moon_pdk_test_utils::{create_empty_moon_sandbox, create_moon_sandbox};
 use serde_json::json;
 use std::collections::BTreeMap;
 use std::env;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 mod go_toolchain_tier2 {
     use super::*;
@@ -1263,20 +1263,29 @@ mod go_toolchain_tier2 {
     mod bins {
         use super::*;
 
-        fn go_install(cwd: VirtualPath, args: &[&str], gobin: Option<&Path>) -> ExecCommand {
+        fn go_install(cwd: VirtualPath, args: &[&str]) -> ExecCommand {
             let mut command = ExecCommandInput::new("go", ["install", "-v"]);
             command.args.extend(args.iter().map(|arg| arg.to_string()));
             command.cwd = Some(cwd);
 
-            if let Some(gobin) = gobin {
-                command
-                    .env
-                    .insert("GOBIN".into(), gobin.to_string_lossy().into());
-            }
-
             ExecCommand::new(command)
                 .cache(CacheStrategy::Memory)
                 .label(format!("go-bin-{}", args.last().unwrap()))
+        }
+
+        fn assert_installs(
+            mut commands: Vec<ExecCommand>,
+            expected: Vec<ExecCommand>,
+            gobin: Option<&Path>,
+        ) {
+            for command in &mut commands {
+                // Compared as paths, as separators are mixed on Windows
+                let actual = command.command.env.remove("GOBIN").map(PathBuf::from);
+
+                assert_eq!(actual.as_deref(), gobin);
+            }
+
+            assert_eq!(commands, expected);
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -1320,12 +1329,13 @@ mod go_toolchain_tier2 {
                 })
                 .await;
 
-            assert_eq!(
+            assert_installs(
                 output.commands,
-                [
-                    go_install(cwd.clone(), &["golang.org/x/tools/gopls@latest"], None),
-                    go_install(cwd, &["golang.org/x/tools/cmd/goimports@latest"], None),
-                ]
+                vec![
+                    go_install(cwd.clone(), &["golang.org/x/tools/gopls@latest"]),
+                    go_install(cwd, &["golang.org/x/tools/cmd/goimports@latest"]),
+                ],
+                None,
             );
         }
 
@@ -1351,16 +1361,13 @@ mod go_toolchain_tier2 {
                 })
                 .await;
 
-            assert_eq!(
+            assert_installs(
                 output.commands,
-                [
-                    go_install(cwd.clone(), &["golang.org/x/tools/gopls@v0.20.0"], None),
-                    go_install(
-                        cwd,
-                        &["-tags", "netgo", "golang.org/x/tools/cmd/stringer"],
-                        None
-                    ),
-                ]
+                vec![
+                    go_install(cwd.clone(), &["golang.org/x/tools/gopls@v0.20.0"]),
+                    go_install(cwd, &["-tags", "netgo", "golang.org/x/tools/cmd/stringer"]),
+                ],
+                None,
             );
         }
 
@@ -1415,13 +1422,13 @@ mod go_toolchain_tier2 {
                 })
                 .await;
 
-            assert_eq!(
+            assert_installs(
                 output.commands,
-                [go_install(
+                vec![go_install(
                     plugin.plugin.to_virtual_path(sandbox.path()),
                     &["github.com/revel/cmd/revel"],
-                    Some(&sandbox.path().join(".go/bin"))
-                )]
+                )],
+                Some(&sandbox.path().join(".go").join("bin")),
             );
         }
 
@@ -1488,13 +1495,13 @@ mod go_toolchain_tier2 {
                 })
                 .await;
 
-            assert_eq!(
+            assert_installs(
                 output.commands,
-                [go_install(
+                vec![go_install(
                     plugin.plugin.to_virtual_path(sandbox.path()),
                     &["golang.org/x/tools/gopls@v0.16.0"],
-                    Some(&sandbox.path().join(".go/bin"))
-                )]
+                )],
+                Some(&sandbox.path().join(".go").join("bin")),
             );
         }
 
@@ -1522,13 +1529,13 @@ mod go_toolchain_tier2 {
                 })
                 .await;
 
-            assert_eq!(
+            assert_installs(
                 output.commands,
-                [go_install(
+                vec![go_install(
                     plugin.plugin.to_virtual_path(sandbox.path()),
                     &["golang.org/x/tools/gopls"],
-                    Some(&sandbox.path().join(".go/bin"))
-                )]
+                )],
+                Some(&sandbox.path().join(".go").join("bin")),
             );
         }
     }
