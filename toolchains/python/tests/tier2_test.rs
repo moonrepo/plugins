@@ -667,6 +667,69 @@ b = { workspace = true }
         }
     }
 
+    mod locate_dependencies_roots {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn locates_each_dir_in_order() {
+            let sandbox = create_moon_sandbox("locate");
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let output = plugin
+                .locate_dependencies_roots(LocateDependenciesRootsInput {
+                    starting_dirs: vec![
+                        VirtualPath::new(sandbox.path().join("workspace/packages/a/nested")),
+                        VirtualPath::new(sandbox.path()),
+                        VirtualPath::new(sandbox.path().join("package/nested")),
+                    ],
+                    toolchain_config: json!({
+                        "packageManager": "uv"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.roots,
+                vec![
+                    LocateDependenciesRootOutput {
+                        members: Some(vec!["packages/*".into()]),
+                        root: Some(VirtualPath::new("/workspace/workspace")),
+                    },
+                    LocateDependenciesRootOutput::default(),
+                    LocateDependenciesRootOutput {
+                        members: None,
+                        root: Some(VirtualPath::new("/workspace/package")),
+                    },
+                ]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn returns_nothing_for_each_dir_if_pm_not_configured() {
+            let sandbox = create_moon_sandbox("locate");
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let output = plugin
+                .locate_dependencies_roots(LocateDependenciesRootsInput {
+                    starting_dirs: vec![
+                        VirtualPath::new(sandbox.path().join("package")),
+                        VirtualPath::new(sandbox.path().join("workspace")),
+                    ],
+                    toolchain_config: json!({
+                        "packageManager": null
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.roots,
+                vec![LocateDependenciesRootOutput::default(); 2]
+            );
+        }
+    }
+
     mod install_dependencies {
         use super::*;
 
