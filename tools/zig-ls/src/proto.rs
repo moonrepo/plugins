@@ -79,8 +79,12 @@ pub fn download_prebuilt(
     let index: ZlsReleaseIndex = fetch_json(&config.index_url)?;
     let release = index.find(version)?;
     let artifact = release.artifact(env)?;
+    let mut output = create_download_prebuilt_output(NAME, artifact)?;
 
-    Ok(Json(create_download_prebuilt_output(NAME, artifact)?))
+    // ZLS archives have no top-level directory, unlike Zig's
+    output.archive_prefix = None;
+
+    Ok(Json(output))
 }
 
 #[plugin_fn]
