@@ -70,6 +70,45 @@ mod node_depman_tool {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn locates_bins_and_globals_windows() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("npm-test", |config| {
+                    config.host(HostOS::Windows, HostArch::X64);
+                })
+                .await;
+
+            let output = plugin
+                .locate_executables(LocateExecutablesInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("9.0.0").unwrap(),
+                        ..Default::default()
+                    },
+                    install_dir: plugin.tool.to_virtual_path(sandbox.path()),
+                })
+                .await;
+
+            assert_eq!(
+                output.exes.get("npm").unwrap().exe_path,
+                Some("shims/npm.cmd".into())
+            );
+
+            // A JS file ran through node, not one of our .cmd shims
+            assert_eq!(
+                output.exes.get("node-gyp").unwrap().exe_path,
+                Some("node_modules/node-gyp/bin/node-gyp.js".into())
+            );
+
+            // Global bins are linked directly into the prefix on Windows
+            assert!(output.globals_lookup_dirs.contains(&"$PREFIX".into()));
+            assert!(
+                output
+                    .globals_lookup_dirs
+                    .contains(&"$PROTO_HOME\\tools\\node\\$PROTO_NODE_VERSION".into())
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn downloads_from_custom_registry() {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
@@ -452,8 +491,17 @@ mod node_depman_tool {
 
             assert_eq!(exes.get("nub").unwrap().exe_path, Some("bin/nub".into()));
 
-            // nubx runs through the primary binary
-            assert_eq!(exes.get("nubx").unwrap().exe_path, Some("bin/nub".into()));
+            // nubx and nubr run through the primary binary, which reads
+            // the mode from an env var when not invoked by that file name
+            for verb in ["nubx", "nubr"] {
+                let exe = exes.get(verb).unwrap();
+
+                assert_eq!(exe.exe_path, Some("bin/nub".into()));
+                assert_eq!(
+                    exe.shim_env_vars,
+                    Some(FxHashMap::from_iter([("__NUB_ARGV0".into(), verb.into())]))
+                );
+            }
 
             // No internal shims are created for the native binary
             assert!(!sandbox.path().join("shims/nub").exists());
@@ -484,6 +532,31 @@ mod node_depman_tool {
                 exes.get("nub").unwrap().exe_path,
                 Some("bin/nub.exe".into())
             );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn locates_globals_in_user_bin_dir() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("nub-test", |config| {
+                    config.host(HostOS::MacOS, HostArch::Arm64);
+                })
+                .await;
+
+            let dirs = plugin
+                .locate_executables(LocateExecutablesInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("0.10.0").unwrap(),
+                        ..Default::default()
+                    },
+                    install_dir: plugin.tool.to_virtual_path(sandbox.path()),
+                })
+                .await
+                .globals_lookup_dirs;
+
+            assert!(dirs.contains(&"$XDG_BIN_HOME".into()));
+            assert!(dirs.contains(&"$HOME/.local/bin".into()));
+            assert!(!dirs.iter().any(|dir| dir.contains("pnpm")));
         }
     }
 
@@ -572,6 +645,40 @@ mod node_depman_tool {
                     .exe_path,
                 Some("shims/pnpm.cmd".into())
             );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn locates_globals_in_home_dir() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("pnpm-test", |config| {
+                    config.host(HostOS::MacOS, HostArch::Arm64);
+                })
+                .await;
+
+            let locate = |version: &str| {
+                plugin.locate_executables(LocateExecutablesInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse(version).unwrap(),
+                        ..Default::default()
+                    },
+                    install_dir: plugin.tool.to_virtual_path(sandbox.path()),
+                })
+            };
+
+            let dirs = locate("10.0.0").await.globals_lookup_dirs;
+
+            assert!(dirs.contains(&"$PNPM_HOME".into()));
+            assert!(dirs.contains(&"$HOME/Library/pnpm".into()));
+
+            // v11+ links into a bin folder of the home directory
+            for version in ["11.0.0", "12.0.0"] {
+                let dirs = locate(version).await.globals_lookup_dirs;
+
+                assert!(dirs.contains(&"$PNPM_HOME/bin".into()));
+                assert!(dirs.contains(&"$HOME/Library/pnpm/bin".into()));
+                assert!(!dirs.contains(&"$PNPM_HOME".into()));
+            }
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -1028,6 +1135,33 @@ mod node_depman_tool {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn supports_prebuilt_v0() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("yarn-test", |config| {
+                    config.host(HostOS::MacOS, HostArch::X64);
+                })
+                .await;
+
+            assert_eq!(
+                plugin
+                    .download_prebuilt(DownloadPrebuiltInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("0.21.3").unwrap(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .await,
+                DownloadPrebuiltOutput {
+                    archive_prefix: Some("package".into()),
+                    download_url: "https://registry.npmjs.org/yarn/-/yarn-0.21.3.tgz".into(),
+                    ..Default::default()
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn locates_default_bin() {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
@@ -1375,8 +1509,57 @@ npmRegistries:
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn supports_prebuilt_windows_x64() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("yarn-test", |config| {
+                    config.host(HostOS::Windows, HostArch::X64);
+                })
+                .await;
+
+            assert_eq!(
+                plugin
+                    .download_prebuilt(DownloadPrebuiltInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("6.0.0-rc.23").unwrap(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .await,
+                DownloadPrebuiltOutput {
+                    archive_prefix: Some("yarn-x86_64-pc-windows-msvc".into()),
+                    download_name: Some("yarn-x86_64-pc-windows-msvc.zip".into()),
+                    download_url: "https://github.com/yarnpkg/zpm/releases/download/v6.0.0-rc.23/yarn-x86_64-pc-windows-msvc.zip".into(),
+                    ..Default::default()
+                }
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        #[should_panic(expected = "unsupported architecture x64 for macos.")]
+        async fn doesnt_support_macos_x64() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("yarn-test", |config| {
+                    config.host(HostOS::MacOS, HostArch::X64);
+                })
+                .await;
+
+            plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("6.0.0-rc.23").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await;
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         #[should_panic(expected = "unsupported OS windows.")]
-        async fn doesnt_support_windows() {
+        async fn doesnt_support_windows_before_rc23() {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("yarn-test", |config| {
@@ -1428,7 +1611,7 @@ npmRegistries:
         }
 
         #[tokio::test(flavor = "multi_thread")]
-        #[should_panic(expected = "unsupported architecture riscv64.")]
+        #[should_panic(expected = "unsupported architecture riscv64 for linux.")]
         async fn doesnt_support_other_archs() {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox

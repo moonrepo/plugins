@@ -7,8 +7,18 @@ expression: "std :: fs ::\nread_to_string(sandbox.path().join(\".proto/shims/reg
     "alt_exe": true,
     "context": "nub-test"
   },
+  "nubr": {
+    "alt_exe": true,
+    "context": "nub-test",
+    "env_vars": {
+      "__NUB_ARGV0": "nubr"
+    }
+  },
   "nubx": {
     "alt_exe": true,
-    "context": "nub-test"
+    "context": "nub-test",
+    "env_vars": {
+      "__NUB_ARGV0": "nubx"
+    }
   }
 }
