@@ -5,13 +5,14 @@ use extism_pdk::*;
 use moon_config::DependencyScope;
 use moon_pdk::VirtualPathExt;
 use moon_pdk::{
-    load_project_toolchain_config, load_toolchain_config, locate_root, locate_root_many,
-    locate_root_many_with_check, parse_toolchain_config_schema,
+    load_project_toolchain_config, load_toolchain_config, locate_root,
+    parse_toolchain_config_schema,
 };
 use moon_pdk_api::*;
 use pep508_rs::{Requirement, VersionOrUrl};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
+use toolchain_common::{DirCache, RootLocator};
 
 #[plugin_fn]
 pub fn define_requirements(
@@ -207,39 +208,35 @@ fn locate_roots(
         PythonPackageManager::Uv => vec!["uv.lock"],
     };
 
+    let mut locator = RootLocator::default();
+    let mut workspace_members = DirCache::default();
     let mut roots = vec![];
+
+    // Members are only extracted from tools (like uv workspaces)
+    let load_members = |dir: &VirtualPath| {
+        PyProjectTomlWithTools::load(dir.join("pyproject.toml"))?.extract_members(package_manager)
+    };
 
     for starting_dir in starting_dirs {
         let mut output = LocateDependenciesRootOutput::default();
 
         // First attempt: find lock files
-        if let Some(root) = locate_root_many(starting_dir, &lock_names) {
-            output.members = PyProjectTomlWithTools::load(root.join("pyproject.toml"))?
-                .extract_members(package_manager)?;
+        if let Some(root) = locator.locate(starting_dir, &lock_names) {
+            output.members = workspace_members.get_or_load(&root, load_members)?.clone();
             output.root = Some(root);
         }
-
         // Second attempt: find workspace-compatible manifest files
-        if output.root.is_none() {
-            locate_root_many_with_check(starting_dir, &manifest_names, |root| {
-                let manifest = PyProjectTomlWithTools::load(root.join("pyproject.toml"))?;
-                let mut found = false;
-
-                if manifest.tool.is_some()
-                    && let Some(members) = manifest.extract_members(package_manager)?
-                {
-                    output.root = Some(root.to_owned());
-                    output.members = Some(members);
-                    found = true;
-                }
-
-                Ok(found)
-            })?;
+        else if let Some((root, members)) =
+            locator.locate_with_check(starting_dir, &manifest_names, |dir| {
+                Ok(workspace_members.get_or_load(dir, load_members)?.clone())
+            })?
+        {
+            output.members = Some(members);
+            output.root = Some(root);
         }
-
         // Last attempt: find a manifest file (project only)
-        if output.root.is_none() {
-            output.root = locate_root_many(starting_dir, &manifest_names);
+        else {
+            output.root = locator.locate(starting_dir, &manifest_names);
         }
 
         roots.push(output);

@@ -11,6 +11,7 @@ use rubund::parser::{SourceType, parse_lockfile};
 use starbase_utils::fs;
 use std::collections::HashMap;
 use std::path::{Component, Path, PathBuf};
+use toolchain_common::{DirCache, RootLocator};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -52,6 +53,8 @@ pub fn locate_dependencies_roots(
 }
 
 fn locate_roots(starting_dirs: &[VirtualPath]) -> AnyResult<Vec<LocateDependenciesRootOutput>> {
+    let mut locator = RootLocator::default();
+    let mut root_members = DirCache::default();
     let mut roots = vec![];
 
     for starting_dir in starting_dirs {
@@ -59,19 +62,23 @@ fn locate_roots(starting_dirs: &[VirtualPath]) -> AnyResult<Vec<LocateDependenci
 
         // Walk upward for the nearest Gemfile/Gemfile.lock. If none is found, `root`
         // stays `None` and moon skips install steps for this project.
-        if let Some(root) = locate_root_many(starting_dir, &ROOT_FILES) {
+        if let Some(root) = locator.locate(starting_dir, &ROOT_FILES) {
             // Bundler has no workspaces, but local gems in subdirectories, like
             // `libs/billing` in a shared Gemfile, use the root's bundle. Report them
             // as members, otherwise moon never installs it for their projects.
-            let members = match find_manifest(&root) {
-                Some(manifest) => gemfile::parse_gems(&fs::read_file(manifest)?)
-                    .into_iter()
-                    .filter_map(|gem| get_member_dir(gem.path.as_deref()?))
-                    .collect::<Vec<_>>(),
-                None => vec![],
-            };
+            output.members = root_members
+                .get_or_load(&root, |root| {
+                    let members = match find_manifest(root) {
+                        Some(manifest) => gemfile::parse_gems(&fs::read_file(manifest)?)
+                            .into_iter()
+                            .filter_map(|gem| get_member_dir(gem.path.as_deref()?))
+                            .collect::<Vec<_>>(),
+                        None => vec![],
+                    };
 
-            output.members = (!members.is_empty()).then_some(members);
+                    Ok((!members.is_empty()).then_some(members))
+                })?
+                .clone();
             output.root = Some(root);
         }
 

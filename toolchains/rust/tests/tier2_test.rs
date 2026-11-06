@@ -603,6 +603,39 @@ mod rust_toolchain_tier2 {
                 ]
             );
         }
+
+        // Directories that share a root reuse its cached manifest
+        #[tokio::test(flavor = "multi_thread")]
+        async fn shares_roots_between_dirs() {
+            let sandbox = create_moon_sandbox("locate");
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            let output = plugin
+                .locate_dependencies_roots(LocateDependenciesRootsInput {
+                    starting_dirs: vec![
+                        VirtualPath::new(sandbox.path().join("workspace/crates/a/nested")),
+                        VirtualPath::new(sandbox.path().join("workspace")),
+                        VirtualPath::new(sandbox.path().join("package/nested")),
+                        VirtualPath::new(sandbox.path().join("package")),
+                    ],
+                    ..Default::default()
+                })
+                .await;
+
+            let workspace = LocateDependenciesRootOutput {
+                members: Some(vec!["crates/*".into()]),
+                root: Some(VirtualPath::new("/workspace/workspace")),
+            };
+            let package = LocateDependenciesRootOutput {
+                members: None,
+                root: Some(VirtualPath::new("/workspace/package")),
+            };
+
+            assert_eq!(
+                output.roots,
+                [vec![workspace; 2], vec![package; 2]].concat()
+            );
+        }
     }
 
     mod install_dependencies {

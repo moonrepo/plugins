@@ -144,6 +144,33 @@ end
                 ]
             );
         }
+
+        // Directories that share a root reuse its cached manifest
+        #[tokio::test(flavor = "multi_thread")]
+        async fn shares_roots_between_dirs() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("Gemfile", r#"gem "billing", path: "libs/billing""#);
+            let plugin = sandbox.create_toolchain("ruby").await;
+
+            let output = plugin
+                .locate_dependencies_roots(LocateDependenciesRootsInput {
+                    starting_dirs: vec![
+                        VirtualPath::new(sandbox.path().join("libs/billing")),
+                        VirtualPath::new(sandbox.path().join("libs/billing/lib")),
+                        VirtualPath::new(sandbox.path().join("app")),
+                    ],
+                    toolchain_config: json!({}),
+                    ..Default::default()
+                })
+                .await;
+
+            let root = LocateDependenciesRootOutput {
+                members: Some(vec!["libs/billing".into()]),
+                root: Some(VirtualPath::new("/workspace")),
+            };
+
+            assert_eq!(output.roots, vec![root; 3]);
+        }
     }
 
     mod setup_environment {
