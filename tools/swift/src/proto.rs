@@ -65,11 +65,16 @@ pub fn parse_version_file(
             version = Some(UnresolvedVersionSpec::parse(line.trim())?);
         }
     } else if input.file == "Package.swift" {
+        // SwiftPM allows any spacing after `//`, any label casing,
+        // and trailing `;` settings like `6.3;(experimentalCGen)`
         for line in input.content.lines() {
-            let line = line.trim();
+            let line = line.trim().to_ascii_lowercase();
 
-            if let Some(raw_version) = line.strip_prefix("// swift-tools-version:") {
-                let raw_version = raw_version.trim();
+            if let Some(raw_version) = line
+                .strip_prefix("//")
+                .and_then(|comment| comment.trim_start().strip_prefix("swift-tools-version:"))
+            {
+                let raw_version = raw_version.split(';').next().unwrap_or_default().trim();
                 let range = format!("^{raw_version}");
 
                 version = Some(UnresolvedVersionSpec::parse(range)?);
@@ -213,7 +218,8 @@ pub fn locate_executables(
             ),
         ]),
         exes_dirs: vec!["usr/bin".into()],
-        globals_lookup_dirs: vec!["$TOOL_DIR/usr/bin".into()],
+        // Where `swift package experimental-install` writes
+        globals_lookup_dirs: vec!["$HOME/.swiftpm/bin".into()],
         ..Default::default()
     }))
 }
