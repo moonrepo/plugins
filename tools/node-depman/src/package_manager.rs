@@ -53,9 +53,7 @@ impl PackageManager {
             manager = match version {
                 VersionSpec::Canary => Self::Pnpm12,
                 VersionSpec::Alias(alias) => {
-                    if alias == "latest" {
-                        Self::Pnpm11
-                    } else if alias == "next" {
+                    if alias == "latest" || alias == "next" {
                         Self::Pnpm12
                     } else {
                         Self::Pnpm
@@ -185,37 +183,53 @@ impl PackageManager {
     }
 
     pub fn get_global_lookup_dirs(&self, env: &HostEnvironment) -> Vec<String> {
+        // npm links global bins directly into its prefix on Windows,
+        // which defaults to the Node.js directory (it has no `bin` there)
+        let bin = if self.is_npm() && env.os.is_windows() {
+            ""
+        } else {
+            "/bin"
+        };
+
         let mut dirs: Vec<String> = vec![
-            "$PREFIX/bin".into(),
+            format!("$PREFIX{bin}"),
             "$PREFIX/shims".into(),
-            "$PROTO_HOME/tools/node/$PROTO_NODE_VERSION/bin".into(),
+            format!("$PROTO_HOME/tools/node/$PROTO_NODE_VERSION{bin}"),
         ];
 
         match self {
-            // https://docs.npmjs.com/cli/v9/configuring-npm/folders#prefix-configuration
-            // https://github.com/npm/cli/blob/latest/lib/npm.js
+            // https://docs.npmjs.com/cli/v11/configuring-npm/folders#executables
             // https://github.com/npm/cli/blob/latest/workspaces/config/lib/index.js#L339
             Self::Npm => {
                 dirs.push("$TOOL_DIR/shims".into());
             }
-            // Nub's global layout is modeled on pnpm v11 and intentionally
-            // shares pnpm's directories. There is no NUB_HOME.
+            // Since v0.9, nub links bins into the shared user bin directory
             // https://github.com/nubjs/nub/blob/main/vendor/aube/crates/aube/src/commands/global.rs
-            Self::Nub |
-            // https://pnpm.io/npmrc#global-dir
-            // https://github.com/pnpm/pnpm/blob/main/config/config/src/index.ts#L350
-            // https://github.com/pnpm/pnpm/blob/main/config/config/src/dirs.ts#L40
+            Self::Nub => {
+                dirs.push("$XDG_BIN_HOME".into());
+                dirs.push("$HOME/.local/bin".into());
+            }
+            // https://pnpm.io/npmrc#global-bin-dir
+            // https://github.com/pnpm/pnpm/blob/v10.34.9/config/config/src/dirs.ts
+            // https://github.com/pnpm/pnpm/blob/v11.28.9/pnpm11/config/reader/src/getConfig/globalInstall.ts
             Self::Pnpm | Self::Pnpm11 | Self::Pnpm12 => {
-                dirs.push("$PNPM_HOME".into());
+                let mut homes = vec!["$PNPM_HOME"];
 
                 if env.os.is_windows() {
-                    dirs.push("$LOCALAPPDATA/pnpm".into());
-                } else if env.os.is_mac() {
-                    dirs.push("$HOME/Library/pnpm".into());
+                    homes.push("$LOCALAPPDATA/pnpm");
                 } else {
-                    dirs.push("$XDG_DATA_HOME/pnpm".into());
-                    dirs.push("$HOME/.local/share/pnpm".into());
+                    homes.push("$XDG_DATA_HOME/pnpm");
+                    homes.push(if env.os.is_mac() {
+                        "$HOME/Library/pnpm"
+                    } else {
+                        "$HOME/.local/share/pnpm"
+                    });
                 }
+
+                // v11+ links bins into a `bin` folder of its home directory
+                let bin = if self == &Self::Pnpm { "" } else { "/bin" };
+
+                dirs.extend(homes.into_iter().map(|home| format!("{home}{bin}")));
             }
             // https://github.com/yarnpkg/yarn/blob/master/src/cli/commands/global.js#L84
             Self::Yarn1 | Self::Yarn2to5 | Self::Yarn6 => {

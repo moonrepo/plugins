@@ -11,13 +11,13 @@ mod node_depman_tool {
     mod nub {
         use super::*;
 
-        generate_shims_test!("nub-test", ["nub", "nubx"]);
+        generate_shims_test!("nub-test", ["nub", "nubx", "nubr"]);
     }
 
     mod pnpm {
         use super::*;
 
-        // The pn and pnx shims are created for pnpm >= 11 (the latest)
+        // The pn and pnx shims are created for pnpm >= 11 (the latest is v12)
         generate_shims_test!("pnpm-test", ["pnpm", "pnpx", "pn", "pnx"]);
     }
 

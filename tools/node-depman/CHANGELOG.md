@@ -2,9 +2,21 @@
 
 ## Unreleased
 
+#### 🚀 Updates
+
+- Added a `nubr` executable for Nub v0.9.3+.
+- Added Windows x64 support for Yarn v6 (from `6.0.0-rc.23`).
+
 #### 🐞 Fixes
 
 - Fixed the `latest` version resolving to a pre-release when the npm `latest` dist-tag points to one. It now falls back to the highest stable version.
+- Fixed the `nubx` shim running `nub` instead of `nubx`.
+- Fixed the `node-gyp` executable pointing to a non-existent `.cmd` file on Windows.
+- Fixed global directories for pnpm v11+, which links global bins into `$PNPM_HOME/bin`, and Nub v0.9+, which links them into `~/.local/bin` (or `$XDG_BIN_HOME`).
+- Fixed npm global directories on Windows, where bins are linked directly into the prefix.
+- Fixed `shared-globals-dir` for pnpm v10 and below, which ignore `pnpm_config_*` environment variables. They now receive `npm_config_global_dir` and `npm_config_global_bin_dir`.
+- Fixed Yarn v6 on macOS x64 attempting a download that doesn't exist, instead of failing as unsupported.
+- Fixed the archive prefix for Yarn v0 versions.
 
 ## 0.20.2
 

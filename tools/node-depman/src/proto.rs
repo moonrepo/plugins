@@ -336,9 +336,9 @@ fn get_archive_prefix(manager: &PackageManager, spec: &VersionSpec) -> String {
     if manager == &PackageManager::Yarn1
         && let Some(version) = spec.as_version()
     {
-        // Prefix changed to "package" in v1.22.20
+        // Prefix was "yarn-v" from v1.0.0 until v1.22.20
         // https://github.com/yarnpkg/yarn/releases/tag/v1.22.20
-        if version.minor <= 22 && version.patch <= 19 {
+        if version.major == 1 && version.minor <= 22 && version.patch <= 19 {
             return format!("yarn-v{version}");
         }
     }
@@ -364,33 +364,36 @@ pub fn download_prebuilt(
     // Yarn v6 is Rust based and is NOT installed from the npm registry!
     // https://v6.yarnpkg.com/getting-started
     if manager == PackageManager::Yarn6 {
+        let mut targets = permutations![
+            HostOS::Linux => [HostArch::X64, HostArch::Arm64, HostArch::X86],
+            HostOS::MacOS => [HostArch::Arm64],
+        ];
+
+        // Windows builds start at 6.0.0-rc.23
+        if version
+            .as_version()
+            .is_some_and(|inner| inner >= &Version::parse("6.0.0-rc.23").unwrap())
+        {
+            targets.insert(HostOS::Windows, vec![HostArch::X64]);
+        }
+
+        check_supported_os_and_arch("yarn", env, targets)?;
+
         let arch = match env.arch {
             HostArch::Arm64 => "aarch64",
             HostArch::X64 => "x86_64",
             HostArch::X86 => "i686",
-            other => {
-                return Err(plugin_err!(PluginError::UnsupportedArch {
-                    tool: "yarn".into(),
-                    arch: other.to_string(),
-                }));
-            }
+            _ => unreachable!(),
         };
 
         let os = match env.os {
             HostOS::MacOS => "apple-darwin",
-            HostOS::Linux => "unknown-linux",
-            other => {
-                return Err(plugin_err!(PluginError::UnsupportedOS {
-                    tool: "yarn".into(),
-                    os: other.to_string(),
-                }));
-            }
+            HostOS::Windows => "pc-windows-msvc",
+            // Yarn only publishes musl builds for Linux, and they also run on glibc hosts.
+            _ => "unknown-linux-musl",
         };
 
-        // Yarn only publishes musl builds for Linux, and they also run on glibc hosts.
-        let libc = if env.os.is_linux() { "-musl" } else { "" };
-
-        let filename = format!("yarn-{arch}-{os}{libc}.zip");
+        let filename = format!("yarn-{arch}-{os}.zip");
 
         return Ok(Json(DownloadPrebuiltOutput {
             archive_prefix: Some(filename.replace(".zip", "")),
@@ -472,10 +475,17 @@ pub fn locate_executables(
             // so we need to make them executable on our end!
             // https://github.com/nubjs/nub/blob/main/npm/nub/postinstall.js#L22
             primary = ExecutableConfig::new_primary(&exe_name).update_perms(true);
-            secondary.insert(
-                "nubx".into(),
-                ExecutableConfig::new(exe_name).update_perms(true),
-            );
+
+            // The binary picks its mode from the argv[0] file name, or this
+            // variable when ran through a shim (which proto's shims are)
+            // https://github.com/nubjs/nub/blob/main/npm/nub/bin/launch.js
+            for verb in ["nubx", "nubr"] {
+                let mut config = ExecutableConfig::new(&exe_name).update_perms(true);
+                config.shim_env_vars =
+                    Some(FxHashMap::from_iter([("__NUB_ARGV0".into(), verb.into())]));
+
+                secondary.insert(verb.into(), config);
+            }
         }
         PackageManager::Pnpm => {
             primary = ExecutableConfig::new_primary("shims/pnpm");
@@ -534,15 +544,16 @@ pub fn locate_executables(
         // Only applies to shims, not real binaries!
         config.no_bin = true;
 
-        if name != "node-gyp" {
-            config.update_perms = true;
+        // A JS file ran through node, not one of our shims
+        if name == "node-gyp" {
+            return;
         }
 
-        // Our internal shims are .cmd scripts on Windows, but native
-        // executables (yarn v6) must keep their .exe extension
+        config.update_perms = true;
+
+        // Our internal shims are .cmd scripts on Windows
         if env.os.is_windows()
             && let Some(exe_path) = &mut config.exe_path
-            && exe_path.extension().is_none_or(|ext| ext != "exe")
         {
             exe_path.set_extension("cmd");
         }
@@ -588,11 +599,10 @@ pub fn activate_environment(
                 );
             }
 
-            // Nub mirrors pnpm's global-dir/global-bin-dir split, but only
-            // the npm-compat env family is always honored (pnpm_config_*
-            // requires pnpm to be the incumbent package manager, and PREFIX
-            // is never read for install locations).
-            PackageManager::Nub => {
+            // Nub and pnpm have explicit support for the bin and root dirs.
+            // Nub (which never reads PREFIX) and pnpm v10 and below only
+            // read them from the npm-compat env family.
+            PackageManager::Nub | PackageManager::Pnpm => {
                 output
                     .env
                     .insert("npm_config_global_dir".into(), globals_root_dir);
@@ -601,9 +611,8 @@ pub fn activate_environment(
                     .insert("npm_config_global_bin_dir".into(), globals_bin_dir);
             }
 
-            // Pnpm has explicit support for the bin and root dirs,
-            // which makes this super simple to handle.
-            PackageManager::Pnpm | PackageManager::Pnpm11 | PackageManager::Pnpm12 => {
+            // While v11+ only reads its own env family
+            PackageManager::Pnpm11 | PackageManager::Pnpm12 => {
                 output
                     .env
                     .insert("pnpm_config_global_dir".into(), globals_root_dir);
