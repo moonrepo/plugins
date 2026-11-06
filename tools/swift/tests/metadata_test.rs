@@ -59,12 +59,15 @@ mod swift_tool {
             (LinuxPlatform::AmazonLinux2, "amazon-linux-2"),
             (LinuxPlatform::AmazonLinux2023, "amazon-linux-2023"),
             (LinuxPlatform::Debian12, "debian-12"),
+            (LinuxPlatform::Debian13, "debian-13"),
             (LinuxPlatform::Fedora39, "fedora-39"),
             (LinuxPlatform::Fedora41, "fedora-41"),
             (LinuxPlatform::RedhatUbi9, "redhat-ubi-9"),
+            (LinuxPlatform::RedhatUbi10, "redhat-ubi-10"),
             (LinuxPlatform::Ubuntu2004, "ubuntu-20.04"),
             (LinuxPlatform::Ubuntu2204, "ubuntu-22.04"),
             (LinuxPlatform::Ubuntu2404, "ubuntu-24.04"),
+            (LinuxPlatform::Ubuntu2604, "ubuntu-26.04"),
         ];
 
         for (linux_platform, expected) in platforms {

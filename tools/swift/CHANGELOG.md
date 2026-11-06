@@ -1,5 +1,21 @@
 # Swift plugin
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added `debian-13`, `redhat-ubi-10`, and `ubuntu-26.04` Linux platforms, available from Swift 6.4.
+
+#### 🐞 Fixes
+
+- Fixed downloads of 6.4.0 and later `.0` releases, which Swift.org names `swift-6.4.0-RELEASE`
+  instead of `swift-6.4-RELEASE`.
+- Fixed the globals directory, which pointed at the toolchain's own `usr/bin` instead of
+  `~/.swiftpm/bin`, where `swift package experimental-install` writes executables.
+- Fixed `Package.swift` version detection, which failed on trailing settings like
+  `// swift-tools-version: 6.3;(experimentalCGen)`, and ignored the spacing and casing that SwiftPM
+  allows, like `//swift-tools-version:5.10`.
+
 ## 0.1.0
 
 #### 🚀 Updates

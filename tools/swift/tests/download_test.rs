@@ -67,6 +67,92 @@ mod swift_tool {
     }
 
     #[tokio::test(flavor = "multi_thread")]
+    async fn supports_newer_linux_platforms() {
+        let platforms = [
+            (LinuxPlatform::Debian13, "debian13", "debian13"),
+            (LinuxPlatform::RedhatUbi10, "ubi10", "ubi10"),
+            (LinuxPlatform::Ubuntu2604, "ubuntu2604", "ubuntu26.04"),
+        ];
+
+        for (linux_platform, platform, archive_suffix) in platforms {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("swift-test", |config| {
+                    config
+                        .host(HostOS::Linux, HostArch::X64)
+                        .tool_config(SwiftToolConfig {
+                            linux_platform: linux_platform.clone(),
+                            ..Default::default()
+                        });
+                })
+                .await;
+
+            assert_eq!(
+                plugin
+                    .download_prebuilt(DownloadPrebuiltInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("6.4.2").unwrap(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .await
+                    .download_url,
+                format!(
+                    "https://download.swift.org/swift-6.4.2-release/{platform}/swift-6.4.2-RELEASE/swift-6.4.2-RELEASE-{archive_suffix}.tar.gz"
+                )
+            );
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn keeps_zero_patch_from_6_4() {
+        for (os, arch, version, archive_prefix, download_url) in [
+            (
+                HostOS::Linux,
+                HostArch::X64,
+                "6.3.0",
+                Some("swift-6.3-RELEASE-ubuntu24.04"),
+                "https://download.swift.org/swift-6.3-release/ubuntu2404/swift-6.3-RELEASE/swift-6.3-RELEASE-ubuntu24.04.tar.gz",
+            ),
+            (
+                HostOS::Linux,
+                HostArch::X64,
+                "6.4.0",
+                Some("swift-6.4.0-RELEASE-ubuntu24.04"),
+                "https://download.swift.org/swift-6.4.0-release/ubuntu2404/swift-6.4.0-RELEASE/swift-6.4.0-RELEASE-ubuntu24.04.tar.gz",
+            ),
+            (
+                HostOS::MacOS,
+                HostArch::Arm64,
+                "6.4.0",
+                None,
+                "https://download.swift.org/swift-6.4.0-release/xcode/swift-6.4.0-RELEASE/swift-6.4.0-RELEASE-osx.pkg",
+            ),
+        ] {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("swift-test", |config| {
+                    config.host(os, arch);
+                })
+                .await;
+
+            let output = plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse(version).unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.archive_prefix.as_deref(), archive_prefix);
+            assert_eq!(output.download_url, download_url);
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
     async fn supports_linux_arm64() {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
@@ -273,5 +359,7 @@ mod swift_tool {
             output.exes.get("sourcekit-lsp").unwrap().exe_path,
             Some("usr/bin/sourcekit-lsp".into())
         );
+        assert_eq!(output.exes_dirs, vec![std::path::PathBuf::from("usr/bin")]);
+        assert_eq!(output.globals_lookup_dirs, vec!["$HOME/.swiftpm/bin"]);
     }
 }
