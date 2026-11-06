@@ -3,11 +3,10 @@ use crate::go_mod::{Replacement, parse_go_mod};
 use crate::go_sum::GoSum;
 use crate::go_work::GoWork;
 use crate::package_graph::{GoPackageGraph, is_version_segment, module_dir_candidates};
-use crate::parsers;
 use extism_pdk::*;
 use moon_config::BinEntry;
 use moon_pdk::{
-    HostLogInput, HostLogTarget, VirtualPathExt, command_exists, exec, get_host_env_var,
+    HostLogInput, HostLogTarget, VirtualPathExt, command_exists, get_host_env_var,
     get_host_environment, host_log, locate_root, parse_toolchain_config_schema,
 };
 use moon_pdk_api::*;
@@ -283,59 +282,22 @@ fn is_bin_installed(
     globals_dir: Option<&VirtualPath>,
     module: &str,
     version: &str,
-) -> AnyResult<bool> {
+) -> bool {
+    // Without a registry to inspect (like Cargo's `.crates.toml`), we can't
+    // verify which version an installed binary is, so entries pinned to a
+    // version, branch, or commit are always included. Their command only
+    // executes when the environment fingerprint changes, like a version bump
+    if version != "latest" {
+        return false;
+    }
+
     let Some(globals_dir) = globals_dir else {
-        return Ok(false);
+        return false;
     };
 
-    let bin = globals_dir.join(env.os.get_exe_name(get_bin_name(module)));
-
-    if !bin.exists() {
-        return Ok(false);
-    }
-
-    // `latest` can't be compared without resolving it, so any version counts
-    if version == "latest" {
-        return Ok(true);
-    }
-
-    // Neither can branches or commits, so they're always installed. Their
-    // command only runs when the environment fingerprint changes
-    if !is_exact_version(version) {
-        return Ok(false);
-    }
-
-    let Some(bin_path) = bin.to_real_path()? else {
-        return Ok(false);
-    };
-
-    // Go embeds the module version in the binary. Any Go can read it, so
-    // don't let `go.mod` switch toolchains
-    let mut command = ExecCommandInput::pipe("go", ["version", "-m", &bin_path.to_string()]);
-    command.env.insert("GOTOOLCHAIN".into(), "local".into());
-
-    let Ok(result) = exec(command) else {
-        return Ok(false);
-    };
-
-    Ok(result.exit_code == 0
-        && parsers::build_info::parse_module_version(&result.stdout) == Some(version))
-}
-
-// A full version like `v1.2.3`, or a pseudo-version, which is what
-// `go version -m` reports for a binary installed with it
-fn is_exact_version(version: &str) -> bool {
-    version
-        .strip_prefix('v')
-        .and_then(|version| version.split(['-', '+']).next())
-        .is_some_and(|core| {
-            let parts = core.split('.').collect::<Vec<_>>();
-
-            parts.len() == 3
-                && parts
-                    .iter()
-                    .all(|part| !part.is_empty() && part.chars().all(|c| c.is_ascii_digit()))
-        })
+    globals_dir
+        .join(env.os.get_exe_name(get_bin_name(module)))
+        .exists()
 }
 
 #[plugin_fn]
@@ -373,7 +335,7 @@ pub fn setup_environment(
 
             let (module, version) = name.split_once('@').unwrap_or((name, "latest"));
 
-            if !force && is_bin_installed(env, input.globals_dir.as_ref(), module, version)? {
+            if !force && is_bin_installed(env, input.globals_dir.as_ref(), module, version) {
                 continue;
             }
 

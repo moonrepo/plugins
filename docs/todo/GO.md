@@ -50,10 +50,11 @@ checksum files exist for every archive.
 | D2 (#13): pin the task toolchain with `GOTOOLCHAIN=local`?            | Yes, when `version` is set and the host hasn't set `GOTOOLCHAIN` |
 | D3 (#14): treat every directory under a lone `go.mod` as a member?    | Yes, with `**/*` members                                         |
 | D4 (#15): hash the root `go.mod`'s requires for projects without one? | Yes, in `hash_task_contents`                                     |
-| D5 (#16): check pinned bins against the installed version?            | Yes, with `go version -m`, for exact semver pins only            |
+| D5 (#16): check pinned bins against the installed version?            | No. Running `go` for every pinned bin is too much overhead       |
 | D6 (#17): key the project graph cache on `.go` sources?               | Yes, together with #19 so that rebuilds stay cheap               |
 
-D1–D6 were accepted as recommended. Phase 2 was checked live with moon 2.6.4 in the single-module
+D1–D4 and D6 were accepted as recommended. D5 was implemented and then reverted, as the extra `go`
+process per pinned bin on every setup costs more than it saves. Phase 2 was checked live with moon 2.6.4 in the single-module
 repo from "Testing"; the results are under each item.
 
 ## Phase 1: clear-cut fixes
@@ -398,8 +399,8 @@ changing.
 
 ### #16 Check pinned bins with `go version -m` (D5)
 
-- [x] Compare installed module versions
-- [x] Update tests
+Won't do (D5): running `go version -m` for each pinned bin adds too much overhead to setup. Pinned
+bins keep being emitted every time, and only run when the list of commands changes.
 
 **Problem:** `is_bin_installed` (`tier2.rs:243-264`) always includes bins pinned to a version. moon
 fingerprints the returned commands (`setup_environment.rs:101`), so an unchanged command list never
@@ -414,11 +415,9 @@ behavior. This is one process per pinned bin per setup.
 **Tests:** flip `always_installs_versioned_bins` to skip a matching install. Use a stub binary
 script, since `go version -m` needs a real Go binary, or skip without `go`.
 
-**Done:** the `mod` line is read by a grammar in `parsers/build_info.rs`, which has unit tests.
-Integration tests cover a missing binary, a file that isn't a Go binary, and a branch pin; a
-matching binary can't be built portably in CI. Live, `gopls@v0.21.1` with v0.21.1 installed ran no
-`go install`, while `@v0.20.0` emitted one. A `GOBIN` outside the workspace and home directory
-isn't visible to the plugin, so its bins are always installed, as before.
+**Reverted:** this was implemented, with a `parsers/build_info.rs` grammar for the `mod` line, and
+worked live (`gopls@v0.21.1` with v0.21.1 installed ran no `go install`), but was removed for the
+cost of the extra process.
 
 ### #17 Go source edits don't refresh the project graph (D6)
 

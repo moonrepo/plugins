@@ -38,10 +38,6 @@
   installed by `moon setup`. The root now reports every directory below it as a member.
 - An invalid `go.mod`, like one in `testdata`, is now skipped with a warning when moon reads
   manifests, instead of failing.
-- `bins` pinned to an exact version, like `@v1.2.3`, are now only installed when the installed
-  binary was built from a different version, as reported by `go version -m`. Before, they were
-  only installed when the list of commands changed, so a deleted or replaced binary wasn't
-  reinstalled. Bins pinned to a branch or commit work as before.
 - Relationships are now inferred with a single `go list -json` per module, instead of one or two
   per project.
 - Installs are skipped when `vendor/modules.txt` exists, as Go builds from `vendor`.

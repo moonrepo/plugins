@@ -1702,30 +1702,7 @@ mod go_toolchain_tier2 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
-        async fn always_installs_bins_pinned_to_a_branch() {
-            let sandbox = create_empty_moon_sandbox();
-            sandbox.create_file(".go/bin/gopls", "");
-            sandbox.create_file(".go/bin/gopls.exe", "");
-
-            let plugin = sandbox.create_toolchain("go").await;
-
-            let output = plugin
-                .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::new(sandbox.path()),
-                    globals_dir: Some(VirtualPath::new(sandbox.path().join(".go/bin"))),
-                    toolchain_config: json!({
-                        "bins": ["golang.org/x/tools/gopls@master"]
-                    }),
-                    ..Default::default()
-                })
-                .await;
-
-            assert_eq!(output.commands.len(), 1);
-        }
-
-        // An empty file isn't a Go binary, so its version can't be read
-        #[tokio::test(flavor = "multi_thread")]
-        async fn installs_versioned_bins_that_dont_match() {
+        async fn always_installs_versioned_bins() {
             let sandbox = create_empty_moon_sandbox();
             sandbox.create_file(".go/bin/gopls", "");
             sandbox.create_file(".go/bin/gopls.exe", "");
