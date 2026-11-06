@@ -2,8 +2,10 @@ use crate::turbo_json::*;
 use extension_common::migrator::*;
 use moon_common::Id;
 use moon_config::{
-    FilePath, Input, Output, PartialTaskArgs, PartialTaskConfig, PartialTaskDependency,
-    PartialTaskOptionsConfig, PartialWorkspaceProjects, TaskOptionCache, TaskOptionEnvFile,
+    FilePath, Input, Output, PartialProjectWorkspaceConfig,
+    PartialProjectWorkspaceInheritedTasksConfig, PartialTaskArgs, PartialTaskConfig,
+    PartialTaskDependency, PartialTaskDependencyConfig, PartialTaskOptionEnvFile,
+    PartialTaskOptionsConfig, PartialWorkspaceProjects, TaskDependencyType, TaskOptionCache,
     TaskOutputStyle, TaskPreset,
 };
 use moon_pdk::*;
@@ -13,6 +15,10 @@ use rustc_hash::FxHashSet;
 use starbase_utils::{fs, glob, json};
 use std::collections::BTreeMap;
 use std::str::FromStr;
+
+const TURBO_DEFAULT: &str = "$TURBO_DEFAULT$";
+const TURBO_EXTENDS: &str = "$TURBO_EXTENDS$";
+const TURBO_ROOT: &str = "$TURBO_ROOT$/";
 
 pub struct PackageEntry {
     id: Id,
@@ -79,6 +85,25 @@ impl TurboMigrator {
         Ok((project, task_id.to_owned()))
     }
 
+    fn parse_target(&self, dep: &str) -> AnyResult<Target> {
+        // ^:task
+        if let Some(dep) = dep.strip_prefix('^') {
+            return Target::parse(format!("^:{dep}").as_str()).map_err(map_miette_error);
+        }
+
+        // project:task
+        if dep.contains('#') {
+            let (package, script) = self.find_project_task_from_script(dep)?;
+            let task_id = create_id(&script)?;
+
+            return Target::parse(format!("{}:{task_id}", package.id).as_str())
+                .map_err(map_miette_error);
+        }
+
+        // ~:task
+        Target::parse(dep).map_err(map_miette_error)
+    }
+
     fn find_project_in_packages(&self, package_name: &str) -> AnyResult<&PackageEntry> {
         for package in &self.packages {
             if package.id == package_name || package.alias == package_name {
@@ -93,23 +118,31 @@ impl TurboMigrator {
 
     pub fn migrate_root_config(&mut self, mut turbo_json: TurboJson) -> AnyResult<()> {
         let mut implicit_inputs = vec![];
+        let global = turbo_json.global.take().unwrap_or_default();
 
-        if let Some(global_deps) = turbo_json.global_dependencies.take() {
-            for dep in global_deps {
-                implicit_inputs.push(Input::parse(&dep)?);
-            }
+        // Globs are relative to the root, not the project
+        for glob in turbo_json
+            .global_dependencies
+            .take()
+            .into_iter()
+            .chain(global.inputs)
+            .chain(turbo_json.global_dot_env.take())
+            .flatten()
+        {
+            implicit_inputs.push(Input::parse(match glob.strip_prefix('!') {
+                Some(glob) => format!("!/{glob}"),
+                None => format!("/{glob}"),
+            })?);
         }
 
-        if let Some(global_dot_env) = turbo_json.global_dot_env.take() {
-            for env_file in global_dot_env {
-                implicit_inputs.push(Input::parse(&env_file)?);
-            }
-        }
-
-        if let Some(global_env) = turbo_json.global_env.take() {
-            for env in global_env {
-                implicit_inputs.push(Input::EnvVar(env.to_owned()));
-            }
+        for env in turbo_json
+            .global_env
+            .take()
+            .into_iter()
+            .chain(global.env)
+            .flatten()
+        {
+            implicit_inputs.push(parse_env_input(&env));
         }
 
         if !implicit_inputs.is_empty() {
@@ -184,8 +217,31 @@ impl TurboMigrator {
                     continue;
                 }
 
-                let task = self.migrate_task(task, &script_name)?;
                 let task_id = create_id(&script_name)?;
+
+                // Don't inherit the task, and only create a fresh one if configured
+                if task.extends == Some(false) {
+                    self.inner
+                        .load_project_config(&project_source)?
+                        .workspace
+                        .get_or_insert(PartialProjectWorkspaceConfig::default())
+                        .inherited_tasks
+                        .get_or_insert(PartialProjectWorkspaceInheritedTasksConfig::default())
+                        .exclude
+                        .get_or_insert(vec![])
+                        .push(task_id.clone());
+
+                    if task
+                        == (TurboTask {
+                            extends: Some(false),
+                            ..Default::default()
+                        })
+                    {
+                        continue;
+                    }
+                }
+
+                let task = self.migrate_task(task, &script_name)?;
 
                 self.inner
                     .load_project_config(&project_source)?
@@ -224,69 +280,61 @@ impl TurboMigrator {
             "{} run {}",
             self.package_manager, package_script
         )));
+        config.description = turbo_task.description.clone();
 
         // Dependencies
-        if let Some(depends_on) = &turbo_task.depends_on {
-            let mut deps: Vec<Target> = vec![];
+        let mut deps = vec![];
 
-            for dep in depends_on {
-                // $ENV input
-                if let Some(env) = dep.strip_prefix('$') {
-                    inputs.push(Input::EnvVar(env.into()));
-                    continue;
-                }
-
-                // ^:task
-                if let Some(dep) = dep.strip_prefix('^') {
-                    deps.push(
-                        Target::parse(format!("^:{dep}").as_str()).map_err(map_miette_error)?,
-                    );
-                    continue;
-                }
-
-                // project:task
-                if dep.contains('#') {
-                    let (package, script) = self.find_project_task_from_script(dep)?;
-                    let task_id = create_id(&script)?;
-
-                    deps.push(
-                        Target::parse(format!("{}:{task_id}", package.id).as_str())
-                            .map_err(map_miette_error)?,
-                    );
-                    continue;
-                }
-
-                // ~:task
-                deps.push(Target::parse(dep).map_err(map_miette_error)?);
+        for dep in without_extends(&turbo_task.depends_on) {
+            // $ENV input
+            if let Some(env) = dep.strip_prefix('$') {
+                inputs.push(Input::EnvVar(env.into()));
+                continue;
             }
 
-            if !deps.is_empty() {
-                config.deps = Some(
-                    deps.into_iter()
-                        .map(PartialTaskDependency::Target)
-                        .collect(),
-                );
-            }
+            deps.push(PartialTaskDependency::Target(self.parse_target(dep)?));
+        }
+
+        // Ran alongside the task
+        for dep in without_extends(&turbo_task.with) {
+            deps.push(PartialTaskDependency::Object(PartialTaskDependencyConfig {
+                target: Some(self.parse_target(dep)?),
+                type_of: Some(TaskDependencyType::Wait),
+                ..Default::default()
+            }));
+        }
+
+        if !deps.is_empty() {
+            config.deps = Some(deps);
         }
 
         // Inputs
-        if let Some(env_vars) = &turbo_task.env {
-            for env in env_vars {
-                if env.contains("!") || env.contains("*") {
-                    inputs.push(Input::EnvVarGlob(env.into()));
-                } else {
-                    inputs.push(Input::EnvVar(env.into()));
-                }
-            }
+        for env in without_extends(&turbo_task.env) {
+            inputs.push(parse_env_input(env));
         }
 
-        if let Some(raw_inputs) = &turbo_task.inputs {
-            for input in raw_inputs {
-                if input == "$TURBO_DEFAULT$" {
-                    continue;
+        for input in turbo_task.inputs.iter().flatten() {
+            match input {
+                TurboTaskInput::Glob(glob) => {
+                    if glob != TURBO_EXTENDS {
+                        inputs.push(parse_input(glob)?);
+                    }
                 }
+                // moon hashes inputs right before running, so `jit` is the same as `startup`,
+                // and a dependency's outputs are already covered by its hash
+                TurboTaskInput::Structured(input) => {
+                    if input.mode == TurboInputMode::DependencyOutputs {
+                        continue;
+                    }
 
-                inputs.push(Input::parse(input)?);
+                    if input.with_defaults == Some(true) {
+                        inputs.push(parse_input(TURBO_DEFAULT)?);
+                    }
+
+                    for glob in input.globs.iter().flatten() {
+                        inputs.push(parse_input(glob)?);
+                    }
+                }
             }
         }
 
@@ -295,20 +343,31 @@ impl TurboMigrator {
         }
 
         // Outputs
-        if let Some(raw_outputs) = &turbo_task.outputs {
-            let mut outputs = vec![];
+        let mut outputs = vec![];
 
-            for output in raw_outputs {
-                if output.ends_with("/**") {
-                    outputs.push(Output::parse(format!("{output}/*"))?);
-                } else {
-                    outputs.push(Output::parse(output)?);
-                }
-            }
+        for output in without_extends(&turbo_task.outputs) {
+            let output = output.replace(TURBO_ROOT, "/");
 
-            if !outputs.is_empty() {
-                config.outputs = Some(outputs);
+            if output.ends_with("/**") {
+                outputs.push(Output::parse(format!("{output}/*"))?);
+            } else {
+                outputs.push(Output::parse(output)?);
             }
+        }
+
+        if !outputs.is_empty() {
+            config.outputs = Some(outputs);
+        }
+
+        // Tags
+        let mut tags = vec![];
+
+        for tag in without_extends(&turbo_task.tags) {
+            tags.push(Id::new(tag)?);
+        }
+
+        if !tags.is_empty() {
+            config.tags = Some(tags);
         }
 
         // Options
@@ -324,9 +383,9 @@ impl TurboMigrator {
                 .options
                 .get_or_insert(PartialTaskOptionsConfig::default())
                 .env_file = Some(if dot_env.len() == 1 {
-                TaskOptionEnvFile::File(FilePath::from_str(&dot_env[0])?)
+                PartialTaskOptionEnvFile::File(FilePath::from_str(&dot_env[0])?)
             } else {
-                TaskOptionEnvFile::Enabled(true)
+                PartialTaskOptionEnvFile::Enabled(true)
             });
         }
 
@@ -359,4 +418,26 @@ impl TurboMigrator {
 
         Ok(config)
     }
+}
+
+// Appending to inherited values is moon's default merge strategy
+fn without_extends(list: &Option<Vec<String>>) -> impl Iterator<Item = &String> {
+    list.iter().flatten().filter(|item| *item != TURBO_EXTENDS)
+}
+
+fn parse_env_input(env: &str) -> Input {
+    if env.contains('!') || env.contains('*') {
+        Input::EnvVarGlob(env.into())
+    } else {
+        Input::EnvVar(env.into())
+    }
+}
+
+fn parse_input(glob: &str) -> AnyResult<Input> {
+    // All files in the project
+    if glob == TURBO_DEFAULT {
+        return Ok(Input::parse("**/*")?);
+    }
+
+    Ok(Input::parse(glob.replace(TURBO_ROOT, "/"))?)
 }

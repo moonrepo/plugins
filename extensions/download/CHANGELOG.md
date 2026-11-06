@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Files are now downloaded directly to disk, instead of being loaded into memory.
+
+#### 🐞 Fixes
+
+- Fixed the URL's query string and fragment being included in the file name.
+- Fixed absolute `--dest` paths failing.
+- Fixed values starting with `http` (without `://`) being accepted as URLs, and crashing.
+
 ## 1.0.4
 
 #### 🚀 Updates
