@@ -1683,4 +1683,66 @@ mod go_toolchain_tier2 {
             );
         }
     }
+
+    mod hash_task_contents {
+        use super::*;
+
+        fn project(source: &str) -> ProjectFragment {
+            ProjectFragment {
+                id: Id::raw("a"),
+                source: source.into(),
+                ..Default::default()
+            }
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn includes_the_owning_modules_requires() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "go.mod",
+                "module example.com/org\n\ngo 1.24\n\nrequire (\n\texample.com/x v1.0.0\n\texample.com/y v2.0.0 // indirect\n)\n\nreplace example.com/x => example.com/z v1.1.0\n",
+            );
+
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .hash_task_contents(HashTaskContentsInput {
+                    project: project("apps/a"),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.contents.len(), 2);
+            assert_eq!(
+                output.contents[1],
+                json!({
+                    "go": "1.24.0",
+                    "toolchain": null,
+                    "require": {
+                        "example.com/x": "v1.0.0",
+                        "example.com/y": "v2.0.0"
+                    },
+                    "replace": ["example.com/x => example.com/z v1.1.0"]
+                })
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn skips_projects_with_their_own_go_mod() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("go.mod", "module example.com/org\n");
+            sandbox.create_file("apps/a/go.mod", "module example.com/org/apps/a\n");
+
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .hash_task_contents(HashTaskContentsInput {
+                    project: project("apps/a"),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.contents.len(), 1);
+        }
+    }
 }

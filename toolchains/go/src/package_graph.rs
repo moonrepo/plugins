@@ -80,7 +80,7 @@ fn import_within(import_path: &str, prefix: &str) -> bool {
 
 // Workspace-relative dirs that may own a directory's `go.mod`: the dir
 // itself, then each ancestor up to the workspace root ("").
-fn module_dir_candidates(source: &str) -> Vec<&str> {
+pub fn module_dir_candidates(source: &str) -> Vec<&str> {
     let mut candidates = vec![];
     let mut dir = source;
 

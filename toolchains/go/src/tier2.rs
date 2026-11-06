@@ -1,8 +1,8 @@
 use crate::config::GoToolchainConfig;
-use crate::go_mod::parse_go_mod;
+use crate::go_mod::{Replacement, parse_go_mod};
 use crate::go_sum::GoSum;
 use crate::go_work::GoWork;
-use crate::package_graph::{GoPackageGraph, is_version_segment};
+use crate::package_graph::{GoPackageGraph, is_version_segment, module_dir_candidates};
 use extism_pdk::*;
 use moon_config::BinEntry;
 use moon_pdk::{
@@ -367,7 +367,7 @@ pub fn setup_environment(
 
 #[plugin_fn]
 pub fn hash_task_contents(
-    Json(_): Json<HashTaskContentsInput>,
+    Json(input): Json<HashTaskContentsInput>,
 ) -> FnResult<Json<HashTaskContentsOutput>> {
     let env = get_host_environment()?;
 
@@ -376,9 +376,75 @@ pub fn hash_task_contents(
     map.insert("arch".into(), json::Value::String(env.arch.to_string()));
     map.insert("libc".into(), json::Value::String(env.libc.to_string()));
 
-    Ok(Json(HashTaskContentsOutput {
-        contents: vec![json::Value::Object(map)],
-    }))
+    let mut contents = vec![json::Value::Object(map)];
+
+    if let Some(module) = hash_owning_module(&input.context.workspace_root, &input.project.source)?
+    {
+        contents.push(module);
+    }
+
+    Ok(Json(HashTaskContentsOutput { contents }))
+}
+
+// moon only hashes the dependencies of a `go.mod` in the project's own
+// directory, so for a project without one, like in a single-module
+// monorepo, hash those of the module it belongs to
+fn hash_owning_module(
+    workspace_root: &VirtualPath,
+    source: &str,
+) -> AnyResult<Option<json::Value>> {
+    let source = if source == "." { "" } else { source };
+
+    for dir in module_dir_candidates(source) {
+        let go_mod_path = if dir.is_empty() {
+            workspace_root.join("go.mod")
+        } else {
+            workspace_root.join(dir).join("go.mod")
+        };
+
+        if !go_mod_path.exists() {
+            continue;
+        }
+
+        if dir == source {
+            return Ok(None);
+        }
+
+        let go_mod = parse_go_mod(fs::read_file(go_mod_path)?)?;
+
+        let require = go_mod
+            .require
+            .into_iter()
+            .map(|dep| (dep.module.module_path, dep.module.version))
+            .collect::<std::collections::BTreeMap<_, _>>();
+
+        let replace = go_mod
+            .replace
+            .into_iter()
+            .map(|item| {
+                let target = match item.replacement {
+                    Replacement::FilePath(path) => path,
+                    Replacement::Module(module) => {
+                        format!("{} {}", module.module_path, module.version)
+                    }
+                };
+
+                match item.version {
+                    Some(version) => format!("{} {version} => {target}", item.module_path),
+                    None => format!("{} => {target}", item.module_path),
+                }
+            })
+            .collect::<Vec<_>>();
+
+        return Ok(Some(json::json!({
+            "go": go_mod.go,
+            "toolchain": go_mod.toolchain,
+            "require": require,
+            "replace": replace,
+        })));
+    }
+
+    Ok(None)
 }
 
 // Since Go 1.21, `go` downloads and runs a newer toolchain when `go.mod`

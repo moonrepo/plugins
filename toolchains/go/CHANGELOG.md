@@ -15,6 +15,9 @@
   package in a command to come from the same module, so pairs like `golang.org/x/tools/gopls` and
   `golang.org/x/tools/cmd/goimports` failed.
 - Task hashes now include indirect requires from `go.mod`, as they're part of the build.
+- Tasks of projects without their own `go.mod`, as in single-module monorepos, now hash the `go`,
+  `toolchain`, `require` and `replace` lines of the module they belong to. moon only hashes a
+  manifest in the project's own directory, so a dependency bump didn't change their hashes.
 - When `version` is configured, tasks and the plugin's `go` commands now run with
   `GOTOOLCHAIN=local`, unless the host sets `GOTOOLCHAIN`. Go would otherwise download and run a
   newer toolchain when `go.mod` requires one, so tasks ran a Go that moon didn't install. A
