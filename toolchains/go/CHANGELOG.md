@@ -26,6 +26,11 @@
 
 #### 🚀 Updates
 
+- Projects below a `go.mod` without their own, as in single-module monorepos, now get the module's
+  install and setup actions. moon only scheduled them for the module root, so `bins` were only
+  installed by `moon setup`. The root now reports every directory below it as a member.
+- An invalid `go.mod`, like one in `testdata`, is now skipped with a warning when moon reads
+  manifests, instead of failing.
 - Installs are skipped when `vendor/modules.txt` exists, as Go builds from `vendor`.
 - `GOWORK=off` now disables workspace support, as it does for Go.
 - Added `scaffold_docker` support. The configs phase now copies the `go.mod` and `go.sum` of

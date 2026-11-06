@@ -820,7 +820,7 @@ mod go_toolchain_tier2 {
                 })
                 .await;
 
-            assert!(output.members.is_none());
+            assert_eq!(output.members.unwrap(), ["**/*"]);
             assert_eq!(output.root.unwrap(), VirtualPath::new("/workspace/package"));
         }
 
@@ -836,7 +836,7 @@ mod go_toolchain_tier2 {
                 })
                 .await;
 
-            assert!(output.members.is_none());
+            assert_eq!(output.members.unwrap(), ["**/*"]);
             assert_eq!(
                 output.root.unwrap(),
                 VirtualPath::new("/workspace/package-with-sum")
@@ -882,7 +882,7 @@ mod go_toolchain_tier2 {
 
             unsafe { env::remove_var("GOWORK") };
 
-            assert!(output.members.is_none());
+            assert_eq!(output.members.unwrap(), ["**/*"]);
             assert_eq!(
                 output.root.unwrap(),
                 VirtualPath::new("/workspace/workspace/modules/a")
@@ -906,6 +906,7 @@ mod go_toolchain_tier2 {
                 .await;
 
             assert_eq!(output.root.unwrap(), VirtualPath::new("/workspace/tools"));
+            assert_eq!(output.members.unwrap(), ["**/*"]);
         }
     }
 
@@ -1334,6 +1335,23 @@ mod go_toolchain_tier2 {
                     )
                 ])
             );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn skips_invalid_files() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("testdata/go.mod", "module (\n\trequire {\n");
+
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .parse_manifest(ParseManifestInput {
+                    path: VirtualPath::new(sandbox.path().join("testdata/go.mod")),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.dependencies.is_empty());
         }
 
         #[tokio::test(flavor = "multi_thread")]

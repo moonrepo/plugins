@@ -6,12 +6,17 @@ use crate::package_graph::{GoPackageGraph, is_version_segment};
 use extism_pdk::*;
 use moon_config::BinEntry;
 use moon_pdk::{
-    VirtualPathExt, command_exists, get_host_env_var, get_host_environment, locate_root,
-    parse_toolchain_config_schema,
+    HostLogInput, HostLogTarget, VirtualPathExt, command_exists, get_host_env_var,
+    get_host_environment, host_log, locate_root, parse_toolchain_config_schema,
 };
 use moon_pdk_api::*;
 use starbase_utils::fs;
 use std::path::PathBuf;
+
+#[host_fn]
+extern "ExtismHost" {
+    fn host_log(input: Json<HostLogInput>);
+}
 
 #[plugin_fn]
 pub fn extend_project_graph(
@@ -153,9 +158,14 @@ pub fn locate_dependencies_root(
         output.root = Some(root);
     }
 
-    // Otherwise the nearest `go.mod`, as `go.sum` always sits beside it
-    if output.root.is_none() {
-        output.root = locate_root(&input.starting_dir, "go.mod");
+    // Otherwise the nearest `go.mod`, as `go.sum` always sits beside it.
+    // Every directory below it is part of the module (nested modules find
+    // their own `go.mod` first), so projects there share its install
+    if output.root.is_none()
+        && let Some(root) = locate_root(&input.starting_dir, "go.mod")
+    {
+        output.members = Some(vec!["**/*".into()]);
+        output.root = Some(root);
     }
 
     Ok(Json(output))
@@ -234,7 +244,20 @@ pub fn parse_manifest(
 
     match input.path.file_name().and_then(|name| name.to_str()) {
         Some("go.mod") => {
-            let go_mod = parse_go_mod(fs::read_file(input.path)?)?;
+            // moon reads every `go.mod` below a root, which includes
+            // intentionally invalid ones in `testdata`
+            let go_mod = match parse_go_mod(fs::read_file(&input.path)?) {
+                Ok(go_mod) => go_mod,
+                Err(error) => {
+                    host_log!(
+                        warn,
+                        "Failed to parse <file>{}</file>, skipping: {error}",
+                        input.path
+                    );
+
+                    return Ok(Json(output));
+                }
+            };
 
             // Indirect requires are part of the build too (Go 1.17+),
             // so a bump to one must change task hashes
