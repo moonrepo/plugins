@@ -217,29 +217,123 @@ mod bun_tool {
             })
             .await;
 
+        let result = plugin
+            .download_prebuilt(DownloadPrebuiltInput {
+                context: PluginContext {
+                    version: VersionSpec::parse("1.2.0").unwrap(),
+                    ..Default::default()
+                },
+                ..Default::default()
+            })
+            .await;
+
+        assert_eq!(
+            result.checksum_url,
+            Some(
+                "https://github.com/oven-sh/bun/releases/download/bun-v1.2.0/SHASUMS256.txt".into()
+            )
+        );
+
+        // The baseline suffix depends on the host CPU (always baseline on Apple Silicon)
+        assert!(
+            result.download_url
+                == "https://github.com/oven-sh/bun/releases/download/bun-v1.2.0/bun-darwin-x64.zip"
+                || result.download_url
+                    == "https://github.com/oven-sh/bun/releases/download/bun-v1.2.0/bun-darwin-x64-baseline.zip"
+        );
+        assert_eq!(
+            result.archive_prefix.map(|prefix| format!("{prefix}.zip")),
+            result.download_name
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn supports_freebsd_arm64() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("bun-test", |config| {
+                config.host(HostOS::FreeBSD, HostArch::Arm64);
+            })
+            .await;
+
         assert_eq!(
             plugin
                 .download_prebuilt(DownloadPrebuiltInput {
                     context: PluginContext {
-                        version: VersionSpec::parse("1.2.0").unwrap(),
+                        version: VersionSpec::parse("1.3.14").unwrap(),
                         ..Default::default()
                     },
                     ..Default::default()
                 })
                 .await,
             DownloadPrebuiltOutput {
-                archive_prefix: Some("bun-darwin-x64".into()),
+                archive_prefix: Some("bun-freebsd-aarch64".into()),
                 checksum_url: Some(
-                    "https://github.com/oven-sh/bun/releases/download/bun-v1.2.0/SHASUMS256.txt"
+                    "https://github.com/oven-sh/bun/releases/download/bun-v1.3.14/SHASUMS256.txt"
                         .into()
                 ),
-                download_name: Some("bun-darwin-x64.zip".into()),
+                download_name: Some("bun-freebsd-aarch64.zip".into()),
                 download_url:
-                    "https://github.com/oven-sh/bun/releases/download/bun-v1.2.0/bun-darwin-x64.zip"
+                    "https://github.com/oven-sh/bun/releases/download/bun-v1.3.14/bun-freebsd-aarch64.zip"
                         .into(),
                 ..Default::default()
             }
         );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn supports_freebsd_x64() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("bun-test", |config| {
+                config.host(HostOS::FreeBSD, HostArch::X64);
+            })
+            .await;
+
+        assert_eq!(
+            plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("1.4.0").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await,
+            DownloadPrebuiltOutput {
+                archive_prefix: Some("bun-freebsd-x64".into()),
+                checksum_url: Some(
+                    "https://github.com/oven-sh/bun/releases/download/bun-v1.4.0/SHASUMS256.txt"
+                        .into()
+                ),
+                download_name: Some("bun-freebsd-x64.zip".into()),
+                download_url:
+                    "https://github.com/oven-sh/bun/releases/download/bun-v1.4.0/bun-freebsd-x64.zip"
+                        .into(),
+                ..Default::default()
+            }
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    #[should_panic(expected = "unsupported OS freebsd.")]
+    async fn doesnt_support_freebsd_before_v1314() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("bun-test", |config| {
+                config.host(HostOS::FreeBSD, HostArch::X64);
+            })
+            .await;
+
+        plugin
+            .download_prebuilt(DownloadPrebuiltInput {
+                context: PluginContext {
+                    version: VersionSpec::parse("1.3.13").unwrap(),
+                    ..Default::default()
+                },
+                ..Default::default()
+            })
+            .await;
     }
 
     #[tokio::test(flavor = "multi_thread")]
@@ -401,6 +495,26 @@ mod bun_tool {
                 .unwrap()
                 .exe_path,
             Some("bun.exe".into())
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn locates_globals_dirs() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("bun-test").await;
+
+        let output = plugin
+            .locate_executables(LocateExecutablesInput::default())
+            .await;
+
+        assert_eq!(
+            output.globals_lookup_dirs,
+            [
+                "$BUN_INSTALL_BIN",
+                "$BUN_INSTALL/bin",
+                "$XDG_CACHE_HOME/.bun/bin",
+                "$HOME/.bun/bin"
+            ]
         );
     }
 }

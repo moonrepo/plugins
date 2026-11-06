@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added support for FreeBSD (x64 and arm64), which Bun added in v1.3.14.
+
+#### 🐞 Fixes
+
+- Fixed Intel macOS machines without AVX2 (and x64 under Rosetta) installing a Bun build that
+  crashes on start. They now install the baseline build, like Bun's own installer. Only affects
+  versions before v1.4, where every x64 build became baseline.
+- Fixed globals directories not including `$BUN_INSTALL_BIN`, `$BUN_INSTALL/bin`, and
+  `$XDG_CACHE_HOME/.bun/bin`, which `bun add --global` uses when set.
+
 ## 0.16.11
 
 #### 🚀 Updates

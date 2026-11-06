@@ -200,6 +200,17 @@ pub fn download_prebuilt(
         targets.insert(HostOS::Windows, windows_arches);
     }
 
+    // FreeBSD was added in v1.3.14
+    let has_freebsd = match version {
+        VersionSpec::Version(version) => *version >= Version::new(1, 3, 14),
+        VersionSpec::Alias(alias) => alias == "latest",
+        _ => true,
+    };
+
+    if has_freebsd {
+        targets.insert(HostOS::FreeBSD, vec![HostArch::X64, HostArch::Arm64]);
+    }
+
     check_supported_os_and_arch(NAME, env, targets)?;
 
     let arch = match env.arch {
@@ -208,15 +219,26 @@ pub fn download_prebuilt(
         _ => unreachable!(),
     };
 
+    // x64 builds before v1.4 require AVX2, otherwise the baseline build is needed
     let mut avx2_suffix = "";
 
-    if env.arch == HostArch::X64 && env.os.is_linux() && command_exists(env, "grep") {
-        let output = exec_captured("grep", ["avx2", "/proc/cpuinfo"])?;
+    if env.arch == HostArch::X64 {
+        let has_avx2 = match env.os {
+            HostOS::Linux if command_exists(env, "grep") => {
+                exec_captured("grep", ["avx2", "/proc/cpuinfo"])?.exit_code == 0
+            }
+            HostOS::MacOS if command_exists(env, "sysctl") => {
+                exec_captured("sysctl", ["machdep.cpu"])?
+                    .stdout
+                    .contains("AVX2")
+            }
+            _ => true,
+        };
 
-        if output.exit_code != 0 {
+        if !has_avx2 {
             avx2_suffix = "-baseline";
         }
-    };
+    }
 
     let mut libc_suffix = "";
 
@@ -237,6 +259,7 @@ pub fn download_prebuilt(
         HostOS::Linux => format!("bun-linux-{arch}{libc_suffix}{avx2_suffix}"),
         HostOS::MacOS => format!("bun-darwin-{arch}{avx2_suffix}"),
         HostOS::Windows => format!("bun-windows-{arch}"),
+        HostOS::FreeBSD => format!("bun-freebsd-{arch}"),
         _ => unreachable!(),
     };
 
@@ -294,7 +317,13 @@ pub fn locate_executables(
             ),
             ("bunx".into(), bunx),
         ]),
-        globals_lookup_dirs: vec!["$HOME/.bun/bin".into()],
+        // Where `bun add --global` links bins, in Bun's lookup order
+        globals_lookup_dirs: vec![
+            "$BUN_INSTALL_BIN".into(),
+            "$BUN_INSTALL/bin".into(),
+            "$XDG_CACHE_HOME/.bun/bin".into(),
+            "$HOME/.bun/bin".into(),
+        ],
         ..Default::default()
     }))
 }
