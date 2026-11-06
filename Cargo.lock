@@ -4985,6 +4985,7 @@ name = "python_uv_tool"
 version = "0.3.4"
 dependencies = [
  "extism-pdk",
+ "lang_python_common",
  "proto_pdk",
  "proto_pdk_test_utils",
  "serde",
