@@ -270,6 +270,77 @@ mod java_tool {
                 output.download_name,
                 Some("sapmachine-jdk-21.0.11_linux-x64_bin.tar.gz".into())
             );
+            // Its `<hash> <file>` checksum file doesn't reveal the algorithm
+            assert_eq!(
+                output.checksum_name,
+                Some("sapmachine-jdk-21.0.11_linux-x64_bin.tar.gz.sha256".into())
+            );
+            assert!(output.checksum_url.is_some());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn kona_skips_md5_checksums() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("java-test", |config| {
+                    config.host(HostOS::Linux, HostArch::X64);
+                })
+                .await;
+
+            let mut spec = ToolSpec::parse("kona-21").unwrap();
+            flow::resolve::Resolver::new(&plugin.tool)
+                .resolve_version(&mut spec, false)
+                .await
+                .unwrap();
+
+            let output = plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: spec.get_resolved_version(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await;
+
+            // proto can't verify md5, which fails the install
+            assert!(output.download_name.unwrap().starts_with("TencentKona-21."));
+            assert_eq!(output.checksum, None);
+            assert_eq!(output.checksum_name, None);
+            assert_eq!(output.checksum_url, None);
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn oracle_skips_indirect_downloads() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("java-test", |config| {
+                    config.host(HostOS::Linux, HostArch::X64);
+                })
+                .await;
+
+            // Oracle JDK 17.0.13 and later require a login to download
+            let mut spec = ToolSpec::parse("oracle-17").unwrap();
+            flow::resolve::Resolver::new(&plugin.tool)
+                .resolve_version(&mut spec, false)
+                .await
+                .unwrap();
+
+            let output = plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: spec.get_resolved_version(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(
+                output
+                    .download_url
+                    .starts_with("https://download.oracle.com/")
+            );
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -402,6 +473,19 @@ mod java_tool {
                 Some("bin/jar".into())
             );
             assert_eq!(output.exes_dirs, vec![PathBuf::from("bin")]);
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn has_no_globals_dirs() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox.create_plugin("java-test").await;
+
+            let output = plugin
+                .locate_executables(create_locate_input("temurin-21.0.11+10"))
+                .await;
+
+            // `$JAVA_HOME/bin` is another JDK, not a globals directory
+            assert!(output.globals_lookup_dirs.is_empty());
         }
 
         #[tokio::test(flavor = "multi_thread")]
