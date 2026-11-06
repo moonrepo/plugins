@@ -188,6 +188,52 @@ mod v1_platform {
     }
 }
 
+mod v1_checksum {
+    use super::*;
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn checksum_url_supports_download_file() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_schema_plugin_with_config(
+                "schema-test",
+                locate_fixture("schemas").join("v1-checksum.toml"),
+                |config| {
+                    config.host(HostOS::Linux, HostArch::X64);
+                },
+            )
+            .await;
+
+        let output = download(&plugin, "1.2.3").await;
+
+        assert_eq!(
+            output.checksum_url,
+            Some("https://example.com/v1.2.3/tool-x86_64.tar.gz.minisig".into())
+        );
+        // Extracted from the URL by proto, to detect the algorithm
+        assert_eq!(output.checksum_name, None);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn checksum_name_uses_checksum_file() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_schema_plugin_with_config(
+                "schema-test",
+                locate_fixture("schemas").join("v1-checksum.toml"),
+                |config| {
+                    config.host(HostOS::MacOS, HostArch::Arm64);
+                },
+            )
+            .await;
+
+        assert_eq!(
+            download(&plugin, "1.2.3").await.checksum_name,
+            Some("SHASUMS256.txt".into())
+        );
+    }
+}
+
 mod v1_versions {
     use super::*;
 
