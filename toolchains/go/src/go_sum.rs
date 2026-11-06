@@ -1,5 +1,6 @@
 // `go.sum`, `go.work.sum`
 
+use crate::parsers;
 use moon_config::VersionSpec;
 use moon_pdk_api::AnyResult;
 use std::collections::BTreeMap;
@@ -12,7 +13,9 @@ pub struct GoSumDependency {
 
 #[derive(Debug)]
 pub struct GoSum {
-    pub dependencies: BTreeMap<String, GoSumDependency>,
+    /// Every version listed for a module, as an untidied
+    /// `go.sum` keeps checksums for older versions
+    pub dependencies: BTreeMap<String, Vec<GoSumDependency>>,
 }
 
 impl GoSum {
@@ -22,33 +25,19 @@ impl GoSum {
             dependencies: BTreeMap::new(),
         };
 
-        for mut line in content.as_ref().lines() {
-            if line.starts_with("//") {
-                continue;
-            } else if let Some(index) = line.find("//") {
-                line = &line[0..index];
-            }
-
-            let mut parts = line.trim().splitn(3, ' ');
-            let module = parts.next().unwrap_or_default().trim();
-            let version = parts.next().unwrap_or_default().trim();
-            let hash = parts.next().unwrap_or_default().trim();
-
-            if module.is_empty()
-                || version.is_empty()
-                || version.ends_with("/go.mod")
-                || hash.is_empty()
-            {
+        for entry in parsers::go_sum::parse(content.as_ref()) {
+            // Checksums of a version's `go.mod` file only
+            if entry.version.ends_with("/go.mod") {
                 continue;
             }
 
-            sum.dependencies.insert(
-                module.into(),
-                GoSumDependency {
-                    checksum: hash.into(),
-                    version: VersionSpec::parse(version)?,
-                },
-            );
+            sum.dependencies
+                .entry(entry.module.into())
+                .or_default()
+                .push(GoSumDependency {
+                    checksum: entry.checksum.into(),
+                    version: VersionSpec::parse(entry.version)?,
+                });
         }
 
         Ok(sum)

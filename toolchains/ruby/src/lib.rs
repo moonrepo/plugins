@@ -1,5 +1,6 @@
 pub mod config;
 pub mod gemfile;
+mod parsers;
 #[cfg(feature = "wasm")]
 mod tier1;
 #[cfg(feature = "wasm")]

@@ -1,5 +1,73 @@
 # Changelog
 
+## Unreleased
+
+#### 💥 Breaking
+
+- Removed the `vendor` vendor directory. moon treated a missing `vendor` as a first install, so in
+  repos that don't commit `go mod vendor` output, dependencies were installed on every run, the
+  `tidyOnChange` step never ran, and `moon docker scaffold` dropped a committed `vendor`. As a
+  result, `tidyOnChange` now runs `go mod tidy` after `go.mod` or `go.sum` changes outside of CI.
+- Go workspaces are now installed with `go mod download` instead of `go work sync`, which rewrote
+  the `go.mod` and `go.sum` of each workspace member.
+- Each `bins` entry is now installed with its own `go install`, with `GOBIN` set to the globals
+  directory. Entries were previously grouped by their first 3 path segments, but Go requires every
+  package in a command to come from the same module, so pairs like `golang.org/x/tools/gopls` and
+  `golang.org/x/tools/cmd/goimports` failed.
+- Task hashes now include indirect requires from `go.mod`, as they're part of the build.
+- Tasks of projects without their own `go.mod`, as in single-module monorepos, now hash the `go`,
+  `toolchain`, `require` and `replace` lines of the module they belong to. moon only hashes a
+  manifest in the project's own directory, so a dependency bump didn't change their hashes.
+- When `version` is configured, tasks and the plugin's `go` commands now run with
+  `GOTOOLCHAIN=local`, unless the host sets `GOTOOLCHAIN`. Go would otherwise download and run a
+  newer toolchain when `go.mod` requires one, so tasks ran a Go that moon didn't install. A
+  `go.mod` that needs a newer Go than `version` now fails with Go's error, and `version` should be
+  bumped.
+- Inferred relationships are now direct imports only. With `go list -deps`, a project that imported
+  `b`, which imported `c`, also depended on `c`. A project's packages are now matched by directory,
+  so a parent project no longer picks up the imports of projects nested in it, and a project
+  outside every Go module gets no inferred relationships.
+- `moon docker prune` no longer deletes the `vendor` directory, and the `vendorDir` setting is
+  deprecated. It's committed source that Go builds from, and deleting it made the production
+  install download every module into the image.
+
+#### 🚀 Updates
+
+- Projects below a `go.mod` without their own, as in single-module monorepos, now get the module's
+  install and setup actions. moon only scheduled them for the module root, so `bins` were only
+  installed by `moon setup`. The root now reports every directory below it as a member.
+- An invalid `go.mod`, like one in `testdata`, is now skipped with a warning when moon reads
+  manifests, instead of failing.
+- Relationships are now inferred with a single `go list -json` per module, instead of one or two
+  per project.
+- Installs are skipped when `vendor/modules.txt` exists, as Go builds from `vendor`.
+- `GOWORK=off` now disables workspace support, as it does for Go.
+- Added `scaffold_docker` support. The configs phase now copies the `go.mod` and `go.sum` of
+  `go.work` members and local `replace` targets that aren't projects, which `go mod download`
+  requires.
+- `go list` now runs with `-e`, so a single import that can't be resolved no longer drops all of a
+  project's inferred relationships. Other failures are logged as a warning.
+- `go.sum`, `go.work.sum` and `go.work` are now parsed with [winnow](https://docs.rs/winnow)
+  grammars. A line that can't be parsed is skipped instead of failing the file.
+
+#### 🐞 Fixes
+
+- Fixed inferred relationships going stale when imports changed. moon caches the project graph by
+  its configs, manifests and the plugin's input files, which were only `go.mod` and `go.sum`, so a
+  new import between projects in one module wasn't seen until `go.mod` changed. The Go files that
+  `go list` read are now input files too, so editing one rebuilds the graph. A new file isn't seen
+  until another input changes.
+- Fixed the default Docker image for partial versions and requirements, like `1.24` or `^1.22.0`,
+  which became invalid tags like `golang:~1.24`.
+- Fixed the globals directory not being on `PATH` for tasks when no `version` is configured, so
+  binaries from `bins` weren't found.
+- Fixed a nested module without a `go.sum` resolving to its parent module's dependency root.
+- Fixed `go.work` parsing for quoted paths, `use(`, and indentation other than tabs or 4 spaces.
+- Fixed `go.sum` parsing keeping only the last version of a module.
+- Fixed `go.sum` checksums that contain `//`, like `golang.org/x/net v0.10.0`, being cut off as if
+  the rest were a comment.
+- Updated `go_tool` with the fixes below, which the toolchain uses for tier 3.
+
 ## 1.5.3
 
 #### 🚀 Updates

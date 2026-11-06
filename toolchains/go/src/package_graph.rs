@@ -1,58 +1,92 @@
 use crate::config::GoToolchainConfig;
 use crate::go_mod::{GoMod, ModuleReplacement, Replacement, parse_go_mod};
+use extism_pdk::*;
 use moon_config::DependencyScope;
-use moon_pdk::exec;
+use moon_pdk::{HostLogInput, HostLogTarget, exec, host_log};
 use moon_pdk_api::*;
+use serde::Deserialize;
 use starbase_utils::fs;
 use std::collections::{BTreeMap, BTreeSet};
 
-// The `go list` half of the package graph: every package a directory's
-// packages depend on, as canonical import paths.
-fn execute_go_list(dir: &VirtualPath, packages: &[String], test: bool) -> AnyResult<Vec<String>> {
+#[host_fn]
+extern "ExtismHost" {
+    fn host_log(input: Json<HostLogInput>);
+}
+
+/// A package from `go list -json`, with only the fields that are requested.
+#[derive(Default, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+struct GoListPackage {
+    dir: String,
+    module: Option<GoListModule>,
+    go_files: Vec<String>,
+    cgo_files: Vec<String>,
+    test_go_files: Vec<String>,
+    x_test_go_files: Vec<String>,
+    imports: Vec<String>,
+    test_imports: Vec<String>,
+    x_test_imports: Vec<String>,
+}
+
+#[derive(Default, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+struct GoListModule {
+    dir: String,
+}
+
+// The `go list` half of the package graph: the packages matching `patterns`
+// in one module, with their direct imports. `-e` reports packages that fail
+// to load, like an import that can't be resolved, instead of failing.
+fn execute_go_list(
+    dir: &VirtualPath,
+    patterns: &BTreeSet<String>,
+) -> AnyResult<Vec<GoListPackage>> {
     let mut args = vec![
-        "list",
-        "-deps",
-        "-f",
-        "{{if .Module}}{{.ImportPath}}{{end}}",
+        "list".to_owned(),
+        "-e".into(),
+        "-json=Dir,Module,GoFiles,CgoFiles,TestGoFiles,XTestGoFiles,Imports,TestImports,XTestImports"
+            .into(),
     ];
-
-    if test {
-        args.push("-test");
-    }
-
-    // Scan all packages recursively by default so that dependencies imported
-    // only from subdirectories (internal/, pkg/, ...) are also inferred.
-    if packages.is_empty() {
-        args.push("./...");
-    } else {
-        for package in packages {
-            args.push(package.as_str());
-        }
-    }
+    args.extend(patterns.iter().cloned());
 
     let result = exec(ExecCommandInput::pipe("go", args).cwd(dir.to_owned()))?;
 
     if result.exit_code != 0 {
-        return Ok(vec![]);
+        host_log!(
+            warn,
+            "Failed to infer Go relationships for <path>{}</path>: {}",
+            dir,
+            result.stderr.lines().next().unwrap_or_default()
+        );
     }
 
-    Ok(result
-        .stdout
-        .lines()
-        .filter_map(|line| {
-            // `go list -deps -test` reports a package's test artifacts: the
-            // package compiled into its test binary as `pkg [pkg.test]`, and
-            // the synthetic test binary itself as a bare `pkg.test`. Both
-            // describe the package under test, not a new import — reduce them
-            // to the real package path so ownership filtering claims them
-            // rather than leaking an edge to whatever project the `.test`
-            // path happens to nest under (e.g. the module root).
-            let import_path = line.trim().split(' ').next().unwrap_or_default();
-            let import_path = import_path.strip_suffix(".test").unwrap_or(import_path);
-
-            (!import_path.is_empty()).then(|| import_path.to_owned())
-        })
+    // A stream of JSON objects, one per package
+    Ok(json::Deserializer::from_str(&result.stdout)
+        .into_iter::<GoListPackage>()
+        .map_while(Result::ok)
         .collect())
+}
+
+// Patterns are relative to each project, while `go list` runs from the root
+// of its module.
+fn scope_pattern(relative: &str, pattern: &str) -> String {
+    if relative.is_empty() || !pattern.starts_with('.') {
+        pattern.to_owned()
+    } else if pattern == "." {
+        format!("./{relative}")
+    } else {
+        format!("./{relative}/{}", pattern.trim_start_matches("./"))
+    }
+}
+
+// Whether a workspace-relative `dir` is the `parent` dir itself, or nested
+// beneath it.
+fn dir_within(dir: &str, parent: &str) -> bool {
+    parent.is_empty()
+        || dir == parent
+        || dir
+            .strip_prefix(parent)
+            .is_some_and(|rest| rest.starts_with('/'))
 }
 
 // Whether `import_path` is the package at `prefix` itself, or nested beneath
@@ -66,7 +100,7 @@ fn import_within(import_path: &str, prefix: &str) -> bool {
 
 // Workspace-relative dirs that may own a directory's `go.mod`: the dir
 // itself, then each ancestor up to the workspace root ("").
-fn module_dir_candidates(source: &str) -> Vec<&str> {
+pub fn module_dir_candidates(source: &str) -> Vec<&str> {
     let mut candidates = vec![];
     let mut dir = source;
 
@@ -181,6 +215,10 @@ pub struct GoProject {
     /// Module path as declared when the project owns its `go.mod`
     pub alias: Option<String>,
     root: VirtualPath,
+    /// Workspace-relative dir, empty for the workspace root
+    source: String,
+    /// Workspace-relative dir of the module the project belongs to
+    module_dir: Option<String>,
     import_path: Option<String>,
     /// Direct module requires from the project's own `go.mod`
     requires: Vec<GoRequire>,
@@ -221,6 +259,18 @@ pub struct GoPackageGraph {
     package_prefixes: Vec<(String, Id)>,
     /// The `go.mod` files backing the resolved import paths
     input_files: Vec<VirtualPath>,
+    /// Direct imports of each project's packages, from `go list`
+    imports: BTreeMap<Id, ProjectImports>,
+    /// The Go files `go list` read imports from, so that a changed import
+    /// refreshes the graph, keyed by path for a stable order
+    source_files: BTreeMap<String, VirtualPath>,
+}
+
+#[derive(Default)]
+struct ProjectImports {
+    production: BTreeSet<String>,
+    /// From tests, including external `_test` packages
+    development: BTreeSet<String>,
 }
 
 impl GoPackageGraph {
@@ -234,6 +284,8 @@ impl GoPackageGraph {
             source_to_id: BTreeMap::default(),
             package_prefixes: vec![],
             input_files: vec![],
+            imports: BTreeMap::default(),
+            source_files: BTreeMap::default(),
         }
     }
 
@@ -249,6 +301,8 @@ impl GoPackageGraph {
             let mut project = GoProject {
                 id,
                 root,
+                source: source.to_owned(),
+                module_dir: None,
                 alias: None,
                 import_path: None,
                 requires: vec![],
@@ -310,6 +364,7 @@ impl GoPackageGraph {
                 }
 
                 project.import_path = Some(import_path);
+                project.module_dir = Some(mod_dir);
             }
 
             self.projects.push(project);
@@ -326,7 +381,107 @@ impl GoPackageGraph {
             })
             .collect();
 
+        if self.go_exists
+            && (self.config.infer_relationships || self.config.infer_relationships_from_tests)
+        {
+            self.load_imports()?;
+        }
+
         Ok(())
+    }
+
+    // Runs `go list` once per module, for the packages of every project in
+    // it, and assigns each package to the project whose dir contains it.
+    fn load_imports(&mut self) -> AnyResult<()> {
+        let patterns = if self.config.infer_relationships_packages.is_empty() {
+            // All packages, including those in subdirectories (internal/, pkg/, ...)
+            vec!["./...".to_owned()]
+        } else {
+            self.config.infer_relationships_packages.clone()
+        };
+
+        let mut modules = BTreeMap::<String, BTreeSet<String>>::default();
+
+        for project in &self.projects {
+            if let Some(module_dir) = &project.module_dir {
+                let relative = project.source[module_dir.len()..].trim_start_matches('/');
+
+                modules.entry(module_dir.to_owned()).or_default().extend(
+                    patterns
+                        .iter()
+                        .map(|pattern| scope_pattern(relative, pattern)),
+                );
+            }
+        }
+
+        let with_tests = self.config.infer_relationships_from_tests;
+
+        for (module_dir, patterns) in modules {
+            for package in execute_go_list(&self.workspace_path(&module_dir), &patterns)? {
+                // Relative to the module from Go's own paths, as it may have
+                // resolved symlinks that the workspace path still has
+                let Some(relative) = package
+                    .module
+                    .as_ref()
+                    .and_then(|module| package.dir.strip_prefix(&module.dir))
+                else {
+                    continue;
+                };
+
+                let relative = relative.replace('\\', "/");
+                let relative = relative.trim_matches('/');
+                let source = match (module_dir.is_empty(), relative.is_empty()) {
+                    (true, _) => relative.to_owned(),
+                    (false, true) => module_dir.clone(),
+                    (false, false) => format!("{module_dir}/{relative}"),
+                };
+
+                let Some(owner) = self.resolve_source(&source).cloned() else {
+                    continue;
+                };
+
+                let imports = self.imports.entry(owner).or_default();
+                imports.production.extend(package.imports);
+                imports.development.extend(package.test_imports);
+                imports.development.extend(package.x_test_imports);
+
+                let mut files = [package.go_files, package.cgo_files].concat();
+
+                if with_tests {
+                    files.extend(package.test_go_files);
+                    files.extend(package.x_test_go_files);
+                }
+
+                let dir = self.workspace_path(&source);
+
+                for file in files {
+                    let path = dir.join(&file);
+
+                    self.source_files.insert(path.to_string(), path);
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    // Resolves a workspace-relative dir to the project that contains it.
+    // The longest match wins, so a parent project can't claim the packages
+    // of projects nested beneath it.
+    fn resolve_source(&self, dir: &str) -> Option<&Id> {
+        self.source_to_id
+            .iter()
+            .filter(|(source, _)| dir_within(dir, source))
+            .max_by_key(|(source, _)| source.len())
+            .map(|(_, id)| id)
+    }
+
+    fn workspace_path(&self, dir: &str) -> VirtualPath {
+        if dir.is_empty() {
+            self.workspace_root.clone()
+        } else {
+            self.workspace_root.join(dir)
+        }
     }
 
     pub fn projects(&self) -> &[GoProject] {
@@ -334,7 +489,9 @@ impl GoPackageGraph {
     }
 
     pub fn into_input_files(self) -> Vec<VirtualPath> {
-        self.input_files
+        let mut files = self.input_files;
+        files.extend(self.source_files.into_values());
+        files
     }
 
     fn add_input_file(&mut self, path: VirtualPath) {
@@ -357,15 +514,7 @@ impl GoPackageGraph {
     // Second pass: infer one project's dependencies, picking the mechanism
     // the environment supports.
     pub fn project_dependencies(&self, project: &GoProject) -> AnyResult<Vec<ProjectDependency>> {
-        let mut dependencies = vec![];
-
-        // A project without an import path may still sit under a `go.work`,
-        // where `go list` resolves imports in workspace mode
-        if self.go_exists
-            && (project.import_path.is_some() || project.root.join("go.work").exists())
-        {
-            dependencies = self.dependencies_from_go_list(project)?;
-        }
+        let mut dependencies = self.dependencies_from_imports(project);
 
         // Monorepos using go.work can be resolved purely off the modfile: the
         // workspace wires required sibling modules to their local source, so
@@ -417,19 +566,23 @@ impl GoPackageGraph {
         dependencies
     }
 
-    fn dependencies_from_go_list(&self, project: &GoProject) -> AnyResult<Vec<ProjectDependency>> {
+    fn dependencies_from_imports(&self, project: &GoProject) -> Vec<ProjectDependency> {
         let mut dependencies = vec![];
         let mut seen = BTreeSet::new();
 
-        for (enabled, test, scope) in [
+        let Some(imports) = self.imports.get(&project.id) else {
+            return dependencies;
+        };
+
+        for (enabled, imports, scope) in [
             (
                 self.config.infer_relationships,
-                false,
+                &imports.production,
                 DependencyScope::Production,
             ),
             (
                 self.config.infer_relationships_from_tests,
-                true,
+                &imports.development,
                 DependencyScope::Development,
             ),
         ] {
@@ -437,23 +590,16 @@ impl GoPackageGraph {
                 continue;
             }
 
-            let imports = execute_go_list(
-                &project.root,
-                &self.config.infer_relationships_packages,
-                test,
-            )?;
-
             for import_path in imports {
-                // `./...` also enumerates packages belonging to projects
-                // nested inside this one; anything within the project's own
-                // import path is ownership, not an import
+                // Imports of the project's own packages, like an external
+                // `_test` package importing the package under test
                 if let Some(own) = project.import_path.as_deref()
-                    && import_within(&import_path, own)
+                    && import_within(import_path, own)
                 {
                     continue;
                 }
 
-                if let Some(dep_id) = self.resolve_import(&import_path)
+                if let Some(dep_id) = self.resolve_import(import_path)
                     && dep_id != &project.id
                     && seen.insert(dep_id)
                 {
@@ -466,13 +612,13 @@ impl GoPackageGraph {
             }
         }
 
-        Ok(dependencies)
+        dependencies
     }
 }
 
 // Lexically resolve a relative path (`./`, `../`) against a workspace
 // relative source, returning `None` when it escapes the workspace
-fn resolve_source_path(base: &str, path: &str) -> Option<String> {
+pub fn resolve_source_path(base: &str, path: &str) -> Option<String> {
     if path.starts_with('/') {
         return None;
     }

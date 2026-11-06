@@ -5,6 +5,7 @@ use moon_pdk_test_utils::{create_empty_moon_sandbox, create_moon_sandbox};
 use serde_json::json;
 use std::collections::BTreeMap;
 use std::env;
+use std::path::{Path, PathBuf};
 
 mod go_toolchain_tier2 {
     use super::*;
@@ -277,12 +278,18 @@ mod go_toolchain_tier2 {
                     ])
                 );
 
+                // The Go files that imports were read from, so that a new
+                // import refreshes the cached graph
                 assert_eq!(
                     output.input_files,
                     [
                         VirtualPath::new("/workspace/a/go.mod"),
                         VirtualPath::new("/workspace/b/go.mod"),
                         VirtualPath::new("/workspace/c/go.mod"),
+                        VirtualPath::new("/workspace/a/lib.go"),
+                        VirtualPath::new("/workspace/a/pkg/pkg.go"),
+                        VirtualPath::new("/workspace/b/lib.go"),
+                        VirtualPath::new("/workspace/c/lib.go"),
                     ]
                 );
             }
@@ -369,7 +376,111 @@ mod go_toolchain_tier2 {
                     )])
                 );
 
-                assert_eq!(output.input_files, [VirtualPath::new("/workspace/go.mod")]);
+                assert_eq!(
+                    output.input_files,
+                    [
+                        VirtualPath::new("/workspace/go.mod"),
+                        VirtualPath::new("/workspace/apps/a/main.go"),
+                        VirtualPath::new("/workspace/apps/a/tool/tool.go"),
+                        VirtualPath::new("/workspace/libs/b/lib.go"),
+                    ]
+                );
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn infers_direct_relations_and_test_relations() {
+                let sandbox = create_empty_moon_sandbox();
+                sandbox.create_file("go.mod", "module example.com/org\n\ngo 1.24\n");
+                sandbox.create_file(
+                    "apps/a/main.go",
+                    "package main\n\nimport \"example.com/org/libs/b\"\n\nfunc main() { b.B() }\n",
+                );
+                sandbox.create_file(
+                    "libs/b/b.go",
+                    "package b\n\nimport \"example.com/org/libs/c\"\n\nfunc B() { c.C() }\n",
+                );
+                sandbox.create_file(
+                    "libs/b/b_test.go",
+                    "package b_test\n\nimport (\n\t\"testing\"\n\n\t\"example.com/org/libs/b\"\n\t\"example.com/org/libs/d\"\n)\n\nfunc TestB(t *testing.T) { b.B(); d.D() }\n",
+                );
+                sandbox.create_file("libs/c/c.go", "package c\n\nfunc C() {}\n");
+                sandbox.create_file("libs/d/d.go", "package d\n\nfunc D() {}\n");
+
+                let plugin = sandbox.create_toolchain("go").await;
+
+                let mut input = ExtendProjectGraphInput::default();
+                input.project_sources.insert(Id::raw("a"), "apps/a".into());
+                input.project_sources.insert(Id::raw("b"), "libs/b".into());
+                input.project_sources.insert(Id::raw("c"), "libs/c".into());
+                input.project_sources.insert(Id::raw("d"), "libs/d".into());
+                input.toolchain_config = json!({
+                    "inferRelationships": true,
+                    "inferRelationshipsFromTests": true
+                });
+
+                let output = plugin.extend_project_graph(input).await;
+
+                // Only direct imports: `a` reaches `c` through `b`
+                assert_eq!(
+                    output.extended_projects[&Id::raw("a")].dependencies,
+                    [ProjectDependency {
+                        id: Id::raw("b"),
+                        scope: DependencyScope::Production,
+                        via: Some("package example.com/org/libs/b".into()),
+                    }]
+                );
+
+                // The external `b_test` package importing `b` is ownership
+                assert_eq!(
+                    output.extended_projects[&Id::raw("b")].dependencies,
+                    [
+                        ProjectDependency {
+                            id: Id::raw("c"),
+                            scope: DependencyScope::Production,
+                            via: Some("package example.com/org/libs/c".into()),
+                        },
+                        ProjectDependency {
+                            id: Id::raw("d"),
+                            scope: DependencyScope::Development,
+                            via: Some("package example.com/org/libs/d".into()),
+                        }
+                    ]
+                );
+
+                assert!(
+                    output
+                        .input_files
+                        .contains(&VirtualPath::new("/workspace/libs/b/b_test.go"))
+                );
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn keeps_relations_when_an_import_cant_be_resolved() {
+                let sandbox = create_moon_sandbox("projects-single-module");
+                sandbox.create_file(
+                    "apps/a/missing.go",
+                    "package main\n\nimport _ \"example.com/org/libs/missing\"\n",
+                );
+
+                let plugin = sandbox.create_toolchain("go").await;
+
+                let mut input = ExtendProjectGraphInput::default();
+                input.project_sources.insert(Id::raw("a"), "apps/a".into());
+                input.project_sources.insert(Id::raw("b"), "libs/b".into());
+                input.toolchain_config = json!({
+                    "inferRelationships": true
+                });
+
+                let output = plugin.extend_project_graph(input).await;
+
+                assert_eq!(
+                    output.extended_projects[&Id::raw("a")].dependencies,
+                    [ProjectDependency {
+                        id: Id::raw("b"),
+                        scope: DependencyScope::Production,
+                        via: Some("package example.com/org/libs/b".into()),
+                    }]
+                );
             }
 
             #[tokio::test(flavor = "multi_thread")]
@@ -628,6 +739,71 @@ mod go_toolchain_tier2 {
                 [sandbox.path().join(".home").join("go").join("bin")]
             );
         }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn adds_globals_dir() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .extend_task_command(ExtendTaskCommandInput {
+                    command: "unknown".into(),
+                    globals_dir: Some(VirtualPath::new(sandbox.path().join(".go/bin"))),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.paths, [sandbox.path().join(".go/bin")]);
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn pins_toolchain_when_versioned() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .extend_task_command(ExtendTaskCommandInput {
+                    command: "go".into(),
+                    toolchain_config: json!({ "version": "1.26.2" }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.env.get("GOTOOLCHAIN").map(String::as_str),
+                Some("local")
+            );
+
+            let output = plugin
+                .extend_task_command(ExtendTaskCommandInput {
+                    command: "go".into(),
+                    toolchain_config: json!({}),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(!output.env.contains_key("GOTOOLCHAIN"));
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn doesnt_pin_toolchain_when_host_sets_it() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("go").await;
+
+            unsafe { env::set_var("GOTOOLCHAIN", "auto") };
+
+            let output = plugin
+                .extend_task_command(ExtendTaskCommandInput {
+                    command: "go".into(),
+                    toolchain_config: json!({ "version": "1.26.2" }),
+                    ..Default::default()
+                })
+                .await;
+
+            unsafe { env::remove_var("GOTOOLCHAIN") };
+
+            assert!(!output.env.contains_key("GOTOOLCHAIN"));
+        }
     }
 
     mod extend_task_script {
@@ -655,6 +831,41 @@ mod go_toolchain_tier2 {
             assert_eq!(
                 output.paths,
                 [sandbox.path().join(".home").join("go").join("bin")]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn adds_globals_dir() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .extend_task_script(ExtendTaskScriptInput {
+                    script: "unknown".into(),
+                    globals_dir: Some(VirtualPath::new(sandbox.path().join(".go/bin"))),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.paths, [sandbox.path().join(".go/bin")]);
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn pins_toolchain_when_versioned() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .extend_task_script(ExtendTaskScriptInput {
+                    script: "go build".into(),
+                    toolchain_config: json!({ "version": "1.26.2" }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.env.get("GOTOOLCHAIN").map(String::as_str),
+                Some("local")
             );
         }
     }
@@ -690,7 +901,7 @@ mod go_toolchain_tier2 {
                 })
                 .await;
 
-            assert!(output.members.is_none());
+            assert_eq!(output.members.unwrap(), ["**/*"]);
             assert_eq!(output.root.unwrap(), VirtualPath::new("/workspace/package"));
         }
 
@@ -706,7 +917,7 @@ mod go_toolchain_tier2 {
                 })
                 .await;
 
-            assert!(output.members.is_none());
+            assert_eq!(output.members.unwrap(), ["**/*"]);
             assert_eq!(
                 output.root.unwrap(),
                 VirtualPath::new("/workspace/package-with-sum")
@@ -732,6 +943,51 @@ mod go_toolchain_tier2 {
                 output.root.unwrap(),
                 VirtualPath::new("/workspace/workspace")
             );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn ignores_workspace_when_gowork_is_off() {
+            let sandbox = create_moon_sandbox("locate");
+            let plugin = sandbox.create_toolchain("go").await;
+
+            unsafe { env::set_var("GOWORK", "off") };
+
+            let output = plugin
+                .locate_dependencies_root(LocateDependenciesRootInput {
+                    starting_dir: VirtualPath::new(
+                        sandbox.path().join("workspace/modules/a/nested"),
+                    ),
+                    ..Default::default()
+                })
+                .await;
+
+            unsafe { env::remove_var("GOWORK") };
+
+            assert_eq!(output.members.unwrap(), ["**/*"]);
+            assert_eq!(
+                output.root.unwrap(),
+                VirtualPath::new("/workspace/workspace/modules/a")
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn finds_nested_module_without_lock() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("go.mod", "module example.com/root");
+            sandbox.create_file("go.sum", "");
+            sandbox.create_file("tools/go.mod", "module example.com/root/tools");
+
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .locate_dependencies_root(LocateDependenciesRootInput {
+                    starting_dir: VirtualPath::new(sandbox.path().join("tools")),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.root.unwrap(), VirtualPath::new("/workspace/tools"));
+            assert_eq!(output.members.unwrap(), ["**/*"]);
         }
     }
 
@@ -775,11 +1031,99 @@ mod go_toolchain_tier2 {
             assert_eq!(
                 output.install_command.unwrap(),
                 ExecCommand::new(
-                    ExecCommandInput::new("go", ["work", "sync"])
+                    ExecCommandInput::new("go", ["mod", "download"])
                         .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                 )
             );
             assert!(output.dedupe_command.is_none());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn pins_toolchain_when_versioned() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("go.mod", "");
+            sandbox.create_file("go.sum", "");
+
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .install_dependencies(InstallDependenciesInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    toolchain_config: json!({
+                        "tidyOnChange": true,
+                        "version": "1.26.2"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            for command in [output.install_command, output.dedupe_command] {
+                assert_eq!(
+                    command
+                        .unwrap()
+                        .command
+                        .env
+                        .get("GOTOOLCHAIN")
+                        .map(String::as_str),
+                    Some("local")
+                );
+            }
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn does_nothing_if_vendored() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("go.mod", "");
+            sandbox.create_file("go.sum", "");
+            sandbox.create_file("vendor/modules.txt", "");
+
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .install_dependencies(InstallDependenciesInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    toolchain_config: json!({
+                        "tidyOnChange": true
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.install_command.is_none());
+            assert!(output.dedupe_command.is_none());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn ignores_go_work_when_gowork_is_off() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("go.work", "");
+            sandbox.create_file("go.mod", "");
+            sandbox.create_file("go.sum", "");
+
+            let plugin = sandbox.create_toolchain("go").await;
+
+            unsafe { env::set_var("GOWORK", "off") };
+
+            let output = plugin
+                .install_dependencies(InstallDependenciesInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    toolchain_config: json!({
+                        "tidyOnChange": true
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            unsafe { env::remove_var("GOWORK") };
+
+            assert!(output.install_command.is_some());
+            assert_eq!(
+                output.dedupe_command.unwrap(),
+                ExecCommand::new(
+                    ExecCommandInput::new("go", ["mod", "tidy"])
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                )
+            );
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -826,7 +1170,7 @@ mod go_toolchain_tier2 {
             assert_eq!(
                 output.install_command.unwrap(),
                 ExecCommand::new(
-                    ExecCommandInput::new("go", ["work", "sync"])
+                    ExecCommandInput::new("go", ["mod", "download"])
                         .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                 )
             );
@@ -1073,10 +1417,75 @@ mod go_toolchain_tier2 {
                 ])
             );
         }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn skips_invalid_files() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("testdata/go.mod", "module (\n\trequire {\n");
+
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .parse_manifest(ParseManifestInput {
+                    path: VirtualPath::new(sandbox.path().join("testdata/go.mod")),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.dependencies.is_empty());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn includes_indirect_requires() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "go.mod",
+                "module example.com/org/c\n\nrequire (\n\texample.com/org/a v1.2.3\n\texample.com/org/b v4.5.6 // indirect\n)\n",
+            );
+
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .parse_manifest(ParseManifestInput {
+                    path: VirtualPath::new(sandbox.path().join("go.mod")),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.dependencies.keys().collect::<Vec<_>>(),
+                ["example.com/org/a", "example.com/org/b"]
+            );
+        }
     }
 
     mod bins {
         use super::*;
+
+        fn go_install(cwd: VirtualPath, args: &[&str]) -> ExecCommand {
+            let mut command = ExecCommandInput::new("go", ["install", "-v"]);
+            command.args.extend(args.iter().map(|arg| arg.to_string()));
+            command.cwd = Some(cwd);
+
+            ExecCommand::new(command)
+                .cache(CacheStrategy::Memory)
+                .label(format!("go-bin-{}", args.last().unwrap()))
+        }
+
+        fn assert_installs(
+            mut commands: Vec<ExecCommand>,
+            expected: Vec<ExecCommand>,
+            gobin: Option<&Path>,
+        ) {
+            for command in &mut commands {
+                // Compared as paths, as separators are mixed on Windows
+                let actual = command.command.env.remove("GOBIN").map(PathBuf::from);
+
+                assert_eq!(actual.as_deref(), gobin);
+            }
+
+            assert_eq!(commands, expected);
+        }
 
         #[tokio::test(flavor = "multi_thread")]
         async fn doesnt_add_command_if_empty() {
@@ -1097,18 +1506,21 @@ mod go_toolchain_tier2 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
-        async fn adds_commands_if_not_empty() {
+        async fn adds_a_command_per_bin() {
             let sandbox = create_empty_moon_sandbox();
             let plugin = sandbox.create_toolchain("go").await;
+            let cwd = plugin.plugin.to_virtual_path(sandbox.path());
 
+            // Separate modules that share a path prefix, which Go
+            // can't install in the same command
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
                     root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "bins": [
-                            "golang.org/x/tools/gopls",
+                            "golang.org/x/tools/gopls@latest",
                             {
-                                "bin": "github.com/revel/cmd/revel"
+                                "bin": "golang.org/x/tools/cmd/goimports@latest"
                             }
                         ]
                     }),
@@ -1116,88 +1528,28 @@ mod go_toolchain_tier2 {
                 })
                 .await;
 
-            assert_eq!(
+            assert_installs(
                 output.commands,
-                [
-                    ExecCommand::new(
-                        ExecCommandInput::new(
-                            "go",
-                            ["install", "-v", "github.com/revel/cmd/revel"],
-                        )
-                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
-                    .cache(CacheStrategy::Memory)
-                    .label("go-bins-github.com/revel/cmd@latest"),
-                    ExecCommand::new(
-                        ExecCommandInput::new("go", ["install", "-v", "golang.org/x/tools/gopls"],)
-                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
-                    .cache(CacheStrategy::Memory)
-                    .label("go-bins-golang.org/x/tools@latest")
-                ]
+                vec![
+                    go_install(cwd.clone(), &["golang.org/x/tools/gopls@latest"]),
+                    go_install(cwd, &["golang.org/x/tools/cmd/goimports@latest"]),
+                ],
+                None,
             );
         }
 
         #[tokio::test(flavor = "multi_thread")]
-        async fn separates_commands_by_version() {
+        async fn passes_versions_and_args() {
             let sandbox = create_empty_moon_sandbox();
             let plugin = sandbox.create_toolchain("go").await;
+            let cwd = plugin.plugin.to_virtual_path(sandbox.path());
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
                     root: VirtualPath::new(sandbox.path()),
                     toolchain_config: json!({
                         "bins": [
-                            "golang.org/x/tools/gopls@1",
-                            {
-                                "bin": "github.com/revel/cmd/revel@2"
-                            }
-                        ]
-                    }),
-                    ..Default::default()
-                })
-                .await;
-
-            assert_eq!(
-                output.commands,
-                [
-                    ExecCommand::new(
-                        ExecCommandInput::new(
-                            "go",
-                            ["install", "-v", "github.com/revel/cmd/revel@2"],
-                        )
-                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
-                    .cache(CacheStrategy::Memory)
-                    .label("go-bins-github.com/revel/cmd@2"),
-                    ExecCommand::new(
-                        ExecCommandInput::new(
-                            "go",
-                            ["install", "-v", "golang.org/x/tools/gopls@1"],
-                        )
-                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
-                    .cache(CacheStrategy::Memory)
-                    .label("go-bins-golang.org/x/tools@1"),
-                ]
-            );
-        }
-
-        #[tokio::test(flavor = "multi_thread")]
-        async fn separates_commands_by_args() {
-            let sandbox = create_empty_moon_sandbox();
-            let plugin = sandbox.create_toolchain("go").await;
-
-            let output = plugin
-                .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::new(sandbox.path()),
-                    toolchain_config: json!({
-                        "bins": [
-                            "golang.org/x/tools/gopls",
-                            {
-                                "bin": "golang.org/x/tools/cmd/goimports",
-                                "args": ["-tags", "netgo"]
-                            },
+                            "golang.org/x/tools/gopls@v0.20.0",
                             {
                                 "bin": "golang.org/x/tools/cmd/stringer",
                                 "args": ["-tags", "netgo"]
@@ -1208,32 +1560,39 @@ mod go_toolchain_tier2 {
                 })
                 .await;
 
-            assert_eq!(
+            assert_installs(
                 output.commands,
-                [
-                    ExecCommand::new(
-                        ExecCommandInput::new("go", ["install", "-v", "golang.org/x/tools/gopls"],)
-                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
-                    .cache(CacheStrategy::Memory)
-                    .label("go-bins-golang.org/x/tools@latest"),
-                    ExecCommand::new(
-                        ExecCommandInput::new(
-                            "go",
-                            [
-                                "install",
-                                "-v",
-                                "-tags",
-                                "netgo",
-                                "golang.org/x/tools/cmd/goimports",
-                                "golang.org/x/tools/cmd/stringer"
-                            ],
-                        )
-                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
-                    .cache(CacheStrategy::Memory)
-                    .label("go-bins-golang.org/x/tools@latest"),
-                ]
+                vec![
+                    go_install(cwd.clone(), &["golang.org/x/tools/gopls@v0.20.0"]),
+                    go_install(cwd, &["-tags", "netgo", "golang.org/x/tools/cmd/stringer"]),
+                ],
+                None,
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn pins_toolchain_when_versioned() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    toolchain_config: json!({
+                        "bins": ["golang.org/x/tools/gopls"],
+                        "version": "1.26.2"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.commands[0]
+                    .command
+                    .env
+                    .get("GOTOOLCHAIN")
+                    .map(String::as_str),
+                Some("local")
             );
         }
 
@@ -1288,14 +1647,13 @@ mod go_toolchain_tier2 {
                 })
                 .await;
 
-            assert_eq!(
+            assert_installs(
                 output.commands,
-                [ExecCommand::new(
-                    ExecCommandInput::new("go", ["install", "-v", "github.com/revel/cmd/revel"],)
-                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                )
-                .cache(CacheStrategy::Memory)
-                .label("go-bins-github.com/revel/cmd@latest")]
+                vec![go_install(
+                    plugin.plugin.to_virtual_path(sandbox.path()),
+                    &["github.com/revel/cmd/revel"],
+                )],
+                Some(&sandbox.path().join(".go").join("bin")),
             );
         }
 
@@ -1362,17 +1720,13 @@ mod go_toolchain_tier2 {
                 })
                 .await;
 
-            assert_eq!(
+            assert_installs(
                 output.commands,
-                [ExecCommand::new(
-                    ExecCommandInput::new(
-                        "go",
-                        ["install", "-v", "golang.org/x/tools/gopls@v0.16.0"],
-                    )
-                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                )
-                .cache(CacheStrategy::Memory)
-                .label("go-bins-golang.org/x/tools@v0.16.0")]
+                vec![go_install(
+                    plugin.plugin.to_virtual_path(sandbox.path()),
+                    &["golang.org/x/tools/gopls@v0.16.0"],
+                )],
+                Some(&sandbox.path().join(".go").join("bin")),
             );
         }
 
@@ -1400,15 +1754,76 @@ mod go_toolchain_tier2 {
                 })
                 .await;
 
-            assert_eq!(
+            assert_installs(
                 output.commands,
-                [ExecCommand::new(
-                    ExecCommandInput::new("go", ["install", "-v", "golang.org/x/tools/gopls"],)
-                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                )
-                .cache(CacheStrategy::Memory)
-                .label("go-bins-golang.org/x/tools@latest")]
+                vec![go_install(
+                    plugin.plugin.to_virtual_path(sandbox.path()),
+                    &["golang.org/x/tools/gopls"],
+                )],
+                Some(&sandbox.path().join(".go").join("bin")),
             );
+        }
+    }
+
+    mod hash_task_contents {
+        use super::*;
+
+        fn project(source: &str) -> ProjectFragment {
+            ProjectFragment {
+                id: Id::raw("a"),
+                source: source.into(),
+                ..Default::default()
+            }
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn includes_the_owning_modules_requires() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "go.mod",
+                "module example.com/org\n\ngo 1.24\n\nrequire (\n\texample.com/x v1.0.0\n\texample.com/y v2.0.0 // indirect\n)\n\nreplace example.com/x => example.com/z v1.1.0\n",
+            );
+
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .hash_task_contents(HashTaskContentsInput {
+                    project: project("apps/a"),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.contents.len(), 2);
+            assert_eq!(
+                output.contents[1],
+                json!({
+                    "go": "1.24.0",
+                    "toolchain": null,
+                    "require": {
+                        "example.com/x": "v1.0.0",
+                        "example.com/y": "v2.0.0"
+                    },
+                    "replace": ["example.com/x => example.com/z v1.1.0"]
+                })
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn skips_projects_with_their_own_go_mod() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("go.mod", "module example.com/org\n");
+            sandbox.create_file("apps/a/go.mod", "module example.com/org/apps/a\n");
+
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .hash_task_contents(HashTaskContentsInput {
+                    project: project("apps/a"),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.contents.len(), 1);
         }
     }
 }

@@ -28,9 +28,10 @@ pub fn to_go_version(spec: &VersionSpec) -> String {
         _ => {
             let version = spec.as_version().unwrap();
 
-            // Versioning changed in >= 1.21.0
+            // Versioning changed in >= 1.21.0, but prereleases
+            // are still named like `go1.21rc1`
             // https://go.dev/doc/go1.21#introduction
-            if version.major >= 1 && version.minor >= 21 {
+            if version.major >= 1 && version.minor >= 21 && version.prerelease.is_none() {
                 return version.to_string();
             }
 
@@ -102,6 +103,13 @@ mod tests {
             to_go_version(&VersionSpec::parse("1.22.1").unwrap()),
             "1.22.1"
         );
-        // assert_eq!(to_go_version("1.23.0-beta2"), "1.23.0beta2");
+        assert_eq!(
+            to_go_version(&VersionSpec::parse("1.23.0-rc2").unwrap()),
+            "1.23rc2"
+        );
+        assert_eq!(
+            to_go_version(&VersionSpec::parse("1.27.0-rc1").unwrap()),
+            "1.27rc1"
+        );
     }
 }
