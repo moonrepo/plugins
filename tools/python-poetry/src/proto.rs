@@ -1,5 +1,6 @@
 use crate::version::*;
 use extism_pdk::*;
+use lang_python_common::parse_pep440_spec;
 use proto_pdk::*;
 use starbase_utils::fs;
 use std::collections::HashMap;
@@ -44,21 +45,6 @@ pub fn parse_version_file(
 ) -> FnResult<Json<ParseVersionFileOutput>> {
     let mut version = None;
 
-    // https://peps.python.org/pep-0440/#version-specifiers
-    fn parse_pep(constraint: &str) -> AnyResult<UnresolvedVersionSpec> {
-        let reqs = constraint
-            .split(',')
-            .map(|req| match req.trim().strip_prefix("~=").map(str::trim) {
-                // `~=X.Y` allows `X.*` (`^X.Y`), while `~=X.Y.Z` allows `X.Y.*` (`~X.Y.Z`)
-                Some(ver) if ver.split('.').count() == 2 => format!("^{ver}"),
-                Some(ver) => format!("~{ver}"),
-                None => req.replace("==", "="),
-            })
-            .collect::<Vec<_>>();
-
-        Ok(UnresolvedVersionSpec::parse(reqs.join(","))?)
-    }
-
     if input.file == ".poetry-version" {
         let content = input.content.trim();
 
@@ -71,7 +57,7 @@ pub fn parse_version_file(
         && let Some(poetry_field) = tool_field.get("poetry")
         && let Some(Value::String(constraint)) = poetry_field.get("requires-poetry")
     {
-        version = Some(parse_pep(constraint)?);
+        version = Some(parse_pep440_spec(constraint)?);
     }
 
     Ok(Json(ParseVersionFileOutput { version }))
