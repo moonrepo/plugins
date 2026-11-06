@@ -1025,6 +1025,31 @@ mod go_toolchain_tier2 {
                 ]
             );
         }
+
+        // Directories that share a root reuse its cached manifest
+        #[tokio::test(flavor = "multi_thread")]
+        async fn shares_roots_between_dirs() {
+            let sandbox = create_moon_sandbox("locate");
+            let plugin = sandbox.create_toolchain("go").await;
+
+            let output = plugin
+                .locate_dependencies_roots(LocateDependenciesRootsInput {
+                    starting_dirs: vec![
+                        VirtualPath::new(sandbox.path().join("workspace/modules/a/nested")),
+                        VirtualPath::new(sandbox.path().join("workspace")),
+                        VirtualPath::new(sandbox.path().join("workspace/other")),
+                    ],
+                    ..Default::default()
+                })
+                .await;
+
+            let workspace = LocateDependenciesRootOutput {
+                members: Some(vec!["modules/a".into()]),
+                root: Some(VirtualPath::new("/workspace/workspace")),
+            };
+
+            assert_eq!(output.roots, vec![workspace; 3]);
+        }
     }
 
     mod install_dependencies {
