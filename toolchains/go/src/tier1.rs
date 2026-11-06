@@ -149,20 +149,3 @@ pub fn scaffold_docker(
 
     Ok(Json(output))
 }
-
-#[plugin_fn]
-pub fn prune_docker(Json(input): Json<PruneDockerInput>) -> FnResult<Json<PruneDockerOutput>> {
-    let config = parse_toolchain_config::<GoToolchainConfig>(input.toolchain_config)?;
-    let mut output = PruneDockerOutput::default();
-    let vendor_dir = input
-        .root
-        .join(config.vendor_dir.as_deref().unwrap_or("vendor"));
-
-    if vendor_dir.exists() && input.docker_config.delete_vendor_directories {
-        fs::remove_dir_all(&vendor_dir)?;
-
-        output.changed_files.push(vendor_dir);
-    }
-
-    Ok(Json(output))
-}

@@ -28,8 +28,9 @@ config_struct!(
         /// This setting is ignored when using Go workspaces.
         pub tidy_on_change: bool,
 
-        /// Relative path to the vendor directory generated with `go mod vendor`.
-        /// If vendored with the default name of "vendor", this setting can be omitted.
+        /// Unused. `docker prune` no longer deletes the vendor directory, as it's
+        /// committed source that Go builds from.
+        #[deprecated]
         pub vendor_dir: Option<String>,
 
         /// Configured version to download and install.

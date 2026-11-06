@@ -15,6 +15,9 @@
   package in a command to come from the same module, so pairs like `golang.org/x/tools/gopls` and
   `golang.org/x/tools/cmd/goimports` failed.
 - Task hashes now include indirect requires from `go.mod`, as they're part of the build.
+- `moon docker prune` no longer deletes the `vendor` directory, and the `vendorDir` setting is
+  deprecated. It's committed source that Go builds from, and deleting it made the production
+  install download every module into the image.
 
 #### 🚀 Updates
 
