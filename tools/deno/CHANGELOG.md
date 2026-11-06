@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added checksum verification for `canary` downloads.
+
+#### 🐞 Fixes
+
+- Fixed `.dvmrc` files written by dvm v1.8+ (`deno_version=<version>`) failing to parse.
+- Fixed the globals directory when `DENO_INSTALL_ROOT` ends with `bin`, which Deno v2.2.11+ uses
+  as-is instead of its `bin` subdirectory.
+- Fixed the build from source help links, which pointed to removed documentation pages.
+
 ## 0.15.12
 
 #### 🚀 Updates
