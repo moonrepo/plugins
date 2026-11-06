@@ -16,6 +16,23 @@ pub fn from_ruby_version(version: &str) -> String {
     version.to_owned()
 }
 
+/// Extract the CRuby version from a `.ruby-version` file. Version managers accept
+/// an optional `ruby-` prefix, while anything else that isn't a version, like
+/// `jruby-9.4.5.0` or `system`, is for a different engine or manager.
+pub fn parse_ruby_version_file(content: &str) -> Option<&str> {
+    let version = content
+        .lines()
+        .map(str::trim)
+        .find(|line| !line.is_empty() && !line.starts_with('#'))?
+        .split_whitespace()
+        .next()?;
+    let version = version.strip_prefix("ruby-").unwrap_or(version);
+
+    version
+        .starts_with(|c: char| c.is_ascii_digit())
+        .then_some(version)
+}
+
 // Reverse of the above, and without build metadata
 pub fn to_ruby_version(version: &Version) -> String {
     let mut ruby_version = format!("{}.{}.{}", version.major, version.minor, version.patch);

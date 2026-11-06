@@ -1,7 +1,10 @@
-use moon_config::LanguageType;
+use moon_config::{DockerPruneConfig, LanguageType};
 use moon_pdk_api::*;
-use moon_pdk_test_utils::create_empty_moon_sandbox;
+use moon_pdk_test_utils::{MoonWasmSandbox, create_empty_moon_sandbox};
 use serde_json::json;
+use std::fs;
+use std::path::Path;
+use std::process::Command;
 
 mod ruby_toolchain_tier1 {
     use super::*;
@@ -26,6 +29,8 @@ mod ruby_toolchain_tier1 {
             assert!(output.manifest_file_names.contains(&"Gemfile".to_string()));
             assert!(output.lock_file_names.contains(&"Gemfile.lock".to_string()));
             assert!(output.exe_names.contains(&"bundle".to_string()));
+            assert!(output.exe_names.contains(&"rspec".to_string()));
+            assert!(output.config_file_globs.contains(&"Rakefile".to_string()));
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -63,6 +68,24 @@ mod ruby_toolchain_tier1 {
                 .await;
 
             assert_eq!(output.default_settings.get("version").unwrap(), "3.3.5");
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn ignores_other_engines() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(".ruby-version", "jruby-9.4.5.0\n");
+            let plugin = sandbox.create_toolchain("ruby").await;
+
+            let output = plugin
+                .initialize_toolchain(InitializeToolchainInput {
+                    context: MoonContext {
+                        working_dir: plugin.plugin.to_virtual_path(sandbox.path()),
+                        ..Default::default()
+                    },
+                })
+                .await;
+
+            assert!(!output.default_settings.contains_key("version"));
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -108,6 +131,128 @@ mod ruby_toolchain_tier1 {
                 .await;
 
             assert_eq!(output.default_image.unwrap(), "ruby:3.3");
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn scaffolds_gem_version_files() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("ruby").await;
+
+            let output = plugin
+                .define_docker_metadata(DefineDockerMetadataInput::default())
+                .await;
+
+            assert_eq!(output.scaffold_globs, ["lib/**/version.rb"]);
+        }
+    }
+
+    mod prune_docker {
+        use super::*;
+
+        // Requires Bundler 2.1+, which added `bundle config set`, as macOS ships
+        // 1.17 with its system Ruby, and proto's shim runs the system `ruby`
+        // instead when no Ruby is pinned. Returns the gem directory of its Ruby ABI.
+        fn get_ruby_abi(dir: &Path) -> Option<String> {
+            let run = |args: &[&str]| {
+                Command::new("bundle")
+                    .args(args)
+                    .current_dir(dir)
+                    .output()
+                    .ok()
+                    .filter(|out| out.status.success())
+                    .map(|out| String::from_utf8_lossy(&out.stdout).into_owned())
+            };
+
+            // Like `Bundler version 2.6.9`, or only the version since Bundler 3
+            let output = run(&["-v"])?;
+            let mut version = output
+                .lines()
+                .last()?
+                .trim_start_matches("Bundler version ")
+                .split('.')
+                .map(|part| part.parse::<u32>().ok());
+
+            ((version.next()??, version.next()??) >= (2, 1)).then_some(())?;
+
+            run(&[
+                "exec",
+                "ruby",
+                "-e",
+                "print RbConfig::CONFIG['ruby_version']",
+            ])
+        }
+
+        async fn prune(
+            delete_vendor_directories: bool,
+        ) -> Option<(MoonWasmSandbox, PruneDockerOutput)> {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("Gemfile", "source \"https://rubygems.org\"\n");
+            sandbox.create_file(".bundle/config", "---\nBUNDLE_PATH: \"vendor/bundle\"\n");
+
+            let abi = get_ruby_abi(sandbox.path())?;
+            sandbox.create_file(
+                format!("vendor/bundle/ruby/{abi}/specifications/stale-1.0.gemspec"),
+                "",
+            );
+            sandbox.create_file(
+                format!("vendor/bundle/ruby/{abi}/gems/stale-1.0/stale.rb"),
+                "",
+            );
+
+            let plugin = sandbox.create_toolchain("ruby").await;
+            let output = plugin
+                .prune_docker(PruneDockerInput {
+                    docker_config: DockerPruneConfig {
+                        delete_vendor_directories,
+                        ..Default::default()
+                    },
+                    root: VirtualPath::new(sandbox.path()),
+                    toolchain_config: json!({}),
+                    ..Default::default()
+                })
+                .await;
+
+            Some((sandbox, output))
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn persists_groups_and_cleans_their_gems() {
+            let Some((sandbox, output)) = prune(true).await else {
+                return;
+            };
+
+            let config = fs::read_to_string(sandbox.path().join(".bundle/config")).unwrap();
+
+            assert!(
+                config.contains("BUNDLE_WITHOUT: \"development:test\""),
+                "{config}"
+            );
+            assert!(
+                fs::read_dir(sandbox.path().join("vendor/bundle/ruby"))
+                    .unwrap()
+                    .all(|abi| !abi.unwrap().path().join("gems/stale-1.0").exists())
+            );
+            assert_eq!(output.changed_files.len(), 2);
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn only_persists_groups_when_not_deleting() {
+            let Some((sandbox, output)) = prune(false).await else {
+                return;
+            };
+
+            let config = fs::read_to_string(sandbox.path().join(".bundle/config")).unwrap();
+
+            assert!(
+                config.contains("BUNDLE_WITHOUT: \"development:test\""),
+                "{config}"
+            );
+            assert!(
+                fs::read_dir(sandbox.path().join("vendor/bundle/ruby"))
+                    .unwrap()
+                    .any(|abi| abi.unwrap().path().join("gems/stale-1.0").exists())
+            );
+            assert_eq!(output.changed_files.len(), 1);
         }
     }
 }

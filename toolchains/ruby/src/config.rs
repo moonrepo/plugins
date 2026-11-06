@@ -1,5 +1,5 @@
 use moon_config::UnresolvedVersionSpec;
-use moon_pdk_api::config_struct;
+use moon_pdk_api::{ExecCommandInput, config_struct};
 use schematic::{Config, ConfigEnum, derive_enum};
 
 derive_enum!(
@@ -24,13 +24,15 @@ config_struct!(
         pub package_manager: RubyPackageManager,
 
         /// Where Bundler installs gems, relative to the dependency root.
+        /// Only the workspace's is used, as moon checks it for installed gems.
         #[setting(default = "vendor/bundle")]
         pub bundle_path: String,
 
         /// Extra arguments appended to `bundle install`.
         pub bundler_install_args: Vec<String>,
 
-        /// Run installs in frozen/deployment mode (CI-friendly).
+        /// Run installs in frozen mode (CI-friendly), so that Bundler errors
+        /// instead of updating an out-of-date lockfile. Applied via `BUNDLE_FROZEN`.
         pub frozen: bool,
 
         /// Gem groups to exclude during a production install, applied via
@@ -41,3 +43,35 @@ config_struct!(
         pub version: Option<UnresolvedVersionSpec>,
     }
 );
+
+pub const DEFAULT_NON_PRODUCTION_GROUPS: [&str; 2] = ["development", "test"];
+
+impl RubyToolchainConfig {
+    /// Gem groups that are skipped by production installs.
+    pub fn get_non_production_groups(&self) -> Vec<&str> {
+        if self.production_without_groups.is_empty() {
+            DEFAULT_NON_PRODUCTION_GROUPS.to_vec()
+        } else {
+            self.production_without_groups
+                .iter()
+                .map(String::as_str)
+                .collect()
+        }
+    }
+
+    /// Pin the configured Ruby for proto's `bundle` shim, as moon doesn't set it
+    /// for commands without a project, like a shared Gemfile's (moon#118).
+    pub fn pin_version(&self, command: &mut ExecCommandInput) {
+        if let Some(version) = &self.version {
+            command.env.insert(
+                "PROTO_RUBY_VERSION".into(),
+                // Like moon, as `latest` may not be installed
+                if version.is_latest() {
+                    "*".into()
+                } else {
+                    version.to_string()
+                },
+            );
+        }
+    }
+}
