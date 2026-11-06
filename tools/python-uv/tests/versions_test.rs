@@ -67,4 +67,23 @@ mod python_uv_tool {
             }
         );
     }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn parses_arbitrary_equality_as_exact() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("uv-test").await;
+
+        assert_eq!(
+            plugin
+                .parse_version_file(ParseVersionFileInput {
+                    content: r#"required-version = "===0.5.0""#.into(),
+                    file: "uv.toml".into(),
+                    ..Default::default()
+                })
+                .await,
+            ParseVersionFileOutput {
+                version: Some(UnresolvedVersionSpec::parse("=0.5.0").unwrap()),
+            }
+        );
+    }
 }
