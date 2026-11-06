@@ -329,12 +329,31 @@ fn extract_workspace_members_and_catalogs(
 pub fn locate_dependencies_root(
     Json(input): Json<LocateDependenciesRootInput>,
 ) -> FnResult<Json<LocateDependenciesRootOutput>> {
-    let config =
-        parse_toolchain_config_schema::<JavaScriptToolchainConfig>(input.toolchain_config)?;
-    let mut output = LocateDependenciesRootOutput::default();
+    let mut roots = locate_roots(&[input.starting_dir], input.toolchain_config)?;
+
+    Ok(Json(roots.pop().unwrap_or_default()))
+}
+
+#[plugin_fn]
+pub fn locate_dependencies_roots(
+    Json(input): Json<LocateDependenciesRootsInput>,
+) -> FnResult<Json<LocateDependenciesRootsOutput>> {
+    Ok(Json(LocateDependenciesRootsOutput {
+        roots: locate_roots(&input.starting_dirs, input.toolchain_config)?,
+    }))
+}
+
+fn locate_roots(
+    starting_dirs: &[VirtualPath],
+    toolchain_config: json::Value,
+) -> AnyResult<Vec<LocateDependenciesRootOutput>> {
+    let config = parse_toolchain_config_schema::<JavaScriptToolchainConfig>(toolchain_config)?;
 
     let Some(package_manager) = config.package_manager else {
-        return Ok(Json(output));
+        return Ok(starting_dirs
+            .iter()
+            .map(|_| LocateDependenciesRootOutput::default())
+            .collect());
     };
 
     let package_manager_config: SharedPackageManagerConfig =
@@ -377,37 +396,47 @@ pub fn locate_dependencies_root(
         JavaScriptPackageManager::Yarn => vec!["yarn.lock"],
     };
 
-    // First attempt: find lock files
-    if let Some(root) = locate_root_many(&input.starting_dir, &lock_names) {
-        output.members = extract_workspace_members_and_catalogs(package_manager, &root)?;
-        output.root = Some(root);
+    let mut roots = vec![];
+
+    for starting_dir in starting_dirs {
+        let mut output = LocateDependenciesRootOutput::default();
+
+        // First attempt: find lock files
+        if let Some(root) = locate_root_many(starting_dir, &lock_names) {
+            output.members = extract_workspace_members_and_catalogs(package_manager, &root)?;
+            output.root = Some(root);
+        }
+
+        // Second attempt: find workspace-compatible manifest files
+        if output.root.is_none() {
+            locate_root_many_with_check(starting_dir, &workspace_manifest_names, |root| {
+                let mut found = false;
+
+                if let Some(members) =
+                    extract_workspace_members_and_catalogs(package_manager, root)?
+                {
+                    output.root = Some(root.to_owned());
+                    output.members = Some(members);
+                    found = true;
+                }
+
+                Ok(found)
+            })?;
+        }
+
+        // Last attempt: find a manifest file (project only)
+        if output.root.is_none()
+            && let Some(root) = locate_root_many(starting_dir, &manifest_names)
+        {
+            extract_workspace_members_and_catalogs(package_manager, &root)?;
+
+            output.root = Some(root);
+        }
+
+        roots.push(output);
     }
 
-    // Second attempt: find workspace-compatible manifest files
-    if output.root.is_none() {
-        locate_root_many_with_check(&input.starting_dir, &workspace_manifest_names, |root| {
-            let mut found = false;
-
-            if let Some(members) = extract_workspace_members_and_catalogs(package_manager, root)? {
-                output.root = Some(root.to_owned());
-                output.members = Some(members);
-                found = true;
-            }
-
-            Ok(found)
-        })?;
-    }
-
-    // Last attempt: find a manifest file (project only)
-    if output.root.is_none()
-        && let Some(root) = locate_root_many(&input.starting_dir, &manifest_names)
-    {
-        extract_workspace_members_and_catalogs(package_manager, &root)?;
-
-        output.root = Some(root);
-    }
-
-    Ok(Json(output))
+    Ok(roots)
 }
 
 #[plugin_fn]

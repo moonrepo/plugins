@@ -107,6 +107,45 @@ end
         }
     }
 
+    mod locate_dependencies_roots {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn locates_each_dir_in_order() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("app/Gemfile.lock", "");
+            sandbox.create_file("api/Gemfile", "");
+            let plugin = sandbox.create_toolchain("ruby").await;
+
+            let output = plugin
+                .locate_dependencies_roots(LocateDependenciesRootsInput {
+                    starting_dirs: vec![
+                        VirtualPath::new(sandbox.path().join("app/lib/nested")),
+                        VirtualPath::new(sandbox.path().join("other")),
+                        VirtualPath::new(sandbox.path().join("api")),
+                    ],
+                    toolchain_config: json!({}),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.roots,
+                vec![
+                    LocateDependenciesRootOutput {
+                        members: None,
+                        root: Some(VirtualPath::new("/workspace/app")),
+                    },
+                    LocateDependenciesRootOutput::default(),
+                    LocateDependenciesRootOutput {
+                        members: None,
+                        root: Some(VirtualPath::new("/workspace/api")),
+                    },
+                ]
+            );
+        }
+    }
+
     mod setup_environment {
         use super::*;
 
