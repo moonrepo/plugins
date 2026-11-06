@@ -311,46 +311,67 @@ pub fn extend_task_script(
 pub fn locate_dependencies_root(
     Json(input): Json<LocateDependenciesRootInput>,
 ) -> FnResult<Json<LocateDependenciesRootOutput>> {
-    let mut output = LocateDependenciesRootOutput::default();
+    let mut roots = locate_roots(&[input.starting_dir])?;
 
-    // Attempt to find `Cargo.lock` first
-    if let Some(root) = locate_root(&input.starting_dir, "Cargo.lock") {
-        output.members = CargoToml::load(root.join("Cargo.toml"))?.extract_members();
-        output.root = Some(root);
+    Ok(Json(roots.pop().unwrap_or_default()))
+}
+
+#[plugin_fn]
+pub fn locate_dependencies_roots(
+    Json(input): Json<LocateDependenciesRootsInput>,
+) -> FnResult<Json<LocateDependenciesRootsOutput>> {
+    Ok(Json(LocateDependenciesRootsOutput {
+        roots: locate_roots(&input.starting_dirs)?,
+    }))
+}
+
+fn locate_roots(starting_dirs: &[VirtualPath]) -> AnyResult<Vec<LocateDependenciesRootOutput>> {
+    let mut roots = vec![];
+
+    for starting_dir in starting_dirs {
+        let mut output = LocateDependenciesRootOutput::default();
+
+        // Attempt to find `Cargo.lock` first
+        if let Some(root) = locate_root(starting_dir, "Cargo.lock") {
+            output.members = CargoToml::load(root.join("Cargo.toml"))?.extract_members();
+            output.root = Some(root);
+        }
+
+        // Otherwise find a `Cargo.toml` workspace
+        if output.root.is_none() {
+            locate_root_with_check(starting_dir, "Cargo.toml", |root| {
+                let manifest = CargoToml::load(root.join("Cargo.toml"))?;
+                let mut found = false;
+
+                if manifest.workspace.is_some() {
+                    output.root = Some(root.to_owned());
+                    output.members = manifest.extract_members();
+                    found = true;
+                }
+
+                Ok(found)
+            })?;
+        }
+
+        // Else may be a stand-alone project
+        if output.root.is_none() {
+            locate_root_with_check(starting_dir, "Cargo.toml", |root| {
+                let manifest = CargoToml::load(root.join("Cargo.toml"))?;
+                let mut found = false;
+
+                if manifest.package.is_some() {
+                    output.root = Some(root.to_owned());
+                    found = true;
+                }
+
+                Ok(found)
+            })?;
+        }
+
+        roots.push(output);
     }
 
-    // Otherwise find a `Cargo.toml` workspace
-    if output.root.is_none() {
-        locate_root_with_check(&input.starting_dir, "Cargo.toml", |root| {
-            let manifest = CargoToml::load(root.join("Cargo.toml"))?;
-            let mut found = false;
-
-            if manifest.workspace.is_some() {
-                output.root = Some(root.to_owned());
-                output.members = manifest.extract_members();
-                found = true;
-            }
-
-            Ok(found)
-        })?;
-    }
-
-    // Else may be a stand-alone project
-    if output.root.is_none() {
-        locate_root_with_check(&input.starting_dir, "Cargo.toml", |root| {
-            let manifest = CargoToml::load(root.join("Cargo.toml"))?;
-            let mut found = false;
-
-            if manifest.package.is_some() {
-                output.root = Some(root.to_owned());
-                found = true;
-            }
-
-            Ok(found)
-        })?;
-    }
-
-    Ok(Json(output))
+    Ok(roots)
 }
 
 #[plugin_fn]
