@@ -21,16 +21,13 @@ pub fn define_requirements(
 
     Ok(Json(DefineRequirementsOutput {
         requires: match config.package_manager {
-            Some(package_manager) => vec![format!("unstable_{package_manager}")],
+            Some(package_manager) => vec![ToolchainRequirement {
+                id: format!("unstable_{package_manager}"),
+                setup_toolchain: Some(RequirementPhase::After),
+                setup_environment: Some(RequirementPhase::After),
+            }],
             None => vec![],
         },
-        // We must ensure package managers are fully installed
-        // before we setup the environment, otherwise commands fail
-        for_setup_environment: true,
-        // However, we don't want this when we setup this toolchain,
-        // because the package managers depend on us, and it would
-        // introduce a cycle
-        for_setup_toolchain: false,
     }))
 }
 

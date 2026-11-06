@@ -203,17 +203,25 @@ pub fn define_requirements(
 ) -> FnResult<Json<DefineRequirementsOutput>> {
     let config =
         parse_toolchain_config_schema::<JavaScriptToolchainConfig>(input.toolchain_config)?;
-    let mut output = DefineRequirementsOutput {
-        for_setup_toolchain: true,
-        ..Default::default()
-    };
+    let mut output = DefineRequirementsOutput::default();
 
     if let Some(package_manager) = config.package_manager {
+        let mut ids = vec![];
+
         if !package_manager.is_standalone() {
-            output.requires.push("node".into());
+            ids.push("node".to_string());
         }
 
-        output.requires.push(format!("{package_manager}"));
+        ids.push(package_manager.to_string());
+
+        output.requires = ids
+            .into_iter()
+            .map(|id| ToolchainRequirement {
+                id,
+                setup_toolchain: Some(RequirementPhase::After),
+                setup_environment: Some(RequirementPhase::After),
+            })
+            .collect();
     }
 
     Ok(Json(output))
