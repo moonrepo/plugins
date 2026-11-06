@@ -14,9 +14,23 @@
   was previously added for all commands, including other toolchains' commands, where binstubs like
   `bin/yarn` or `bin/vite` could shadow their tools.
 - Task hashes no longer include `version` (moon already hashes it), `bundlePath` or `frozen`.
+- Installs in CI are now frozen when a lockfile exists, as Bundler would otherwise rewrite an
+  out-of-date lockfile. A lockfile that doesn't list the CI platform now fails the install, which
+  `bundle lock --add-platform <platform>` fixes.
+- Task hashes now include the locked version of every gem in the Gemfile, so they change once, and
+  then after each `bundle update`.
 
 #### 🚀 Updates
 
+- Local gems in subdirectories of a Gemfile, like `gem "billing", path: "libs/billing"`, are now
+  reported as members of its dependency root, so their projects get the root's install. Commands
+  also set `PROTO_RUBY_VERSION` when `version` is configured, as moon doesn't set it for a shared
+  root's commands.
+- Tasks that run a gem executable which is only installed in the bundle, like `rspec`, now run it
+  with `bundle exec`. A binstub of the same name in `bin/` takes precedence.
+- Project graph inference now adds edges from gemspec dependencies, sets the gem name as the project
+  alias, and finds `path` block gems by name.
+- Lockfile versions with RubyGems segments, like `7.1.3.4` or `1.0.0.pre`, are now parsed.
 - Added `prune_docker` support. `moon docker prune` now persists the skipped groups with
   `bundle config set --local without`, as `bundle exec` fails on the missing gems otherwise, and
   runs `bundle clean` to remove their gems when `deleteVendorDirectories` is enabled.

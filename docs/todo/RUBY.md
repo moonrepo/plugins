@@ -38,6 +38,8 @@ on Bundler itself rather than on plugin output.
 | D4 (#15): feed gem versions to the task hasher?                  | Yes: every literal Gemfile gem, with lockfile versions normalized   |
 | D5 (#16): build from source by default where no prebuilt exists? | Yes on macOS x64 and Linux musl; keep the error on Windows          |
 
+D1–D4 were accepted as recommended. D5 is open.
+
 ## Phase 1: clear-cut fixes
 
 ### #1 Parse `.ruby-version` the way version managers do
@@ -217,6 +219,9 @@ shims, rbenv or chruby) isn't hashed at all.
 **Tests:** replace `includes_resolved_version` with three cases: `version` set gives no contents;
 unset with a `.ruby-version` gives that version; unset with no file gives no contents.
 
+**Outcome:** `hash_task_contents` was removed instead, so the plugin adds nothing to task hashes. An
+unset `version` with only a `.ruby-version` pin isn't hashed.
+
 ### #9 Gemfile scanner gaps
 
 - [x] `path "<dir>" do … end` blocks
@@ -252,8 +257,8 @@ unset with a `.ruby-version` gives that version; unset with no file gives no con
 
 ### #11 Frozen installs in CI (D1)
 
-- [ ] Set `BUNDLE_FROZEN=true` in CI
-- [ ] Tests
+- [x] Set `BUNDLE_FROZEN=true` in CI
+- [x] Tests
 
 **Problem:** Bundler, unlike npm or pnpm, doesn't freeze the lockfile in CI, so `bundle install` in
 CI can silently rewrite `Gemfile.lock`. The JavaScript toolchain already uses frozen installs when
@@ -266,8 +271,8 @@ failure, but it needs a changelog callout.
 
 ### #12 Bare gem executables (D2)
 
-- [ ] Rewrite to `bundle exec` when the exe is only in the bundle
-- [ ] Tests
+- [x] Rewrite to `bundle exec` when the exe is only in the bundle
+- [x] Tests
 
 **Problem:** with gems installed into `bundlePath`, gem executables live in
 `<bundlePath>/ruby/<abi>/bin`, which isn't on PATH. A task with `command: rspec` or `rubocop` either
@@ -281,11 +286,14 @@ toolchain's `cargo X` rewrite.
 
 **Alternative:** document `bundle exec` and `bundle binstubs`, and change nothing.
 
+**Confirmed:** with `path` set to `vendor/bundle`, Bundler 2.6.9 installs `rake`'s executable at
+`vendor/bundle/ruby/3.4.0/bin/rake`.
+
 ### #13 Projects under a shared Gemfile get no install (D3)
 
-- [ ] Report members from the root Gemfile
-- [ ] Pin the Ruby version on emitted commands
-- [ ] Fixture and tests
+- [x] Report members from the root Gemfile
+- [x] Pin the Ruby version on emitted commands
+- [x] Tests
 
 **Problem:** `locate_dependencies_root` (`tier2.rs:17-29`) never reports `members`. moon's
 `in_dependencies_workspace` (`crates/toolchain-plugin/src/toolchain_plugin.rs:164`) then only
@@ -309,15 +317,17 @@ on every install fingerprint (moon `crates/actions/src/actions/install_dependenc
 
 **Not covered:** a nested project that uses the root bundle but isn't declared in the root Gemfile.
 
-**Tests:** fixture `__fixtures__/shared-gemfile` (root Gemfile with path gems, no Gemfile in the
-libraries) for `locate_dependencies_root`.
+**Tests:** `reports_local_gems_as_members` in `tier2_test.rs` creates the layout in the sandbox, so
+there's no fixture. Paths outside the root (`../`) are skipped, as moon matches members relative to
+it. The prune commands (#5) also set `PROTO_RUBY_VERSION`, since `exec` gets no toolchain env
+either.
 
 ### #14 Edges from gemspec dependencies (D3)
 
-- [ ] Map gem names to projects
-- [ ] Link `add_dependency` and `add_development_dependency`
-- [ ] Optionally set the gem name as the project alias
-- [ ] Tests
+- [x] Map gem names to projects
+- [x] Link `add_dependency` and `add_development_dependency`
+- [x] Optionally set the gem name as the project alias
+- [x] Tests
 
 **Problem:** in the shared-Gemfile layout, dependencies between libraries live in gemspecs
 (`spec.add_dependency "billing"`), not Gemfiles. `extend_project_graph` only reads each project's
@@ -333,11 +343,16 @@ scanner:
 - Push gemspecs into `input_files`.
 - Optionally return the gem name as the project `alias`, as JavaScript does with package names.
 
+**Done:** the alias is set only when the project has a single gemspec, and moon skips aliases that
+conflict. A `path:` gem that doesn't resolve to a project's source now falls back to the gem name,
+which replaces #9's `path` block guess when the directory differs. An edge that's in both the
+Gemfile and a gemspec is only added once, with the Gemfile's scope.
+
 ### #15 Gem versions in task hashes (D4)
 
-- [ ] `parse_manifest`: report every literal gem
-- [ ] `parse_lock`: normalize RubyGems versions
-- [ ] Tests
+- [x] `parse_manifest`: report every literal gem
+- [x] `parse_lock`: normalize RubyGems versions
+- [x] Tests
 
 **Problem:** moon's task hasher only records manifest dependencies that have a version requirement,
 resolved through the lockfile (moon `task_hashing.rs:420-470`). `parse_manifest`
@@ -361,8 +376,8 @@ correctly.
   - turn the first alphabetic segment and everything after it into a prerelease (`1.0.0.pre` →
     `1.0.0-pre`)
 
-**Not covered:** `*` may not match prerelease gems, which would fall back to recording `*`. Probe
-this first.
+**Not covered:** `*` doesn't match prereleases, like a Rails `8.1.0.alpha` from git, since
+version_spec's wildcard compares the prerelease too. The hasher then records `*` for those gems.
 
 ### #16 Build from source where no prebuilt exists (D5)
 

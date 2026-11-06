@@ -1,14 +1,27 @@
-//! Best-effort `Gemfile` path-gem scanner.
+//! Best-effort `Gemfile` and gemspec scanner.
 //!
-//! A `Gemfile` is executable Ruby script, so this intentionally does not try to
-//! parse dependencies in general. It only extracts literal `gem ..., path: ...`
-//! declarations so moon can infer project-to-project edges in Ruby monorepos.
+//! Both are executable Ruby script, so this intentionally does not try to
+//! evaluate them. It only extracts literal gem declarations, so moon can infer
+//! project-to-project edges and hash gem versions in Ruby monorepos.
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PathGem {
+pub struct Gem {
     pub name: String,
-    pub path: String,
+    /// Directory of a local gem.
+    pub path: Option<String>,
     pub groups: Vec<String>,
+}
+
+#[derive(Debug, Default, PartialEq, Eq)]
+pub struct Gemspec {
+    pub name: Option<String>,
+    pub dependencies: Vec<GemspecDependency>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct GemspecDependency {
+    pub name: String,
+    pub development: bool,
 }
 
 enum Block {
@@ -17,10 +30,11 @@ enum Block {
     Other,
 }
 
-/// Parse literal `path:` gem declarations from a `Gemfile`, preserving Bundler
-/// group names verbatim. The caller decides how to map groups onto moon scopes.
-/// Also includes gems within `path "<dir>" do` blocks, and `gemspec path:`.
-pub fn parse_path_gems(content: &str) -> Vec<PathGem> {
+/// Parse literal gem declarations from a `Gemfile`, preserving Bundler group
+/// names verbatim. The caller decides how to map groups onto moon scopes.
+/// Local gems are declared with `path:`, `path "<dir>" do` blocks, and
+/// `gemspec path:`.
+pub fn parse_gems(content: &str) -> Vec<Gem> {
     let mut gems = vec![];
     let mut blocks: Vec<Block> = vec![];
 
@@ -122,7 +136,7 @@ fn strip_block_opener(line: &str) -> Option<&str> {
     Some(call.trim_end())
 }
 
-fn parse_gem_call(args: &str, block_dir: Option<&str>) -> Option<PathGem> {
+fn parse_gem_call(args: &str, block_dir: Option<&str>) -> Option<Gem> {
     let mut name = None;
     let mut path = None;
     let mut groups = vec![];
@@ -156,14 +170,15 @@ fn parse_gem_call(args: &str, block_dir: Option<&str>) -> Option<PathGem> {
 
     // Bundler finds gems in a path block by their gemspec name,
     // which is typically a directory of the same name
-    let path = path.or_else(|| Some(format!("{}/{name}", block_dir?.trim_end_matches('/'))))?;
+    let path =
+        path.or_else(|| block_dir.map(|dir| format!("{}/{name}", dir.trim_end_matches('/'))));
 
-    Some(PathGem { name, path, groups })
+    Some(Gem { name, path, groups })
 }
 
 /// A bare `gemspec` is the current project, so only `gemspec path:`
 /// references another gem.
-fn parse_gemspec_call(args: &str) -> Option<PathGem> {
+fn parse_gemspec_call(args: &str) -> Option<Gem> {
     let mut name = None;
     let mut path = None;
 
@@ -186,11 +201,53 @@ fn parse_gemspec_call(args: &str) -> Option<PathGem> {
             .to_owned()
     });
 
-    Some(PathGem {
+    Some(Gem {
         name,
-        path,
+        path: Some(path),
         groups: vec![],
     })
+}
+
+/// Parse the literal name and dependencies from a gemspec, which are
+/// set on the block variable, like `spec.add_dependency "billing"`.
+pub fn parse_gemspec(content: &str) -> Gemspec {
+    let mut gemspec = Gemspec::default();
+
+    for line in join_continued_lines(content) {
+        let Some((var, call)) = line.split_once('.') else {
+            continue;
+        };
+
+        if var.is_empty() || !var.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+            continue;
+        }
+
+        if let Some(value) = call
+            .strip_prefix("name")
+            .and_then(|rest| rest.trim_start().strip_prefix('='))
+            .filter(|value| !value.starts_with('='))
+        {
+            gemspec.name = quoted(value.trim().trim_end_matches(".freeze")).map(str::to_owned);
+            continue;
+        }
+
+        for (method, development) in [
+            ("add_dependency", false),
+            ("add_runtime_dependency", false),
+            ("add_development_dependency", true),
+        ] {
+            if let Some(args) = after_bare_call(call, method)
+                && let Some(name) = split_args(args).first().copied().and_then(quoted)
+            {
+                gemspec.dependencies.push(GemspecDependency {
+                    name: name.to_owned(),
+                    development,
+                });
+            }
+        }
+    }
+
+    gemspec
 }
 
 fn parse_groups(args: &str) -> Vec<String> {
@@ -338,6 +395,13 @@ fn split_args(args: &str) -> Vec<&str> {
 mod tests {
     use super::*;
 
+    fn parse_path_gems(content: &str) -> Vec<Gem> {
+        parse_gems(content)
+            .into_iter()
+            .filter(|gem| gem.path.is_some())
+            .collect()
+    }
+
     #[test]
     fn captures_literal_path_gems() {
         let gems = parse_path_gems(
@@ -351,9 +415,9 @@ gem 'support', :path => '../libs/support'
 
         assert_eq!(gems.len(), 2);
         assert_eq!(gems[0].name, "billing");
-        assert_eq!(gems[0].path, "../libs/billing");
+        assert_eq!(gems[0].path.as_deref(), Some("../libs/billing"));
         assert_eq!(gems[1].name, "support");
-        assert_eq!(gems[1].path, "../libs/support");
+        assert_eq!(gems[1].path.as_deref(), Some("../libs/support"));
     }
 
     #[test]
@@ -383,7 +447,7 @@ end
 
         assert_eq!(gems.len(), 1);
         assert_eq!(gems[0].name, "migrations-core");
-        assert_eq!(gems[0].path, "migrations/core");
+        assert_eq!(gems[0].path.as_deref(), Some("migrations/core"));
         assert_eq!(gems[0].groups, ["migrations"]);
     }
 
@@ -393,7 +457,7 @@ end
 
         assert_eq!(gems.len(), 1);
         assert_eq!(gems[0].name, "spree");
-        assert_eq!(gems[0].path, "../");
+        assert_eq!(gems[0].path.as_deref(), Some("../"));
     }
 
     #[test]
@@ -434,7 +498,7 @@ gem "real", path: "../libs/#real" # trailing comment
         );
 
         assert_eq!(gems.len(), 1);
-        assert_eq!(gems[0].path, "../libs/#real");
+        assert_eq!(gems[0].path.as_deref(), Some("../libs/#real"));
     }
     #[test]
     fn captures_multi_line_gem_calls() {
@@ -448,7 +512,7 @@ gem "billing",
         );
 
         assert_eq!(gems.len(), 1);
-        assert_eq!(gems[0].path, "../libs/billing");
+        assert_eq!(gems[0].path.as_deref(), Some("../libs/billing"));
         assert_eq!(gems[0].groups, ["test", "ci"]);
     }
 
@@ -466,8 +530,8 @@ gem "rails"
 
         assert_eq!(gems.len(), 2);
         assert_eq!(gems[0].name, "admin_ui");
-        assert_eq!(gems[0].path, "components/admin_ui");
-        assert_eq!(gems[1].path, "ui/public");
+        assert_eq!(gems[0].path.as_deref(), Some("components/admin_ui"));
+        assert_eq!(gems[1].path.as_deref(), Some("ui/public"));
     }
 
     #[test]
@@ -482,7 +546,7 @@ gemspec path: "../libs/core", name: "core-lib"
 
         assert_eq!(gems.len(), 2);
         assert_eq!(gems[0].name, "billing");
-        assert_eq!(gems[0].path, "../libs/billing");
+        assert_eq!(gems[0].path.as_deref(), Some("../libs/billing"));
         assert_eq!(gems[1].name, "core-lib");
     }
 
@@ -505,5 +569,71 @@ gem "billing", path: "../libs/billing"
 
         assert_eq!(gems[0].groups, ["test"]);
         assert!(gems[1].groups.is_empty());
+    }
+
+    #[test]
+    fn captures_gems_without_paths() {
+        let gems = parse_gems(
+            r#"
+gem "rails", "~> 7.1"
+group :test do
+  gem "rspec"
+end
+gemspec
+"#,
+        );
+
+        assert_eq!(gems.len(), 2);
+        assert_eq!(gems[0].name, "rails");
+        assert_eq!(gems[0].path, None);
+        assert_eq!(gems[1].name, "rspec");
+        assert_eq!(gems[1].groups, ["test"]);
+    }
+
+    #[test]
+    fn parses_gemspec_name_and_dependencies() {
+        let gemspec = parse_gemspec(
+            r#"
+require_relative "lib/billing/version"
+
+Gem::Specification.new do |spec|
+  spec.name          = "billing"
+  spec.version       = Billing::VERSION
+  spec.namespace     = "ignored"
+
+  spec.add_dependency "core", "~> 1.0"
+  spec.add_runtime_dependency("money")
+  spec.add_development_dependency "rspec",
+    ">= 3"
+  spec.add_dependency name_from_variable
+end
+"#,
+        );
+
+        assert_eq!(gemspec.name.as_deref(), Some("billing"));
+        assert_eq!(
+            gemspec.dependencies,
+            [
+                GemspecDependency {
+                    name: "core".into(),
+                    development: false,
+                },
+                GemspecDependency {
+                    name: "money".into(),
+                    development: false,
+                },
+                GemspecDependency {
+                    name: "rspec".into(),
+                    development: true,
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn parses_frozen_gemspec_names() {
+        let gemspec = parse_gemspec(r#"s.name = "billing".freeze"#);
+
+        assert_eq!(gemspec.name.as_deref(), Some("billing"));
     }
 }

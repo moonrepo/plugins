@@ -1,5 +1,5 @@
 use moon_config::UnresolvedVersionSpec;
-use moon_pdk_api::config_struct;
+use moon_pdk_api::{ExecCommandInput, config_struct};
 use schematic::{Config, ConfigEnum, derive_enum};
 
 derive_enum!(
@@ -55,6 +55,22 @@ impl RubyToolchainConfig {
                 .iter()
                 .map(String::as_str)
                 .collect()
+        }
+    }
+
+    /// Pin the configured Ruby for proto's `bundle` shim, as moon doesn't set it
+    /// for commands without a project, like a shared Gemfile's (moon#118).
+    pub fn pin_version(&self, command: &mut ExecCommandInput) {
+        if let Some(version) = &self.version {
+            command.env.insert(
+                "PROTO_RUBY_VERSION".into(),
+                // Like moon, as `latest` may not be installed
+                if version.is_latest() {
+                    "*".into()
+                } else {
+                    version.to_string()
+                },
+            );
         }
     }
 }

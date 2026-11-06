@@ -38,12 +38,19 @@ features (`tier2.rs:419-447`). moon then looks the version up in the parsed work
 where `[workspace.dependencies]` is merged into `dependencies` (`tier2.rs:468-470`) before the
 package's own tables, which overwrite it (`tier2.rs:473-481`). Two cases break:
 
-1. **A root package's own inherited production dependencies lose their version.** In a workspace
-   root that's also a package, `[workspace.dependencies] serde = "1"` and
+1. **Inherited versions are lost when the root package inherits the same dependency.** In a
+   workspace root that's also a package, `[workspace.dependencies] serde = "1"` and
    `[dependencies] serde = { workspace = true }` share the `serde` key, and the inherited marker
-   replaces the version. moon #2799 falls back to every locked `serde` version, but that only works
-   with `hasher.optimization: accuracy`. With `performance`, no lockfile is read, so the dependency
-   isn't hashed at all.
+   replaces the version. That loses the version for the root package and for every member that
+   inherits `serde`. moon #2799 falls back to hashing every locked `serde` version, which has two
+   gaps:
+   - With `hasher.optimization: performance`, no lockfile is read, so the dependency isn't hashed
+     at all.
+   - With `accuracy`, a workspace version change is missed when the old and new versions both stay
+     locked. For example, `syn = "1"` becomes `"2"`, and both are in `Cargo.lock` through other
+     crates. The locked set is the same, so the hash doesn't change, and tasks can reuse stale
+     outputs. Members are most exposed, as their task inputs don't include the root `Cargo.toml`.
+     (Copilot's second review comment on #2799.)
 2. **Members can inherit the wrong version.** When the root package declares its own
    `[dependencies] foo = "0.5"` next to `[workspace.dependencies] foo = "1"`, the merged map only
    holds `^0.5`, so moon resolves a member's `foo = { workspace = true }` to `^0.5`.
@@ -84,9 +91,10 @@ more than it uses; that's out of scope here.
 
 **Compatibility:** with D1's recommendation, moon hosts before #2799 ignore a version on an
 inherited entry, and keep their current (scope-only) lookup, so nothing changes for them. With
-#2799, the resolved version is used first, which fixes both cases above in both hasher modes, and in
-accuracy mode the lockfile is matched against the real requirement, instead of the
-every-locked-version fallback.
+#2799, the resolved version is used first, which fixes both cases above in both hasher modes. In
+accuracy mode, the lockfile is matched against the real requirement instead of the
+every-locked-version fallback, so a requirement change that selects another locked version changes
+the hash.
 
 ## Tests
 
@@ -99,9 +107,9 @@ In `tier2_test.rs`, `mod parse_manifest`:
 - **New fixture `__fixtures__/root-package`:** a workspace root with a `[package]`, where
   `[workspace.dependencies]` has `serde = "1"`, `foo = "1"`, `core = { path = "core" }` and a git
   entry, and the root's own `[dependencies]` has `serde = { workspace = true }` and `foo = "0.5"`. A
-  `member/Cargo.toml` inherits `foo`, `core` and the git entry under `[dev-dependencies]`, plus
-  something under `[target.'cfg(unix)'.build-dependencies]`. Assert:
-  - The root's `serde` keeps `^1` (case 1).
+  `member/Cargo.toml` inherits `serde` under `[dependencies]`, `foo`, `core` and the git entry under
+  `[dev-dependencies]`, plus something under `[target.'cfg(unix)'.build-dependencies]`. Assert:
+  - The root's and the member's `serde` are both `^1` (case 1).
   - The member's `foo` is `^1`, not `^0.5` (case 2).
   - `core` has its `path` and no version, the git entry has its `url`, and the target-table entry is
     resolved.
@@ -113,6 +121,13 @@ In `tier2_test.rs`, `mod parse_manifest`:
       workspace's production dependencies first, reuse a root package's own manifest, fall back to
       locked versions, and use an inherited entry's own version first. This replaces the moon item
       for `apply_toolchain_dependencies_by_scope` under "Outside this repo (moon)" in `RUST.md`.
+- [x] moon #2799 commit `2a58332b7a` (Copilot's first review comment): the lookup stops at the first
+      workspace entry with the name, even if it has no version. Before, a root package's own
+      `[dev-dependencies] serde = "=0.9.0"` was used for a member's inherited dev `serde` when the
+      root package also inherited `serde`. It now goes to the locked-version fallback.
+- Not done in moon: when an inherited version can't be resolved, also hash a digest of the root
+  `Cargo.toml`. It would close both gaps in case 1 without this change, but any edit to the root
+  manifest would invalidate those tasks. This change makes it unnecessary.
 - [ ] When #2799 is carried to `develop-3.0`, add an end-to-end hashing test there. The `tc-tier2`
       test plugin on 3.0 parses manifests and lockfiles; `master`'s doesn't.
 

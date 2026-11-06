@@ -113,6 +113,7 @@ pub fn prune_docker(Json(input): Json<PruneDockerInput>) -> FnResult<Json<PruneD
     let groups = config.get_non_production_groups().join(":");
 
     exec_bundle(
+        &config,
         &input.root,
         ["config", "set", "--local", "without", &groups],
     )?;
@@ -124,7 +125,7 @@ pub fn prune_docker(Json(input): Json<PruneDockerInput>) -> FnResult<Json<PruneD
     let bundle_dir = input.root.join(&config.bundle_path);
 
     if input.docker_config.delete_vendor_directories && bundle_dir.exists() {
-        exec_bundle(&input.root, ["clean"])?;
+        exec_bundle(&config, &input.root, ["clean"])?;
 
         output.changed_files.push(bundle_dir);
     }
@@ -132,8 +133,15 @@ pub fn prune_docker(Json(input): Json<PruneDockerInput>) -> FnResult<Json<PruneD
     Ok(Json(output))
 }
 
-fn exec_bundle<const N: usize>(root: &VirtualPath, args: [&str; N]) -> AnyResult<()> {
-    let result = exec(ExecCommandInput::pipe("bundle", args).cwd(root.to_owned()))?;
+fn exec_bundle<const N: usize>(
+    config: &RubyToolchainConfig,
+    root: &VirtualPath,
+    args: [&str; N],
+) -> AnyResult<()> {
+    let mut command = ExecCommandInput::pipe("bundle", args).cwd(root.to_owned());
+    config.pin_version(&mut command);
+
+    let result = exec(command)?;
 
     if result.exit_code != 0 {
         return Err(anyhow!(
