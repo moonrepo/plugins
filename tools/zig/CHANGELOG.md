@@ -1,5 +1,14 @@
 # Zig plugin
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed the `master` alias (`proto install zig master`, or `master` in `.zig-version`) failing to
+  resolve, as the master build wasn't in the version list.
+- No longer creates a `~/.proto/bin/zig.exe` on Windows. It's a copy of the executable, which can't
+  find Zig's `lib` directory and fails on every run. Use the `zig` shim instead.
+
 ## 0.1.0
 
 #### 🎉 Release
