@@ -295,7 +295,7 @@ live in a project. Live check: `moon docker scaffold` copied a non-project `tool
 - [x] `GoWork::parse` (`go_work.rs:42-82`): trim lines instead of matching a tab or four spaces,
       strip quotes, and accept `use(`. Confirmed against `go list -m`: two-space indentation and
       `use(` dropped modules, and `"./quoted"` was reported with its quotes. **Since replaced:**
-      `go.work`, `go.sum` and `go.work.sum` now use winnow grammars (`syntax.rs`), where `//` only
+      `go.work`, `go.sum` and `go.work.sum` now use winnow grammars (`parsers/`), where `//` only
       starts a comment at the beginning of a token. The old `go.sum` parser cut off 28 checksums in
       the local cache that contain `//`, like `golang.org/x/net v0.10.0`; on 305 real files, that
       was the only difference.

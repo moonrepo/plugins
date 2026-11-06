@@ -1,7 +1,6 @@
-//! Winnow helpers shared by the grammars for `go.sum`, `go.work.sum` and
-//! `go.work`. These files are line based, with `//` comments that only
-//! start at the beginning of a token, since hashes and paths may contain
-//! `//` themselves.
+//! Helpers shared by the `go.sum` and `go.work` grammars. These files are
+//! line based, with `//` comments that only start at the beginning of a
+//! token, since checksums and paths may contain `//` themselves.
 
 use winnow::Result;
 use winnow::ascii::{line_ending, space0, space1, till_line_ending};

@@ -4,9 +4,8 @@
 //! evaluate them. It only extracts literal gem declarations, so moon can infer
 //! project-to-project edges and hash gem versions in Ruby monorepos.
 
-mod parser;
-
-use parser::{Call, Statement, Value};
+use crate::parsers;
+use crate::parsers::gemfile::{Call, Statement, Value};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Gem {
@@ -35,7 +34,11 @@ pub struct GemspecDependency {
 pub fn parse_gems(content: &str) -> Vec<Gem> {
     let mut gems = vec![];
 
-    collect_gems(&parser::parse(content), &Scope::default(), &mut gems);
+    collect_gems(
+        &parsers::gemfile::parse(content),
+        &Scope::default(),
+        &mut gems,
+    );
 
     gems
 }
@@ -153,7 +156,7 @@ fn push_group_names(groups: &mut Vec<String>, value: &Value) {
 pub fn parse_gemspec(content: &str) -> Gemspec {
     let mut gemspec = Gemspec::default();
 
-    collect_gemspec(&parser::parse(content), &mut gemspec);
+    collect_gemspec(&parsers::gemfile::parse(content), &mut gemspec);
 
     gemspec
 }

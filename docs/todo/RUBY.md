@@ -236,7 +236,7 @@ unset `version` with only a `.ruby-version` pin isn't hashed.
 - [x] `gemspec path: "<dir>"`
 - [x] Unit tests in `gemfile.rs`
 
-**Since replaced:** `gemfile/parser.rs` is now a winnow grammar for the Ruby subset that Gemfiles
+**Since replaced:** `parsers/gemfile.rs` is now a winnow grammar for the Ruby subset that Gemfiles
 and gemspecs use, and `gemfile.rs` walks its statements.
 
 **Problem:** `parse_path_gems` (`gemfile.rs:16-63`) reads one line at a time and only understands
