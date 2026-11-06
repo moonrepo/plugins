@@ -322,6 +322,138 @@ mod node_tool {
     }
 
     #[tokio::test(flavor = "multi_thread")]
+    async fn supports_linux_arm64_pre_v16() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("node-test", |config| {
+                config.host(HostOS::Linux, HostArch::Arm64);
+            })
+            .await;
+
+        assert_eq!(
+            plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("14.0.0").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await
+                .download_url,
+            "https://nodejs.org/download/release/v14.0.0/node-v14.0.0-linux-arm64.tar.xz"
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn supports_windows_arm64_pre_v20() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("node-test", |config| {
+                config.host(HostOS::Windows, HostArch::Arm64);
+            })
+            .await;
+
+        assert_eq!(
+            plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("18.0.0").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await
+                .download_url,
+            "https://nodejs.org/download/release/v18.0.0/node-v18.0.0-win-x64.zip"
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn supports_linux_riscv64() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("node-test", |config| {
+                config.host(HostOS::Linux, HostArch::Riscv64);
+            })
+            .await;
+
+        assert_eq!(
+            plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("22.21.1").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await,
+            DownloadPrebuiltOutput {
+                archive_prefix: Some("node-v22.21.1-linux-riscv64".into()),
+                checksum_url: Some(
+                    "https://unofficial-builds.nodejs.org/download/release/v22.21.1/SHASUMS256.txt"
+                        .into()
+                ),
+                download_name: Some("node-v22.21.1-linux-riscv64.tar.xz".into()),
+                download_url:
+                    "https://unofficial-builds.nodejs.org/download/release/v22.21.1/node-v22.21.1-linux-riscv64.tar.xz"
+                        .into(),
+                ..Default::default()
+            }
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn supports_linux_loong64() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("node-test", |config| {
+                config.host(HostOS::Linux, HostArch::LongArm64);
+            })
+            .await;
+
+        assert_eq!(
+            plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("22.21.1").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await
+                .download_url,
+            "https://unofficial-builds.nodejs.org/download/release/v22.21.1/node-v22.21.1-linux-loong64.tar.xz"
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    #[should_panic(expected = "No pre-built Node.js archive is available for musl Linux on s390x.")]
+    async fn doesnt_support_musl_on_other_archs() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("node-test", |config| {
+                config.host_environment(HostEnvironment {
+                    arch: HostArch::S390x,
+                    libc: HostLibc::Musl,
+                    os: HostOS::Linux,
+                    ..Default::default()
+                });
+            })
+            .await;
+
+        plugin
+            .download_prebuilt(DownloadPrebuiltInput {
+                context: PluginContext {
+                    version: VersionSpec::parse("20.0.0").unwrap(),
+                    ..Default::default()
+                },
+                ..Default::default()
+            })
+            .await;
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
     async fn supports_macos_x64() {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
@@ -565,6 +697,38 @@ mod node_tool {
                 .unwrap()
                 .starts_with("https://mirror.com/node/nightly/v")
         );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn uses_official_host_for_musl_canary() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("node-test", |config| {
+                config.host_environment(HostEnvironment {
+                    arch: HostArch::X64,
+                    libc: HostLibc::Musl,
+                    os: HostOS::Linux,
+                    ..Default::default()
+                });
+            })
+            .await;
+
+        let output = plugin
+            .download_prebuilt(DownloadPrebuiltInput {
+                context: PluginContext {
+                    version: VersionSpec::parse("canary").unwrap(),
+                    ..Default::default()
+                },
+                ..Default::default()
+            })
+            .await;
+
+        assert!(
+            output
+                .download_url
+                .starts_with("https://nodejs.org/download/nightly/v")
+        );
+        assert!(output.download_url.ends_with("-linux-x64-musl.tar.xz"));
     }
 
     #[tokio::test(flavor = "multi_thread")]

@@ -2,9 +2,24 @@
 
 ## Unreleased
 
+#### 🚀 Updates
+
+- Added Linux riscv64 and loong64 support, using [unofficial builds](https://github.com/nodejs/unofficial-builds).
+- Windows arm64 now uses x64 builds (through emulation) for versions before v20, which have no arm64 builds.
+
 #### 🐞 Fixes
 
 - Updated the `latest` version to never be a pre-release or contain build metadata.
+- Fixed `.nvmrc` and `.node-version` files containing `lts/*` or `lts-*` failing to parse. They now
+  resolve to the latest LTS, like nvm and fnm.
+- Fixed Linux arm64 installing x64 builds for versions before v16, which can't run. Only macOS
+  (through Rosetta) uses x64 builds for those versions.
+- Fixed musl Linux on architectures other than x64 and arm64 installing glibc builds, which can't
+  run. It now errors, as no musl builds exist for them.
+- Fixed `canary` on musl Linux downloading from the unofficial builds host, which doesn't have the
+  official nightly it resolved.
+- Fixed `bundled-npm` installing the npm bundled with the Node.js version configured in the working
+  directory, instead of the version that was just installed.
 
 ## 0.17.13
 
