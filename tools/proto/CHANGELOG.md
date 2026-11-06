@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed downloads of proto before v0.14.2, which failed verifying a checksum file that those
+  releases don't publish, and before v0.8.3, whose file names include the version.
+
 ## 0.5.8
 
 #### 🚀 Updates
