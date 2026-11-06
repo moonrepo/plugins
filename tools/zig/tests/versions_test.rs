@@ -22,4 +22,22 @@ mod zig_tool {
         assert_eq!(output.aliases.get("latest"), output.latest.as_ref());
         assert_eq!(output.aliases.get("master"), output.canary.as_ref());
     }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn resolves_master_alias_to_dev_build() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("zig-test").await;
+        let mut spec = ToolSpec::parse("master").unwrap();
+
+        flow::resolve::Resolver::new(&plugin.tool)
+            .resolve_version(&mut spec, false)
+            .await
+            .unwrap();
+
+        assert!(
+            spec.get_resolved_version().to_string().contains("-dev."),
+            "{}",
+            spec.get_resolved_version()
+        );
+    }
 }
