@@ -3,14 +3,19 @@ use crate::gemfile;
 use extism_pdk::*;
 use moon_config::{DependencyScope, UnresolvedVersionSpec, VersionSpec};
 use moon_pdk::{
-    VirtualPathExt, get_host_env_var, get_host_environment, locate_root_many,
-    parse_toolchain_config_schema,
+    HostLogInput, VirtualPathExt, get_host_env_var, get_host_environment, get_toolchain_config,
+    host_log, locate_root_many, parse_toolchain_config_schema,
 };
 use moon_pdk_api::*;
 use rubund::parser::{SourceType, parse_lockfile};
 use starbase_utils::fs;
 use std::collections::HashMap;
 use std::path::{Component, Path, PathBuf};
+
+#[host_fn]
+extern "ExtismHost" {
+    fn host_log(input: Json<HostLogInput>);
+}
 
 // Files that mark a Bundler dependency root, lockfiles first (most precise),
 // then manifests. Includes Bundler's alternative `gems.rb`/`gems.locked` names.
@@ -73,7 +78,15 @@ pub fn setup_environment(
     Json(input): Json<SetupEnvironmentInput>,
 ) -> FnResult<Json<SetupEnvironmentOutput>> {
     let config = parse_toolchain_config_schema::<RubyToolchainConfig>(input.toolchain_config)?;
+    let bundle_path = get_bundle_path()?;
     let mut output = SetupEnvironmentOutput::default();
+
+    if config.bundle_path != bundle_path {
+        host_log!(
+            warn,
+            "Ignoring a project's <property>bundlePath</property>, as moon checks for installed gems in the workspace's"
+        );
+    }
 
     // Install gems into a project-local directory (the Ruby analog of a venv /
     // node_modules) so installs are isolated, cacheable, and don't pollute a
@@ -81,17 +94,11 @@ pub fn setup_environment(
     // `bundle install --path` flag, and only when it changed, as moon skips
     // the setup when the commands match the previous run.
     if get_local_bundle_setting(&input.root, "BUNDLE_PATH")?.as_deref()
-        != Some(config.bundle_path.as_str())
+        != Some(bundle_path.as_str())
     {
         let mut command = ExecCommandInput::new(
             "bundle",
-            [
-                "config",
-                "set",
-                "--local",
-                "path",
-                config.bundle_path.as_str(),
-            ],
+            ["config", "set", "--local", "path", bundle_path.as_str()],
         )
         .cwd(input.root.clone());
 
@@ -100,6 +107,12 @@ pub fn setup_environment(
     }
 
     Ok(Json(output))
+}
+
+/// The workspace's `bundlePath`. moon checks for installed gems in it, as the
+/// toolchain's vendor directory, so a project's would reinstall them every run.
+pub(crate) fn get_bundle_path() -> AnyResult<String> {
+    Ok(get_toolchain_config::<RubyToolchainConfig>()?.bundle_path)
 }
 
 /// Read a setting from the app's local Bundler config, which is flat YAML with one
@@ -177,11 +190,7 @@ fn gather_binstub_paths(root: &VirtualPath, paths: &mut Vec<PathBuf>) -> AnyResu
 
 /// Whether the command is a gem executable that's only in the bundle,
 /// at `<bundlePath>/ruby/<abi>/bin`, and not a binstub.
-fn is_bundled_executable(
-    root: &VirtualPath,
-    config: &RubyToolchainConfig,
-    command: &str,
-) -> AnyResult<bool> {
+fn is_bundled_executable(root: &VirtualPath, command: &str) -> AnyResult<bool> {
     if matches!(command, "ruby" | "bundle" | "bundler" | "gem")
         || command.contains(['/', '\\'])
         || root.join("bin").join(command).exists()
@@ -189,7 +198,7 @@ fn is_bundled_executable(
         return Ok(false);
     }
 
-    let abi_dirs = root.join(&config.bundle_path).join("ruby");
+    let abi_dirs = root.join(get_bundle_path()?).join("ruby");
 
     if !abi_dirs.exists() {
         return Ok(false);
@@ -204,7 +213,6 @@ fn is_bundled_executable(
 pub fn extend_task_command(
     Json(input): Json<ExtendTaskCommandInput>,
 ) -> FnResult<Json<ExtendTaskCommandOutput>> {
-    let config = parse_toolchain_config_schema::<RubyToolchainConfig>(input.toolchain_config)?;
     let mut output = ExtendTaskCommandOutput::default();
 
     let Some(root) = locate_root_many(&input.context.get_project_root(&input.project), &ROOT_FILES)
@@ -215,7 +223,7 @@ pub fn extend_task_command(
     gather_binstub_paths(&root, &mut output.paths)?;
 
     // Gem executables like `rspec` aren't on `PATH`, so run them with Bundler
-    if is_bundled_executable(&root, &config, &input.command)? {
+    if is_bundled_executable(&root, &input.command)? {
         output.command = Some("bundle".into());
         output.args = Some(Extend::Prepend(vec!["exec".into(), input.command]));
     }
@@ -264,7 +272,9 @@ pub fn parse_lock(Json(input): Json<ParseLockInput>) -> FnResult<Json<ParseLockO
             dep.meta = Some(platform.to_string());
         } else if let Some(source) = lock.sources.get(spec.source_index) {
             match source.type_ {
-                SourceType::Git => dep.meta = source.revision.map(str::to_owned),
+                // moon hashes this over the version, which a git gem
+                // often keeps between revisions
+                SourceType::Git => dep.hash = source.revision.map(str::to_owned),
                 SourceType::Path => {
                     let path = source.path.unwrap_or(source.remote);
 
@@ -302,33 +312,31 @@ fn split_platform(raw: &str) -> (&str, Option<&str>) {
 }
 
 /// RubyGems versions have any number of segments, and a letter starts a
-/// prerelease, so `7.1.3.4`, `3.1` and `1.0.0.pre` aren't semver. Pad to 3
-/// numeric segments, and move extra ones into build metadata, like `7.1.3+4`
-/// and `1.0.0-pre`.
+/// prerelease, so `7.1.3.4`, `3.1` and `1.0.0.pre` aren't semver. moon only uses
+/// these to hash tasks, against the `*` requirements from `parse_manifest`, which
+/// don't match prereleases. So pad to 3 numeric segments, and keep the rest as
+/// build metadata, like `7.1.3+4` and `1.0.0+pre`, which is still hashed.
 fn normalize_gem_version(version: &str) -> String {
-    let mut numbers = vec![];
-    let mut pre = vec![];
+    let mut segments = version.split('.').peekable();
+    let mut release = vec![];
 
-    for segment in version.split('.') {
-        match segment.parse::<u64>() {
-            Ok(number) if pre.is_empty() => numbers.push(number.to_string()),
-            _ => pre.push(segment),
-        }
+    while release.len() < 3
+        && let Some(number) = segments
+            .peek()
+            .and_then(|segment| segment.parse::<u64>().ok())
+    {
+        release.push(number.to_string());
+        segments.next();
     }
 
-    let build = numbers.split_off(numbers.len().min(3));
-    numbers.resize(3, "0".into());
+    release.resize(3, "0".into());
 
-    let mut normalized = numbers.join(".");
-
-    if !pre.is_empty() {
-        normalized.push('-');
-        normalized.push_str(&pre.join("."));
-    }
+    let mut normalized = release.join(".");
+    let build = segments.collect::<Vec<_>>().join(".");
 
     if !build.is_empty() {
         normalized.push('+');
-        normalized.push_str(&build.join("."));
+        normalized.push_str(&build);
     }
 
     normalized

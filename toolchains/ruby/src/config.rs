@@ -24,6 +24,7 @@ config_struct!(
         pub package_manager: RubyPackageManager,
 
         /// Where Bundler installs gems, relative to the dependency root.
+        /// Only the workspace's is used, as moon checks it for installed gems.
         #[setting(default = "vendor/bundle")]
         pub bundle_path: String,
 

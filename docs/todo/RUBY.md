@@ -113,6 +113,11 @@ the command in that case.
 **Tests** (`tier2_test.rs`): a config with the same path emits nothing; a different path emits the
 command; a config holding only `BUNDLE_JOBS` emits the command.
 
+**Later:** `bundlePath` is now only read from the workspace config. moon checks for installed gems
+in the toolchain's `vendor_dir_name` (moon
+`crates/actions/src/actions/install_dependencies.rs:100`), which is the workspace's, so a project's
+override reinstalled gems on every run. A project's value is ignored with a warning.
+
 ### #4 Make `frozen` an install-time setting
 
 - [x] Move it to the install command's env
@@ -379,8 +384,11 @@ correctly.
   - turn the first alphabetic segment and everything after it into a prerelease (`1.0.0.pre` →
     `1.0.0-pre`)
 
-**Not covered:** `*` doesn't match prereleases, like a Rails `8.1.0.alpha` from git, since
-version_spec's wildcard compares the prerelease too. The hasher then records `*` for those gems.
+**Done:** version_spec follows semver, so no requirement, not even `*`, matches a prerelease like a
+Rails `8.1.0.alpha` from git. moon only uses `parse_lock` versions to hash tasks, so everything
+after the first 3 numeric segments goes into build metadata instead (`1.0.0.pre` → `1.0.0+pre`),
+which `*` matches and the hash still includes. Git gems also report their revision as the `hash`,
+which moon records over the version, as a version often stays the same between revisions.
 
 ### #16 Build from source where no prebuilt exists (D5)
 

@@ -19,6 +19,9 @@
   `bundle lock --add-platform <platform>` fixes.
 - Task hashes now include the locked version of every gem in the Gemfile, so they change once, and
   then after each `bundle update`.
+- `bundlePath` is now only read from the workspace's toolchain config. moon checks for installed
+  gems in it, so a project's override reinstalled them on every run. A project's value is now
+  ignored with a warning.
 
 #### 🚀 Updates
 
@@ -30,7 +33,8 @@
   with `bundle exec`. A binstub of the same name in `bin/` takes precedence.
 - Project graph inference now adds edges from gemspec dependencies, sets the gem name as the project
   alias, and finds `path` block gems by name.
-- Lockfile versions with RubyGems segments, like `7.1.3.4` or `1.0.0.pre`, are now parsed.
+- Lockfile versions with RubyGems segments, like `7.1.3.4` or `1.0.0.pre`, are now parsed, and git
+  gems are hashed by their revision.
 - Task detection now includes `rails`, `rspec` and `rubocop`, and project detection includes
   `Rakefile` and `.rspec`.
 - Added `prune_docker` support. `moon docker prune` now persists the skipped groups with

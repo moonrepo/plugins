@@ -127,7 +127,7 @@ pub fn prune_docker(Json(input): Json<PruneDockerInput>) -> FnResult<Json<PruneD
 
     // Removes the gems in skipped groups but keeps the rest,
     // so native extensions aren't compiled again
-    let bundle_dir = input.root.join(&config.bundle_path);
+    let bundle_dir = input.root.join(crate::tier2::get_bundle_path()?);
 
     if input.docker_config.delete_vendor_directories && bundle_dir.exists() {
         exec_bundle(&config, &input.root, ["clean"])?;

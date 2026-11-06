@@ -1,8 +1,20 @@
 use moon_config::{DependencyScope, UnresolvedVersionSpec};
 use moon_pdk_api::*;
-use moon_pdk_test_utils::{ToolchainTestWrapper, create_empty_moon_sandbox};
+use moon_pdk_test_utils::{MoonWasmSandbox, ToolchainTestWrapper, create_empty_moon_sandbox};
 use serde_json::json;
 use std::path::{Path, PathBuf};
+
+/// With workspace config, which `bundlePath` is only read from.
+async fn create_ruby_with_config(
+    sandbox: &MoonWasmSandbox,
+    config: serde_json::Value,
+) -> ToolchainTestWrapper {
+    sandbox
+        .create_toolchain_with_config("ruby", |cfg| {
+            cfg.insert("moon_toolchain_config", config.clone());
+        })
+        .await
+}
 
 mod ruby_toolchain_tier2 {
     use super::*;
@@ -147,7 +159,8 @@ end
         #[tokio::test(flavor = "multi_thread")]
         async fn can_customize_bundle_path() {
             let sandbox = create_empty_moon_sandbox();
-            let plugin = sandbox.create_toolchain("ruby").await;
+            let plugin =
+                create_ruby_with_config(&sandbox, json!({ "bundlePath": "vendor/gems" })).await;
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
@@ -160,6 +173,25 @@ end
             assert_eq!(
                 output.commands,
                 vec![path_command(&plugin, sandbox.path(), "vendor/gems")]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn ignores_project_bundle_path() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("ruby").await;
+
+            let output = plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    toolchain_config: json!({ "bundlePath": "vendor/project" }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.commands,
+                vec![path_command(&plugin, sandbox.path(), "vendor/bundle")]
             );
         }
 
@@ -203,7 +235,8 @@ end
         async fn updates_a_changed_path() {
             let sandbox = create_empty_moon_sandbox();
             sandbox.create_file(".bundle/config", "---\nBUNDLE_PATH: \"vendor/bundle\"\n");
-            let plugin = sandbox.create_toolchain("ruby").await;
+            let plugin =
+                create_ruby_with_config(&sandbox, json!({ "bundlePath": "vendor/gems" })).await;
 
             let output = plugin
                 .setup_environment(SetupEnvironmentInput {
@@ -462,7 +495,10 @@ end
     mod extend_task_command_bundled_executables {
         use super::*;
 
-        async fn extend(command: &str, config: serde_json::Value) -> ExtendTaskCommandOutput {
+        async fn extend(
+            command: &str,
+            workspace_config: serde_json::Value,
+        ) -> ExtendTaskCommandOutput {
             let sandbox = create_empty_moon_sandbox();
             sandbox.create_file("Gemfile", "");
             sandbox.create_file("vendor/bundle/ruby/3.4.0/bin/rspec", "");
@@ -470,12 +506,12 @@ end
             sandbox.create_file("vendor/bundle/ruby/3.4.0/bin/bundle", "");
             sandbox.create_file("vendor/gems/ruby/3.4.0/bin/rubocop", "");
             sandbox.create_file("bin/rake", "");
-            let plugin = sandbox.create_toolchain("ruby").await;
+            let plugin = create_ruby_with_config(&sandbox, workspace_config).await;
 
             plugin
                 .extend_task_command(ExtendTaskCommandInput {
                     command: command.into(),
-                    toolchain_config: config,
+                    toolchain_config: json!({}),
                     ..Default::default()
                 })
                 .await
@@ -636,7 +672,7 @@ BUNDLED WITH
             assert_eq!(billing[0].meta.as_deref(), Some("path:../libs/billing"));
 
             let fork = output.dependencies.get("some_fork").unwrap();
-            assert_eq!(fork[0].meta.as_deref(), Some("abc123def456"));
+            assert_eq!(fork[0].hash.as_deref(), Some("abc123def456"));
 
             let nokogiri = output.dependencies.get("nokogiri").unwrap();
             assert_eq!(
@@ -689,8 +725,8 @@ DEPENDENCIES
                 ("minitest", "5.25.0"),
                 ("rack", "3.0.0"),
                 ("tzinfo-data", "1.2024.1"),
-                ("shakapacker", "8.0.0-pre"),
-                ("rails", "8.1.0-beta1.2"),
+                ("shakapacker", "8.0.0+pre"),
+                ("rails", "8.1.0+beta1.2"),
             ] {
                 assert_eq!(
                     output.dependencies.get(name).unwrap()[0].version,
