@@ -1,12 +1,26 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed `.python-version` files failing to resolve when they contain comments or several versions
+  (one per line, as written by pyenv), in which case the first is used, or a CPython prerelease,
+  like `3.15.0rc2`. Files for other implementations, like `pypy3.10-7.3.12`, or `system`, are now
+  ignored with a warning instead of failing.
+- Added `$PYTHONUSERBASE/bin` as a globals directory on Unix, which is where `pip install --user`
+  writes when the user base is overridden.
+- Added `git`, `bash`, and `libzstd-dev` to the build from source system dependencies, as suggested
+  by pyenv. Without them, Alpine couldn't run `python-build`, and Debian/Ubuntu built 3.14+ without
+  the `compression.zstd` module.
+
 ## 0.15.0
 
 #### 🚀 Updates
 
 - Updated pre-builts to reference our new API: https://registry.moonrepo.app/releases/python
 - Added a new config setting `use-latest-build`, that will resolve a version to use the latest available build (trailing `+`) when one exists, and no build was provided in the original version.
-- 
+
 ## 0.14.9
 
 #### 🚀 Updates

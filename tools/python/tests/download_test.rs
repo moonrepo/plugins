@@ -211,6 +211,33 @@ mod python_tool {
         plugin.download_prebuilt(create_input("3.12.0")).await;
     }
 
+    #[tokio::test(flavor = "multi_thread")]
+    async fn looks_for_globals_in_user_base() {
+        for (os, expected) in [
+            (
+                HostOS::Linux,
+                vec!["$TOOL_DIR/bin", "$PYTHONUSERBASE/bin", "$HOME/.local/bin"],
+            ),
+            (
+                HostOS::Windows,
+                vec!["$TOOL_DIR/Scripts", "$HOME/.local/bin"],
+            ),
+        ] {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("python-test", |config| {
+                    config.host(os, HostArch::X64);
+                })
+                .await;
+
+            let output = plugin
+                .locate_executables(LocateExecutablesInput::default())
+                .await;
+
+            assert_eq!(output.globals_lookup_dirs, expected, "for {os}");
+        }
+    }
+
     // The registry has no release, so the request itself fails
     #[tokio::test(flavor = "multi_thread")]
     #[should_panic(expected = "releases/python/3.0.0 (404)")]

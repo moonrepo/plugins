@@ -186,4 +186,43 @@ mod python_tool {
         assert!(output.aliases.contains_key("latest"));
         assert_eq!(output.aliases.get("latest"), output.latest.as_ref());
     }
+
+    async fn parse_version_file(content: &str) -> Option<UnresolvedVersionSpec> {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("python-test").await;
+
+        plugin
+            .parse_version_file(ParseVersionFileInput {
+                content: content.into(),
+                file: ".python-version".into(),
+                ..Default::default()
+            })
+            .await
+            .version
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn parses_python_version_file() {
+        for (content, expected) in [
+            ("3.12.1", "3.12.1"),
+            ("3.12", "3.12"),
+            // pyenv writes a line per version, the first being the default
+            ("3.12.1\n3.11.7\n", "3.12.1"),
+            ("# pinned for CI\n\n  3.13 \n", "3.13"),
+            ("3.15.0rc2", "3.15.0-rc.2"),
+        ] {
+            assert_eq!(
+                parse_version_file(content).await,
+                Some(UnresolvedVersionSpec::parse(expected).unwrap()),
+                "for {content:?}"
+            );
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn ignores_other_implementations_in_python_version_file() {
+        for content in ["system", "pypy3.10-7.3.12", "miniconda3-latest"] {
+            assert_eq!(parse_version_file(content).await, None, "for {content:?}");
+        }
+    }
 }
