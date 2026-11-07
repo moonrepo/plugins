@@ -20,7 +20,8 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
         type_of: PluginType::CommandLine,
         minimum_proto_version: Some(Version::new(0, 60, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
-        self_upgrade_commands: vec!["upgrade".into()],
+        // Not blocked, as `moon upgrade` (v2.2.2+) runs `proto install`
+        // itself when installed by proto
         ..Default::default()
     }))
 }
