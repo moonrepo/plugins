@@ -4,6 +4,10 @@
 
 #### 🚀 Updates
 
+- Added Linux s390x, ppc64, and riscv64, and FreeBSD x64 support for pnpm v12.4+, which were only
+  supported by pnpm v11 and below.
+- Added `$NPM_CONFIG_PREFIX` (npm) and `$YARN_PREFIX` (Yarn) to the globals directories.
+- `latest` for Yarn now follows `@yarnpkg/cli-dist`'s latest version, instead of being fixed to v4.
 - `$PREFIX`, and `$PNPM_HOME` for pnpm v11+, are now used as-is for the globals directories when
   they already are a `bin` directory, instead of appending another `bin`.
 - Added a `nubr` executable for Nub v0.9.3+.
@@ -11,6 +15,8 @@
 
 #### 🐞 Fixes
 
+- Fixed pinning an alias, like `latest`, writing it to `devEngines` in `package.json`, which only
+  supports versions and ranges. It now errors instead.
 - Fixed the `latest` version resolving to a pre-release when the npm `latest` dist-tag points to one. It now falls back to the highest stable version.
 - Fixed the `nubx` shim running `nub` instead of `nubx`.
 - Fixed the `node-gyp` executable pointing to a non-existent `.cmd` file on Windows.
