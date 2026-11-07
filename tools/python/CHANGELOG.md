@@ -4,6 +4,8 @@
 
 #### 🐞 Fixes
 
+- Fixed a comment after the version in `.python-version`, like `3.13 # stable`, failing to
+  parse. Everything after `#` is now ignored.
 - Fixed `.python-version` files failing to resolve when they contain comments or several versions
   (one per line, as written by pyenv), in which case the first is used, or a CPython prerelease,
   like `3.15.0rc2`. Files for other implementations, like `pypy3.10-7.3.12`, or `system`, are now

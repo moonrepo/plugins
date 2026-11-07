@@ -2,6 +2,7 @@
 
 use proto_pdk_api::Version;
 use regex::Regex;
+use tool_common::extract_version_from_text;
 
 // Python tags, python-build, and the pre-built archives use `3.15.0rc2`,
 // while the registry (and semver ordering) uses `3.15.0-rc.2`
@@ -48,10 +49,7 @@ pub fn to_python_version(version: &Version) -> String {
 /// first line that isn't blank or a comment. Names that aren't a version, like
 /// `system` or other implementations (`pypy3.10-7.3.12`), aren't for CPython.
 pub fn parse_python_version_file(content: &str) -> Option<String> {
-    let version = content
-        .lines()
-        .map(str::trim)
-        .find(|line| !line.is_empty() && !line.starts_with('#'))?;
+    let version = extract_version_from_text(content)?;
 
     if version.starts_with(|c: char| c.is_ascii_alphabetic()) {
         return None;
@@ -147,6 +145,7 @@ mod tests {
             ("3.12\n", "3.12"),
             ("3.12.1\n3.11.7\n", "3.12.1"),
             ("# pinned for CI\n\n  3.13 \n", "3.13"),
+            ("3.13 # pinned for CI", "3.13"),
             (">=3.11,<3.13", ">=3.11,<3.13"),
             ("3.12.1+20240107", "3.12.1+20240107"),
             ("3.15.0rc2", "3.15.0-rc.2"),
