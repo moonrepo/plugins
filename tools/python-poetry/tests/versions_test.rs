@@ -38,7 +38,7 @@ mod python_poetry_tool {
         assert_eq!(
             plugin
                 .parse_version_file(ParseVersionFileInput {
-                    content: "2.1.1\n".into(),
+                    content: "2.1.1 # pinned for CI\n".into(),
                     file: ".poetry-version".into(),
                     ..Default::default()
                 })

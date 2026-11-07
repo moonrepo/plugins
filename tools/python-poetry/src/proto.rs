@@ -5,7 +5,7 @@ use proto_pdk::*;
 use starbase_utils::fs;
 use std::collections::HashMap;
 use toml::Value;
-use tool_common::enable_tracing;
+use tool_common::{enable_tracing, extract_version_from_text};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -46,9 +46,7 @@ pub fn parse_version_file(
     let mut version = None;
 
     if input.file == ".poetry-version" {
-        let content = input.content.trim();
-
-        if !content.is_empty() {
+        if let Some(content) = extract_version_from_text(&input.content) {
             version = Some(UnresolvedVersionSpec::parse(content)?);
         }
     } else if input.file == "pyproject.toml"
