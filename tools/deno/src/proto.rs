@@ -156,14 +156,12 @@ pub fn build_instructions(
     )?;
 
     let mut output = BuildInstructionsOutput {
-        // source: Some(SourceLocation::Git(GitSource {
-        //     url: "https://github.com/denoland/deno.git".into(),
-        //     reference: None,
-        //     submodules: true,
-        // })),
+        // Unlike GitHub's tag archives, includes the submodules
         source: Some(SourceLocation::Archive(ArchiveSource {
-            url: format!("https://github.com/denoland/deno/archive/refs/tags/v{version}.tar.gz"),
-            prefix: Some(format!("deno-{version}")),
+            url: format!(
+                "https://github.com/denoland/deno/releases/download/v{version}/deno_src.tar.gz"
+            ),
+            prefix: Some("deno".into()),
         })),
         help_url: Some(
             "https://github.com/denoland/deno/blob/main/.github/CONTRIBUTING.md#building-from-source"
@@ -171,6 +169,8 @@ pub fn build_instructions(
         ),
         system_dependencies: vec![
             // Linux
+            SystemDependency::for_os(HostOS::Linux, "clang"),
+            SystemDependency::for_os(HostOS::Linux, "lld"),
             SystemDependency::for_os(HostOS::Linux, "cmake"),
             SystemDependency::for_os(HostOS::Linux, "libglib2.0-dev"),
             SystemDependency::for_os(HostOS::Linux, "protobuf-compiler"),
@@ -185,37 +185,20 @@ pub fn build_instructions(
             BuildRequirement::XcodeCommandLineTools,
             BuildRequirement::GitVersion(Requirement::parse(">=2.19.2")?),
             BuildRequirement::CommandExistsOnPath("cargo".into()),
-            BuildRequirement::CommandVersion("python".into(), Requirement::parse(">=3")?, None),
         ],
         ..Default::default()
     };
 
-    match env.os {
-        HostOS::MacOS => {}
-        HostOS::Windows => {
-            output.requirements.extend(vec![
-                BuildRequirement::GitConfigSetting("core.symlinks".into(), "true".into()),
-                BuildRequirement::ManualIntercept(
-                    "https://github.com/denoland/deno/blob/main/.github/CONTRIBUTING.md#windows"
-                        .into(),
-                ),
-            ]);
+    if env.os.is_windows() {
+        output.requirements.extend(vec![
+            BuildRequirement::GitConfigSetting("core.symlinks".into(), "true".into()),
+            BuildRequirement::ManualIntercept(
+                "https://github.com/denoland/deno/blob/main/.github/CONTRIBUTING.md#windows".into(),
+            ),
+        ]);
 
-            // TODO download protobuf
-        }
-        // Not sure if these apply to all Linux based...
-        _ => {
-            output.instructions.extend(vec![
-                BuildInstruction::RequestScript("https://apt.llvm.org/llvm.sh".into()),
-                BuildInstruction::MakeExecutable("llvm.sh".into()),
-                BuildInstruction::RunCommand(Box::new(CommandInstruction::new(
-                    "./llvm.sh",
-                    ["16"],
-                ))),
-                BuildInstruction::RemoveFile("./llvm.sh".into()),
-            ]);
-        }
-    };
+        // TODO download protobuf
+    }
 
     // These must come last as it's the actual command to build the binary!
     output.instructions.extend(vec![

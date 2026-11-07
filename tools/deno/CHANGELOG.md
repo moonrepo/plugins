@@ -13,6 +13,12 @@
 
 #### 🐞 Fixes
 
+- Fixed building from source:
+  - Linux always failed, as the `llvm.sh` script it ran must be run as root. `clang` and `lld` are
+    now installed as system dependencies instead.
+  - Python is no longer required, as Deno only uses it for running WPT tests.
+  - The source is now the `deno_src.tar.gz` release asset, which includes the submodules that
+    GitHub's tag archives lack.
 - Fixed a comment after the version in `.dvmrc`, like `2.9 # stable`, failing to parse.
   Everything after `#` is now ignored.
 - Fixed `.dvmrc` files written by dvm v1.8+ (`deno_version=<version>`) failing to parse.
