@@ -28,4 +28,4 @@ serde = { workspace = true }
 
 [features]
 default = ["wasm"]
-wasm = ["python_poetry_tool/wasm"]
+wasm = ["toolchain_common/wasm", "python_poetry_tool/wasm"]

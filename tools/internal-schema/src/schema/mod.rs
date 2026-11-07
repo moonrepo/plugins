@@ -1,4 +1,4 @@
-use proto_pdk::{
+use proto_pdk_api::{
     AnyResult, HostArch, HostEnvironment, HostLibc, HostOS, UnresolvedVersionSpec, VersionSpec,
     anyhow,
 };

@@ -829,6 +829,7 @@ version = "0.0.0"
 dependencies = [
  "indexmap",
  "proto_pdk",
+ "proto_pdk_api",
  "serde",
  "serde_json",
 ]
@@ -5747,6 +5748,7 @@ version = "0.19.0"
 dependencies = [
  "extism-pdk",
  "proto_pdk",
+ "proto_pdk_api",
  "proto_pdk_test_utils",
  "regex",
  "serde",

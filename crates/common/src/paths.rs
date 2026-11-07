@@ -1,4 +1,3 @@
-use proto_pdk::{AnyResult, get_host_env_var};
 use std::path::{Path, PathBuf};
 
 fn is_bin_dir(path: &Path) -> bool {
@@ -24,9 +23,10 @@ pub fn append_bin_dir(path: impl AsRef<Path>) -> PathBuf {
 
 /// Like [`append_bin_dir`], but for the directory in an environment variable,
 /// returning a `$NAME` or `$NAME/bin` lookup that proto expands on the host.
-pub fn append_env_bin_dir(name: &str) -> AnyResult<String> {
+#[cfg(feature = "wasm")]
+pub fn append_env_bin_dir(name: &str) -> proto_pdk::AnyResult<String> {
     Ok(
-        if get_host_env_var(name)?.is_some_and(|dir| is_bin_dir(Path::new(&dir))) {
+        if proto_pdk::get_host_env_var(name)?.is_some_and(|dir| is_bin_dir(Path::new(&dir))) {
             format!("${name}")
         } else {
             format!("${name}/bin")

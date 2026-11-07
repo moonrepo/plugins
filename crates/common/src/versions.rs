@@ -1,4 +1,4 @@
-use proto_pdk::{LoadVersionsOutput, UnresolvedVersionSpec, Version};
+use proto_pdk_api::{LoadVersionsOutput, UnresolvedVersionSpec, Version};
 
 fn is_stable(version: &Version) -> bool {
     version.prerelease.is_none() && version.build.is_none()
@@ -45,7 +45,7 @@ pub fn extract_version_from_text(content: &str) -> Option<&str> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use proto_pdk::VersionSpec;
+    use proto_pdk_api::VersionSpec;
 
     fn create_output(latest: Option<&str>, versions: &[&str]) -> LoadVersionsOutput {
         LoadVersionsOutput {

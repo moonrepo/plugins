@@ -1,7 +1,8 @@
 use indexmap::IndexMap;
-use proto_pdk::{
-    AnyResult, ChecksumAlgorithm, DownloadPrebuiltOutput, HostArch, HostEnvironment, HostLibc,
-    HostOS, Version, VersionSpec, fetch_json,
+#[cfg(feature = "wasm")]
+use proto_pdk::{AnyResult, VersionSpec, fetch_json};
+use proto_pdk_api::{
+    ChecksumAlgorithm, DownloadPrebuiltOutput, HostArch, HostEnvironment, HostLibc, HostOS, Version,
 };
 use serde::{Deserialize, Deserializer};
 
@@ -136,6 +137,7 @@ pub struct ReleasesResponse {
     pub data: IndexMap<Version, Release>,
 }
 
+#[cfg(feature = "wasm")]
 pub fn fetch_versions(
     env: &HostEnvironment,
     language: &str,
@@ -162,6 +164,7 @@ pub fn fetch_versions(
     Ok(res.data.into_iter().map(VersionSpec::Version).collect())
 }
 
+#[cfg(feature = "wasm")]
 pub fn fetch_release(language: &str, version: &Version) -> AnyResult<Release> {
     let res: ReleaseResponse = fetch_json(format!(
         "https://registry.moonrepo.app/releases/{language}/{version}"

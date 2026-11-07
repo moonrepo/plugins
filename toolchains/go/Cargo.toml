@@ -39,4 +39,4 @@ tokio = { workspace = true }
 
 [features]
 default = ["wasm"]
-wasm = ["go_tool/wasm"]
+wasm = ["toolchain_common/wasm", "go_tool/wasm"]
