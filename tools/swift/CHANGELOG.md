@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+#### 💥 Breaking
+
+- When `linux-platform` isn't configured, the Linux distribution is now detected from
+  `/etc/os-release`, like swiftly, instead of always using `ubuntu-24.04`. Other distributions were
+  installing an Ubuntu toolchain that can fail with missing or mismatched libraries. Unsupported
+  distributions still fall back to `ubuntu-24.04`, with a warning.
+
 #### 🚀 Updates
 
 - Added `debian-13`, `redhat-ubi-10`, and `ubuntu-26.04` Linux platforms, available from Swift 6.4.
