@@ -488,8 +488,13 @@ pub fn parse_manifest(
         }
     }
 
+    // Dependencies that members inherit with `workspace = true`, which aren't
+    // dependencies of a root package, so are kept apart from its own
     if let Some(workspace) = &manifest.workspace {
-        extract_deps(&workspace.dependencies, &mut output.dependencies)?;
+        extract_deps(
+            &workspace.dependencies,
+            &mut output.inheritable_dependencies,
+        )?;
     }
 
     // Extracted before the main tables, so those take precedence

@@ -39,6 +39,10 @@
 - Fixed bare dependency requirements (`1.2.3`) being parsed as exact versions instead of caret
   requirements, so task hashes with `hasher.optimization: accuracy` now track the resolved version
   from `Cargo.lock`. `[target.*]` dependencies are now included as well.
+- Fixed `workspace = true` dependencies being hashed with the wrong version, or none, when the
+  workspace root is also a package that declares or inherits the same dependency.
+  `[workspace.dependencies]` are now returned as `inheritable_dependencies` instead of being merged
+  into the root package's `dependencies`, so its tasks no longer hash every workspace dependency.
 - Includes `rust_tool` fixes for toolchain file precedence and Windows ARM64.
 
 ## 1.0.12
