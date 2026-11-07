@@ -297,6 +297,29 @@ mod node_tool {
         use super::*;
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn errors_for_aliases() {
+            let sandbox = create_empty_proto_sandbox();
+            sandbox.create_file("package.json", "{}");
+
+            let plugin = sandbox.create_plugin("node-test").await;
+
+            let output = plugin
+                .pin_version(PinVersionInput {
+                    dir: plugin.tool.to_virtual_path(sandbox.path()),
+                    version: UnresolvedVersionSpec::parse("lts").unwrap(),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(!output.pinned);
+            assert!(output.error.unwrap().contains("not aliases"));
+            assert_eq!(
+                std::fs::read_to_string(sandbox.path().join("package.json")).unwrap(),
+                "{}"
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn errors_if_no_package_json() {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox.create_plugin("node-test").await;

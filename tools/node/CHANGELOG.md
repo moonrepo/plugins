@@ -9,6 +9,8 @@
 
 #### 🐞 Fixes
 
+- Fixed pinning an alias, like `lts` or `latest`, writing it to `devEngines` in `package.json`, which
+  only supports versions and ranges. It now errors instead.
 - Fixed building from source:
   - The built `node` was never found, as it stayed in the source's `out/Release` directory. Builds
     are now installed like the pre-built archives, including npm and corepack.
