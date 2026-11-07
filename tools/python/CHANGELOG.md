@@ -4,6 +4,8 @@
 
 #### 🐞 Fixes
 
+- Fixed 32-bit ARM Linux installing the soft-float (`gnueabi`) build, which hard-float distros,
+  like Raspberry Pi OS, can't run. The hard-float (`gnueabihf`) build is now preferred.
 - Fixed a comment after the version in `.python-version`, like `3.13 # stable`, failing to
   parse. Everything after `#` is now ignored.
 - Fixed `.python-version` files failing to resolve when they contain comments or several versions

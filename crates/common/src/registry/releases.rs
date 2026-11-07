@@ -42,13 +42,22 @@ pub struct Build {
 
 impl Build {
     pub fn get_artifact(&self, env: &HostEnvironment) -> Option<&Artifact> {
-        self.artifacts
+        let matches = self
+            .artifacts
             .values()
-            .find(|art| {
+            .filter(|art| {
                 art.arch.as_ref().is_none_or(|arch| arch == &env.arch)
                     && art.os.as_ref().is_none_or(|os| os == &env.os)
                     && art.libc.as_ref().is_none_or(|libc| libc == &env.libc)
             })
+            .collect::<Vec<_>>();
+
+        // 32-bit ARM distros are hard-float, and can't run soft-float (`eabi`) binaries
+        matches
+            .iter()
+            .find(|art| art.abi.as_deref() == Some("eabihf"))
+            .or(matches.first())
+            .copied()
             .or(self.artifact.as_ref())
     }
 }
@@ -196,5 +205,27 @@ mod tests {
         };
 
         assert!(build.get_artifact(&env).is_some());
+    }
+
+    #[test]
+    fn prefers_hard_float_arm_artifacts() {
+        let build: Build = serde_json::from_str(
+            r#"{"artifacts":{
+                "armv7-unknown-linux-gnueabi":{"arch":"arm","os":"linux","libc":"gnu","abi":"eabi","archive_file":"eabi.tar.gz"},
+                "armv7-unknown-linux-gnueabihf":{"arch":"arm","os":"linux","libc":"gnu","abi":"eabihf","archive_file":"eabihf.tar.gz"}
+            }}"#,
+        )
+        .unwrap();
+        let env = HostEnvironment {
+            arch: HostArch::Arm,
+            os: HostOS::Linux,
+            libc: HostLibc::Gnu,
+            ..Default::default()
+        };
+
+        assert_eq!(
+            build.get_artifact(&env).unwrap().archive_file,
+            "eabihf.tar.gz"
+        );
     }
 }
