@@ -4,6 +4,11 @@
 
 #### 🐞 Fixes
 
+- Fixed a version pattern without a capture group panicking, which surfaced as an unclear WASM
+  error. It now errors with how to fix the pattern.
+- Fixed a format v1 canary with its own `download-url-canary` using the stable `checksum-url` (with
+  `canary` as the version), which doesn't exist. The checksum is now skipped, unless
+  `checksum-url-canary` is configured.
 - Fixed comments in version files, like `1.4 # stable`, failing to parse. The first line with a
   version is now used, and everything after `#` is ignored.
 - Fixed the `latest` version resolving to a pre-release or a version with build metadata, when configured as such. It now falls back to the highest stable version.
