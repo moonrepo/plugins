@@ -3300,6 +3300,7 @@ dependencies = [
 name = "lang_zig_common"
 version = "0.1.0"
 dependencies = [
+ "common",
  "proto_pdk_api",
  "serde",
  "serde_json",
