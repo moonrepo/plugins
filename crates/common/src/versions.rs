@@ -31,6 +31,17 @@ pub fn ensure_stable_latest(output: &mut LoadVersionsOutput) {
     }
 }
 
+/// Extract the version from a plain version file, like `.nvmrc` or `.python-version`:
+/// the first line with content once `#` comments (which may follow the version, as
+/// version managers allow) and surrounding whitespace are removed. Lines starting
+/// with `//` are also skipped as comments.
+pub fn extract_version_from_text(content: &str) -> Option<&str> {
+    content
+        .lines()
+        .map(|line| line.split('#').next().unwrap_or_default().trim())
+        .find(|line| !line.is_empty() && !line.starts_with("//"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -104,5 +115,33 @@ mod tests {
         ensure_stable_latest(&mut output);
 
         assert_eq!(get_latest(&output).unwrap(), "^1");
+    }
+
+    #[test]
+    fn extracts_first_version_line() {
+        for (content, expected) in [
+            ("20.18.0", "20.18.0"),
+            ("  lts/*  \n", "lts/*"),
+            ("\n\n20\n22\n", "20"),
+            ("# pinned for CI\n20", "20"),
+            ("// pinned for CI\n20", "20"),
+            ("20 # LTS", "20"),
+            ("20#LTS\n22", "20"),
+            (">=18 <20 # range", ">=18 <20"),
+            ("\t3.12.1\r\n", "3.12.1"),
+        ] {
+            assert_eq!(
+                extract_version_from_text(content),
+                Some(expected),
+                "for {content:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn extracts_nothing_without_a_version() {
+        for content in ["", "  \n\n", "# only a comment", "  # indented\n// js"] {
+            assert_eq!(extract_version_from_text(content), None, "for {content:?}");
+        }
     }
 }
