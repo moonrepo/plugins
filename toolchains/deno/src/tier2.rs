@@ -10,6 +10,7 @@ use moon_pdk::{
 };
 use moon_pdk_api::*;
 use std::path::PathBuf;
+use toolchain_common::append_bin_dir;
 
 fn gather_shared_paths(
     env: &HostEnvironment,
@@ -28,9 +29,9 @@ fn gather_shared_paths(
         paths.push(PathBuf::from(dir));
     } else {
         let maybe_dir = if let Some(value) = get_host_env_var("DENO_INSTALL_ROOT")? {
-            Some(PathBuf::from(value).join("bin"))
+            Some(append_bin_dir(value))
         } else if let Some(value) = get_host_env_var("DENO_HOME")? {
-            Some(PathBuf::from(value).join("bin"))
+            Some(append_bin_dir(value))
         } else {
             env.home_dir
                 .join(".deno")

@@ -8,7 +8,7 @@ use nodejs_package_json::PackageJson;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
 use std::collections::HashMap;
-use tool_common::enable_tracing;
+use tool_common::{append_env_bin_dir, enable_tracing};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -313,28 +313,16 @@ pub fn locate_executables(
 ) -> FnResult<Json<LocateExecutablesOutput>> {
     let env = get_host_environment()?;
 
-    // https://docs.deno.com/runtime/reference/cli/install/
-    // Bins go in the root's `bin` dir, unless the root already is one (v2.2.11+)
-    let is_bin_root = get_host_env_var("DENO_INSTALL_ROOT")?.is_some_and(|root| {
-        root.trim_end_matches(['/', '\\'])
-            .rsplit(['/', '\\'])
-            .next()
-            == Some("bin")
-    });
-
     Ok(Json(LocateExecutablesOutput {
         exes: HashMap::from_iter([(
             "deno".into(),
             ExecutableConfig::new_primary(env.os.get_exe_name("deno")),
         )]),
+        // https://docs.deno.com/runtime/reference/cli/install/
+        // Bins go in the root's `bin` dir, unless the root already is one (v2.2.11+)
         globals_lookup_dirs: vec![
-            if is_bin_root {
-                "$DENO_INSTALL_ROOT"
-            } else {
-                "$DENO_INSTALL_ROOT/bin"
-            }
-            .into(),
-            "$DENO_HOME/bin".into(),
+            append_env_bin_dir("DENO_INSTALL_ROOT")?,
+            append_env_bin_dir("DENO_HOME")?,
             "$HOME/.deno/bin".into(),
         ],
         ..Default::default()
