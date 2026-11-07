@@ -13,6 +13,8 @@
 
 #### 🚀 Updates
 
+- `$GOPATH` is now used as-is for the globals directory when it already is a `bin` directory,
+  instead of appending another `bin`.
 - Added Linux riscv64, ppc64le and loong64, and FreeBSD arm64 support.
 
 #### 🐞 Fixes

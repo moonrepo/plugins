@@ -4,7 +4,7 @@ use extism_pdk::*;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
 use std::collections::HashMap;
-use tool_common::enable_tracing;
+use tool_common::{append_env_bin_dir, enable_tracing};
 
 static NAME: &str = "Go";
 
@@ -227,7 +227,11 @@ pub fn locate_executables(
         ]),
         // Not `$GOROOT/bin`, which is a Go installation, not where
         // `go install` writes, and would shadow this tool's `go`
-        globals_lookup_dirs: vec!["$GOBIN".into(), "$GOPATH/bin".into(), "$HOME/go/bin".into()],
+        globals_lookup_dirs: vec![
+            "$GOBIN".into(),
+            append_env_bin_dir("GOPATH")?,
+            "$HOME/go/bin".into(),
+        ],
         ..Default::default()
     }))
 }
