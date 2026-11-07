@@ -31,16 +31,17 @@ mod python_poetry_tool {
     }
 
     #[cfg(unix)]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn configures_the_installed_poetry() {
+    async fn run_post_install(version: &str) -> Option<String> {
         use std::os::unix::fs::PermissionsExt;
 
         let sandbox = create_empty_proto_sandbox();
-        let tool_dir = sandbox.path().join(".proto/tools/poetry-test/2.1.0");
+        let tool_dir = sandbox
+            .path()
+            .join(format!(".proto/tools/poetry-test/{version}"));
         let exe_path = tool_dir.join("bin/poetry");
 
         sandbox.create_file(
-            ".proto/tools/poetry-test/2.1.0/bin/poetry",
+            format!(".proto/tools/poetry-test/{version}/bin/poetry"),
             "#!/bin/sh\necho \"$@\" > \"$(dirname \"$0\")/args\"\n",
         );
         std::fs::set_permissions(&exe_path, std::fs::Permissions::from_mode(0o755)).unwrap();
@@ -51,17 +52,29 @@ mod python_poetry_tool {
             .post_install(InstallHook {
                 context: PluginContext {
                     tool_dir: VirtualPath::new(&tool_dir),
-                    version: VersionSpec::parse("2.1.0").unwrap(),
+                    version: VersionSpec::parse(version).unwrap(),
                     ..Default::default()
                 },
                 ..Default::default()
             })
             .await;
 
+        std::fs::read_to_string(tool_dir.join("bin/args")).ok()
+    }
+
+    #[cfg(unix)]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn configures_the_installed_poetry_v1() {
         assert_eq!(
-            std::fs::read_to_string(tool_dir.join("bin/args")).unwrap(),
-            "config virtualenvs.use-poetry-python false\n"
+            run_post_install("1.8.0").await.as_deref(),
+            Some("config virtualenvs.prefer-active-python true\n")
         );
+    }
+
+    #[cfg(unix)]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn doesnt_configure_poetry_v2() {
+        assert_eq!(run_post_install("2.1.0").await, None);
     }
 
     #[tokio::test(flavor = "multi_thread")]

@@ -4,6 +4,13 @@
 
 #### 🐞 Fixes
 
+- Fixed the post-install hook writing `virtualenvs.use-poetry-python` to the global Poetry config
+  for Poetry 2, overriding the user's own choice, when it's already the default. Only Poetry
+  1.2-1.8 is still configured.
+- Fixed the installer script being reused until Poetry is uninstalled. It's now fetched for every
+  install.
+- Fixed a `requires-poetry` that can't be translated, like `~=2`, failing version detection. It's now
+  ignored with a warning.
 - Fixed comments in `.poetry-version`, like `2.1.1 # stable`, failing to parse. Everything
   after `#` is now ignored.
 - Fixed installing prereleases, like `1.2.0-rc2`, which the installer rejected as it only accepts

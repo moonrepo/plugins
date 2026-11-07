@@ -10,6 +10,7 @@ use tool_common::{enable_tracing, extract_version_from_text};
 #[host_fn]
 extern "ExtismHost" {
     fn exec_command(input: Json<ExecCommandInput>) -> Json<ExecCommandOutput>;
+    fn host_log(input: Json<HostLogInput>);
 }
 
 #[plugin_fn]
@@ -55,7 +56,15 @@ pub fn parse_version_file(
         && let Some(poetry_field) = tool_field.get("poetry")
         && let Some(Value::String(constraint)) = poetry_field.get("requires-poetry")
     {
-        version = Some(parse_pep440_spec(constraint)?);
+        match parse_pep440_spec(constraint) {
+            Ok(spec) => version = Some(spec),
+            Err(error) => {
+                host_log!(
+                    warn,
+                    "Unable to use <property>requires-poetry</property> <version>{constraint}</version> from <file>pyproject.toml</file>, ignoring it: {error}",
+                );
+            }
+        };
     }
 
     Ok(Json(ParseVersionFileOutput { version }))
@@ -78,17 +87,16 @@ pub fn native_install(
     let env = get_host_environment()?;
     let script_path = input.context.temp_dir.join("get-poetry.py");
 
-    if !script_path.exists() {
-        let mut script = fetch_text("https://install.python-poetry.org")?;
+    // Fetched for every install, as it's written to the tool's shared temp directory
+    let mut script = fetch_text("https://install.python-poetry.org")?;
 
-        // https://stackoverflow.com/a/77120044
-        // https://github.com/python-poetry/install.python-poetry.org/issues/24
-        if env.os.is_unix() {
-            script = script.replace("symlinks=False", "symlinks=True");
-        }
-
-        fs::write_file(&script_path, script)?;
+    // https://stackoverflow.com/a/77120044
+    // https://github.com/python-poetry/install.python-poetry.org/issues/24
+    if env.os.is_unix() {
+        script = script.replace("symlinks=False", "symlinks=True");
     }
+
+    fs::write_file(&script_path, script)?;
 
     let result = exec(ExecCommandInput {
         command: "python".into(),
@@ -140,8 +148,19 @@ pub fn native_install(
 
 #[plugin_fn]
 pub fn post_install(Json(input): Json<InstallHook>) -> FnResult<()> {
+    // https://python-poetry.org/docs/1.8/configuration/#virtualenvsprefer-active-python-experimental
+    // Poetry 2 uses the active Python by default (`virtualenvs.use-poetry-python`), so only
+    // configure 1.2-1.8, as this writes the user's global config for every Poetry
+    if !input
+        .context
+        .version
+        .as_version()
+        .is_some_and(|v| v.major == 1 && v.minor >= 2)
+    {
+        return Ok(());
+    }
+
     let env = get_host_environment()?;
-    let version = input.context.version.as_version();
 
     // Run the installed version directly, as proto's bins and shims may not be
     // on `PATH` yet, and a shim runs the detected version, not this one
@@ -153,17 +172,10 @@ pub fn post_install(Json(input): Json<InstallHook>) -> FnResult<()> {
         .expect("Invalid tool directory!")
         .to_string();
 
-    // https://python-poetry.org/docs/main/configuration/#virtualenvsuse-poetry-python
-    if version.is_some_and(|v| v.major >= 2) {
-        exec_captured(poetry, ["config", "virtualenvs.use-poetry-python", "false"])?;
-    }
-    // https://python-poetry.org/docs/1.8/configuration/#virtualenvsprefer-active-python-experimental
-    else if version.is_some_and(|v| v.major >= 1 && v.minor >= 2) {
-        exec_captured(
-            poetry,
-            ["config", "virtualenvs.prefer-active-python", "true"],
-        )?;
-    }
+    exec_captured(
+        poetry,
+        ["config", "virtualenvs.prefer-active-python", "true"],
+    )?;
 
     Ok(())
 }
