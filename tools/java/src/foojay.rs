@@ -218,6 +218,9 @@ fn java_arch(env: &HostEnvironment) -> AnyResult<&'static str> {
         HostArch::Arm64 => "aarch64",
         HostArch::Mips => "mips",
         HostArch::Powerpc => "ppc",
+        // Most vendors only publish little-endian builds for Linux,
+        // while `ppc64` returns big-endian builds
+        HostArch::Powerpc64 if env.os.is_linux() => "ppc64le",
         HostArch::Powerpc64 => "ppc64",
         HostArch::Riscv64 => "riscv64",
         HostArch::S390x => "s390x",
@@ -294,6 +297,17 @@ mod tests {
 
             assert!(!package.is_supported_by_proto());
         }
+    }
+
+    #[test]
+    fn uses_little_endian_ppc64_on_linux() {
+        let env = HostEnvironment {
+            arch: HostArch::Powerpc64,
+            os: HostOS::Linux,
+            ..Default::default()
+        };
+
+        assert_eq!(java_arch(&env).unwrap(), "ppc64le");
     }
 
     mod checksum_supported_by_proto {
@@ -500,10 +514,8 @@ mod tests {
                 ("aoj_openj9", Distribution::AojOpenj9),
                 ("gluon_graalvm", Distribution::GluonGraalvm),
                 ("graalvm_community", Distribution::GraalvmCommunity),
-                ("graalvm_ce20", Distribution::GraalvmCe20),
                 ("ojdk_build", Distribution::OjdkBuild),
                 ("semeru_certified", Distribution::SemeruCertified),
-                ("zulu_prime", Distribution::ZuluPrime),
             ] {
                 assert_eq!(
                     parse_package(&format!(r#"{{"distribution":"{value}"}}"#)).distribution,

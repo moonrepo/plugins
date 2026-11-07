@@ -22,7 +22,6 @@ pub enum Distribution {
     AojOpenj9,
     Bisheng,
     Corretto,
-    Debian,
     Dragonwell,
     GluonGraalvm,
     Graalvm,
@@ -31,7 +30,6 @@ pub enum Distribution {
     GraalvmCe16,
     GraalvmCe17,
     GraalvmCe19,
-    GraalvmCe20,
     GraalvmCommunity,
     Jetbrains,
     Kona,
@@ -54,7 +52,6 @@ pub enum Distribution {
     Temurin,
     Trava,
     Zulu,
-    ZuluPrime,
 }
 
 impl Distribution {
