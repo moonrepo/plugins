@@ -9,6 +9,13 @@
 
 #### 🐞 Fixes
 
+- Fixed building from source:
+  - The built `node` was never found, as it stayed in the source's `out/Release` directory. Builds
+    are now installed like the pre-built archives, including npm and corepack.
+  - macOS forced GCC 12 (`CXX=g++-12`), while Node.js requires the Xcode toolchain. Linux now uses
+    the default compiler (or `CXX` when set), as `g++-12` was only installed with apt, and failed
+    elsewhere.
+  - Python is now required as `python3`, which Node.js' `configure` uses.
 - Fixed a comment after the version in `.nvmrc` or `.node-version`, like `20 # LTS`, failing to
   parse. Like nvm, everything after `#` is now ignored.
 - Updated the `latest` version to never be a pre-release or contain build metadata.

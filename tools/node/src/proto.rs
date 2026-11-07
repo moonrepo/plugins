@@ -241,28 +241,18 @@ pub fn build_instructions(
             url: format!("https://github.com/nodejs/node/archive/refs/tags/v{version}.tar.gz"),
             prefix: Some(format!("node-{version}")),
         })),
+        // The distribution's default compiler is used (or `CXX` when set),
+        // which `configure` checks against the version's requirements. On
+        // macOS, this is the Xcode toolchain.
         system_dependencies: vec![
-            SystemDependency::for_pm(
-                HostPackageManager::Apt,
-                ["python3", "python3-pip", "g++-12", "gcc-12", "make"],
-            ),
-            SystemDependency::for_pm(HostPackageManager::Brew, ["gcc@12"]),
-            SystemDependency::for_pm(
-                HostPackageManager::Dnf,
-                ["python3", "python3-pip", "gcc-c++", "make"],
-            ),
-            SystemDependency::for_pm(
-                HostPackageManager::Yum,
-                ["python3", "python3-pip", "gcc-c++", "make"],
-            ),
-            SystemDependency::for_pm(
-                HostPackageManager::Pacman,
-                ["python3", "python3-pip", "gcc", "make"],
-            ),
+            SystemDependency::for_pm(HostPackageManager::Apt, ["python3", "g++", "make"]),
+            SystemDependency::for_pm(HostPackageManager::Dnf, ["python3", "gcc-c++", "make"]),
+            SystemDependency::for_pm(HostPackageManager::Yum, ["python3", "gcc-c++", "make"]),
+            SystemDependency::for_pm(HostPackageManager::Pacman, ["python", "gcc", "make"]),
         ],
         requirements: vec![
             BuildRequirement::XcodeCommandLineTools,
-            BuildRequirement::CommandExistsOnPath("python".into()),
+            BuildRequirement::CommandExistsOnPath("python3".into()),
             BuildRequirement::CommandExistsOnPath("make".into()),
         ],
         ..Default::default()
@@ -272,19 +262,32 @@ pub fn build_instructions(
         output.requirements.push(BuildRequirement::ManualIntercept(
             "https://github.com/nodejs/node/blob/main/BUILDING.md#windows-prerequisites".into(),
         ));
-        output
-            .instructions
-            .push(BuildInstruction::RunCommand(Box::new(
-                CommandInstruction::new(".\\vcbuild", ["full-icu"]),
-            )));
+        output.instructions.extend(vec![
+            BuildInstruction::RunCommand(Box::new(CommandInstruction::new(
+                ".\\vcbuild",
+                ["full-icu"],
+            ))),
+            BuildInstruction::MoveFile("out/Release/node.exe".into(), "node.exe".into()),
+            BuildInstruction::RemoveAllExcept(vec!["node.exe".into()]),
+        ]);
     } else {
         output.instructions.extend(vec![
-            BuildInstruction::SetEnvVar("CXX".into(), "g++-12".into()),
             BuildInstruction::RunCommand(Box::new(CommandInstruction::new(
                 "./configure",
                 ["--with-intl", "full-icu"],
             ))),
             BuildInstruction::RunCommand(Box::new(CommandInstruction::new("make", ["-j4"]))),
+            // Stage the same layout as the pre-built archives (with npm and corepack),
+            // as the source has its own `lib` directory
+            BuildInstruction::RunCommand(Box::new(CommandInstruction::new(
+                "make",
+                ["install", "DESTDIR=out/install", "PREFIX=/"],
+            ))),
+            BuildInstruction::RemoveAllExcept(vec!["out".into()]),
+            BuildInstruction::MoveFile("out/install/bin".into(), "bin".into()),
+            BuildInstruction::MoveFile("out/install/include".into(), "include".into()),
+            BuildInstruction::MoveFile("out/install/lib".into(), "lib".into()),
+            BuildInstruction::RemoveDir("out".into()),
         ]);
     }
 
