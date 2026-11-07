@@ -1,3 +1,4 @@
+use common::extract_version_from_text;
 use proto_pdk_api::{AnyResult, DetectVersionOutput, UnresolvedVersionSpec, Version};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -59,11 +60,7 @@ pub fn parse_zig_version_file<'a>(file: &str, content: &'a str) -> Option<ZigVer
     if file == "build.zig.zon" {
         parse_zon_version(content).map(ZigVersionSource::Minimum)
     } else {
-        content
-            .lines()
-            .map(str::trim)
-            .find(|line| !line.is_empty())
-            .map(ZigVersionSource::Exact)
+        extract_version_from_text(content).map(ZigVersionSource::Exact)
     }
 }
 
@@ -89,6 +86,10 @@ mod tests {
     fn detects_zig_version_sources() {
         assert_eq!(
             parse_zig_version_file(".zig-version", "\n0.15.2\n"),
+            Some(ZigVersionSource::Exact("0.15.2"))
+        );
+        assert_eq!(
+            parse_zig_version_file(".zig-version", "# pinned for CI\n0.15.2 # stable\n"),
             Some(ZigVersionSource::Exact("0.15.2"))
         );
         assert_eq!(

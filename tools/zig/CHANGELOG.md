@@ -4,6 +4,8 @@
 
 #### 🐞 Fixes
 
+- Fixed comments in `.zig-version` and `.zigversion`, like `0.15.2 # stable`, failing to parse.
+  Everything after `#` is now ignored.
 - Fixed the `master` alias (`proto install zig master`, or `master` in `.zig-version`) failing to
   resolve, as the master build wasn't in the version list.
 - No longer creates a `~/.proto/bin/zig.exe` on Windows. It's a copy of the executable, which can't
