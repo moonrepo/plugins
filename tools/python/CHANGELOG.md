@@ -2,8 +2,15 @@
 
 ## Unreleased
 
+#### 🚀 Updates
+
+- Added uv's `.python-versions` file to version detection, after `.python-version`.
+
 #### 🐞 Fixes
 
+- Fixed free-threaded and debug builds in `.python-version`, like `3.13t` or `3.13+freethreaded`
+  (written by `uv python pin`), installing the standard build or failing to parse. They're now
+  ignored with a warning, as only standard builds are available.
 - Fixed 32-bit ARM Linux installing the soft-float (`gnueabi`) build, which hard-float distros,
   like Raspberry Pi OS, can't run. The hard-float (`gnueabihf`) build is now preferred.
 - Fixed a comment after the version in `.python-version`, like `3.13 # stable`, failing to

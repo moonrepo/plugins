@@ -187,6 +187,20 @@ mod python_tool {
         assert_eq!(output.aliases.get("latest"), output.latest.as_ref());
     }
 
+    #[tokio::test(flavor = "multi_thread")]
+    async fn detects_uv_multiple_versions_file() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("python-test").await;
+
+        assert_eq!(
+            plugin
+                .detect_version_files(DetectVersionInput::default())
+                .await
+                .files,
+            [".python-version", ".python-versions"]
+        );
+    }
+
     async fn parse_version_file(content: &str) -> Option<UnresolvedVersionSpec> {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox.create_plugin("python-test").await;

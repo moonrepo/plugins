@@ -55,6 +55,16 @@ pub fn parse_python_version_file(content: &str) -> Option<String> {
         return None;
     }
 
+    // Free-threaded (`3.13t`, `3.13+freethreaded`) and debug builds aren't
+    // available, so don't install the standard build in their place
+    if version.ends_with(|c: char| c.is_ascii_alphabetic())
+        || version
+            .split_once('+')
+            .is_some_and(|(_, variant)| variant.starts_with(|c: char| c.is_ascii_alphabetic()))
+    {
+        return None;
+    }
+
     // CPython's prerelease format, like `3.15.0rc2`
     let prerelease = Regex::new(r"^([0-9]+\.[0-9]+\.[0-9]+)((?:a|b|rc)[0-9]+)$").unwrap();
 
@@ -168,6 +178,11 @@ mod tests {
             "miniconda3-latest",
             "# 3.12",
             "",
+            "3.13t",
+            "3.13.1t",
+            "3.13+freethreaded",
+            "3.13+debug",
+            "3.13d",
         ] {
             assert_eq!(parse_python_version_file(content), None, "for {content:?}");
         }
