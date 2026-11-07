@@ -69,6 +69,31 @@ mod deno_tool {
     }
 
     #[tokio::test(flavor = "multi_thread")]
+    #[should_panic(expected = "No pre-built Deno archive is available for musl Linux targets.")]
+    async fn doesnt_support_linux_musl() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("deno-test", |config| {
+                config.host_with(|host| {
+                    host.os = HostOS::Linux;
+                    host.arch = HostArch::X64;
+                    host.libc = HostLibc::Musl;
+                });
+            })
+            .await;
+
+        plugin
+            .download_prebuilt(DownloadPrebuiltInput {
+                context: PluginContext {
+                    version: VersionSpec::parse("2.9.8").unwrap(),
+                    ..Default::default()
+                },
+                ..Default::default()
+            })
+            .await;
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
     async fn supports_macos_arm64() {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox

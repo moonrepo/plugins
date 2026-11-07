@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+#### 💥 Breaking
+
+- Installing on musl Linux (like Alpine) now errors, as Deno only publishes glibc builds. A glibc
+  build was installed instead, which fails to run without a glibc compatibility layer.
+
 #### 🚀 Updates
 
 - Added checksum verification for `canary` downloads.

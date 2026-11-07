@@ -249,6 +249,13 @@ pub fn download_prebuilt(
         ],
     )?;
 
+    // Deno only publishes glibc builds for Linux
+    if env.os.is_linux() && env.libc == HostLibc::Musl {
+        return Err(plugin_err!(
+            "No pre-built Deno archive is available for musl Linux targets."
+        ));
+    }
+
     let config = get_tool_config::<DenoToolConfig>()?;
     let version = &input.context.version;
 
