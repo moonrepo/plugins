@@ -11,6 +11,7 @@ use proto_pdk::{
 };
 use rustc_hash::FxHashMap;
 use starbase_utils::{fs::find_upwards, yaml};
+use tool_common::append_env_bin_dir;
 
 #[derive(Debug, PartialEq)]
 pub enum PackageManager {
@@ -182,17 +183,18 @@ impl PackageManager {
         }
     }
 
-    pub fn get_global_lookup_dirs(&self, env: &HostEnvironment) -> Vec<String> {
+    pub fn get_global_lookup_dirs(&self, env: &HostEnvironment) -> AnyResult<Vec<String>> {
         // npm links global bins directly into its prefix on Windows,
         // which defaults to the Node.js directory (it has no `bin` there)
-        let bin = if self.is_npm() && env.os.is_windows() {
-            ""
-        } else {
-            "/bin"
-        };
+        let npm_on_windows = self.is_npm() && env.os.is_windows();
+        let bin = if npm_on_windows { "" } else { "/bin" };
 
         let mut dirs: Vec<String> = vec![
-            format!("$PREFIX{bin}"),
+            if npm_on_windows {
+                "$PREFIX".into()
+            } else {
+                append_env_bin_dir("PREFIX")?
+            },
             "$PREFIX/shims".into(),
             format!("$PROTO_HOME/tools/node/$PROTO_NODE_VERSION{bin}"),
         ];
@@ -213,7 +215,16 @@ impl PackageManager {
             // https://github.com/pnpm/pnpm/blob/v10.34.9/config/config/src/dirs.ts
             // https://github.com/pnpm/pnpm/blob/v11.28.9/pnpm11/config/reader/src/getConfig/globalInstall.ts
             Self::Pnpm | Self::Pnpm11 | Self::Pnpm12 => {
-                let mut homes = vec!["$PNPM_HOME"];
+                // v11+ links bins into a `bin` folder of its home directory
+                let has_bin = self != &Self::Pnpm;
+
+                dirs.push(if has_bin {
+                    append_env_bin_dir("PNPM_HOME")?
+                } else {
+                    "$PNPM_HOME".into()
+                });
+
+                let mut homes = vec![];
 
                 if env.os.is_windows() {
                     homes.push("$LOCALAPPDATA/pnpm");
@@ -226,8 +237,7 @@ impl PackageManager {
                     });
                 }
 
-                // v11+ links bins into a `bin` folder of its home directory
-                let bin = if self == &Self::Pnpm { "" } else { "/bin" };
+                let bin = if has_bin { "/bin" } else { "" };
 
                 dirs.extend(homes.into_iter().map(|home| format!("{home}{bin}")));
             }
@@ -242,10 +252,10 @@ impl PackageManager {
         }
 
         if env.os.is_windows() {
-            return dirs.into_iter().map(|dir| dir.replace("/", "\\")).collect();
+            return Ok(dirs.into_iter().map(|dir| dir.replace("/", "\\")).collect());
         }
 
-        dirs
+        Ok(dirs)
     }
 
     pub fn get_http_headers(

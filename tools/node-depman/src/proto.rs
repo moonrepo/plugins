@@ -522,7 +522,7 @@ pub fn locate_executables(
     // These are the directories that contain the executable binaries,
     // NOT where the packages/node modules are stored. Some package managers
     // have separate folders for the 2 processes, and then create symlinks.
-    let mut globals_lookup_dirs = manager.get_global_lookup_dirs(env);
+    let mut globals_lookup_dirs = manager.get_global_lookup_dirs(env)?;
 
     // If only shared dir, clear everything else
     if config.shared_globals_dir {

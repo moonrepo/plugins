@@ -4,6 +4,8 @@
 
 #### 🚀 Updates
 
+- `$PREFIX`, and `$PNPM_HOME` for pnpm v11+, are now used as-is for the globals directories when
+  they already are a `bin` directory, instead of appending another `bin`.
 - Added a `nubr` executable for Nub v0.9.3+.
 - Added Windows x64 support for Yarn v6 (from `6.0.0-rc.23`).
 
