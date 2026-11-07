@@ -9,6 +9,8 @@
 
 #### 🐞 Fixes
 
+- Fixed a comment after the version in `.nvmrc` or `.node-version`, like `20 # LTS`, failing to
+  parse. Like nvm, everything after `#` is now ignored.
 - Updated the `latest` version to never be a pre-release or contain build metadata.
 - Fixed `.nvmrc` and `.node-version` files containing `lts/*` or `lts-*` failing to parse. They now
   resolve to the latest LTS, like nvm and fnm.

@@ -219,7 +219,7 @@ mod node_tool {
         assert_eq!(
             plugin
                 .parse_version_file(ParseVersionFileInput {
-                    content: "# comment\n^20.1".into(),
+                    content: "# comment\n^20.1 # LTS".into(),
                     file: ".nvmrc".into(),
                     ..Default::default()
                 })
@@ -257,7 +257,7 @@ mod node_tool {
         assert_eq!(
             plugin
                 .parse_version_file(ParseVersionFileInput {
-                    content: "# comment\n^20.1".into(),
+                    content: "# comment\n^20.1 # LTS".into(),
                     file: ".node-version".into(),
                     ..Default::default()
                 })
