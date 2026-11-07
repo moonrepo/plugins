@@ -62,7 +62,7 @@ mod deno_tool {
         assert_eq!(
             plugin
                 .parse_version_file(ParseVersionFileInput {
-                    content: "# comment\n^2.1".into(),
+                    content: "# comment\n^2.1 # stable".into(),
                     file: ".dvmrc".into(),
                     ..Default::default()
                 })
