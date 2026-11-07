@@ -38,7 +38,7 @@ mod swift_tool {
 
         let output = plugin
             .parse_version_file(ParseVersionFileInput {
-                content: "\n6.1.2\n".into(),
+                content: "\n6.1.2 # pinned for CI\n".into(),
                 file: ".swift-version".into(),
                 ..Default::default()
             })

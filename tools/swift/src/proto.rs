@@ -4,7 +4,7 @@ use extism_pdk::*;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
 use std::collections::HashMap;
-use tool_common::enable_tracing;
+use tool_common::{enable_tracing, extract_version_from_text};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -61,8 +61,8 @@ pub fn parse_version_file(
     let mut version = None;
 
     if input.file == ".swift-version" {
-        if let Some(line) = input.content.lines().find(|line| !line.trim().is_empty()) {
-            version = Some(UnresolvedVersionSpec::parse(line.trim())?);
+        if let Some(line) = extract_version_from_text(&input.content) {
+            version = Some(UnresolvedVersionSpec::parse(line)?);
         }
     } else if input.file == "Package.swift" {
         // SwiftPM allows any spacing after `//`, any label casing,
