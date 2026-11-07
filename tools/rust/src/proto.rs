@@ -4,7 +4,7 @@ use lang_rust_common::*;
 use proto_pdk::*;
 use starbase_utils::fs;
 use std::collections::HashMap;
-use tool_common::enable_tracing;
+use tool_common::{append_env_bin_dir, enable_tracing};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -246,8 +246,8 @@ pub fn locate_executables(
         // directly bypasses the rustup proxies in `~/.cargo/bin`
         exes_dirs: vec![],
         globals_lookup_dirs: vec![
-            "$CARGO_INSTALL_ROOT/bin".into(),
-            "$CARGO_HOME/bin".into(),
+            append_env_bin_dir("CARGO_INSTALL_ROOT")?,
+            append_env_bin_dir("CARGO_HOME")?,
             "$HOME/.cargo/bin".into(),
         ],
         globals_prefix: Some("cargo-".into()),
