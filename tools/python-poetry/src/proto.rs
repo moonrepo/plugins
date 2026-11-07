@@ -1,13 +1,16 @@
+use crate::version::*;
 use extism_pdk::*;
+use lang_python_common::parse_pep440_spec;
 use proto_pdk::*;
 use starbase_utils::fs;
 use std::collections::HashMap;
 use toml::Value;
-use tool_common::enable_tracing;
+use tool_common::{enable_tracing, extract_version_from_text};
 
 #[host_fn]
 extern "ExtismHost" {
     fn exec_command(input: Json<ExecCommandInput>) -> Json<ExecCommandOutput>;
+    fn host_log(input: Json<HostLogInput>);
 }
 
 #[plugin_fn]
@@ -41,31 +44,28 @@ pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
 pub fn parse_version_file(
     Json(input): Json<ParseVersionFileInput>,
 ) -> FnResult<Json<ParseVersionFileOutput>> {
+    let content = fs::read_file(&input.path)?;
     let mut version = None;
 
-    // https://peps.python.org/pep-0440/#version-specifiers
-    fn parse_pep(version: &str) -> AnyResult<UnresolvedVersionSpec> {
-        Ok(UnresolvedVersionSpec::parse(
-            version
-                .replace("~=", "~")
-                .replace("===", "^")
-                .replace("==", "="),
-        )?)
-    }
-
     if input.file == ".poetry-version" {
-        let content = input.content.trim();
-
-        if !content.is_empty() {
-            version = Some(UnresolvedVersionSpec::parse(content)?);
+        if let Some(constraint) = extract_version_from_text(&content) {
+            version = Some(UnresolvedVersionSpec::parse(constraint)?);
         }
     } else if input.file == "pyproject.toml"
-        && let Ok(project_toml) = toml::from_str::<Value>(&input.content)
+        && let Ok(project_toml) = toml::from_str::<Value>(&content)
         && let Some(tool_field) = project_toml.get("tool")
         && let Some(poetry_field) = tool_field.get("poetry")
         && let Some(Value::String(constraint)) = poetry_field.get("requires-poetry")
     {
-        version = Some(parse_pep(constraint)?);
+        match parse_pep440_spec(constraint) {
+            Ok(spec) => version = Some(spec),
+            Err(error) => {
+                host_log!(
+                    warn,
+                    "Unable to use <property>requires-poetry</property> <version>{constraint}</version> from <file>pyproject.toml</file>, ignoring it: {error}",
+                );
+            }
+        };
     }
 
     Ok(Json(ParseVersionFileOutput { version }))
@@ -75,15 +75,7 @@ pub fn parse_version_file(
 pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
     let tags = load_git_tags("https://github.com/python-poetry/poetry")?
         .into_iter()
-        .map(|tag| {
-            for del in ["a", "b", "rc"] {
-                if let Some(parts) = tag.split_once(del) {
-                    return format!("{}-{}{}", parts.0, del, parts.1);
-                }
-            }
-
-            tag
-        })
+        .map(|tag| from_pep_version(&tag))
         .collect::<Vec<_>>();
 
     Ok(Json(LoadVersionsOutput::from(tags)?))
@@ -96,17 +88,16 @@ pub fn native_install(
     let env = get_host_environment()?;
     let script_path = input.context.temp_dir.join("get-poetry.py");
 
-    if !script_path.exists() {
-        let mut script = fetch_text("https://install.python-poetry.org")?;
+    // Fetched for every install, as it's written to the tool's shared temp directory
+    let mut script = fetch_text("https://install.python-poetry.org")?;
 
-        // https://stackoverflow.com/a/77120044
-        // https://github.com/python-poetry/install.python-poetry.org/issues/24
-        if env.os.is_unix() {
-            script = script.replace("symlinks=False", "symlinks=True");
-        }
-
-        fs::write_file(&script_path, script)?;
+    // https://stackoverflow.com/a/77120044
+    // https://github.com/python-poetry/install.python-poetry.org/issues/24
+    if env.os.is_unix() {
+        script = script.replace("symlinks=False", "symlinks=True");
     }
+
+    fs::write_file(&script_path, script)?;
 
     let result = exec(ExecCommandInput {
         command: "python".into(),
@@ -127,7 +118,10 @@ pub fn native_install(
                     .expect("Invalid install directory!")
                     .to_string(),
             ),
-            ("POETRY_VERSION".into(), input.context.version.to_string()),
+            (
+                "POETRY_VERSION".into(),
+                to_pep_version(&input.context.version.to_string()),
+            ),
         ]),
         set_executable: true,
         ..Default::default()
@@ -141,6 +135,10 @@ pub fn native_install(
             Some("An error log has been written to the current directory.".into())
         } else if !result.stderr.is_empty() {
             Some(result.stderr)
+        }
+        // The installer reports errors, like an unknown version, on stdout
+        else if result.exit_code != 0 {
+            Some(result.stdout.trim().to_owned())
         } else {
             None
         },
@@ -151,22 +149,34 @@ pub fn native_install(
 
 #[plugin_fn]
 pub fn post_install(Json(input): Json<InstallHook>) -> FnResult<()> {
-    let version = input.context.version.as_version();
-
-    // https://python-poetry.org/docs/main/configuration/#virtualenvsuse-poetry-python
-    if version.is_some_and(|v| v.major >= 2) {
-        exec_captured(
-            "poetry",
-            ["config", "virtualenvs.use-poetry-python", "false"],
-        )?;
-    }
     // https://python-poetry.org/docs/1.8/configuration/#virtualenvsprefer-active-python-experimental
-    else if version.is_some_and(|v| v.major >= 1 && v.minor >= 2) {
-        exec_captured(
-            "poetry",
-            ["config", "virtualenvs.prefer-active-python", "true"],
-        )?;
+    // Poetry 2 uses the active Python by default (`virtualenvs.use-poetry-python`), so only
+    // configure 1.2-1.8, as this writes the user's global config for every Poetry
+    if !input
+        .context
+        .version
+        .as_version()
+        .is_some_and(|v| v.major == 1 && v.minor >= 2)
+    {
+        return Ok(());
     }
+
+    let env = get_host_environment()?;
+
+    // Run the installed version directly, as proto's bins and shims may not be
+    // on `PATH` yet, and a shim runs the detected version, not this one
+    let poetry = input
+        .context
+        .tool_dir
+        .join(env.os.get_exe_name("bin/poetry"))
+        .to_real_path()?
+        .expect("Invalid tool directory!")
+        .to_string();
+
+    exec_captured(
+        poetry,
+        ["config", "virtualenvs.prefer-active-python", "true"],
+    )?;
 
     Ok(())
 }

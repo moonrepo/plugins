@@ -829,6 +829,7 @@ version = "0.0.0"
 dependencies = [
  "indexmap",
  "proto_pdk",
+ "proto_pdk_api",
  "serde",
  "serde_json",
 ]
@@ -2444,6 +2445,7 @@ dependencies = [
  "schematic",
  "serde",
  "starbase_sandbox",
+ "starbase_utils",
  "tokio",
  "tool_common",
 ]
@@ -3097,6 +3099,7 @@ dependencies = [
  "serde",
  "serde_json",
  "starbase_sandbox",
+ "starbase_utils",
  "tokio",
  "tool_common",
 ]
@@ -3266,6 +3269,7 @@ dependencies = [
  "schematic",
  "serde",
  "starbase_sandbox",
+ "starbase_utils",
  "tokio",
  "tool_common",
 ]
@@ -3282,6 +3286,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "lang_python_common"
+version = "0.1.0"
+dependencies = [
+ "proto_pdk_api",
+]
+
+[[package]]
 name = "lang_rust_common"
 version = "0.1.0"
 dependencies = [
@@ -3293,6 +3304,7 @@ dependencies = [
 name = "lang_zig_common"
 version = "0.1.0"
 dependencies = [
+ "common",
  "proto_pdk_api",
  "serde",
  "serde_json",
@@ -4851,7 +4863,9 @@ version = "0.5.8"
 dependencies = [
  "extism-pdk",
  "proto_pdk",
+ "proto_pdk_test_utils",
  "serde",
+ "tokio",
  "tool_common",
 ]
 
@@ -4909,6 +4923,7 @@ name = "python_poetry_tool"
 version = "0.1.9"
 dependencies = [
  "extism-pdk",
+ "lang_python_common",
  "proto_pdk",
  "proto_pdk_test_utils",
  "serde",
@@ -4944,6 +4959,7 @@ dependencies = [
  "schematic",
  "serde",
  "starbase_sandbox",
+ "starbase_utils",
  "tokio",
  "tool_common",
 ]
@@ -4976,10 +4992,12 @@ name = "python_uv_tool"
 version = "0.3.4"
 dependencies = [
  "extism-pdk",
+ "lang_python_common",
  "proto_pdk",
  "proto_pdk_test_utils",
  "serde",
  "starbase_sandbox",
+ "starbase_utils",
  "tokio",
  "toml 1.1.6+spec-1.1.0",
  "tool_common",
@@ -5472,6 +5490,7 @@ dependencies = [
  "schematic",
  "serde",
  "starbase_sandbox",
+ "starbase_utils",
  "tokio",
  "tool_common",
 ]
@@ -5735,11 +5754,13 @@ version = "0.19.0"
 dependencies = [
  "extism-pdk",
  "proto_pdk",
+ "proto_pdk_api",
  "proto_pdk_test_utils",
  "regex",
  "serde",
  "serde_json",
  "starbase_sandbox",
+ "starbase_utils",
  "tokio",
  "tool_common",
 ]
@@ -6511,6 +6532,7 @@ dependencies = [
  "schematic",
  "serde",
  "starbase_sandbox",
+ "starbase_utils",
  "tokio",
  "tool_common",
 ]
@@ -8489,6 +8511,7 @@ dependencies = [
  "serde",
  "serde_json",
  "starbase_sandbox",
+ "starbase_utils",
  "tokio",
  "tool_common",
 ]
@@ -8506,6 +8529,7 @@ dependencies = [
  "serde",
  "serde_json",
  "starbase_sandbox",
+ "starbase_utils",
  "tokio",
  "tool_common",
 ]

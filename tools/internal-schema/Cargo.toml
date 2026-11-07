@@ -21,9 +21,11 @@ crate-type = ["cdylib"]
 tool_common = { path = "../../crates/tool-common" }
 extism-pdk = { workspace = true }
 proto_pdk = { workspace = true }
+proto_pdk_api = { workspace = true }
 regex = { workspace = true, features = ["unicode-perl"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
+starbase_utils = { workspace = true }
 
 [dev-dependencies]
 proto_pdk_test_utils = { workspace = true, features = ["schema"] }
@@ -32,4 +34,4 @@ tokio = { workspace = true }
 
 [features]
 default = ["wasm"]
-wasm = []
+wasm = ["tool_common/wasm"]

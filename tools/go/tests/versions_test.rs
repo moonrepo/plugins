@@ -1,5 +1,19 @@
 use proto_pdk_test_utils::*;
 
+fn version_file(
+    sandbox: &ProtoWasmSandbox,
+    file: &str,
+    content: impl AsRef<str>,
+) -> ParseVersionFileInput {
+    sandbox.create_file(file, content);
+
+    ParseVersionFileInput {
+        file: file.into(),
+        path: VirtualPath::new(sandbox.path().join(file)),
+        ..Default::default()
+    }
+}
+
 mod go_tool {
     use super::*;
 
@@ -38,19 +52,18 @@ mod go_tool {
         let plugin = sandbox.create_plugin("go-test").await;
 
         let output = plugin
-            .parse_version_file(ParseVersionFileInput {
-                content: r#"
+            .parse_version_file(version_file(
+                &sandbox,
+                "go.mod",
+                r#"
 module github.com/moonrepo/go-plugin
 
 go 1.20
 
 require (
     github.com/99designs/gqlgen v0.17.25
-)"#
-                .into(),
-                file: "go.mod".into(),
-                ..Default::default()
-            })
+)"#,
+            ))
             .await;
 
         assert_eq!(
@@ -65,17 +78,16 @@ require (
         let plugin = sandbox.create_plugin("go-test").await;
 
         let output = plugin
-            .parse_version_file(ParseVersionFileInput {
-                content: r#"
+            .parse_version_file(version_file(
+                &sandbox,
+                "go.mod",
+                r#"
 module github.com/moonrepo/go-plugin
 
 require (
     github.com/99designs/gqlgen v0.17.25
-)"#
-                .into(),
-                file: "go.mod".into(),
-                ..Default::default()
-            })
+)"#,
+            ))
             .await;
 
         assert_eq!(output.version, None);
@@ -87,18 +99,17 @@ require (
         let plugin = sandbox.create_plugin("go-test").await;
 
         let output = plugin
-            .parse_version_file(ParseVersionFileInput {
-                content: r#"
+            .parse_version_file(version_file(
+                &sandbox,
+                "go.work",
+                r#"
 go 1.18
 
 use (
     ./hello
     ./example
-)"#
-                .into(),
-                file: "go.work".into(),
-                ..Default::default()
-            })
+)"#,
+            ))
             .await;
 
         assert_eq!(
@@ -113,16 +124,15 @@ use (
         let plugin = sandbox.create_plugin("go-test").await;
 
         let output = plugin
-            .parse_version_file(ParseVersionFileInput {
-                content: r#"
+            .parse_version_file(version_file(
+                &sandbox,
+                "go.work",
+                r#"
 use (
     ./hello
     ./example
-)"#
-                .into(),
-                file: "go.work".into(),
-                ..Default::default()
-            })
+)"#,
+            ))
             .await;
 
         assert_eq!(output.version, None);
@@ -134,11 +144,11 @@ use (
         let plugin = sandbox.create_plugin("go-test").await;
 
         let output = plugin
-            .parse_version_file(ParseVersionFileInput {
-                content: "module example.com/a\n\ngo 1.22\n\ntoolchain go1.26.0\n".into(),
-                file: "go.mod".into(),
-                ..Default::default()
-            })
+            .parse_version_file(version_file(
+                &sandbox,
+                "go.mod",
+                "module example.com/a\n\ngo 1.22\n\ntoolchain go1.26.0\n",
+            ))
             .await;
 
         assert_eq!(
@@ -153,11 +163,11 @@ use (
         let plugin = sandbox.create_plugin("go-test").await;
 
         let output = plugin
-            .parse_version_file(ParseVersionFileInput {
-                content: "go 1.22\n\ntoolchain default\n".into(),
-                file: "go.work".into(),
-                ..Default::default()
-            })
+            .parse_version_file(version_file(
+                &sandbox,
+                "go.work",
+                "go 1.22\n\ntoolchain default\n",
+            ))
             .await;
 
         assert_eq!(

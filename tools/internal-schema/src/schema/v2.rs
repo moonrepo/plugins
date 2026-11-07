@@ -1,5 +1,5 @@
 use super::{PlatformMapper, VERSION_REGEX};
-use proto_pdk::{
+use proto_pdk_api::{
     Clause, DetectVersionOutput, DownloadPrebuiltOutput, HostEnvironment, HostOS,
     LoadVersionsOutput, LocateExecutablesOutput, MatchesRequirement, MatchesVersion, Op,
     PluginError, Range, RegisterToolOutput, SpecError, UnresolvedVersionSpec, Version, VersionSpec,

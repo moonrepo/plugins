@@ -1,5 +1,39 @@
 # Changelog
 
+## Unreleased
+
+#### 💥 Breaking
+
+- Installing on musl Linux (like Alpine) now errors, as Deno only publishes glibc builds. A glibc
+  build was installed instead, which fails to run without a glibc compatibility layer.
+
+#### 🚀 Updates
+
+- Added `engines.deno` in `package.json` as a fallback for version detection, which Deno v2.9+
+  also checks.
+- Added checksum verification for `canary` downloads.
+
+#### 🐞 Fixes
+
+- Fixed pinning an alias, like `lts` or `latest`, writing it to `devEngines` in `package.json`, which
+  only supports versions and ranges. It now errors instead.
+- Fixed building from source:
+  - Linux always failed, as the `llvm.sh` script it ran must be run as root. `clang` and `lld` are
+    now installed as system dependencies instead.
+  - Python is no longer required, as Deno only uses it for running WPT tests.
+  - The source is now the `deno_src.tar.gz` release asset, which includes the submodules that
+    GitHub's tag archives lack.
+- Fixed a comment after the version in `.dvmrc`, like `2.9 # stable`, failing to parse.
+  Everything after `#` is now ignored.
+- Fixed `.dvmrc` files written by dvm v1.8+ (`deno_version=<version>`) failing to parse.
+- Fixed the globals directory when `DENO_INSTALL_ROOT` ends with `bin`, which Deno v2.2.11+ uses
+  as-is instead of its `bin` subdirectory. The same applies to `DENO_HOME`.
+- Fixed the build from source help links, which pointed to removed documentation pages.
+
+#### ⚙️ Internal
+
+- Version files are now read from their path, as the `content` input is deprecated.
+
 ## 0.15.12
 
 #### 🚀 Updates

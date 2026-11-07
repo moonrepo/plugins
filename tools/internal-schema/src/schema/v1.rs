@@ -1,5 +1,5 @@
 use super::{PlatformMapper, VERSION_REGEX};
-use proto_pdk::{
+use proto_pdk_api::{
     ExecutableConfig, HostArch, HostEnvironment, HostLibc, HostOS, PluginError, StringOrVec,
     UnresolvedVersionSpec, Version, VersionSpec,
 };

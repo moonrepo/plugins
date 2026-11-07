@@ -1,5 +1,38 @@
 # Changelog
 
+## Unreleased
+
+#### 💥 Breaking
+
+- `packageManager` (`bun@x`) in `package.json` now takes precedence over `engines.bun`, like
+  setup-bun, as an exact version should win over a range.
+
+#### 🚀 Updates
+
+- `$BUN_INSTALL` is now used as-is for the globals directory when it already is a `bin` directory,
+  instead of appending another `bin`.
+- Added support for FreeBSD (x64 and arm64), which Bun added in v1.3.14.
+
+#### 🐞 Fixes
+
+- Fixed pinning when `.bumrc` or `.bun-version` exists, which overrode the `package.json` it wrote
+  to. The existing version file is now updated (and removed when unpinning). `package.json` pins now
+  only write `devEngines.runtime`, as also writing `devEngines.packageManager` turned another package
+  manager's entry into a list.
+- Fixed pinning an alias, like `lts` or `latest`, writing it to `devEngines` in `package.json`, which
+  only supports versions and ranges. It now errors instead.
+- Fixed a comment after the version in `.bun-version` or `.bumrc`, like `1.3 # stable`, failing
+  to parse. Everything after `#` is now ignored.
+- Fixed Intel macOS machines without AVX2 (and x64 under Rosetta) installing a Bun build that
+  crashes on start. They now install the baseline build, like Bun's own installer. Only affects
+  versions before v1.4, where every x64 build became baseline.
+- Fixed globals directories not including `$BUN_INSTALL_BIN`, `$BUN_INSTALL/bin`, and
+  `$XDG_CACHE_HOME/.bun/bin`, which `bun add --global` uses when set.
+
+#### ⚙️ Internal
+
+- Version files are now read from their path, as the `content` input is deprecated.
+
 ## 0.16.11
 
 #### 🚀 Updates

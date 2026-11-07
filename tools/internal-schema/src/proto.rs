@@ -1,11 +1,11 @@
-use crate::schema::{Schema, interpolate_tokens, v1::SchemaType};
+use crate::schema::{Schema, create_version, interpolate_tokens, v1::SchemaType};
 use extism_pdk::*;
 use proto_pdk::*;
-use regex::Captures;
 use serde_json::Value as JsonValue;
+use starbase_utils::fs;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
-use tool_common::{enable_tracing, ensure_stable_latest};
+use tool_common::{enable_tracing, ensure_stable_latest, extract_version_from_text};
 
 macro_rules! override_option {
     ($prev:ident, $next:ident, [ $($prop:ident),* ]) => {
@@ -128,53 +128,6 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
     }))
 }
 
-fn create_version(cap: Captures) -> String {
-    // If no named, use entire string (legacy)
-    if cap.name("major").is_none() {
-        return cap.get(1).unwrap().as_str().to_string();
-    }
-
-    // Otherwise piece named parts together
-    let mut version = String::new();
-
-    version.push_str(
-        cap.name("major")
-            .or_else(|| cap.name("year"))
-            .map(|c| c.as_str())
-            .unwrap_or("0"),
-    );
-    version.push('.');
-    version.push_str(
-        cap.name("minor")
-            .or_else(|| cap.name("month"))
-            .map(|c| c.as_str())
-            .unwrap_or("0"),
-    );
-    version.push('.');
-    version.push_str(
-        cap.name("patch")
-            .or_else(|| cap.name("day"))
-            .map(|c| c.as_str())
-            .unwrap_or("0"),
-    );
-
-    if let Some(pre) = cap.name("pre").map(|c| c.as_str()) {
-        if !pre.starts_with('-') {
-            version.push('-');
-        }
-        version.push_str(pre);
-    }
-
-    if let Some(build) = cap.name("build").map(|c| c.as_str()) {
-        if !build.starts_with('+') {
-            version.push('+');
-        }
-        version.push_str(build);
-    }
-
-    version
-}
-
 #[plugin_fn]
 pub fn detect_version_files(
     Json(_): Json<DetectVersionInput>,
@@ -191,6 +144,18 @@ pub fn detect_version_files(
 }
 
 #[plugin_fn]
+pub fn parse_version_file(
+    Json(input): Json<ParseVersionFileInput>,
+) -> FnResult<Json<ParseVersionFileOutput>> {
+    let content = fs::read_file(&input.path)?;
+    Ok(Json(ParseVersionFileOutput {
+        version: extract_version_from_text(&content)
+            .map(UnresolvedVersionSpec::parse)
+            .transpose()?,
+    }))
+}
+
+#[plugin_fn]
 pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
     let schema = get_schema()?;
     let resolve = schema.get_resolve(&input.initial);
@@ -203,7 +168,7 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
 
         for tag in load_git_tags(repository)? {
             if let Some(cap) = pattern.captures(&tag) {
-                versions.insert(VersionSpec::parse(create_version(cap))?);
+                versions.insert(VersionSpec::parse(create_version(&cap)?)?);
             }
         }
     }
@@ -217,14 +182,14 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
             match row {
                 JsonValue::String(v) => {
                     if let Some(cap) = pattern.captures(&v) {
-                        versions.insert(VersionSpec::parse(create_version(cap))?);
+                        versions.insert(VersionSpec::parse(create_version(&cap)?)?);
                     }
                 }
                 JsonValue::Object(o) => {
                     if let Some(JsonValue::String(v)) = o.get(version_key)
                         && let Some(cap) = pattern.captures(v)
                     {
-                        versions.insert(VersionSpec::parse(create_version(cap))?);
+                        versions.insert(VersionSpec::parse(create_version(&cap)?)?);
                     }
                 }
                 _ => {}
@@ -299,26 +264,32 @@ pub fn download_prebuilt(
             )
             .replace("{download_file}", &download_file);
 
-            let checksum_file = interpolate_tokens(
-                platform.checksum_name.as_deref().unwrap_or("CHECKSUM.txt"),
-                env,
-                spec,
-                &platform,
-            );
+            // Only return a configured name, otherwise proto extracts it from the URL,
+            // as its extension is required to detect the algorithm (`.minisig`, etc)
+            let checksum_name = platform
+                .checksum_name
+                .as_ref()
+                .map(|name| interpolate_tokens(name, env, spec, &platform));
 
             let checksum_url = if is_canary {
-                schema
+                // A canary with its own download URL can't use the stable checksum
+                schema.install.checksum_url_canary.as_ref().or(schema
                     .install
-                    .checksum_url_canary
-                    .as_ref()
-                    .or(schema.install.checksum_url.as_ref())
+                    .download_url_canary
+                    .is_none()
+                    .then_some(schema.install.checksum_url.as_ref())
+                    .flatten())
             } else {
                 schema.install.checksum_url.as_ref()
             };
 
             let checksum_url = checksum_url.map(|url| {
                 interpolate_tokens(url, env, spec, &platform)
-                    .replace("{checksum_file}", &checksum_file)
+                    .replace(
+                        "{checksum_file}",
+                        checksum_name.as_deref().unwrap_or("CHECKSUM.txt"),
+                    )
+                    .replace("{download_file}", &download_file)
             });
 
             let archive_prefix = platform
@@ -329,7 +300,7 @@ pub fn download_prebuilt(
             DownloadPrebuiltOutput {
                 archive_prefix,
                 checksum_url,
-                checksum_name: Some(checksum_file),
+                checksum_name,
                 checksum_public_key: schema.install.checksum_public_key,
                 download_url,
                 download_name: Some(download_file),

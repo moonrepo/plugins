@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+#### 💥 Breaking
+
+- The `canary` version now errors. moon stopped publishing canary builds in v2, and the old `canary`
+  release on GitHub only has a moon v1 build from December 2025, which was installed instead.
+
+#### 🚀 Updates
+
+- `moon upgrade` is no longer blocked by proto. moon v2.2.2+ detects that proto installed it, and
+  upgrades with `proto install moon latest --pin local`.
+
+#### 🐞 Fixes
+
+- Fixed building moon v1 from source, which tried to build a `moonx` binary that only exists in v2.
+- Fixed building moon v2.2+ from source without `protoc`, which it requires. It's now installed with
+  apt or Homebrew when missing.
+- moon v2.0 and v2.1 now error as unsupported on macOS x64, instead of failing to download a build
+  that was never published.
+
 ## 0.4.3
 
 #### 🚀 Updates

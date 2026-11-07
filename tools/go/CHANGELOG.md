@@ -13,6 +13,8 @@
 
 #### 🚀 Updates
 
+- `$GOPATH` is now used as-is for the globals directory when it already is a `bin` directory,
+  instead of appending another `bin`.
 - Added Linux riscv64, ppc64le and loong64, and FreeBSD arm64 support.
 
 #### 🐞 Fixes
@@ -21,6 +23,10 @@
   instead of Go's `go1.27rc1` file names.
 - Fixed building from source, which ran Go's entire test suite with `all.bash`, and then deleted
   everything except `bin`, which Go can't run without.
+
+#### ⚙️ Internal
+
+- Version files are now read from their path, as the `content` input is deprecated.
 
 ## 0.16.8
 

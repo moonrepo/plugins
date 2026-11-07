@@ -40,4 +40,4 @@ tokio = { workspace = true }
 
 [features]
 default = ["wasm"]
-wasm = ["ruby_tool/wasm"]
+wasm = ["toolchain_common/wasm", "ruby_tool/wasm"]

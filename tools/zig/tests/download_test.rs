@@ -140,6 +140,7 @@ mod zig_tool {
             .await;
 
         assert_eq!(output.exes["zig"].exe_path, Some("zig".into()));
+        assert!(!output.exes["zig"].no_bin);
     }
 
     #[tokio::test(flavor = "multi_thread")]
@@ -156,5 +157,6 @@ mod zig_tool {
             .await;
 
         assert_eq!(output.exes["zig"].exe_path, Some("zig.exe".into()));
+        assert!(output.exes["zig"].no_bin);
     }
 }

@@ -2,13 +2,15 @@ use crate::config::NodeToolConfig;
 use extism_pdk::*;
 use lang_javascript_common::{
     NodeDistLTS, NodeDistVersion, extract_dev_engine_runtime_version, extract_engine_version,
-    extract_version_from_text, extract_volta_version, insert_dev_engine_version, remove_dev_engine,
+    extract_volta_version, get_dev_engine_version_error, insert_dev_engine_version,
+    remove_dev_engine,
 };
 use nodejs_package_json::PackageJson;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
+use starbase_utils::fs;
 use std::collections::HashMap;
-use tool_common::{enable_tracing, ensure_stable_latest};
+use tool_common::{enable_tracing, ensure_stable_latest, extract_version_from_text};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -54,10 +56,11 @@ pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
 pub fn parse_version_file(
     Json(input): Json<ParseVersionFileInput>,
 ) -> FnResult<Json<ParseVersionFileOutput>> {
+    let content = fs::read_file(&input.path)?;
     let mut version = None;
 
     if input.file == "package.json" {
-        if let Ok(package_json) = json::from_str::<PackageJson>(&input.content) {
+        if let Ok(package_json) = json::from_str::<PackageJson>(&content) {
             let mut candidates = vec![];
 
             if let Some(constraint) = extract_dev_engine_runtime_version(&package_json, "node") {
@@ -94,7 +97,13 @@ pub fn parse_version_file(
                 return Err(plugin_err!("{error}"));
             }
         }
-    } else if let Some(constraint) = extract_version_from_text(&input.content) {
+    } else if let Some(constraint) = extract_version_from_text(&content) {
+        // nvm's and fnm's latest LTS, which proto can't parse as an alias
+        let constraint = match constraint {
+            "lts/*" | "lts-*" => "lts",
+            other => other,
+        };
+
         version = Some(UnresolvedVersionSpec::parse(constraint)?);
     }
 
@@ -108,6 +117,12 @@ pub fn pin_version(Json(input): Json<PinVersionInput>) -> FnResult<Json<PinVersi
 
     if file.exists() {
         let mut package_json: json::Value = starbase_utils::json::read_file(&file)?;
+
+        if let Some(error) = get_dev_engine_version_error(&input.version) {
+            output.error = Some(error);
+
+            return Ok(Json(output));
+        }
 
         insert_dev_engine_version(
             &mut package_json,
@@ -235,28 +250,18 @@ pub fn build_instructions(
             url: format!("https://github.com/nodejs/node/archive/refs/tags/v{version}.tar.gz"),
             prefix: Some(format!("node-{version}")),
         })),
+        // The distribution's default compiler is used (or `CXX` when set),
+        // which `configure` checks against the version's requirements. On
+        // macOS, this is the Xcode toolchain.
         system_dependencies: vec![
-            SystemDependency::for_pm(
-                HostPackageManager::Apt,
-                ["python3", "python3-pip", "g++-12", "gcc-12", "make"],
-            ),
-            SystemDependency::for_pm(HostPackageManager::Brew, ["gcc@12"]),
-            SystemDependency::for_pm(
-                HostPackageManager::Dnf,
-                ["python3", "python3-pip", "gcc-c++", "make"],
-            ),
-            SystemDependency::for_pm(
-                HostPackageManager::Yum,
-                ["python3", "python3-pip", "gcc-c++", "make"],
-            ),
-            SystemDependency::for_pm(
-                HostPackageManager::Pacman,
-                ["python3", "python3-pip", "gcc", "make"],
-            ),
+            SystemDependency::for_pm(HostPackageManager::Apt, ["python3", "g++", "make"]),
+            SystemDependency::for_pm(HostPackageManager::Dnf, ["python3", "gcc-c++", "make"]),
+            SystemDependency::for_pm(HostPackageManager::Yum, ["python3", "gcc-c++", "make"]),
+            SystemDependency::for_pm(HostPackageManager::Pacman, ["python", "gcc", "make"]),
         ],
         requirements: vec![
             BuildRequirement::XcodeCommandLineTools,
-            BuildRequirement::CommandExistsOnPath("python".into()),
+            BuildRequirement::CommandExistsOnPath("python3".into()),
             BuildRequirement::CommandExistsOnPath("make".into()),
         ],
         ..Default::default()
@@ -266,19 +271,32 @@ pub fn build_instructions(
         output.requirements.push(BuildRequirement::ManualIntercept(
             "https://github.com/nodejs/node/blob/main/BUILDING.md#windows-prerequisites".into(),
         ));
-        output
-            .instructions
-            .push(BuildInstruction::RunCommand(Box::new(
-                CommandInstruction::new(".\\vcbuild", ["full-icu"]),
-            )));
+        output.instructions.extend(vec![
+            BuildInstruction::RunCommand(Box::new(CommandInstruction::new(
+                ".\\vcbuild",
+                ["full-icu"],
+            ))),
+            BuildInstruction::MoveFile("out/Release/node.exe".into(), "node.exe".into()),
+            BuildInstruction::RemoveAllExcept(vec!["node.exe".into()]),
+        ]);
     } else {
         output.instructions.extend(vec![
-            BuildInstruction::SetEnvVar("CXX".into(), "g++-12".into()),
             BuildInstruction::RunCommand(Box::new(CommandInstruction::new(
                 "./configure",
                 ["--with-intl", "full-icu"],
             ))),
             BuildInstruction::RunCommand(Box::new(CommandInstruction::new("make", ["-j4"]))),
+            // Stage the same layout as the pre-built archives (with npm and corepack),
+            // as the source has its own `lib` directory
+            BuildInstruction::RunCommand(Box::new(CommandInstruction::new(
+                "make",
+                ["install", "DESTDIR=out/install", "PREFIX=/"],
+            ))),
+            BuildInstruction::RemoveAllExcept(vec!["out".into()]),
+            BuildInstruction::MoveFile("out/install/bin".into(), "bin".into()),
+            BuildInstruction::MoveFile("out/install/include".into(), "include".into()),
+            BuildInstruction::MoveFile("out/install/lib".into(), "lib".into()),
+            BuildInstruction::RemoveDir("out".into()),
         ]);
     }
 
@@ -295,7 +313,10 @@ pub fn download_prebuilt(
         NAME,
         env,
         permutations! [
-            HostOS::Linux => [HostArch::X64, HostArch::Arm64, HostArch::Arm, HostArch::Powerpc64, HostArch::S390x],
+            HostOS::Linux => [
+                HostArch::X64, HostArch::Arm64, HostArch::Arm, HostArch::Powerpc64, HostArch::S390x,
+                HostArch::Riscv64, HostArch::LongArm64
+            ],
             HostOS::MacOS => [HostArch::X64, HostArch::Arm64],
             HostOS::Windows => [HostArch::X64, HostArch::X86, HostArch::Arm64],
         ],
@@ -303,12 +324,15 @@ pub fn download_prebuilt(
 
     let config = get_tool_config::<NodeToolConfig>()?;
     let mut version = input.context.version;
-    let mut host = config.dist_url;
     let mut channel = "release";
+
+    // Only built by https://github.com/nodejs/unofficial-builds
+    let mut unofficial = matches!(env.arch, HostArch::Riscv64 | HostArch::LongArm64);
 
     let mut arch: String = match env.arch {
         HostArch::Arm => "armv7l".into(),
         HostArch::Arm64 => "arm64".into(),
+        HostArch::LongArm64 => "loong64".into(),
         HostArch::Powerpc64 => {
             if env.os.is_linux() {
                 "ppc64le".into()
@@ -316,30 +340,32 @@ pub fn download_prebuilt(
                 "ppc64".into()
             }
         }
+        HostArch::Riscv64 => "riscv64".into(),
         HostArch::S390x => "s390x".into(),
         HostArch::X64 => "x64".into(),
         HostArch::X86 => "x86".into(),
         _ => unreachable!(),
     };
 
-    // Arm64 support was added after v16, but M1/M2 machines can
-    // run x64 binaries via Rosetta. This is a compat hack!
-    if env.arch == HostArch::Arm64 {
-        let m1_compat_version = Version::new(16, 0, 0);
-
-        if version.as_version().unwrap_or(&m1_compat_version).major < 16 {
-            arch = "x64".into();
-        }
+    // Arm64 builds start at v16 for macOS and v20 for Windows, but both
+    // can run x64 builds through Rosetta or emulation. Linux can't!
+    if env.arch == HostArch::Arm64
+        && let Some(version) = version.as_version()
+        && ((env.os.is_mac() && version.major < 16) || (env.os.is_windows() && version.major < 20))
+    {
+        arch = "x64".into();
     }
 
-    // Support unofficial MUSL builds
-    // https://github.com/nodejs/unofficial-builds
-    if env.os.is_linux()
-        && env.libc == HostLibc::Musl
-        && (env.arch == HostArch::X64 || env.arch == HostArch::Arm64)
-    {
+    if env.os.is_linux() && env.libc == HostLibc::Musl {
+        if !matches!(env.arch, HostArch::X64 | HostArch::Arm64) {
+            return Err(plugin_err!(
+                "No pre-built Node.js archive is available for musl Linux on {}.",
+                env.arch
+            ));
+        }
+
         arch.push_str("-musl");
-        host = config.dist_url_unofficial;
+        unofficial = true;
     }
 
     // When canary, extract the latest version from the index
@@ -360,7 +386,16 @@ pub fn download_prebuilt(
 
         channel = "nightly";
         version = VersionSpec::parse(&entry.version)?;
+
+        // Found in the official index, so it doesn't exist on the unofficial host
+        unofficial = false;
     }
+
+    let host = if unofficial {
+        config.dist_url_unofficial
+    } else {
+        config.dist_url
+    };
 
     let prefix = match env.os {
         HostOS::Linux => format!("node-v{version}-linux-{arch}"),
@@ -458,7 +493,16 @@ pub fn post_install(Json(input): Json<InstallHook>) -> FnResult<()> {
         args.extend(passthrough_args);
     }
 
-    exec_streamed("proto", args)?;
+    // The `bundled` alias resolves against this variable, and otherwise
+    // the `node` that's detected in the working directory
+    let mut command = ExecCommandInput::inherit("proto", args);
+
+    command.env.insert(
+        "PROTO_NODE_VERSION".into(),
+        input.context.version.to_string(),
+    );
+
+    exec(command)?;
 
     Ok(())
 }

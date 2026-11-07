@@ -2,6 +2,20 @@ use proto_pdk_test_utils::*;
 use starbase_sandbox::assert_snapshot;
 use std::fs;
 
+fn version_file(
+    sandbox: &ProtoWasmSandbox,
+    file: &str,
+    content: impl AsRef<str>,
+) -> ParseVersionFileInput {
+    sandbox.create_file(file, content);
+
+    ParseVersionFileInput {
+        file: file.into(),
+        path: VirtualPath::new(sandbox.path().join(file)),
+        ..Default::default()
+    }
+}
+
 mod node_tool {
     use super::*;
     use ::node_tool::NodeToolConfig;
@@ -85,11 +99,11 @@ mod node_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: r#"{ "engines": { "node": ">=16" } }"#.into(),
-                    file: "package.json".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    "package.json",
+                    r#"{ "engines": { "node": ">=16" } }"#
+                ))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse(">=16").unwrap()),
@@ -104,13 +118,11 @@ mod node_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content:
-                        r#"{ "devEngines": { "runtime": { "name": "node", "version": ">=16" } } }"#
-                            .into(),
-                    file: "package.json".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    "package.json",
+                    r#"{ "devEngines": { "runtime": { "name": "node", "version": ">=16" } } }"#
+                ))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse(">=16").unwrap()),
@@ -125,11 +137,11 @@ mod node_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: r#"{ "volta": { "node": "16.20.2" } }"#.into(),
-                    file: "package.json".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    "package.json",
+                    r#"{ "volta": { "node": "16.20.2" } }"#
+                ))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("16.20.2").unwrap()),
@@ -144,12 +156,11 @@ mod node_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: r#"{ "devEngines": { "runtime": { "name": "node", "version": "^20" } }, "volta": { "node": "18.1.0" }, "engines": { "node": ">=16" } }"#
-                        .into(),
-                    file: "package.json".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    "package.json",
+                    r#"{ "devEngines": { "runtime": { "name": "node", "version": "^20" } }, "volta": { "node": "18.1.0" }, "engines": { "node": ">=16" } }"#,
+                ))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("^20").unwrap()),
@@ -164,12 +175,11 @@ mod node_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: r#"{ "volta": { "node": "invalid version" }, "engines": { "node": ">=18" } }"#
-                        .into(),
-                    file: "package.json".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    "package.json",
+                    r#"{ "volta": { "node": "invalid version" }, "engines": { "node": ">=18" } }"#
+                ))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse(">=18").unwrap()),
@@ -184,11 +194,11 @@ mod node_tool {
         let plugin = sandbox.create_plugin("node-test").await;
 
         plugin
-            .parse_version_file(ParseVersionFileInput {
-                content: r#"{ "volta": { "node": "invalid version" } }"#.into(),
-                file: "package.json".into(),
-                ..Default::default()
-            })
+            .parse_version_file(version_file(
+                &sandbox,
+                "package.json",
+                r#"{ "volta": { "node": "invalid version" } }"#,
+            ))
             .await;
     }
 
@@ -199,11 +209,7 @@ mod node_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: "~20".into(),
-                    file: ".nvmrc".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(&sandbox, ".nvmrc", "~20"))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("~20").unwrap()),
@@ -218,11 +224,7 @@ mod node_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: "# comment\n^20.1".into(),
-                    file: ".nvmrc".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(&sandbox, ".nvmrc", "# comment\n^20.1 # LTS"))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("^20.1").unwrap()),
@@ -237,11 +239,7 @@ mod node_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: "~20".into(),
-                    file: ".node-version".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(&sandbox, ".node-version", "~20"))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("~20").unwrap()),
@@ -256,11 +254,11 @@ mod node_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: "# comment\n^20.1".into(),
-                    file: ".node-version".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    ".node-version",
+                    "# comment\n^20.1 # LTS"
+                ))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("^20.1").unwrap()),
@@ -268,8 +266,52 @@ mod node_tool {
         );
     }
 
+    #[tokio::test(flavor = "multi_thread")]
+    async fn parses_latest_lts_wildcard() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("node-test").await;
+
+        for (file, content) in [
+            (".nvmrc", "lts/*"),
+            (".nvmrc", "lts-*\n"),
+            (".node-version", "lts/*"),
+        ] {
+            assert_eq!(
+                plugin
+                    .parse_version_file(version_file(&sandbox, file, content))
+                    .await,
+                ParseVersionFileOutput {
+                    version: Some(UnresolvedVersionSpec::Alias("lts".into())),
+                }
+            );
+        }
+    }
+
     mod pin_version {
         use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn errors_for_aliases() {
+            let sandbox = create_empty_proto_sandbox();
+            sandbox.create_file("package.json", "{}");
+
+            let plugin = sandbox.create_plugin("node-test").await;
+
+            let output = plugin
+                .pin_version(PinVersionInput {
+                    dir: plugin.tool.to_virtual_path(sandbox.path()),
+                    version: UnresolvedVersionSpec::parse("lts").unwrap(),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(!output.pinned);
+            assert!(output.error.unwrap().contains("not aliases"));
+            assert_eq!(
+                std::fs::read_to_string(sandbox.path().join("package.json")).unwrap(),
+                "{}"
+            );
+        }
 
         #[tokio::test(flavor = "multi_thread")]
         async fn errors_if_no_package_json() {

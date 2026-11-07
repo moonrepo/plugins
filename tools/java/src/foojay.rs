@@ -18,6 +18,7 @@ pub struct FoojayPackage {
     pub archive_type: ArchiveType,
     #[serde(deserialize_with = "lenient_distribution")]
     pub distribution: Option<Distribution>,
+    pub directly_downloadable: bool,
     pub distribution_version: String,
     pub id: String,
     pub java_version: String,
@@ -42,8 +43,9 @@ where
 
 impl FoojayPackage {
     pub fn is_supported_by_proto(&self) -> bool {
-        // Distributions not in our enum are not supported
-        if self.distribution.is_none() {
+        // Distributions not in our enum are not supported, nor are packages
+        // behind a login or license wall (older Oracle JDKs, for example)
+        if self.distribution.is_none() || !self.directly_downloadable {
             return false;
         }
 
@@ -166,8 +168,7 @@ pub struct FoojayPackageInfo {
 
 impl FoojayPackageInfo {
     pub fn is_checksum_supported_by_proto(&self) -> bool {
-        !self.checksum.is_empty()
-            && (self.checksum_type == "sha256" || self.checksum_type == "sha512")
+        self.checksum_type == "sha256" || self.checksum_type == "sha512"
     }
 }
 
@@ -217,6 +218,9 @@ fn java_arch(env: &HostEnvironment) -> AnyResult<&'static str> {
         HostArch::Arm64 => "aarch64",
         HostArch::Mips => "mips",
         HostArch::Powerpc => "ppc",
+        // Most vendors only publish little-endian builds for Linux,
+        // while `ppc64` returns big-endian builds
+        HostArch::Powerpc64 if env.os.is_linux() => "ppc64le",
         HostArch::Powerpc64 => "ppc64",
         HostArch::Riscv64 => "riscv64",
         HostArch::S390x => "s390x",
@@ -246,6 +250,7 @@ mod tests {
     fn create_package(archive_type: ArchiveType, lib_c_type: Option<LibcType>) -> FoojayPackage {
         FoojayPackage {
             archive_type,
+            directly_downloadable: true,
             distribution: Some(Distribution::default()),
             lib_c_type,
             operating_system: "linux".into(),
@@ -282,6 +287,49 @@ mod tests {
                 ArchiveType::Rpm,
             ] {
                 assert!(!create_package(archive_type, None).is_supported_by_proto());
+            }
+        }
+
+        #[test]
+        fn doesnt_support_indirect_downloads() {
+            let mut package = create_package(ArchiveType::TarGz, None);
+            package.directly_downloadable = false;
+
+            assert!(!package.is_supported_by_proto());
+        }
+    }
+
+    #[test]
+    fn uses_little_endian_ppc64_on_linux() {
+        let env = HostEnvironment {
+            arch: HostArch::Powerpc64,
+            os: HostOS::Linux,
+            ..Default::default()
+        };
+
+        assert_eq!(java_arch(&env).unwrap(), "ppc64le");
+    }
+
+    mod checksum_supported_by_proto {
+        use super::*;
+
+        fn create_info(checksum_type: &str) -> FoojayPackageInfo {
+            FoojayPackageInfo {
+                checksum_type: checksum_type.into(),
+                ..Default::default()
+            }
+        }
+
+        #[test]
+        fn supports_sha_types() {
+            assert!(create_info("sha256").is_checksum_supported_by_proto());
+            assert!(create_info("sha512").is_checksum_supported_by_proto());
+        }
+
+        #[test]
+        fn doesnt_support_other_types() {
+            for checksum_type in ["", "md5", "sha1"] {
+                assert!(!create_info(checksum_type).is_checksum_supported_by_proto());
             }
         }
     }
@@ -466,10 +514,8 @@ mod tests {
                 ("aoj_openj9", Distribution::AojOpenj9),
                 ("gluon_graalvm", Distribution::GluonGraalvm),
                 ("graalvm_community", Distribution::GraalvmCommunity),
-                ("graalvm_ce20", Distribution::GraalvmCe20),
                 ("ojdk_build", Distribution::OjdkBuild),
                 ("semeru_certified", Distribution::SemeruCertified),
-                ("zulu_prime", Distribution::ZuluPrime),
             ] {
                 assert_eq!(
                     parse_package(&format!(r#"{{"distribution":"{value}"}}"#)).distribution,
@@ -505,9 +551,9 @@ mod tests {
             // fail the entire response
             let response: FoojayResponse<FoojayPackage> = serde_json::from_str(
                 r#"{"result":[
-                    {"distribution":"temurin","archive_type":"tar.gz"},
-                    {"distribution":"eliya","archive_type":"tar.gz"},
-                    {"distribution":"zulu","archive_type":"zip"}
+                    {"distribution":"temurin","archive_type":"tar.gz","directly_downloadable":true},
+                    {"distribution":"eliya","archive_type":"tar.gz","directly_downloadable":true},
+                    {"distribution":"zulu","archive_type":"zip","directly_downloadable":true}
                 ]}"#,
             )
             .unwrap();

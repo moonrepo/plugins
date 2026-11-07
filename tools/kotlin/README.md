@@ -4,18 +4,18 @@
 
 ## Installation
 
-Register the plugin in `.prototools` using a published plugin version:
-
-```toml
-[plugins.tools]
-kotlin = "https://github.com/moonrepo/plugins/releases/download/kotlin_tool-vX.Y.Z/kotlin_tool.wasm"
-```
-
 Install Java and Kotlin:
 
 ```shell
 proto install java
 proto install kotlin
+```
+
+This plugin is built-in to proto, but if you want to override it with an explicit version, add the following to `.prototools`.
+
+```toml
+[plugins.tools]
+kotlin = "https://github.com/moonrepo/plugins/releases/download/kotlin_tool-vX.Y.Z/kotlin_tool.wasm"
 ```
 
 This plugin installs the portable command-line compiler ZIP from JetBrains. It supports Linux, macOS, and Windows with a compatible Java runtime. Kotlin/Native and the experimental compiler native image are separate distributions and are not installed by this plugin.

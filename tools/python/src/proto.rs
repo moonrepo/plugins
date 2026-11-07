@@ -1,11 +1,14 @@
 use crate::config::PythonToolConfig;
-use crate::version::{from_python_tag, from_python_version, to_python_version};
+use crate::version::{
+    from_python_tag, from_python_version, parse_python_version_file, to_python_version,
+};
 use extism_pdk::*;
 use proto_pdk::*;
 use regex::Regex;
 use schematic::SchemaBuilder;
+use starbase_utils::fs;
 use std::collections::{HashMap, HashSet};
-use tool_common::{enable_tracing, registry::*};
+use tool_common::{append_env_bin_dir, enable_tracing, registry::*};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -39,9 +42,33 @@ pub fn define_tool_config(_: ()) -> FnResult<Json<DefineToolConfigOutput>> {
 #[plugin_fn]
 pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
     Ok(Json(DetectVersionOutput {
-        files: vec![".python-version".into()],
+        // `.python-versions` is uv's file for multiple versions, where the first is the default
+        files: vec![".python-version".into(), ".python-versions".into()],
         ignore: vec![],
     }))
+}
+
+#[plugin_fn]
+pub fn parse_version_file(
+    Json(input): Json<ParseVersionFileInput>,
+) -> FnResult<Json<ParseVersionFileOutput>> {
+    let content = fs::read_file(&input.path)?;
+    let mut output = ParseVersionFileOutput::default();
+
+    match parse_python_version_file(&content) {
+        Some(version) => {
+            output.version = Some(UnresolvedVersionSpec::parse(version)?);
+        }
+        None => {
+            host_log!(
+                warn,
+                "<file>{}</file> doesn't pin a CPython version that proto can install (like <id>system</id>, PyPy, or a free-threaded build), ignoring it",
+                input.file,
+            );
+        }
+    };
+
+    Ok(Json(output))
 }
 
 #[plugin_fn]
@@ -128,13 +155,13 @@ pub fn build_instructions(
         system_dependencies: vec![
             SystemDependency::for_pm(
                 HostPackageManager::Apk,
-                "build-base libffi-dev openssl-dev bzip2-dev zlib-dev xz-dev readline-dev sqlite-dev tk-dev zstd-dev"
+                "git bash build-base libffi-dev openssl-dev bzip2-dev zlib-dev xz-dev readline-dev sqlite-dev tk-dev zstd-dev"
                     .split(' ')
                     .collect::<Vec<_>>(),
             ),
             SystemDependency::for_pm(
                 HostPackageManager::Apt,
-                "make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev curl libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev"
+                "make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev curl git libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev libzstd-dev"
                     .split(' ')
                     .collect::<Vec<_>>(),
             ),
@@ -259,8 +286,17 @@ pub fn locate_executables(
         exe_path = format!("{exe_path}{}", version.major);
     }
 
+    let mut globals_lookup_dirs = vec![format!("$TOOL_DIR/{exes_dir}")];
+
+    // Where `pip install --user` writes on Unix when the user base is overridden
+    if !env.os.is_windows() {
+        globals_lookup_dirs.push(append_env_bin_dir("PYTHONUSERBASE")?);
+    }
+
+    globals_lookup_dirs.push("$HOME/.local/bin".into());
+
     Ok(Json(LocateExecutablesOutput {
-        globals_lookup_dirs: vec![format!("$TOOL_DIR/{exes_dir}"), "$HOME/.local/bin".into()],
+        globals_lookup_dirs,
         exes: HashMap::from_iter([
             ("python".into(), ExecutableConfig::new_primary(exe_path)),
             (

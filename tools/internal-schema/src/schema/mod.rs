@@ -1,6 +1,8 @@
-use proto_pdk::{
+use proto_pdk_api::{
     AnyResult, HostArch, HostEnvironment, HostLibc, HostOS, UnresolvedVersionSpec, VersionSpec,
+    anyhow,
 };
+use regex::Captures;
 use serde::Deserialize;
 use std::{collections::HashMap, path::PathBuf};
 
@@ -8,6 +10,52 @@ pub mod v1;
 pub mod v2;
 
 pub const VERSION_REGEX: &str = r"^v?((?<major>[0-9]+)\.(?<minor>[0-9]+)\.(?<patch>[0-9]+)(?<pre>-[0-9a-zA-Z\.]+)?(?<build>\+[-0-9a-zA-Z\.]+)?)$";
+
+/// Create a version from the named groups of a version pattern, where the
+/// year/month/day groups are an alternative to major/minor/patch. Leading
+/// zeros are removed (`2024.01.05` becomes `2024.1.5`), as semver disallows them.
+pub fn create_version(cap: &Captures) -> AnyResult<String> {
+    // If no named, use the first group (legacy)
+    if cap.name("major").or_else(|| cap.name("year")).is_none() {
+        return cap.get(1).map(|c| c.as_str().to_string()).ok_or_else(|| {
+            anyhow!(
+                "The version pattern matched <id>{}</id>, but has no capture group for the version. Wrap the version in parentheses, or use named groups like <id>major</id>.",
+                &cap[0]
+            )
+        });
+    }
+
+    let number = |name: &str, alt: &str| {
+        cap.name(name)
+            .or_else(|| cap.name(alt))
+            .map(|c| c.as_str().trim_start_matches('0'))
+            .filter(|value| !value.is_empty())
+            .unwrap_or("0")
+    };
+
+    let mut version = format!(
+        "{}.{}.{}",
+        number("major", "year"),
+        number("minor", "month"),
+        number("patch", "day")
+    );
+
+    if let Some(pre) = cap.name("pre").map(|c| c.as_str()) {
+        if !pre.starts_with('-') {
+            version.push('-');
+        }
+        version.push_str(pre);
+    }
+
+    if let Some(build) = cap.name("build").map(|c| c.as_str()) {
+        if !build.starts_with('+') {
+            version.push('+');
+        }
+        version.push_str(build);
+    }
+
+    Ok(version)
+}
 
 #[derive(Clone, Debug, Default, Deserialize)]
 #[serde(default, deny_unknown_fields)]
@@ -197,4 +245,56 @@ pub fn interpolate_tokens(
     }
 
     value
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use regex::Regex;
+
+    fn create(pattern: &str, value: &str) -> String {
+        create_version(&Regex::new(pattern).unwrap().captures(value).unwrap()).unwrap()
+    }
+
+    #[test]
+    fn creates_from_major_minor_patch() {
+        assert_eq!(create(VERSION_REGEX, "v1.2.3"), "1.2.3");
+        assert_eq!(
+            create(VERSION_REGEX, "1.2.3-rc.1+build.5"),
+            "1.2.3-rc.1+build.5"
+        );
+    }
+
+    #[test]
+    fn removes_leading_zeros() {
+        assert_eq!(create(VERSION_REGEX, "2024.01.05"), "2024.1.5");
+        assert_eq!(create(VERSION_REGEX, "v1.00.0"), "1.0.0");
+    }
+
+    #[test]
+    fn creates_from_year_month_day() {
+        assert_eq!(
+            create(
+                r"^(?<year>\d{4})\.(?<month>\d{2})\.(?<day>\d{2})$",
+                "2024.08.06"
+            ),
+            "2024.8.6"
+        );
+        assert_eq!(
+            create(r"^v(?<year>\d{4})\.(?<month>\d{2})$", "v2024.11"),
+            "2024.11.0"
+        );
+    }
+
+    #[test]
+    fn errors_without_a_capture_group() {
+        let pattern = Regex::new(r"^v[0-9.]+$").unwrap();
+
+        assert!(create_version(&pattern.captures("v1.2.3").unwrap()).is_err());
+    }
+
+    #[test]
+    fn uses_first_group_without_named_groups() {
+        assert_eq!(create(r"^tool-(\d+\.\d+\.\d+)$", "tool-1.2.3"), "1.2.3");
+    }
 }

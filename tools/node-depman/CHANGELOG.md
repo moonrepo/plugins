@@ -2,9 +2,33 @@
 
 ## Unreleased
 
+#### 🚀 Updates
+
+- Added Linux s390x, ppc64, and riscv64, and FreeBSD x64 support for pnpm v12.4+, which were only
+  supported by pnpm v11 and below.
+- Added `$NPM_CONFIG_PREFIX` (npm) and `$YARN_PREFIX` (Yarn) to the globals directories.
+- `latest` for Yarn now follows `@yarnpkg/cli-dist`'s latest version, instead of being fixed to v4.
+- `$PREFIX`, and `$PNPM_HOME` for pnpm v11+, are now used as-is for the globals directories when
+  they already are a `bin` directory, instead of appending another `bin`.
+- Added a `nubr` executable for Nub v0.9.3+.
+- Added Windows x64 support for Yarn v6 (from `6.0.0-rc.23`).
+
 #### 🐞 Fixes
 
+- Fixed pinning an alias, like `latest`, writing it to `devEngines` in `package.json`, which only
+  supports versions and ranges. It now errors instead.
 - Fixed the `latest` version resolving to a pre-release when the npm `latest` dist-tag points to one. It now falls back to the highest stable version.
+- Fixed the `nubx` shim running `nub` instead of `nubx`.
+- Fixed the `node-gyp` executable pointing to a non-existent `.cmd` file on Windows.
+- Fixed global directories for pnpm v11+, which links global bins into `$PNPM_HOME/bin`, and Nub v0.9+, which links them into `~/.local/bin` (or `$XDG_BIN_HOME`).
+- Fixed npm global directories on Windows, where bins are linked directly into the prefix.
+- Fixed `shared-globals-dir` for pnpm v10 and below, which ignore `pnpm_config_*` environment variables. They now receive `npm_config_global_dir` and `npm_config_global_bin_dir`.
+- Fixed Yarn v6 on macOS x64 attempting a download that doesn't exist, instead of failing as unsupported.
+- Fixed the archive prefix for Yarn v0 versions.
+
+#### ⚙️ Internal
+
+- Version files are now read from their path, as the `content` input is deprecated.
 
 ## 0.20.2
 

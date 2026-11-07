@@ -1,6 +1,20 @@
 use proto_pdk_test_utils::*;
 use starbase_sandbox::locate_fixture;
 
+fn version_file(
+    sandbox: &ProtoWasmSandbox,
+    file: &str,
+    content: impl AsRef<str>,
+) -> ParseVersionFileInput {
+    sandbox.create_file(file, content);
+
+    ParseVersionFileInput {
+        file: file.into(),
+        path: VirtualPath::new(sandbox.path().join(file)),
+        ..Default::default()
+    }
+}
+
 mod schema_tool {
     use super::*;
 
@@ -24,6 +38,27 @@ mod schema_tool {
         let output = plugin.load_versions(LoadVersionsInput::default()).await;
 
         assert!(!output.versions.is_empty());
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn parses_version_file_without_comments() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_schema_plugin("schema-test", locate_fixture("schemas").join("base.toml"))
+            .await;
+
+        let output = plugin
+            .parse_version_file(version_file(
+                &sandbox,
+                ".moon-version",
+                "# pinned for CI\n1.4 # stable\n",
+            ))
+            .await;
+
+        assert_eq!(
+            output.version,
+            Some(UnresolvedVersionSpec::parse("1.4").unwrap())
+        );
     }
 
     #[tokio::test(flavor = "multi_thread")]

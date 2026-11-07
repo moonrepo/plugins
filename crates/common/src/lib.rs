@@ -1,14 +1,19 @@
+mod paths;
 pub mod registry;
 mod versions;
 
+pub use paths::*;
 pub use versions::*;
 
-use proto_pdk::{WarpgateTracingOptions, get_test_environment, initialize_tracing_with_options};
-use std::sync::atomic::{AtomicBool, Ordering};
-
-static TRACING_ENABLED: AtomicBool = AtomicBool::new(false);
-
+#[cfg(feature = "wasm")]
 pub fn enable_tracing() {
+    use proto_pdk::{
+        WarpgateTracingOptions, get_test_environment, initialize_tracing_with_options,
+    };
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    static TRACING_ENABLED: AtomicBool = AtomicBool::new(false);
+
     // Disable tracing while running tests!
     if let Ok(Some(_)) = get_test_environment() {
         return;

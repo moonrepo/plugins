@@ -1,3 +1,4 @@
+use common::extract_version_from_text;
 use proto_pdk_api::{AnyResult, DetectVersionOutput, UnresolvedVersionSpec, Version};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -10,7 +11,9 @@ impl ZigVersionSource<'_> {
     pub fn to_zig_requirement(self) -> AnyResult<UnresolvedVersionSpec> {
         match self {
             Self::Exact(version) => Ok(UnresolvedVersionSpec::parse(version)?),
-            Self::Minimum(version) => Ok(UnresolvedVersionSpec::parse(format!(">={version}"))?),
+            // Zig breaks APIs between minor versions, so stay within
+            // the minimum's minor, while allowing newer patches
+            Self::Minimum(version) => Ok(UnresolvedVersionSpec::parse(format!("~{version}"))?),
         }
     }
 
@@ -23,19 +26,18 @@ impl ZigVersionSource<'_> {
             return Ok(UnresolvedVersionSpec::parse("canary")?);
         }
 
-        let version = Version::parse(raw_version)?;
+        // Partial versions and aliases already work as ZLS requirements
+        let Ok(version) = Version::parse(raw_version) else {
+            return Ok(UnresolvedVersionSpec::parse(raw_version)?);
+        };
 
         if version.prerelease.is_some() {
             return Ok(UnresolvedVersionSpec::parse("canary")?);
         }
 
-        let operator = match self {
-            Self::Exact(_) => "~",
-            Self::Minimum(_) => ">=",
-        };
-
+        // ZLS releases match Zig's minor versions, but not their patches
         Ok(UnresolvedVersionSpec::parse(format!(
-            "{operator}{}.{}",
+            "~{}.{}",
             version.major, version.minor,
         ))?)
     }
@@ -56,11 +58,7 @@ pub fn parse_zig_version_file<'a>(file: &str, content: &'a str) -> Option<ZigVer
     if file == "build.zig.zon" {
         parse_zon_version(content).map(ZigVersionSource::Minimum)
     } else {
-        content
-            .lines()
-            .map(str::trim)
-            .find(|line| !line.is_empty())
-            .map(ZigVersionSource::Exact)
+        extract_version_from_text(content).map(ZigVersionSource::Exact)
     }
 }
 
@@ -89,6 +87,10 @@ mod tests {
             Some(ZigVersionSource::Exact("0.15.2"))
         );
         assert_eq!(
+            parse_zig_version_file(".zig-version", "# pinned for CI\n0.15.2 # stable\n"),
+            Some(ZigVersionSource::Exact("0.15.2"))
+        );
+        assert_eq!(
             parse_zig_version_file(
                 "build.zig.zon",
                 r#".{
@@ -113,7 +115,7 @@ mod tests {
                 .to_zig_requirement()
                 .unwrap()
                 .to_string(),
-            ">=0.15.2"
+            "~0.15.2"
         );
     }
 
@@ -131,7 +133,21 @@ mod tests {
                 .to_zls_requirement()
                 .unwrap()
                 .to_string(),
-            ">=0.15"
+            "~0.15"
+        );
+        assert_eq!(
+            ZigVersionSource::Exact("0.15")
+                .to_zls_requirement()
+                .unwrap()
+                .to_string(),
+            "~0.15"
+        );
+        assert_eq!(
+            ZigVersionSource::Exact("latest")
+                .to_zls_requirement()
+                .unwrap()
+                .to_string(),
+            "latest"
         );
         assert_eq!(
             ZigVersionSource::Exact("0.16.0-dev.123+abc")

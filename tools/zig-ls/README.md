@@ -6,15 +6,15 @@ Supports official prebuilt ZLS archives for Linux, macOS, and Windows. Requires 
 
 ## Installation
 
-Add the plugin to `.prototools`, then install ZLS.
+```shell
+proto install zls
+```
+
+This plugin is built-in to proto, but if you want to override it with an explicit version, add the following to `.prototools`.
 
 ```toml
 [plugins.tools]
 zls = "https://github.com/moonrepo/plugins/releases/download/zig_ls_tool-vX.Y.Z/zig_ls_tool.wasm"
-```
-
-```shell
-proto install zls
 ```
 
 ZLS and Zig should use the same minor release. For example:
@@ -37,7 +37,7 @@ index-url = "https://releases.zigtools.org/v1/zls/index.json"
 
 ## Version detection
 
-The plugin detects Zig versions from `.zig-version`, `.zigversion`, and `build.zig.zon`. Stable versions in plain version files are converted to a matching ZLS minor range because Zig and ZLS patch versions may differ. The `minimum_zig_version` field in `build.zig.zon` is preserved as a minimum minor requirement, while development Zig versions resolve to proto's `canary` version.
+The plugin detects Zig versions from `.zig-version`, `.zigversion`, and `build.zig.zon`. Stable versions in plain version files are converted to a matching ZLS minor range because Zig and ZLS patch versions may differ. The `minimum_zig_version` field in `build.zig.zon` is converted to the same minor range, while development Zig versions resolve to proto's `canary` version, which this plugin can't install yet (ZLS development builds aren't supported).
 
 ## Contributing
 

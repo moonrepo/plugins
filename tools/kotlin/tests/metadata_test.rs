@@ -4,7 +4,7 @@ mod kotlin_tool {
     use super::*;
 
     #[tokio::test(flavor = "multi_thread")]
-    async fn registers_portable_language_with_java_dependency() {
+    async fn registers_portable_language() {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox.create_plugin("kotlin-test").await;
         let output = plugin

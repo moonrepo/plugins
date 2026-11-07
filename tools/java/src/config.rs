@@ -22,7 +22,6 @@ pub enum Distribution {
     AojOpenj9,
     Bisheng,
     Corretto,
-    Debian,
     Dragonwell,
     GluonGraalvm,
     Graalvm,
@@ -31,7 +30,6 @@ pub enum Distribution {
     GraalvmCe16,
     GraalvmCe17,
     GraalvmCe19,
-    GraalvmCe20,
     GraalvmCommunity,
     Jetbrains,
     Kona,
@@ -41,7 +39,6 @@ pub enum Distribution {
     Microsoft,
     OjdkBuild,
     OpenLogic,
-    #[default]
     #[serde(rename = "openjdk")]
     OpenJdk,
     Oracle,
@@ -49,10 +46,12 @@ pub enum Distribution {
     SapMachine,
     Semeru,
     SemeruCertified,
+    // Like SDKMAN and mise, as jdk.java.net's `openjdk`
+    // builds stop receiving updates after 6 months
+    #[default]
     Temurin,
     Trava,
     Zulu,
-    ZuluPrime,
 }
 
 impl Distribution {
@@ -67,6 +66,7 @@ impl Distribution {
                 Self::GluonGraalvm => value == "gluon",
                 Self::Graalvm => value == "graal",
                 Self::GraalvmCommunity => value == "graalce",
+                Self::Jetbrains => value == "jbr",
                 Self::Kona => value == "tencent",
                 Self::Liberica => value == "librca",
                 Self::LibericaNative => value == "nik",
@@ -310,6 +310,7 @@ mod tests {
                 ("graalce", Distribution::GraalvmCommunity),
                 ("graal", Distribution::Graalvm),
                 ("gluon", Distribution::GluonGraalvm),
+                ("jbr", Distribution::Jetbrains),
                 ("dragon", Distribution::Dragonwell),
                 ("alibaba", Distribution::Dragonwell),
                 ("albba", Distribution::Dragonwell),
@@ -336,8 +337,8 @@ mod tests {
         }
 
         #[test]
-        fn defaults_to_openjdk() {
-            assert_eq!(Distribution::default(), Distribution::OpenJdk);
+        fn defaults_to_temurin() {
+            assert_eq!(Distribution::default(), Distribution::Temurin);
         }
 
         #[test]

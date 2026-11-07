@@ -1,5 +1,19 @@
 use proto_pdk_test_utils::*;
 
+fn version_file(
+    sandbox: &ProtoWasmSandbox,
+    file: &str,
+    content: impl AsRef<str>,
+) -> ParseVersionFileInput {
+    sandbox.create_file(file, content);
+
+    ParseVersionFileInput {
+        file: file.into(),
+        path: VirtualPath::new(sandbox.path().join(file)),
+        ..Default::default()
+    }
+}
+
 mod zig_tool {
     use super::*;
 
@@ -49,11 +63,7 @@ mod zig_tool {
 
         for file in [".zig-version", ".zigversion"] {
             let output = plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: "\n0.14.1\n".into(),
-                    file: file.into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(&sandbox, file, "\n0.14.1\n"))
                 .await;
 
             assert_eq!(
@@ -69,20 +79,19 @@ mod zig_tool {
         let plugin = sandbox.create_plugin("zig-test").await;
 
         let output = plugin
-            .parse_version_file(ParseVersionFileInput {
-                content: r#".{
+            .parse_version_file(version_file(
+                &sandbox,
+                "build.zig.zon",
+                r#".{
                     .name = .example,
                     .minimum_zig_version = "0.14.1",
-                }"#
-                .into(),
-                file: "build.zig.zon".into(),
-                ..Default::default()
-            })
+                }"#,
+            ))
             .await;
 
         assert_eq!(
             output.version,
-            Some(UnresolvedVersionSpec::parse(">=0.14.1").unwrap())
+            Some(UnresolvedVersionSpec::parse("~0.14.1").unwrap())
         );
     }
 }
