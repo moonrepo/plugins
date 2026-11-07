@@ -2,13 +2,13 @@ use crate::config::NodeToolConfig;
 use extism_pdk::*;
 use lang_javascript_common::{
     NodeDistLTS, NodeDistVersion, extract_dev_engine_runtime_version, extract_engine_version,
-    extract_version_from_text, extract_volta_version, insert_dev_engine_version, remove_dev_engine,
+    extract_volta_version, insert_dev_engine_version, remove_dev_engine,
 };
 use nodejs_package_json::PackageJson;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
 use std::collections::HashMap;
-use tool_common::{enable_tracing, ensure_stable_latest};
+use tool_common::{enable_tracing, ensure_stable_latest, extract_version_from_text};
 
 #[host_fn]
 extern "ExtismHost" {
