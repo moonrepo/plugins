@@ -2,7 +2,8 @@ use crate::config::NodeToolConfig;
 use extism_pdk::*;
 use lang_javascript_common::{
     NodeDistLTS, NodeDistVersion, extract_dev_engine_runtime_version, extract_engine_version,
-    extract_volta_version, insert_dev_engine_version, remove_dev_engine,
+    extract_volta_version, get_dev_engine_version_error, insert_dev_engine_version,
+    remove_dev_engine,
 };
 use nodejs_package_json::PackageJson;
 use proto_pdk::*;
@@ -114,6 +115,12 @@ pub fn pin_version(Json(input): Json<PinVersionInput>) -> FnResult<Json<PinVersi
 
     if file.exists() {
         let mut package_json: json::Value = starbase_utils::json::read_file(&file)?;
+
+        if let Some(error) = get_dev_engine_version_error(&input.version) {
+            output.error = Some(error);
+
+            return Ok(Json(output));
+        }
 
         insert_dev_engine_version(
             &mut package_json,
