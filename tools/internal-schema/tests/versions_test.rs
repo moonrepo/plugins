@@ -27,6 +27,27 @@ mod schema_tool {
     }
 
     #[tokio::test(flavor = "multi_thread")]
+    async fn parses_version_file_without_comments() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_schema_plugin("schema-test", locate_fixture("schemas").join("base.toml"))
+            .await;
+
+        let output = plugin
+            .parse_version_file(ParseVersionFileInput {
+                content: "# pinned for CI\n1.4 # stable\n".into(),
+                file: ".moon-version".into(),
+                ..Default::default()
+            })
+            .await;
+
+        assert_eq!(
+            output.version,
+            Some(UnresolvedVersionSpec::parse("1.4").unwrap())
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
     async fn sets_latest_alias() {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox

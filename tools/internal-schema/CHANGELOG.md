@@ -4,6 +4,8 @@
 
 #### 🐞 Fixes
 
+- Fixed comments in version files, like `1.4 # stable`, failing to parse. The first line with a
+  version is now used, and everything after `#` is ignored.
 - Fixed the `latest` version resolving to a pre-release or a version with build metadata, when configured as such. It now falls back to the highest stable version.
 - Fixed the `year`, `month`, and `day` version pattern groups being ignored, unless a `major` group was also matched.
 - Fixed a single version with leading zeros, like `2024.01.05`, failing to load all versions. Leading zeros are now removed, for example `2024.1.5`.
