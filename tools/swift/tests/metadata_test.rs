@@ -29,7 +29,7 @@ mod swift_tool {
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    async fn registers_default_linux_platform_lock_metadata() {
+    async fn registers_detected_linux_platform_lock_metadata() {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("swift-test", |config| {
@@ -43,14 +43,8 @@ mod swift_tool {
             })
             .await;
 
-        assert_eq!(
-            metadata
-                .lock_options
-                .metadata
-                .get("platform")
-                .map(String::as_str),
-            Some("ubuntu-24.04")
-        );
+        // Detected from the machine running the tests, or the default
+        assert!(metadata.lock_options.metadata.contains_key("platform"));
     }
 
     #[tokio::test(flavor = "multi_thread")]
@@ -77,7 +71,7 @@ mod swift_tool {
                     config
                         .host(HostOS::Linux, HostArch::X64)
                         .tool_config(SwiftToolConfig {
-                            linux_platform: linux_platform.clone(),
+                            linux_platform: Some(linux_platform.clone()),
                             ..Default::default()
                         });
                 })

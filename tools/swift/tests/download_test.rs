@@ -7,6 +7,14 @@ mod swift_tool {
     const SWIFT_5_RELEASE_KEY: &str = include_str!("../src/keys/release-key-v5.asc");
     const SWIFT_6_RELEASE_KEY: &str = include_str!("../src/keys/release-key-v6.asc");
 
+    // Pinned, as an unset platform is detected from the machine running the tests
+    fn ubuntu_2404() -> SwiftToolConfig {
+        SwiftToolConfig {
+            linux_platform: Some(LinuxPlatform::Ubuntu2404),
+            ..Default::default()
+        }
+    }
+
     #[tokio::test(flavor = "multi_thread")]
     async fn supports_all_linux_platforms() {
         let platforms = [
@@ -32,7 +40,7 @@ mod swift_tool {
                     config
                         .host(HostOS::Linux, HostArch::X64)
                         .tool_config(SwiftToolConfig {
-                            linux_platform: linux_platform.clone(),
+                            linux_platform: Some(linux_platform.clone()),
                             ..Default::default()
                         });
                 })
@@ -81,7 +89,7 @@ mod swift_tool {
                     config
                         .host(HostOS::Linux, HostArch::X64)
                         .tool_config(SwiftToolConfig {
-                            linux_platform: linux_platform.clone(),
+                            linux_platform: Some(linux_platform.clone()),
                             ..Default::default()
                         });
                 })
@@ -133,7 +141,7 @@ mod swift_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("swift-test", |config| {
-                    config.host(os, arch);
+                    config.host(os, arch).tool_config(ubuntu_2404());
                 })
                 .await;
 
@@ -157,7 +165,9 @@ mod swift_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("swift-test", |config| {
-                config.host(HostOS::Linux, HostArch::Arm64);
+                config
+                    .host(HostOS::Linux, HostArch::Arm64)
+                    .tool_config(ubuntu_2404());
             })
             .await;
 
@@ -190,7 +200,9 @@ mod swift_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("swift-test", |config| {
-                config.host(HostOS::Linux, HostArch::X64);
+                config
+                    .host(HostOS::Linux, HostArch::X64)
+                    .tool_config(ubuntu_2404());
             })
             .await;
 
@@ -223,7 +235,9 @@ mod swift_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("swift-test", |config| {
-                config.host(HostOS::Linux, HostArch::X64);
+                config
+                    .host(HostOS::Linux, HostArch::X64)
+                    .tool_config(ubuntu_2404());
             })
             .await;
 
@@ -257,7 +271,9 @@ mod swift_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("swift-test", |config| {
-                config.host(HostOS::Linux, HostArch::X64);
+                config
+                    .host(HostOS::Linux, HostArch::X64)
+                    .tool_config(ubuntu_2404());
             })
             .await;
 
@@ -333,7 +349,9 @@ mod swift_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("swift-test", |config| {
-                config.host(HostOS::Linux, HostArch::X64);
+                config
+                    .host(HostOS::Linux, HostArch::X64)
+                    .tool_config(ubuntu_2404());
             })
             .await;
 

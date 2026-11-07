@@ -1,4 +1,4 @@
-use crate::config::SwiftToolConfig;
+use crate::config::{LinuxPlatform, SwiftToolConfig};
 use crate::version::{from_swift_version, to_swift_version};
 use extism_pdk::*;
 use proto_pdk::*;
@@ -9,9 +9,25 @@ use tool_common::{enable_tracing, extract_version_from_text};
 #[host_fn]
 extern "ExtismHost" {
     fn exec_command(input: Json<ExecCommandInput>) -> Json<ExecCommandOutput>;
+    fn host_log(input: Json<HostLogInput>);
 }
 
 static NAME: &str = "Swift";
+
+// Swift.org builds each Linux toolchain against a specific distribution
+fn detect_linux_platform(config: &SwiftToolConfig) -> AnyResult<Option<LinuxPlatform>> {
+    if config.linux_platform.is_some() {
+        return Ok(config.linux_platform.clone());
+    }
+
+    let output = exec_captured("cat", ["/etc/os-release"])?;
+
+    Ok(if output.exit_code == 0 {
+        LinuxPlatform::from_os_release(&output.stdout)
+    } else {
+        None
+    })
+}
 
 #[plugin_fn]
 pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {
@@ -22,10 +38,11 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
 
     if env.os.is_linux() {
         let config: SwiftToolConfig = get_tool_config()?;
+        let platform = detect_linux_platform(&config)?.unwrap_or_default();
 
         lock_options
             .metadata
-            .insert("platform".into(), config.linux_platform.to_string());
+            .insert("platform".into(), platform.to_string());
     }
 
     Ok(Json(RegisterToolOutput {
@@ -135,7 +152,19 @@ pub fn download_prebuilt(
 
     let (platform, archive_prefix, filename) = match env.os {
         HostOS::Linux => {
-            let linux_platform = config.linux_platform;
+            let linux_platform = match detect_linux_platform(&config)? {
+                Some(platform) => platform,
+                None => {
+                    let platform = LinuxPlatform::default();
+
+                    host_log!(
+                        warn,
+                        "Unable to detect a Linux distribution that Swift supports, using {platform}. Configure the <property>linux-platform</property> setting to choose another.",
+                    );
+
+                    platform
+                }
+            };
             let download_platform = linux_platform.get_download_platform();
             let archive_suffix = linux_platform.get_archive_suffix();
 

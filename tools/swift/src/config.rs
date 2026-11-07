@@ -65,20 +65,113 @@ impl LinuxPlatform {
             Self::Ubuntu2604 => "ubuntu2604",
         }
     }
+
+    /// Detect the platform from the contents of `/etc/os-release`, like swiftly,
+    /// where RHEL derivatives (Rocky, Alma, etc) use the UBI builds.
+    pub fn from_os_release(content: &str) -> Option<Self> {
+        let (mut id, mut id_like, mut version) = ("", "", "");
+
+        for line in content.lines() {
+            if let Some((key, value)) = line.split_once('=') {
+                let value = value.trim().trim_matches(['"', '\'']);
+
+                match key.trim() {
+                    "ID" => id = value,
+                    "ID_LIKE" => id_like = value,
+                    "VERSION_ID" => version = value,
+                    _ => {}
+                };
+            }
+        }
+
+        Some(match (id, version) {
+            ("ubuntu", "20.04") => Self::Ubuntu2004,
+            ("ubuntu", "22.04") => Self::Ubuntu2204,
+            ("ubuntu", "24.04") => Self::Ubuntu2404,
+            ("ubuntu", "26.04") => Self::Ubuntu2604,
+            ("debian", "12") => Self::Debian12,
+            ("debian", "13") => Self::Debian13,
+            ("fedora", "39") => Self::Fedora39,
+            ("fedora", "41") => Self::Fedora41,
+            ("amzn", "2") => Self::AmazonLinux2,
+            ("amzn", "2023") => Self::AmazonLinux2023,
+            _ if id == "rhel" || id_like.split_whitespace().any(|like| like == "rhel") => {
+                match version.split('.').next() {
+                    Some("9") => Self::RedhatUbi9,
+                    Some("10") => Self::RedhatUbi10,
+                    _ => return None,
+                }
+            }
+            _ => return None,
+        })
+    }
 }
 
 #[derive(Debug, schematic::Schematic, serde::Deserialize, serde::Serialize)]
 #[serde(default, deny_unknown_fields, rename_all = "kebab-case")]
 pub struct SwiftToolConfig {
     pub dist_url: String,
-    pub linux_platform: LinuxPlatform,
+    /// Detected from `/etc/os-release` when not configured.
+    pub linux_platform: Option<LinuxPlatform>,
 }
 
 impl Default for SwiftToolConfig {
     fn default() -> Self {
         Self {
             dist_url: "https://download.swift.org/{release}/{platform}/{folder}/{file}".into(),
-            linux_platform: LinuxPlatform::default(),
+            linux_platform: None,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn detects_platform_from_os_release() {
+        for (content, expected) in [
+            ("ID=ubuntu\nVERSION_ID=\"24.04\"", LinuxPlatform::Ubuntu2404),
+            ("ID=ubuntu\nVERSION_ID=\"22.04\"", LinuxPlatform::Ubuntu2204),
+            ("ID=debian\nVERSION_ID=\"13\"", LinuxPlatform::Debian13),
+            ("ID=fedora\nVERSION_ID=41", LinuxPlatform::Fedora41),
+            (
+                "ID=\"amzn\"\nID_LIKE=\"centos rhel fedora\"\nVERSION_ID=\"2\"",
+                LinuxPlatform::AmazonLinux2,
+            ),
+            (
+                "ID=\"amzn\"\nID_LIKE=\"fedora\"\nVERSION_ID=\"2023\"",
+                LinuxPlatform::AmazonLinux2023,
+            ),
+            ("ID=\"rhel\"\nVERSION_ID=\"9.4\"", LinuxPlatform::RedhatUbi9),
+            (
+                "ID=\"rocky\"\nID_LIKE=\"rhel centos fedora\"\nVERSION_ID=\"10.0\"",
+                LinuxPlatform::RedhatUbi10,
+            ),
+        ] {
+            assert_eq!(
+                LinuxPlatform::from_os_release(content),
+                Some(expected),
+                "for {content:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn doesnt_detect_unsupported_platforms() {
+        for content in [
+            "",
+            "ID=ubuntu\nVERSION_ID=\"18.04\"",
+            "ID=fedora\nVERSION_ID=40",
+            "ID=linuxmint\nID_LIKE=\"ubuntu debian\"\nVERSION_ID=\"22\"",
+            "ID=alpine\nVERSION_ID=3.20.0",
+            "ID=\"rocky\"\nID_LIKE=\"rhel centos fedora\"\nVERSION_ID=\"8.10\"",
+        ] {
+            assert_eq!(
+                LinuxPlatform::from_os_release(content),
+                None,
+                "for {content:?}"
+            );
         }
     }
 }
