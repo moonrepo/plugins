@@ -3,9 +3,3 @@ debug = "line-tables-only"
 
 [profile.dev.package."*"]
 debug = false
-
-# Native builds (like unit tests) can link a PDK object that references the
-# Extism host functions, which only exist in WASM. Unlike other linkers, MSVC
-# errors for these unused references, so let them stay unresolved.
-[target.'cfg(all(windows, target_env = "msvc"))']
-rustflags = ["-C", "link-arg=/FORCE:UNRESOLVED"]

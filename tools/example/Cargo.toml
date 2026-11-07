@@ -25,4 +25,4 @@ serde = { workspace = true }
 
 [features]
 default = ["wasm"]
-wasm = []
+wasm = ["tool_common/wasm"]

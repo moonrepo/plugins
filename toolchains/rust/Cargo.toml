@@ -42,4 +42,4 @@ toml = { workspace = true }
 
 [features]
 default = ["wasm"]
-wasm = ["rust_tool/wasm"]
+wasm = ["toolchain_common/wasm", "rust_tool/wasm"]

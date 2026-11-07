@@ -47,4 +47,4 @@ tokio = { workspace = true }
 
 [features]
 default = ["wasm"]
-wasm = []
+wasm = ["toolchain_common/wasm"]

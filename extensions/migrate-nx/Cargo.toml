@@ -37,4 +37,4 @@ tokio = { workspace = true }
 
 [features]
 default = ["wasm"]
-wasm = []
+wasm = ["extension_common/wasm"]
