@@ -4,7 +4,7 @@ use proto_pdk::*;
 use serde_json::Value as JsonValue;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
-use tool_common::{enable_tracing, ensure_stable_latest};
+use tool_common::{enable_tracing, ensure_stable_latest, extract_version_from_text};
 
 macro_rules! override_option {
     ($prev:ident, $next:ident, [ $($prop:ident),* ]) => {
@@ -139,6 +139,17 @@ pub fn detect_version_files(
             ignore: schema.detect.ignore,
         },
         Schema::V2(schema) => schema.detect,
+    }))
+}
+
+#[plugin_fn]
+pub fn parse_version_file(
+    Json(input): Json<ParseVersionFileInput>,
+) -> FnResult<Json<ParseVersionFileOutput>> {
+    Ok(Json(ParseVersionFileOutput {
+        version: extract_version_from_text(&input.content)
+            .map(UnresolvedVersionSpec::parse)
+            .transpose()?,
     }))
 }
 
