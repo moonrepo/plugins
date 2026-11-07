@@ -246,7 +246,7 @@ mod java_tool {
 
         let output = plugin
             .parse_version_file(ParseVersionFileInput {
-                content: "temurin-21\n".into(),
+                content: "# pinned for CI\ntemurin-21 # LTS\n".into(),
                 file: ".java-version".into(),
                 ..Default::default()
             })

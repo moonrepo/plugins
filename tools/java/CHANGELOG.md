@@ -4,6 +4,8 @@
 
 #### 🐞 Fixes
 
+- Fixed comments in `.java-version`, like `21 # LTS`, failing to parse. Everything after `#` is
+  now ignored.
 - Fixed versions without build metadata, like `temurin-21.0.11` or `21.0.2` in `.java-version`,
   failing to resolve, as every listed version has one (`21.0.11+10`). They now match any build.
 - Fixed `.sdkmanrc` parsing:
