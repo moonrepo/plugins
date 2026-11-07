@@ -7,6 +7,10 @@ extern "ExtismHost" {
     fn exec_command(input: Json<ExecCommandInput>) -> Json<ExecCommandOutput>;
 }
 
+// The `canary` release on GitHub is a stale moon v1 build
+static CANARY_ERROR: &str =
+    "moon no longer publishes canary builds, as of v2. Use a version or the latest alias instead.";
+
 #[plugin_fn]
 pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {
     enable_tracing();
@@ -47,6 +51,10 @@ pub fn build_instructions(
             HostOS::Windows => [HostArch::X64],
         ],
     )?;
+
+    if version.is_canary() {
+        return Err(plugin_err!(CANARY_ERROR));
+    }
 
     let instructions = if is_v2(&version) {
         vec![
@@ -131,6 +139,10 @@ pub fn download_prebuilt(
     let version = input.context.version;
     let arch = env.arch.to_rust_arch();
 
+    if version.is_canary() {
+        return Err(plugin_err!(CANARY_ERROR));
+    }
+
     // moon v2.0 and v2.1 weren't released for macOS x64
     if env.os == HostOS::MacOS
         && env.arch == HostArch::X64
@@ -145,14 +157,7 @@ pub fn download_prebuilt(
         }));
     }
 
-    let base_url = format!(
-        "https://github.com/moonrepo/moon/releases/download/{}",
-        if version.is_canary() {
-            "canary".to_owned()
-        } else {
-            format!("v{version}")
-        }
-    );
+    let base_url = format!("https://github.com/moonrepo/moon/releases/download/v{version}");
 
     let target = match env.os {
         HostOS::Linux => format!("{arch}-unknown-linux-{}", env.libc),

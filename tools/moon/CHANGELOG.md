@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+#### 💥 Breaking
+
+- The `canary` version now errors. moon stopped publishing canary builds in v2, and the old `canary`
+  release on GitHub only has a moon v1 build from December 2025, which was installed instead.
+
 #### 🐞 Fixes
 
 - Fixed building moon v1 from source, which tried to build a `moonx` binary that only exists in v2.

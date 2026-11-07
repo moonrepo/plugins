@@ -5,10 +5,21 @@ mod moon_tool {
 
     generate_download_install_tests!("moon-test", "1.30.0");
 
-    mod canary {
-        use super::*;
+    #[tokio::test(flavor = "multi_thread")]
+    #[should_panic(expected = "moon no longer publishes canary builds")]
+    async fn doesnt_support_canary() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("moon-test").await;
 
-        generate_download_install_tests!("moon-test", "canary");
+        plugin
+            .download_prebuilt(DownloadPrebuiltInput {
+                context: PluginContext {
+                    version: VersionSpec::Canary,
+                    ..Default::default()
+                },
+                ..Default::default()
+            })
+            .await;
     }
 
     mod v2 {
