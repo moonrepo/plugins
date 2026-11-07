@@ -1,14 +1,13 @@
 use crate::config::DenoToolConfig;
 use extism_pdk::*;
 use lang_javascript_common::{
-    extract_dev_engine_runtime_version, extract_version_from_text, insert_dev_engine_version,
-    remove_dev_engine,
+    extract_dev_engine_runtime_version, insert_dev_engine_version, remove_dev_engine,
 };
 use nodejs_package_json::PackageJson;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
 use std::collections::HashMap;
-use tool_common::{append_env_bin_dir, enable_tracing};
+use tool_common::{append_env_bin_dir, enable_tracing, extract_version_from_text};
 
 #[host_fn]
 extern "ExtismHost" {
