@@ -9,10 +9,14 @@
 
 #### 🚀 Updates
 
+- Added `engines.deno` in `package.json` as a fallback for version detection, which Deno v2.9+
+  also checks.
 - Added checksum verification for `canary` downloads.
 
 #### 🐞 Fixes
 
+- Fixed pinning an alias, like `lts` or `latest`, writing it to `devEngines` in `package.json`, which
+  only supports versions and ranges. It now errors instead.
 - Fixed building from source:
   - Linux always failed, as the `llvm.sh` script it ran must be run as root. `clang` and `lld` are
     now installed as system dependencies instead.

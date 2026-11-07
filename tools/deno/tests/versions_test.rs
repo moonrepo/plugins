@@ -34,6 +34,25 @@ mod deno_tool {
     }
 
     #[tokio::test(flavor = "multi_thread")]
+    async fn parses_engines() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("deno-test").await;
+
+        assert_eq!(
+            plugin
+                .parse_version_file(ParseVersionFileInput {
+                    content: r#"{ "engines": { "deno": ">=2.9" } }"#.into(),
+                    file: "package.json".into(),
+                    ..Default::default()
+                })
+                .await,
+            ParseVersionFileOutput {
+                version: Some(UnresolvedVersionSpec::parse(">=2.9").unwrap()),
+            }
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
     async fn parses_dev_engines() {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox.create_plugin("deno-test").await;
