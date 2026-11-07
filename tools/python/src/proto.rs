@@ -41,7 +41,8 @@ pub fn define_tool_config(_: ()) -> FnResult<Json<DefineToolConfigOutput>> {
 #[plugin_fn]
 pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
     Ok(Json(DetectVersionOutput {
-        files: vec![".python-version".into()],
+        // `.python-versions` is uv's file for multiple versions, where the first is the default
+        files: vec![".python-version".into(), ".python-versions".into()],
         ignore: vec![],
     }))
 }
@@ -59,7 +60,7 @@ pub fn parse_version_file(
         None => {
             host_log!(
                 warn,
-                "<file>{}</file> doesn't pin a CPython version, ignoring it",
+                "<file>{}</file> doesn't pin a CPython version that proto can install (like <id>system</id>, PyPy, or a free-threaded build), ignoring it",
                 input.file,
             );
         }
