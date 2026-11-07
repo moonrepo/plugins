@@ -4,6 +4,8 @@
 
 #### 🐞 Fixes
 
+- Fixed comments in `.poetry-version`, like `2.1.1 # stable`, failing to parse. Everything
+  after `#` is now ignored.
 - Fixed installing prereleases, like `1.2.0-rc2`, which the installer rejected as it only accepts
   PyPI's `1.2.0rc2` form.
 - Fixed the post-install hook running whichever `poetry` was on `PATH` instead of the version that
