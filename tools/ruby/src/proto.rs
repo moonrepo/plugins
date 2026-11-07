@@ -3,6 +3,7 @@ use crate::version::*;
 use extism_pdk::*;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
+use starbase_utils::fs;
 use std::collections::{HashMap, HashSet};
 use tool_common::{enable_tracing, registry::*};
 
@@ -47,9 +48,10 @@ pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
 pub fn parse_version_file(
     Json(input): Json<ParseVersionFileInput>,
 ) -> FnResult<Json<ParseVersionFileOutput>> {
+    let content = fs::read_file(&input.path)?;
     let mut output = ParseVersionFileOutput::default();
 
-    match parse_ruby_version_file(&input.content) {
+    match parse_ruby_version_file(&content) {
         Some(version) => {
             output.version = Some(UnresolvedVersionSpec::parse(version)?);
         }

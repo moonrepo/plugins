@@ -1,5 +1,6 @@
 ---
 source: tools/bun/tests/versions_test.rs
+assertion_line: 377
 expression: "fs::read_to_string(sandbox.path().join(\"package.json\")).unwrap()"
 ---
 {
@@ -13,10 +14,6 @@ expression: "fs::read_to_string(sandbox.path().join(\"package.json\")).unwrap()"
         "name": "bun",
         "version": ">=1"
       }
-    ],
-    "packageManager": {
-      "name": "bun",
-      "version": ">=1"
-    }
+    ]
   }
 }

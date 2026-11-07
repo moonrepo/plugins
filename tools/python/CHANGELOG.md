@@ -1,12 +1,41 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added uv's `.python-versions` file to version detection, after `.python-version`.
+
+#### 🐞 Fixes
+
+- Fixed free-threaded and debug builds in `.python-version`, like `3.13t` or `3.13+freethreaded`
+  (written by `uv python pin`), installing the standard build or failing to parse. They're now
+  ignored with a warning, as only standard builds are available.
+- Fixed 32-bit ARM Linux installing the soft-float (`gnueabi`) build, which hard-float distros,
+  like Raspberry Pi OS, can't run. The hard-float (`gnueabihf`) build is now preferred.
+- Fixed a comment after the version in `.python-version`, like `3.13 # stable`, failing to
+  parse. Everything after `#` is now ignored.
+- Fixed `.python-version` files failing to resolve when they contain comments or several versions
+  (one per line, as written by pyenv), in which case the first is used, or a CPython prerelease,
+  like `3.15.0rc2`. Files for other implementations, like `pypy3.10-7.3.12`, or `system`, are now
+  ignored with a warning instead of failing.
+- Added `$PYTHONUSERBASE/bin` as a globals directory on Unix, which is where `pip install --user`
+  writes when the user base is overridden. When it already is a `bin` directory, it's used as-is.
+- Added `git`, `bash`, and `libzstd-dev` to the build from source system dependencies, as suggested
+  by pyenv. Without them, Alpine couldn't run `python-build`, and Debian/Ubuntu built 3.14+ without
+  the `compression.zstd` module.
+
+#### ⚙️ Internal
+
+- Version files are now read from their path, as the `content` input is deprecated.
+
 ## 0.15.0
 
 #### 🚀 Updates
 
 - Updated pre-builts to reference our new API: https://registry.moonrepo.app/releases/python
 - Added a new config setting `use-latest-build`, that will resolve a version to use the latest available build (trailing `+`) when one exists, and no build was provided in the original version.
-- 
+
 ## 0.14.9
 
 #### 🚀 Updates

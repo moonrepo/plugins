@@ -1,14 +1,15 @@
 use crate::config::DenoToolConfig;
 use extism_pdk::*;
 use lang_javascript_common::{
-    extract_dev_engine_runtime_version, extract_version_from_text, insert_dev_engine_version,
-    remove_dev_engine,
+    extract_dev_engine_runtime_version, extract_engine_version, get_dev_engine_version_error,
+    insert_dev_engine_version, remove_dev_engine,
 };
 use nodejs_package_json::PackageJson;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
+use starbase_utils::fs;
 use std::collections::HashMap;
-use tool_common::enable_tracing;
+use tool_common::{append_env_bin_dir, enable_tracing, extract_version_from_text};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -50,19 +51,37 @@ pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
 pub fn parse_version_file(
     Json(input): Json<ParseVersionFileInput>,
 ) -> FnResult<Json<ParseVersionFileOutput>> {
+    let content = fs::read_file(&input.path)?;
     let mut version = None;
 
     if input.file == "package.json" {
-        if let Ok(package_json) = json::from_str::<PackageJson>(&input.content)
-            && let Some(constraint) = extract_dev_engine_runtime_version(&package_json, "deno")
-        {
-            version = Some(UnresolvedVersionSpec::parse(constraint)?);
+        if let Ok(package_json) = json::from_str::<PackageJson>(&content) {
+            if let Some(constraint) = extract_dev_engine_runtime_version(&package_json, "deno") {
+                version = Some(UnresolvedVersionSpec::parse(constraint)?);
+            }
+            // Deno v2.9+ checks this too
+            else if let Some(constraint) = extract_engine_version(&package_json, "deno") {
+                version = Some(UnresolvedVersionSpec::parse(constraint)?);
+            }
         }
-    } else if let Some(constraint) = extract_version_from_text(&input.content) {
+    } else if let Some(constraint) = extract_dvmrc_version(&content) {
         version = Some(UnresolvedVersionSpec::parse(constraint)?);
     }
 
     Ok(Json(ParseVersionFileOutput { version }))
+}
+
+// dvm v1.8+ writes `key=value` lines (`deno_version=1.40.0`),
+// while older dvm and setup-deno read a bare version
+fn extract_dvmrc_version(content: &str) -> Option<&str> {
+    content
+        .lines()
+        .find_map(|line| {
+            let (key, value) = line.split_once('=')?;
+
+            (key.trim() == "deno_version").then_some(value.trim())
+        })
+        .or_else(|| extract_version_from_text(content))
 }
 
 #[plugin_fn]
@@ -72,6 +91,12 @@ pub fn pin_version(Json(input): Json<PinVersionInput>) -> FnResult<Json<PinVersi
 
     if file.exists() {
         let mut package_json: json::Value = starbase_utils::json::read_file(&file)?;
+
+        if let Some(error) = get_dev_engine_version_error(&input.version) {
+            output.error = Some(error);
+
+            return Ok(Json(output));
+        }
 
         insert_dev_engine_version(
             &mut package_json,
@@ -125,7 +150,7 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
     Ok(Json(LoadVersionsOutput::from(tags)?))
 }
 
-// https://docs.deno.com/runtime/contributing/building_from_source/
+// https://github.com/denoland/deno/blob/main/.github/CONTRIBUTING.md#building-from-source
 #[plugin_fn]
 pub fn build_instructions(
     Json(input): Json<BuildInstructionsInput>,
@@ -144,21 +169,21 @@ pub fn build_instructions(
     )?;
 
     let mut output = BuildInstructionsOutput {
-        // source: Some(SourceLocation::Git(GitSource {
-        //     url: "https://github.com/denoland/deno.git".into(),
-        //     reference: None,
-        //     submodules: true,
-        // })),
+        // Unlike GitHub's tag archives, includes the submodules
         source: Some(SourceLocation::Archive(ArchiveSource {
-            url: format!("https://github.com/denoland/deno/archive/refs/tags/v{version}.tar.gz"),
-            prefix: Some(format!("deno-{version}")),
+            url: format!(
+                "https://github.com/denoland/deno/releases/download/v{version}/deno_src.tar.gz"
+            ),
+            prefix: Some("deno".into()),
         })),
         help_url: Some(
-            "https://docs.deno.com/runtime/manual/references/contributing/building_from_source"
+            "https://github.com/denoland/deno/blob/main/.github/CONTRIBUTING.md#building-from-source"
                 .into(),
         ),
         system_dependencies: vec![
             // Linux
+            SystemDependency::for_os(HostOS::Linux, "clang"),
+            SystemDependency::for_os(HostOS::Linux, "lld"),
             SystemDependency::for_os(HostOS::Linux, "cmake"),
             SystemDependency::for_os(HostOS::Linux, "libglib2.0-dev"),
             SystemDependency::for_os(HostOS::Linux, "protobuf-compiler"),
@@ -173,37 +198,20 @@ pub fn build_instructions(
             BuildRequirement::XcodeCommandLineTools,
             BuildRequirement::GitVersion(Requirement::parse(">=2.19.2")?),
             BuildRequirement::CommandExistsOnPath("cargo".into()),
-            BuildRequirement::CommandVersion("python".into(), Requirement::parse(">=3")?, None),
         ],
         ..Default::default()
     };
 
-    match env.os {
-        HostOS::MacOS => {}
-        HostOS::Windows => {
-            output.requirements.extend(vec![
-                BuildRequirement::GitConfigSetting("core.symlinks".into(), "true".into()),
-                BuildRequirement::ManualIntercept(
-                    "https://docs.deno.com/runtime/contributing/building_from_source/#windows"
-                        .into(),
-                ),
-            ]);
+    if env.os.is_windows() {
+        output.requirements.extend(vec![
+            BuildRequirement::GitConfigSetting("core.symlinks".into(), "true".into()),
+            BuildRequirement::ManualIntercept(
+                "https://github.com/denoland/deno/blob/main/.github/CONTRIBUTING.md#windows".into(),
+            ),
+        ]);
 
-            // TODO download protobuf
-        }
-        // Not sure if these apply to all Linux based...
-        _ => {
-            output.instructions.extend(vec![
-                BuildInstruction::RequestScript("https://apt.llvm.org/llvm.sh".into()),
-                BuildInstruction::MakeExecutable("llvm.sh".into()),
-                BuildInstruction::RunCommand(Box::new(CommandInstruction::new(
-                    "./llvm.sh",
-                    ["16"],
-                ))),
-                BuildInstruction::RemoveFile("./llvm.sh".into()),
-            ]);
-        }
-    };
+        // TODO download protobuf
+    }
 
     // These must come last as it's the actual command to build the binary!
     output.instructions.extend(vec![
@@ -236,6 +244,13 @@ pub fn download_prebuilt(
             HostOS::Windows => [HostArch::X64, HostArch::Arm64],
         ],
     )?;
+
+    // Deno only publishes glibc builds for Linux
+    if env.os.is_linux() && env.libc == HostLibc::Musl {
+        return Err(plugin_err!(
+            "No pre-built Deno archive is available for musl Linux targets."
+        ));
+    }
 
     let config = get_tool_config::<DenoToolConfig>()?;
     let version = &input.context.version;
@@ -278,7 +293,8 @@ pub fn download_prebuilt(
 
     Ok(Json(DownloadPrebuiltOutput {
         // Checksums were added in v2.0.1+ but were broken in v2.0.0
-        checksum_url: if version.is_latest()
+        checksum_url: if version.is_canary()
+            || version.is_latest()
             || version
                 .as_version()
                 .is_some_and(|v| checksum_req.matches(v))
@@ -304,9 +320,11 @@ pub fn locate_executables(
             "deno".into(),
             ExecutableConfig::new_primary(env.os.get_exe_name("deno")),
         )]),
+        // https://docs.deno.com/runtime/reference/cli/install/
+        // Bins go in the root's `bin` dir, unless the root already is one (v2.2.11+)
         globals_lookup_dirs: vec![
-            "$DENO_INSTALL_ROOT/bin".into(),
-            "$DENO_HOME/bin".into(),
+            append_env_bin_dir("DENO_INSTALL_ROOT")?,
+            append_env_bin_dir("DENO_HOME")?,
             "$HOME/.deno/bin".into(),
         ],
         ..Default::default()

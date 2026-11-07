@@ -37,7 +37,7 @@ index-url = "https://ziglang.org/download/index.json"
 
 ## Version detection
 
-The plugin detects exact versions from `.zig-version` and `.zigversion`. It also detects `minimum_zig_version` from `build.zig.zon` as a minimum version requirement.
+The plugin detects exact versions from `.zig-version` and `.zigversion`. It also detects `minimum_zig_version` from `build.zig.zon`, which resolves to the latest patch of that minor version (`0.14.0` resolves to the latest `0.14.x`), as Zig changes APIs between minor versions.
 
 ## Contributing
 

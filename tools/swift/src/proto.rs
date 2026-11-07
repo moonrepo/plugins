@@ -1,17 +1,34 @@
-use crate::config::SwiftToolConfig;
+use crate::config::{LinuxPlatform, SwiftToolConfig};
 use crate::version::{from_swift_version, to_swift_version};
 use extism_pdk::*;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
+use starbase_utils::fs;
 use std::collections::HashMap;
-use tool_common::enable_tracing;
+use tool_common::{enable_tracing, extract_version_from_text};
 
 #[host_fn]
 extern "ExtismHost" {
     fn exec_command(input: Json<ExecCommandInput>) -> Json<ExecCommandOutput>;
+    fn host_log(input: Json<HostLogInput>);
 }
 
 static NAME: &str = "Swift";
+
+// Swift.org builds each Linux toolchain against a specific distribution
+fn detect_linux_platform(config: &SwiftToolConfig) -> AnyResult<Option<LinuxPlatform>> {
+    if config.linux_platform.is_some() {
+        return Ok(config.linux_platform.clone());
+    }
+
+    let output = exec_captured("cat", ["/etc/os-release"])?;
+
+    Ok(if output.exit_code == 0 {
+        LinuxPlatform::from_os_release(&output.stdout)
+    } else {
+        None
+    })
+}
 
 #[plugin_fn]
 pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {
@@ -22,10 +39,11 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
 
     if env.os.is_linux() {
         let config: SwiftToolConfig = get_tool_config()?;
+        let platform = detect_linux_platform(&config)?.unwrap_or_default();
 
         lock_options
             .metadata
-            .insert("platform".into(), config.linux_platform.to_string());
+            .insert("platform".into(), platform.to_string());
     }
 
     Ok(Json(RegisterToolOutput {
@@ -58,19 +76,26 @@ pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
 pub fn parse_version_file(
     Json(input): Json<ParseVersionFileInput>,
 ) -> FnResult<Json<ParseVersionFileOutput>> {
+    let content = fs::read_file(&input.path)?;
     let mut version = None;
 
     if input.file == ".swift-version" {
-        if let Some(line) = input.content.lines().find(|line| !line.trim().is_empty()) {
-            version = Some(UnresolvedVersionSpec::parse(line.trim())?);
+        if let Some(line) = extract_version_from_text(&content) {
+            version = Some(UnresolvedVersionSpec::parse(line)?);
         }
     } else if input.file == "Package.swift" {
-        for line in input.content.lines() {
-            let line = line.trim();
+        // SwiftPM allows any spacing after `//`, any label casing,
+        // and trailing `;` settings like `6.3;(experimentalCGen)`
+        for line in content.lines() {
+            let line = line.trim().to_ascii_lowercase();
 
-            if let Some(raw_version) = line.strip_prefix("// swift-tools-version:") {
-                let raw_version = raw_version.trim();
-                let range = format!("^{raw_version}");
+            if let Some(raw_version) = line
+                .strip_prefix("//")
+                .and_then(|comment| comment.trim_start().strip_prefix("swift-tools-version:"))
+            {
+                let raw_version = raw_version.split(';').next().unwrap_or_default().trim();
+                // A minimum, as newer toolchains build older manifests
+                let range = format!(">={raw_version}");
 
                 version = Some(UnresolvedVersionSpec::parse(range)?);
                 break;
@@ -130,7 +155,19 @@ pub fn download_prebuilt(
 
     let (platform, archive_prefix, filename) = match env.os {
         HostOS::Linux => {
-            let linux_platform = config.linux_platform;
+            let linux_platform = match detect_linux_platform(&config)? {
+                Some(platform) => platform,
+                None => {
+                    let platform = LinuxPlatform::default();
+
+                    host_log!(
+                        warn,
+                        "Unable to detect a Linux distribution that Swift supports, using {platform}. Configure the <property>linux-platform</property> setting to choose another.",
+                    );
+
+                    platform
+                }
+            };
             let download_platform = linux_platform.get_download_platform();
             let archive_suffix = linux_platform.get_archive_suffix();
 
@@ -213,7 +250,8 @@ pub fn locate_executables(
             ),
         ]),
         exes_dirs: vec!["usr/bin".into()],
-        globals_lookup_dirs: vec!["$TOOL_DIR/usr/bin".into()],
+        // Where `swift package experimental-install` writes
+        globals_lookup_dirs: vec!["$HOME/.swiftpm/bin".into()],
         ..Default::default()
     }))
 }

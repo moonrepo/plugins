@@ -1,5 +1,19 @@
 use proto_pdk_test_utils::*;
 
+fn version_file(
+    sandbox: &ProtoWasmSandbox,
+    file: &str,
+    content: impl AsRef<str>,
+) -> ParseVersionFileInput {
+    sandbox.create_file(file, content);
+
+    ParseVersionFileInput {
+        file: file.into(),
+        path: VirtualPath::new(sandbox.path().join(file)),
+        ..Default::default()
+    }
+}
+
 mod rust_tool {
     use super::*;
 
@@ -40,11 +54,11 @@ mod rust_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: "1.60.0".into(),
-                    file: "rust-toolchain".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    "rust-toolchain",
+                    "1.60.0 # pinned for CI\n"
+                ))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("1.60.0").unwrap()),
@@ -73,11 +87,11 @@ mod rust_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: "[toolchain]\nchannel = \"1.70.0\"\ncomponents = [\"clippy\"]".into(),
-                    file: "rust-toolchain".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    "rust-toolchain",
+                    "[toolchain]\nchannel = \"1.70.0\"\ncomponents = [\"clippy\"]"
+                ))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("1.70.0").unwrap()),
@@ -92,11 +106,7 @@ mod rust_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: "".into(),
-                    file: "rust-toolchain".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(&sandbox, "rust-toolchain", ""))
                 .await,
             ParseVersionFileOutput { version: None }
         );
@@ -109,11 +119,11 @@ mod rust_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: "[toolchain]\nchannel = \"1.70.0\"".into(),
-                    file: "rust-toolchain.toml".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    "rust-toolchain.toml",
+                    "[toolchain]\nchannel = \"1.70.0\""
+                ))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("1.70.0").unwrap()),
@@ -129,11 +139,11 @@ mod rust_tool {
         // Logs a warning, but still resolves
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: "[toolchain]\nchannel = \"1.70\"".into(),
-                    file: "rust-toolchain.toml".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    "rust-toolchain.toml",
+                    "[toolchain]\nchannel = \"1.70\""
+                ))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("1.70").unwrap()),
@@ -148,11 +158,7 @@ mod rust_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: "[toolchain]".into(),
-                    file: "rust-toolchain.toml".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(&sandbox, "rust-toolchain.toml", "[toolchain]"))
                 .await,
             ParseVersionFileOutput { version: None }
         );

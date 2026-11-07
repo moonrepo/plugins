@@ -3,8 +3,9 @@ use crate::version::{from_go_version, to_go_version};
 use extism_pdk::*;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
+use starbase_utils::fs;
 use std::collections::HashMap;
-use tool_common::enable_tracing;
+use tool_common::{append_env_bin_dir, enable_tracing};
 
 static NAME: &str = "Go";
 
@@ -51,11 +52,12 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
 pub fn parse_version_file(
     Json(input): Json<ParseVersionFileInput>,
 ) -> FnResult<Json<ParseVersionFileOutput>> {
+    let content = fs::read_file(&input.path)?;
     let mut go = None;
     let mut toolchain = None;
 
     if input.file == "go.mod" || input.file == "go.work" {
-        for line in input.content.lines() {
+        for line in content.lines() {
             if let Some(value) = line.strip_prefix("go ") {
                 go = Some(value.trim());
             } else if let Some(value) = line.strip_prefix("toolchain ") {
@@ -227,7 +229,11 @@ pub fn locate_executables(
         ]),
         // Not `$GOROOT/bin`, which is a Go installation, not where
         // `go install` writes, and would shadow this tool's `go`
-        globals_lookup_dirs: vec!["$GOBIN".into(), "$GOPATH/bin".into(), "$HOME/go/bin".into()],
+        globals_lookup_dirs: vec![
+            "$GOBIN".into(),
+            append_env_bin_dir("GOPATH")?,
+            "$HOME/go/bin".into(),
+        ],
         ..Default::default()
     }))
 }

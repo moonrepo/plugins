@@ -5,10 +5,11 @@ use crate::version::from_java_version;
 use extism_pdk::*;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
+use starbase_utils::fs;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::str::FromStr;
-use tool_common::enable_tracing;
+use tool_common::{enable_tracing, extract_version_from_text};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -57,49 +58,58 @@ pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
 pub fn parse_version_file(
     Json(input): Json<ParseVersionFileInput>,
 ) -> FnResult<Json<ParseVersionFileOutput>> {
+    let content = fs::read_file(&input.path)?;
     let mut version = None;
     let is_sdkman = input.file == ".sdkmanrc";
 
-    fn normalize_sdkman_version(value: &str) -> AnyResult<(Distribution, &str)> {
-        let value = value.trim();
-
+    // Identifiers are `<version>-<vendor>`, and newer versions have a 4th
+    // component and the vendor's build (21.0.13.0+9-tem), which doesn't
+    // always match foojay's build, so only the version numbers are kept
+    fn normalize_sdkman_version(value: &str) -> AnyResult<(Distribution, String)> {
         if let Some((version, vendor)) = value.rsplit_once('-')
             && vendor.chars().all(|c| c.is_ascii_alphanumeric())
         {
-            Ok((Distribution::parse(vendor)?, version))
+            let version = version.split('+').next().unwrap_or(version);
+
+            Ok((Distribution::parse(vendor)?, from_java_version(version)))
         } else {
-            Ok((Distribution::default(), value))
+            Ok((Distribution::default(), value.into()))
         }
     }
 
-    if is_sdkman || input.file == ".java-version" {
-        for line in input.content.lines() {
-            let line = line.trim();
+    if is_sdkman {
+        for line in content.lines() {
+            // SDKMAN strips comments and all whitespace from lines
+            let line = line
+                .split('#')
+                .next()
+                .unwrap_or_default()
+                .replace(char::is_whitespace, "");
 
-            if line.is_empty() || is_sdkman && !line.starts_with("java=") {
-                continue;
-            }
-
-            if is_sdkman {
-                let (dist, value) =
-                    normalize_sdkman_version(line.strip_prefix("java=").unwrap_or(line))?;
+            if let Some(value) = line.strip_prefix("java=") {
+                let (dist, value) = normalize_sdkman_version(value)?;
 
                 version = Some(UnresolvedVersionSpec::parse(format!("{dist}-{value}"))?);
-            } else {
-                // Lines may already contain a distribution scope (temurin-21),
-                // or be an alias (latest), so only inject the default scope
-                // into unscoped versions and requirements
-                let mut spec = UnresolvedVersionSpec::parse(line)?;
-
-                if spec.get_scope().is_none() {
-                    spec.set_scope(Distribution::default().to_string());
-                }
-
-                version = Some(spec);
+                break;
             }
-
-            break;
         }
+    } else if input.file == ".java-version"
+        && let Some(line) = extract_version_from_text(&content)
+    {
+        // Java 8 and below are also known by their legacy
+        // 1.x versions (1.8), which jenv and others write
+        let line = line.strip_prefix("1.").unwrap_or(line);
+
+        // Lines may already contain a distribution scope (temurin-21),
+        // or be an alias (latest), so only inject the default scope
+        // into unscoped versions and requirements
+        let mut spec = UnresolvedVersionSpec::parse(line)?;
+
+        if spec.get_scope().is_none() {
+            spec.set_scope(Distribution::default().to_string());
+        }
+
+        version = Some(spec);
     }
 
     Ok(Json(ParseVersionFileOutput { version }))
@@ -174,9 +184,18 @@ pub fn resolve_version(
         ) =>
         {
             initial.set_scope(Distribution::default().to_string());
-            output.candidate = Some(initial);
+            output.candidate = Some(initial.clone());
         }
         None => {}
+    }
+
+    // Java versions have build metadata (21.0.11+10), but are written
+    // without it (21.0.11), which never equals a listed version, so
+    // match exactly with a requirement instead, which ignores builds
+    if let UnresolvedVersionSpec::Version(version) = &initial
+        && version.build.is_none()
+    {
+        output.candidate = Some(UnresolvedVersionSpec::parse(format!("={version}"))?);
     }
 
     Ok(Json(output))
@@ -231,6 +250,7 @@ pub fn download_prebuilt(
 
     // Then fetch download information
     let info = fetch_package_info(&config, &package.id)?;
+    let checksum_supported = info.is_checksum_supported_by_proto();
 
     Ok(Json(DownloadPrebuiltOutput {
         archive_prefix: Some(match java.distribution {
@@ -239,7 +259,7 @@ pub fn download_prebuilt(
             // Nested in jdk dir: jdk-x.x.x
             _ => "*".into(),
         }),
-        checksum: if info.is_checksum_supported_by_proto() {
+        checksum: if checksum_supported && !info.checksum.is_empty() {
             Some(Checksum::from_str(&format!(
                 "{}:{}",
                 info.checksum_type, info.checksum
@@ -247,10 +267,18 @@ pub fn download_prebuilt(
         } else {
             None
         },
-        checksum_url: if info.checksum_uri.is_empty() {
-            None
+        // proto detects the algorithm from the file's extension or contents,
+        // which some vendors don't reveal (SapMachine's `<hash> <file>`),
+        // so name the file after foojay's checksum type
+        checksum_name: if checksum_supported && !info.checksum_uri.is_empty() {
+            Some(format!("{}.{}", info.filename, info.checksum_type))
         } else {
+            None
+        },
+        checksum_url: if checksum_supported && !info.checksum_uri.is_empty() {
             Some(info.checksum_uri)
+        } else {
+            None
         },
         download_name: Some(info.filename),
         download_url: info.direct_download_uri,
@@ -292,10 +320,11 @@ pub fn locate_executables(
         ]);
     }
 
+    // No globals directories, as Java has no global install command,
+    // and `$JAVA_HOME/bin` is another JDK that would be added to `PATH`
     Ok(Json(LocateExecutablesOutput {
         exes,
         exes_dirs: vec![PathBuf::from(bin_dir)],
-        globals_lookup_dirs: vec!["$JAVA_HOME/bin".into()],
         ..Default::default()
     }))
 }

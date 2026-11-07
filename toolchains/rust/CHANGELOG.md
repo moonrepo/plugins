@@ -4,6 +4,8 @@
 
 #### 🚀 Updates
 
+- `CARGO_INSTALL_ROOT` and `CARGO_HOME` are now used as-is for the globals directories when they
+  already are a `bin` directory, instead of appending another `bin`.
 - **Behavior change:** When `version` is a fully-qualified version or channel, tasks now run with
   that toolchain by setting `RUSTUP_TOOLCHAIN`, as rustup ignores moon's `PROTO_RUST_VERSION`. This
   overrides `rust-toolchain.toml` and `rustup override` for moon tasks; enable

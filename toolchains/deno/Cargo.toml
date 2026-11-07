@@ -36,4 +36,4 @@ tokio = { workspace = true }
 
 [features]
 default = ["wasm"]
-wasm = ["deno_tool/wasm"]
+wasm = ["toolchain_common/wasm", "deno_tool/wasm"]

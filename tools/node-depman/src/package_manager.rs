@@ -11,6 +11,7 @@ use proto_pdk::{
 };
 use rustc_hash::FxHashMap;
 use starbase_utils::{fs::find_upwards, yaml};
+use tool_common::append_env_bin_dir;
 
 #[derive(Debug, PartialEq)]
 pub enum PackageManager {
@@ -53,9 +54,7 @@ impl PackageManager {
             manager = match version {
                 VersionSpec::Canary => Self::Pnpm12,
                 VersionSpec::Alias(alias) => {
-                    if alias == "latest" {
-                        Self::Pnpm11
-                    } else if alias == "next" {
+                    if alias == "latest" || alias == "next" {
                         Self::Pnpm12
                     } else {
                         Self::Pnpm
@@ -136,9 +135,15 @@ impl PackageManager {
     }
 
     pub fn get_package_name_for_download(&self, env: &HostEnvironment) -> AnyResult<String> {
+        // pnpm v12.4+ also publishes these targets
+        let is_pnpm12 = self == &Self::Pnpm12;
+
         let arch = match env.arch {
             HostArch::Arm64 => "arm64",
             HostArch::X64 => "x64",
+            HostArch::Powerpc64 if is_pnpm12 => "ppc64",
+            HostArch::Riscv64 if is_pnpm12 => "riscv64",
+            HostArch::S390x if is_pnpm12 => "s390x",
             other => {
                 return Err(PluginError::UnsupportedArch {
                     tool: self.get_bin_name(),
@@ -152,6 +157,7 @@ impl PackageManager {
             HostOS::MacOS => "darwin",
             HostOS::Linux => "linux",
             HostOS::Windows => "win32",
+            HostOS::FreeBSD if is_pnpm12 && env.arch == HostArch::X64 => "freebsd",
             other => {
                 return Err(PluginError::UnsupportedOS {
                     tool: self.get_bin_name(),
@@ -184,41 +190,76 @@ impl PackageManager {
         }
     }
 
-    pub fn get_global_lookup_dirs(&self, env: &HostEnvironment) -> Vec<String> {
+    pub fn get_global_lookup_dirs(&self, env: &HostEnvironment) -> AnyResult<Vec<String>> {
+        // npm links global bins directly into its prefix on Windows,
+        // which defaults to the Node.js directory (it has no `bin` there)
+        let npm_on_windows = self.is_npm() && env.os.is_windows();
+        let bin = if npm_on_windows { "" } else { "/bin" };
+
         let mut dirs: Vec<String> = vec![
-            "$PREFIX/bin".into(),
+            if npm_on_windows {
+                "$PREFIX".into()
+            } else {
+                append_env_bin_dir("PREFIX")?
+            },
             "$PREFIX/shims".into(),
-            "$PROTO_HOME/tools/node/$PROTO_NODE_VERSION/bin".into(),
+            format!("$PROTO_HOME/tools/node/$PROTO_NODE_VERSION{bin}"),
         ];
 
         match self {
-            // https://docs.npmjs.com/cli/v9/configuring-npm/folders#prefix-configuration
-            // https://github.com/npm/cli/blob/latest/lib/npm.js
+            // https://docs.npmjs.com/cli/v11/configuring-npm/folders#executables
             // https://github.com/npm/cli/blob/latest/workspaces/config/lib/index.js#L339
             Self::Npm => {
+                for var in ["NPM_CONFIG_PREFIX", "npm_config_prefix"] {
+                    dirs.push(if npm_on_windows {
+                        format!("${var}")
+                    } else {
+                        append_env_bin_dir(var)?
+                    });
+                }
+
                 dirs.push("$TOOL_DIR/shims".into());
             }
-            // Nub's global layout is modeled on pnpm v11 and intentionally
-            // shares pnpm's directories. There is no NUB_HOME.
+            // Since v0.9, nub links bins into the shared user bin directory
             // https://github.com/nubjs/nub/blob/main/vendor/aube/crates/aube/src/commands/global.rs
-            Self::Nub |
-            // https://pnpm.io/npmrc#global-dir
-            // https://github.com/pnpm/pnpm/blob/main/config/config/src/index.ts#L350
-            // https://github.com/pnpm/pnpm/blob/main/config/config/src/dirs.ts#L40
+            Self::Nub => {
+                dirs.push("$XDG_BIN_HOME".into());
+                dirs.push("$HOME/.local/bin".into());
+            }
+            // https://pnpm.io/npmrc#global-bin-dir
+            // https://github.com/pnpm/pnpm/blob/v10.34.9/config/config/src/dirs.ts
+            // https://github.com/pnpm/pnpm/blob/v11.28.9/pnpm11/config/reader/src/getConfig/globalInstall.ts
             Self::Pnpm | Self::Pnpm11 | Self::Pnpm12 => {
-                dirs.push("$PNPM_HOME".into());
+                // v11+ links bins into a `bin` folder of its home directory
+                let has_bin = self != &Self::Pnpm;
+
+                dirs.push(if has_bin {
+                    append_env_bin_dir("PNPM_HOME")?
+                } else {
+                    "$PNPM_HOME".into()
+                });
+
+                let mut homes = vec![];
 
                 if env.os.is_windows() {
-                    dirs.push("$LOCALAPPDATA/pnpm".into());
-                } else if env.os.is_mac() {
-                    dirs.push("$HOME/Library/pnpm".into());
+                    homes.push("$LOCALAPPDATA/pnpm");
                 } else {
-                    dirs.push("$XDG_DATA_HOME/pnpm".into());
-                    dirs.push("$HOME/.local/share/pnpm".into());
+                    homes.push("$XDG_DATA_HOME/pnpm");
+                    homes.push(if env.os.is_mac() {
+                        "$HOME/Library/pnpm"
+                    } else {
+                        "$HOME/.local/share/pnpm"
+                    });
                 }
+
+                let bin = if has_bin { "/bin" } else { "" };
+
+                dirs.extend(homes.into_iter().map(|home| format!("{home}{bin}")));
             }
             // https://github.com/yarnpkg/yarn/blob/master/src/cli/commands/global.js#L84
             Self::Yarn1 | Self::Yarn2to5 | Self::Yarn6 => {
+                dirs.push(append_env_bin_dir("YARN_PREFIX")?);
+
                 if env.os.is_windows() {
                     dirs.push("$LOCALAPPDATA/Yarn/bin".into());
                 }
@@ -228,10 +269,10 @@ impl PackageManager {
         }
 
         if env.os.is_windows() {
-            return dirs.into_iter().map(|dir| dir.replace("/", "\\")).collect();
+            return Ok(dirs.into_iter().map(|dir| dir.replace("/", "\\")).collect());
         }
 
-        dirs
+        Ok(dirs)
     }
 
     pub fn get_http_headers(

@@ -6,6 +6,7 @@ use lang_zig_common::{
 };
 use proto_pdk::*;
 use schematic::SchemaBuilder;
+use starbase_utils::fs;
 use std::collections::HashMap;
 use tool_common::enable_tracing;
 
@@ -47,7 +48,8 @@ pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
 pub fn parse_version_file(
     Json(input): Json<ParseVersionFileInput>,
 ) -> FnResult<Json<ParseVersionFileOutput>> {
-    let version = parse_zig_version_file(&input.file, &input.content)
+    let content = fs::read_file(&input.path)?;
+    let version = parse_zig_version_file(&input.file, &content)
         .map(|source| source.to_zig_requirement())
         .transpose()?;
 
@@ -65,6 +67,8 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
     let mut output = LoadVersionsOutput::from(index.stable_versions())?;
 
     if let Some(canary) = canary {
+        // proto only resolves an alias to a listed version
+        output.versions.push(canary.to_resolved_spec());
         output.canary = Some(canary.clone());
         output.aliases.insert("master".into(), canary);
     }
@@ -90,12 +94,14 @@ pub fn locate_executables(
     Json(_): Json<LocateExecutablesInput>,
 ) -> FnResult<Json<LocateExecutablesOutput>> {
     let env = get_host_environment()?;
+    let mut primary = ExecutableConfig::new_primary(env.os.get_exe_name("zig"));
+
+    // Zig looks for `lib` next to its own path, so the copy that
+    // proto makes for a Windows bin can't run
+    primary.no_bin = env.os.is_windows();
 
     Ok(Json(LocateExecutablesOutput {
-        exes: HashMap::from_iter([(
-            "zig".into(),
-            ExecutableConfig::new_primary(env.os.get_exe_name("zig")),
-        )]),
+        exes: HashMap::from_iter([("zig".into(), primary)]),
         ..Default::default()
     }))
 }

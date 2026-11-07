@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased
+
+#### 💥 Breaking
+
+- `~=X.Y` in `required-version` now allows any `X.*` from `X.Y`, as PEP 440 and uv define it. For
+  example, `~=0.5` resolves to the latest 0.x, instead of the latest 0.5.x.
+
+#### 🚀 Updates
+
+- Added Windows arm64 and x86, and Linux x86, arm, ppc64le, s390x, and riscv64 support.
+
+#### 🐞 Fixes
+
+- Fixed `uv self update` not being blocked, as `uv self upgrade` was blocked instead.
+- Fixed exact versions in `required-version`, like `==0.5`, `0.5`, or `===0.5.0`, resolving to the
+  latest 0.5 patch instead of 0.5.0, which uv then refused to run. Short versions are now
+  zero-padded, as PEP 440 compares them, which also applies to `<=`.
+- Fixed `!=` in `required-version` failing version detection. proto can't exclude versions, so it's
+  now ignored.
+
+#### ⚙️ Internal
+
+- Version files are now read from their path, as the `content` input is deprecated.
+
 ## 0.3.4
 
 #### 🚀 Updates

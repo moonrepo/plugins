@@ -7,3 +7,6 @@ publish = false
 
 [dependencies]
 common = { path = "../common" }
+
+[features]
+wasm = ["common/wasm"]

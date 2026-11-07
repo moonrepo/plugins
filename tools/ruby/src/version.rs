@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use proto_pdk_api::Version;
+use tool_common::extract_version_from_text;
 
 // Ruby tags, ruby-build, and GitHub releases use `preview2` and `rc1`,
 // while the registry (and semver ordering) use `preview.2` and `rc.1`
@@ -20,10 +21,7 @@ pub fn from_ruby_version(version: &str) -> String {
 /// an optional `ruby-` prefix, while anything else that isn't a version, like
 /// `jruby-9.4.5.0` or `system`, is for a different engine or manager.
 pub fn parse_ruby_version_file(content: &str) -> Option<&str> {
-    let version = content
-        .lines()
-        .map(str::trim)
-        .find(|line| !line.is_empty() && !line.starts_with('#'))?
+    let version = extract_version_from_text(content)?
         .split_whitespace()
         .next()?;
     let version = version.strip_prefix("ruby-").unwrap_or(version);

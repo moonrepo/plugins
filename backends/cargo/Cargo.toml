@@ -34,4 +34,4 @@ tokio = { workspace = true }
 
 [features]
 default = ["wasm"]
-wasm = ["lang_rust_common/wasm"]
+wasm = ["backend_common/wasm", "lang_rust_common/wasm"]

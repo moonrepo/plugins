@@ -15,7 +15,7 @@ mod moon_tool {
             .await;
 
         assert_eq!(metadata.name, "moon");
-        assert_eq!(metadata.self_upgrade_commands, vec!["upgrade"]);
+        assert!(metadata.self_upgrade_commands.is_empty());
         assert_eq!(
             metadata.plugin_version.unwrap().to_string(),
             env!("CARGO_PKG_VERSION")

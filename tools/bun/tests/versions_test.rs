@@ -2,6 +2,20 @@ use proto_pdk_test_utils::*;
 use starbase_sandbox::assert_snapshot;
 use std::fs;
 
+fn version_file(
+    sandbox: &ProtoWasmSandbox,
+    file: &str,
+    content: impl AsRef<str>,
+) -> ParseVersionFileInput {
+    sandbox.create_file(file, content);
+
+    ParseVersionFileInput {
+        file: file.into(),
+        path: VirtualPath::new(sandbox.path().join(file)),
+        ..Default::default()
+    }
+}
+
 mod bun_tool {
     use super::*;
 
@@ -40,14 +54,33 @@ mod bun_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: r#"{ "engines": { "bun": ">=1" } }"#.into(),
-                    file: "package.json".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    "package.json",
+                    r#"{ "engines": { "bun": ">=1" } }"#
+                ))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse(">=1").unwrap()),
+            }
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn prefers_package_manager_over_engines() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("bun-test").await;
+
+        assert_eq!(
+            plugin
+                .parse_version_file(version_file(
+                    &sandbox,
+                    "package.json",
+                    r#"{ "engines": { "bun": ">=1" }, "packageManager": "bun@1.2.3" }"#
+                ))
+                .await,
+            ParseVersionFileOutput {
+                version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
             }
         );
     }
@@ -59,13 +92,11 @@ mod bun_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content:
-                        r#"{ "devEngines": { "runtime": { "name": "bun", "version": ">=1" } } }"#
-                            .into(),
-                    file: "package.json".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    "package.json",
+                    r#"{ "devEngines": { "runtime": { "name": "bun", "version": ">=1" } } }"#
+                ))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse(">=1").unwrap()),
@@ -80,11 +111,11 @@ mod bun_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: r#"{ "volta": { "bun": "1.20.2" } }"#.into(),
-                    file: "package.json".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    "package.json",
+                    r#"{ "volta": { "bun": "1.20.2" } }"#
+                ))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("1.20.2").unwrap()),
@@ -99,11 +130,7 @@ mod bun_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: "~2".into(),
-                    file: ".bumrc".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(&sandbox, ".bumrc", "~2"))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("~2").unwrap()),
@@ -118,11 +145,7 @@ mod bun_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: "# comment\n^2.1".into(),
-                    file: ".bumrc".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(&sandbox, ".bumrc", "# comment\n^2.1 # stable"))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("^2.1").unwrap()),
@@ -137,11 +160,7 @@ mod bun_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: "~2".into(),
-                    file: ".bun-version".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(&sandbox, ".bun-version", "~2"))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("~2").unwrap()),
@@ -156,11 +175,11 @@ mod bun_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: "# comment\n^2.1".into(),
-                    file: ".bun-version".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    ".bun-version",
+                    "# comment\n^2.1 # stable"
+                ))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("^2.1").unwrap()),
@@ -170,6 +189,62 @@ mod bun_tool {
 
     mod pin_version {
         use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn updates_existing_version_file() {
+            let sandbox = create_empty_proto_sandbox();
+            sandbox.create_file(".bun-version", "1.1.0\n");
+            sandbox.create_file("package.json", "{}");
+
+            let plugin = sandbox.create_plugin("bun-test").await;
+
+            assert_eq!(
+                plugin
+                    .pin_version(PinVersionInput {
+                        dir: plugin.tool.to_virtual_path(sandbox.path()),
+                        version: UnresolvedVersionSpec::parse("1.2.3").unwrap(),
+                        ..Default::default()
+                    })
+                    .await,
+                PinVersionOutput {
+                    file: Some(
+                        plugin
+                            .tool
+                            .to_virtual_path(sandbox.path().join(".bun-version"))
+                    ),
+                    error: None,
+                    pinned: true,
+                }
+            );
+
+            assert_eq!(
+                fs::read_to_string(sandbox.path().join(".bun-version")).unwrap(),
+                "1.2.3\n"
+            );
+            assert_eq!(
+                fs::read_to_string(sandbox.path().join("package.json")).unwrap(),
+                "{}"
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn errors_for_aliases_in_package_json() {
+            let sandbox = create_empty_proto_sandbox();
+            sandbox.create_file("package.json", "{}");
+
+            let plugin = sandbox.create_plugin("bun-test").await;
+
+            let output = plugin
+                .pin_version(PinVersionInput {
+                    dir: plugin.tool.to_virtual_path(sandbox.path()),
+                    version: UnresolvedVersionSpec::parse("latest").unwrap(),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(!output.pinned);
+            assert!(output.error.unwrap().contains("not aliases"));
+        }
 
         #[tokio::test(flavor = "multi_thread")]
         async fn errors_if_no_package_json() {
@@ -304,6 +379,35 @@ mod bun_tool {
 
     mod unpin_version {
         use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn removes_version_file() {
+            let sandbox = create_empty_proto_sandbox();
+            sandbox.create_file(".bun-version", "1.2.3\n");
+
+            let plugin = sandbox.create_plugin("bun-test").await;
+
+            assert_eq!(
+                plugin
+                    .unpin_version(UnpinVersionInput {
+                        dir: plugin.tool.to_virtual_path(sandbox.path()),
+                        ..Default::default()
+                    })
+                    .await,
+                UnpinVersionOutput {
+                    file: Some(
+                        plugin
+                            .tool
+                            .to_virtual_path(sandbox.path().join(".bun-version"))
+                    ),
+                    unpinned: true,
+                    version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
+                    ..Default::default()
+                }
+            );
+
+            assert!(!sandbox.path().join(".bun-version").exists());
+        }
 
         #[tokio::test(flavor = "multi_thread")]
         async fn errors_if_no_package_json() {

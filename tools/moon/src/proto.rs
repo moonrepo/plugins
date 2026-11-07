@@ -7,6 +7,10 @@ extern "ExtismHost" {
     fn exec_command(input: Json<ExecCommandInput>) -> Json<ExecCommandOutput>;
 }
 
+// The `canary` release on GitHub is a stale moon v1 build
+static CANARY_ERROR: &str =
+    "moon no longer publishes canary builds, as of v2. Use a version or the latest alias instead.";
+
 #[plugin_fn]
 pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {
     enable_tracing();
@@ -16,7 +20,8 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
         type_of: PluginType::CommandLine,
         minimum_proto_version: Some(Version::new(0, 60, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
-        self_upgrade_commands: vec!["upgrade".into()],
+        // Not blocked, as `moon upgrade` (v2.2.2+) runs `proto install`
+        // itself when installed by proto
         ..Default::default()
     }))
 }
@@ -48,13 +53,12 @@ pub fn build_instructions(
         ],
     )?;
 
-    let output = BuildInstructionsOutput {
-        source: Some(SourceLocation::Archive(ArchiveSource {
-            url: format!("https://github.com/moonrepo/moon/archive/refs/tags/v{version}.tar.gz"),
-            prefix: Some(format!("moon-{version}")),
-        })),
-        requirements: vec![BuildRequirement::CommandExistsOnPath("cargo".into())],
-        instructions: vec![
+    if version.is_canary() {
+        return Err(plugin_err!(CANARY_ERROR));
+    }
+
+    let instructions = if is_v2(&version) {
+        vec![
             BuildInstruction::RunCommand(Box::new(CommandInstruction::new(
                 "cargo",
                 ["build", "--bin", "moon", "--bin", "moonx", "--release"],
@@ -71,7 +75,45 @@ pub fn build_instructions(
                 env.os.get_exe_name("moon").into(),
                 env.os.get_exe_name("moonx").into(),
             ]),
-        ],
+        ]
+    }
+    // moon v1 has no `moonx` binary, and is located by the plugin ID,
+    // like the downloaded binary
+    else {
+        let exe = env.os.get_exe_name(get_plugin_id()?);
+
+        vec![
+            BuildInstruction::RunCommand(Box::new(CommandInstruction::new(
+                "cargo",
+                ["build", "--bin", "moon", "--release"],
+            ))),
+            BuildInstruction::MoveFile(
+                env.os.get_exe_name("target/release/moon").into(),
+                exe.clone().into(),
+            ),
+            BuildInstruction::RemoveAllExcept(vec![exe.into()]),
+        ]
+    };
+
+    let output = BuildInstructionsOutput {
+        source: Some(SourceLocation::Archive(ArchiveSource {
+            url: format!("https://github.com/moonrepo/moon/archive/refs/tags/v{version}.tar.gz"),
+            prefix: Some(format!("moon-{version}")),
+        })),
+        requirements: vec![BuildRequirement::CommandExistsOnPath("cargo".into())],
+        // moon v2.2+ compiles its daemon's gRPC definitions with `protoc`
+        system_dependencies: if version
+            .as_version()
+            .is_some_and(|v| *v >= Version::new(2, 2, 0))
+        {
+            vec![
+                SystemDependency::for_pm(HostPackageManager::Apt, ["protobuf-compiler"]),
+                SystemDependency::for_pm(HostPackageManager::Brew, ["protobuf"]),
+            ]
+        } else {
+            vec![]
+        },
+        instructions,
         ..Default::default()
     };
 
@@ -98,14 +140,25 @@ pub fn download_prebuilt(
     let version = input.context.version;
     let arch = env.arch.to_rust_arch();
 
-    let base_url = format!(
-        "https://github.com/moonrepo/moon/releases/download/{}",
-        if version.is_canary() {
-            "canary".to_owned()
-        } else {
-            format!("v{version}")
-        }
-    );
+    if version.is_canary() {
+        return Err(plugin_err!(CANARY_ERROR));
+    }
+
+    // moon v2.0 and v2.1 weren't released for macOS x64
+    if env.os == HostOS::MacOS
+        && env.arch == HostArch::X64
+        && version
+            .as_version()
+            .is_some_and(|v| v.major == 2 && v.minor < 2)
+    {
+        return Err(plugin_err!(PluginError::UnsupportedTarget {
+            tool: "moon".into(),
+            arch: env.arch.to_string(),
+            os: env.os.to_string(),
+        }));
+    }
+
+    let base_url = format!("https://github.com/moonrepo/moon/releases/download/v{version}");
 
     let target = match env.os {
         HostOS::Linux => format!("{arch}-unknown-linux-{}", env.libc),
@@ -121,7 +174,11 @@ pub fn download_prebuilt(
         let download_file = format!("{target_name}.{target_ext}");
         let checksum_file = format!("{download_file}.sha256");
 
-        output.archive_prefix = Some(target_name);
+        // The Windows zip isn't nested in a folder, unlike the tarballs
+        if !env.os.is_windows() {
+            output.archive_prefix = Some(target_name);
+        }
+
         output.checksum_url = Some(format!("{base_url}/{checksum_file}"));
         output.checksum_name = Some(checksum_file);
         output.download_url = format!("{base_url}/{download_file}");

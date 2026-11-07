@@ -1,5 +1,5 @@
 use nodejs_package_json::{PackageJson, VersionProtocol};
-use proto_pdk_api::{AnyResult, VirtualPath};
+use proto_pdk_api::{AnyResult, UnresolvedVersionSpec, VirtualPath};
 use starbase_utils::{
     fs,
     json::{self, JsonMap, JsonValue},
@@ -14,20 +14,6 @@ pub fn extract_valid_version_protocol(version_protocol: &VersionProtocol) -> Opt
     } else {
         None
     }
-}
-
-pub fn extract_version_from_text(content: &str) -> Option<&str> {
-    for line in content.lines() {
-        let line = line.trim();
-
-        if line.is_empty() || line.starts_with('#') || line.starts_with("//") {
-            continue;
-        } else {
-            return Some(line);
-        }
-    }
-
-    None
 }
 
 pub fn extract_dev_engine_runtime_version(package_json: &PackageJson, key: &str) -> Option<String> {
@@ -123,6 +109,20 @@ pub fn extract_volta_version(
     }
 
     Ok(None)
+}
+
+/// `devEngines` only supports versions and ranges, so return an error
+/// for aliases (like `lts`), which package managers reject.
+pub fn get_dev_engine_version_error(version: &UnresolvedVersionSpec) -> Option<String> {
+    matches!(
+        version,
+        UnresolvedVersionSpec::Alias(_) | UnresolvedVersionSpec::Canary
+    )
+    .then(|| {
+        format!(
+            "Unable to pin <version>{version}</version>, as <property>devEngines</property> in <file>package.json</file> only supports versions and ranges, not aliases."
+        )
+    })
 }
 
 pub fn insert_dev_engine_version(
@@ -256,4 +256,28 @@ pub fn remove_dev_engine(
     }
 
     Ok(removed_version)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn errors_for_dev_engine_aliases() {
+        for version in ["lts", "latest", "canary"] {
+            assert!(
+                get_dev_engine_version_error(&UnresolvedVersionSpec::parse(version).unwrap())
+                    .is_some(),
+                "{version}"
+            );
+        }
+
+        for version in ["20", "^20.1", ">=18 <22", "20.18.0"] {
+            assert!(
+                get_dev_engine_version_error(&UnresolvedVersionSpec::parse(version).unwrap())
+                    .is_none(),
+                "{version}"
+            );
+        }
+    }
 }

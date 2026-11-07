@@ -22,7 +22,7 @@ swift = "https://github.com/moonrepo/plugins/releases/download/swift_tool-vX.Y.Z
 Swift plugin can be configured with a `.prototools` file.
 
 - `dist-url` (string) - The distribution URL to download Swift archives from. Supports `{release}`, `{platform}`, `{folder}`, and `{file}` tokens.
-- `linux-platform` (enum) - The Linux distribution to download Swift for. Defaults to `ubuntu-24.04`. Supports `amazon-linux-2`, `amazon-linux-2023`, `debian-12`, `fedora-39`, `fedora-41`, `redhat-ubi-9`, `ubuntu-20.04`, `ubuntu-22.04`, and `ubuntu-24.04`.
+- `linux-platform` (enum) - The Linux distribution to download Swift for. When not configured, it's detected from `/etc/os-release` (RHEL derivatives like Rocky and Alma use the `redhat-ubi-*` builds), falling back to `ubuntu-24.04` for distributions that Swift doesn't publish builds for. Supports `amazon-linux-2`, `amazon-linux-2023`, `debian-12`, `debian-13`, `fedora-39`, `fedora-41`, `redhat-ubi-9`, `redhat-ubi-10`, `ubuntu-20.04`, `ubuntu-22.04`, `ubuntu-24.04`, and `ubuntu-26.04`. Not every Swift version is published for every platform.
 
 ```toml
 [tools.swift]

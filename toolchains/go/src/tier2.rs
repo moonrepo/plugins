@@ -12,6 +12,7 @@ use moon_pdk::{
 use moon_pdk_api::*;
 use starbase_utils::fs;
 use std::path::PathBuf;
+use toolchain_common::append_bin_dir;
 
 #[host_fn]
 extern "ExtismHost" {
@@ -81,7 +82,7 @@ fn gather_shared_paths(
             value
                 .split(if env.os.is_windows() { ';' } else { ':' })
                 .next()
-                .map(|path| PathBuf::from(path).join("bin"))
+                .map(append_bin_dir)
         } else {
             env.home_dir
                 .join("go")

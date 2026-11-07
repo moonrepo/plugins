@@ -6,6 +6,10 @@
 
 - Fixed the `latest` version resolving to a pre-release, as it was not set and proto used the highest version.
 
+#### ⚙️ Internal
+
+- Version files are now read from their path, as the `content` input is deprecated.
+
 ## 0.3.5
 
 #### 🚀 Updates

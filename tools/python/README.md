@@ -17,7 +17,19 @@ python = "https://github.com/moonrepo/plugins/releases/download/python_tool-vX.Y
 
 ## Configuration
 
-Python plugin does not support configuration.
+Python plugin can be configured with a `.prototools` file.
+
+- `use-latest-build` (bool) - When a fully-qualified version without a build is requested, like
+  `3.12.0`, resolve it to the latest available pre-built build, like `3.12.0+20231002`. Defaults to
+  `false`.
+
+```toml
+[tools.python]
+use-latest-build = true
+```
+
+A `.python-version` file is read like pyenv and uv read it: the first line that isn't blank or a
+comment. Files for other implementations, like `pypy3.10-7.3.12`, or `system`, are ignored.
 
 ## Hooks
 

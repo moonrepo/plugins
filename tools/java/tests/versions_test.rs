@@ -1,16 +1,33 @@
 use proto_pdk_test_utils::*;
 
+fn version_file(
+    sandbox: &ProtoWasmSandbox,
+    file: &str,
+    content: impl AsRef<str>,
+) -> ParseVersionFileInput {
+    sandbox.create_file(file, content);
+
+    ParseVersionFileInput {
+        file: file.into(),
+        path: VirtualPath::new(sandbox.path().join(file)),
+        ..Default::default()
+    }
+}
+
 mod java_tool {
     use super::*;
 
-    // These all resolve against the default openjdk distribution, whose
+    // These all resolve against the openjdk distribution, whose
     // jdk.java.net streams are frozen, so they never drift. All cases in
     // this macro share a plugin instance (and its version cache), so only
     // same-scoped versions may be used!
     generate_resolve_versions_tests!("java-test", {
-        "17" => "openjdk-17.0.2+8",
-        "19" => "openjdk-19.0.2+7",
+        "openjdk-17" => "openjdk-17.0.2+8",
+        "openjdk-19" => "openjdk-19.0.2+7",
         "openjdk-21" => "openjdk-21.0.2+13",
+        // Versions without build metadata match the build
+        "openjdk-21.0.2" => "openjdk-21.0.2+13",
+        "openjdk-17.0.2" => "openjdk-17.0.2+8",
     });
 
     #[tokio::test(flavor = "multi_thread")]
@@ -128,7 +145,7 @@ mod java_tool {
 
         assert_eq!(
             output.candidate,
-            Some(UnresolvedVersionSpec::parse("openjdk-21").unwrap())
+            Some(UnresolvedVersionSpec::parse("temurin-21").unwrap())
         );
     }
 
@@ -163,6 +180,46 @@ mod java_tool {
     }
 
     #[tokio::test(flavor = "multi_thread")]
+    async fn matches_versions_without_build_exactly() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("java-test").await;
+
+        for (initial, candidate) in [
+            ("temurin-21.0.11", "=temurin-21.0.11"),
+            ("21.0.11", "=temurin-21.0.11"),
+            ("temurin-26.0.2-v1", "=temurin-26.0.2-v1"),
+        ] {
+            let output = plugin
+                .resolve_version(ResolveVersionInput {
+                    initial: UnresolvedVersionSpec::parse(initial).unwrap(),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.candidate,
+                Some(UnresolvedVersionSpec::parse(candidate).unwrap()),
+                "for {initial}"
+            );
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn keeps_versions_with_build() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("java-test").await;
+
+        let output = plugin
+            .resolve_version(ResolveVersionInput {
+                initial: UnresolvedVersionSpec::parse("temurin-21.0.11+10").unwrap(),
+                ..Default::default()
+            })
+            .await;
+
+        assert_eq!(output.candidate, None);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
     #[should_panic(expected = "fake")]
     async fn errors_invalid_distribution_scope() {
         let sandbox = create_empty_proto_sandbox();
@@ -182,17 +239,13 @@ mod java_tool {
         let plugin = sandbox.create_plugin("java-test").await;
 
         let output = plugin
-            .parse_version_file(ParseVersionFileInput {
-                content: "21.0.11\n".into(),
-                file: ".java-version".into(),
-                ..Default::default()
-            })
+            .parse_version_file(version_file(&sandbox, ".java-version", "21.0.11\n"))
             .await;
 
         // Unscoped versions receive the default distribution
         assert_eq!(
             output.version.unwrap(),
-            UnresolvedVersionSpec::parse("openjdk-21.0.11").unwrap()
+            UnresolvedVersionSpec::parse("temurin-21.0.11").unwrap()
         );
     }
 
@@ -202,11 +255,11 @@ mod java_tool {
         let plugin = sandbox.create_plugin("java-test").await;
 
         let output = plugin
-            .parse_version_file(ParseVersionFileInput {
-                content: "temurin-21\n".into(),
-                file: ".java-version".into(),
-                ..Default::default()
-            })
+            .parse_version_file(version_file(
+                &sandbox,
+                ".java-version",
+                "# pinned for CI\ntemurin-21 # LTS\n",
+            ))
             .await;
 
         assert_eq!(
@@ -221,11 +274,7 @@ mod java_tool {
         let plugin = sandbox.create_plugin("java-test").await;
 
         let output = plugin
-            .parse_version_file(ParseVersionFileInput {
-                content: "latest\n".into(),
-                file: ".java-version".into(),
-                ..Default::default()
-            })
+            .parse_version_file(version_file(&sandbox, ".java-version", "latest\n"))
             .await;
 
         assert_eq!(
@@ -235,16 +284,30 @@ mod java_tool {
     }
 
     #[tokio::test(flavor = "multi_thread")]
+    async fn parse_java_version_file_legacy_notation() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("java-test").await;
+
+        for (content, version) in [("1.8", "temurin-8"), ("1.8.0.392", "temurin-8.0.392")] {
+            let output = plugin
+                .parse_version_file(version_file(&sandbox, ".java-version", content))
+                .await;
+
+            assert_eq!(
+                output.version.unwrap(),
+                UnresolvedVersionSpec::parse(version).unwrap(),
+                "for {content}"
+            );
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
     async fn parse_sdkmanrc_file() {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox.create_plugin("java-test").await;
 
         let output = plugin
-            .parse_version_file(ParseVersionFileInput {
-                content: "java=21.0.11-tem\n".into(),
-                file: ".sdkmanrc".into(),
-                ..Default::default()
-            })
+            .parse_version_file(version_file(&sandbox, ".sdkmanrc", "java=21.0.11-tem\n"))
             .await;
 
         // SDKMAN vendor suffixes map to distribution scopes
@@ -275,11 +338,11 @@ mod java_tool {
             ("oracle", "oracle"),
         ] {
             let output = plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: format!("java=21.0.11-{vendor}\n"),
-                    file: ".sdkmanrc".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    ".sdkmanrc",
+                    format!("java=21.0.11-{vendor}\n"),
+                ))
                 .await;
 
             assert_eq!(
@@ -291,21 +354,65 @@ mod java_tool {
     }
 
     #[tokio::test(flavor = "multi_thread")]
+    async fn parse_sdkmanrc_build_identifiers() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("java-test").await;
+
+        // Newer identifiers have a 4th component and the vendor's build
+        for (identifier, version) in [
+            ("21.0.13.0+9-tem", "temurin-21.0.13"),
+            ("26.0.2.1+1-tem", "temurin-26.0.2-v1"),
+            ("26.0.2.0+11.1-amzn", "corretto-26.0.2"),
+            ("25.0.4.1+329142-jbr", "jetbrains-25.0.4-v1"),
+            ("11.0.14.1-jbr", "jetbrains-11.0.14-v1"),
+        ] {
+            let output = plugin
+                .parse_version_file(version_file(
+                    &sandbox,
+                    ".sdkmanrc",
+                    format!("java={identifier}\n"),
+                ))
+                .await;
+
+            assert_eq!(
+                output.version.unwrap(),
+                UnresolvedVersionSpec::parse(version).unwrap(),
+                "for {identifier}"
+            );
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn parse_sdkmanrc_comments_and_whitespace() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("java-test").await;
+
+        let output = plugin
+            .parse_version_file(version_file(
+                &sandbox,
+                ".sdkmanrc",
+                "# java=17.0.2-zulu\njava = 21.0.2-tem # LTS\n",
+            ))
+            .await;
+
+        assert_eq!(
+            output.version.unwrap(),
+            UnresolvedVersionSpec::parse("temurin-21.0.2").unwrap()
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
     async fn parse_sdkmanrc_without_vendor() {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox.create_plugin("java-test").await;
 
         let output = plugin
-            .parse_version_file(ParseVersionFileInput {
-                content: "java=21\n".into(),
-                file: ".sdkmanrc".into(),
-                ..Default::default()
-            })
+            .parse_version_file(version_file(&sandbox, ".sdkmanrc", "java=21\n"))
             .await;
 
         assert_eq!(
             output.version.unwrap(),
-            UnresolvedVersionSpec::parse("openjdk-21").unwrap()
+            UnresolvedVersionSpec::parse("temurin-21").unwrap()
         );
     }
 
@@ -316,11 +423,7 @@ mod java_tool {
         let plugin = sandbox.create_plugin("java-test").await;
 
         plugin
-            .parse_version_file(ParseVersionFileInput {
-                content: "java=21.0.11-foobar\n".into(),
-                file: ".sdkmanrc".into(),
-                ..Default::default()
-            })
+            .parse_version_file(version_file(&sandbox, ".sdkmanrc", "java=21.0.11-foobar\n"))
             .await;
     }
 }

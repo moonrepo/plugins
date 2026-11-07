@@ -36,7 +36,6 @@ mod schema_tool {
         }).await,
         DownloadPrebuiltOutput {
             archive_prefix: Some("moon-linux-aarch64-20.0.0".into()),
-            checksum_name: Some("CHECKSUM.txt".into()),
             download_name: Some("moon-aarch64-unknown-linux-gnu".into()),
             download_url: "https://github.com/moonrepo/moon/releases/download/v20.0.0/moon-aarch64-unknown-linux-gnu".into(),
             ..Default::default()
@@ -67,7 +66,6 @@ mod schema_tool {
         }).await,
         DownloadPrebuiltOutput {
             archive_prefix: Some("moon-linux-x86_64-20.0.0".into()),
-            checksum_name: Some("CHECKSUM.txt".into()),
             download_name: Some("moon-x86_64-unknown-linux-gnu".into()),
             download_url: "https://github.com/moonrepo/moon/releases/download/v20.0.0/moon-x86_64-unknown-linux-gnu".into(),
             ..Default::default()
@@ -160,7 +158,6 @@ mod schema_tool {
         }).await,
         DownloadPrebuiltOutput {
             archive_prefix: None,
-            checksum_name: Some("CHECKSUM.txt".into()),
             download_name: Some("moon-aarch64-pc-windows-msvc.exe".into()),
             download_url: "https://github.com/moonrepo/moon/releases/download/v20.0.0/moon-aarch64-pc-windows-msvc.exe".into(),
             ..Default::default()
@@ -191,7 +188,6 @@ mod schema_tool {
         }).await,
         DownloadPrebuiltOutput {
             archive_prefix: None,
-            checksum_name: Some("CHECKSUM.txt".into()),
             download_name: Some("moon-x86-pc-windows-msvc.exe".into()),
             download_url: "https://github.com/moonrepo/moon/releases/download/v20.0.0/moon-x86-pc-windows-msvc.exe".into(),
             ..Default::default()

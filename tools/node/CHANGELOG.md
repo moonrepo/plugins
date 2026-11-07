@@ -2,9 +2,39 @@
 
 ## Unreleased
 
+#### 🚀 Updates
+
+- Added Linux riscv64 and loong64 support, using [unofficial builds](https://github.com/nodejs/unofficial-builds).
+- Windows arm64 now uses x64 builds (through emulation) for versions before v20, which have no arm64 builds.
+
 #### 🐞 Fixes
 
+- Fixed pinning an alias, like `lts` or `latest`, writing it to `devEngines` in `package.json`, which
+  only supports versions and ranges. It now errors instead.
+- Fixed building from source:
+  - The built `node` was never found, as it stayed in the source's `out/Release` directory. Builds
+    are now installed like the pre-built archives, including npm and corepack.
+  - macOS forced GCC 12 (`CXX=g++-12`), while Node.js requires the Xcode toolchain. Linux now uses
+    the default compiler (or `CXX` when set), as `g++-12` was only installed with apt, and failed
+    elsewhere.
+  - Python is now required as `python3`, which Node.js' `configure` uses.
+- Fixed a comment after the version in `.nvmrc` or `.node-version`, like `20 # LTS`, failing to
+  parse. Like nvm, everything after `#` is now ignored.
 - Updated the `latest` version to never be a pre-release or contain build metadata.
+- Fixed `.nvmrc` and `.node-version` files containing `lts/*` or `lts-*` failing to parse. They now
+  resolve to the latest LTS, like nvm and fnm.
+- Fixed Linux arm64 installing x64 builds for versions before v16, which can't run. Only macOS
+  (through Rosetta) uses x64 builds for those versions.
+- Fixed musl Linux on architectures other than x64 and arm64 installing glibc builds, which can't
+  run. It now errors, as no musl builds exist for them.
+- Fixed `canary` on musl Linux downloading from the unofficial builds host, which doesn't have the
+  official nightly it resolved.
+- Fixed `bundled-npm` installing the npm bundled with the Node.js version configured in the working
+  directory, instead of the version that was just installed.
+
+#### ⚙️ Internal
+
+- Version files are now read from their path, as the `content` input is deprecated.
 
 ## 0.17.13
 

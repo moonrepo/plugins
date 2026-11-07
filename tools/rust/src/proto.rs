@@ -4,7 +4,7 @@ use lang_rust_common::*;
 use proto_pdk::*;
 use starbase_utils::fs;
 use std::collections::HashMap;
-use tool_common::enable_tracing;
+use tool_common::{append_env_bin_dir, enable_tracing, extract_version_from_text};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -90,15 +90,14 @@ pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
 pub fn parse_version_file(
     Json(input): Json<ParseVersionFileInput>,
 ) -> FnResult<Json<ParseVersionFileOutput>> {
+    let content = fs::read_file(&input.path)?;
     let mut output = ParseVersionFileOutput::default();
 
     // The legacy file may only contain the channel, or be TOML
-    let channel = if input.file == "rust-toolchain" && !input.content.contains("[toolchain]") {
-        Some(input.content.trim().to_owned()).filter(|channel| !channel.is_empty())
+    let channel = if input.file == "rust-toolchain" && !content.contains("[toolchain]") {
+        extract_version_from_text(&content).map(|channel| channel.to_owned())
     } else {
-        toml::from_str::<ToolchainToml>(&input.content)?
-            .toolchain
-            .channel
+        toml::from_str::<ToolchainToml>(&content)?.toolchain.channel
     };
 
     if let Some(channel) = channel {
@@ -246,8 +245,8 @@ pub fn locate_executables(
         // directly bypasses the rustup proxies in `~/.cargo/bin`
         exes_dirs: vec![],
         globals_lookup_dirs: vec![
-            "$CARGO_INSTALL_ROOT/bin".into(),
-            "$CARGO_HOME/bin".into(),
+            append_env_bin_dir("CARGO_INSTALL_ROOT")?,
+            append_env_bin_dir("CARGO_HOME")?,
             "$HOME/.cargo/bin".into(),
         ],
         globals_prefix: Some("cargo-".into()),

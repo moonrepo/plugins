@@ -2,14 +2,15 @@ use crate::config::BunToolConfig;
 use extism_pdk::*;
 use lang_javascript_common::{
     extract_dev_engine_package_manager_version, extract_dev_engine_runtime_version,
-    extract_engine_version, extract_package_manager_version, extract_version_from_text,
-    extract_volta_version, insert_dev_engine_version, remove_dev_engine,
+    extract_engine_version, extract_package_manager_version, extract_volta_version,
+    get_dev_engine_version_error, insert_dev_engine_version, remove_dev_engine,
 };
 use nodejs_package_json::PackageJson;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
+use starbase_utils::fs;
 use std::collections::HashMap;
-use tool_common::enable_tracing;
+use tool_common::{append_env_bin_dir, enable_tracing, extract_version_from_text};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -55,10 +56,11 @@ pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
 pub fn parse_version_file(
     Json(input): Json<ParseVersionFileInput>,
 ) -> FnResult<Json<ParseVersionFileOutput>> {
+    let content = fs::read_file(&input.path)?;
     let mut version = None;
 
     if input.file == "package.json" {
-        if let Ok(package_json) = json::from_str::<PackageJson>(&input.content) {
+        if let Ok(package_json) = json::from_str::<PackageJson>(&content) {
             if let Some(constraint) = extract_dev_engine_runtime_version(&package_json, "bun") {
                 version = Some(UnresolvedVersionSpec::parse(constraint)?);
             } else if let Some(constraint) =
@@ -73,43 +75,60 @@ pub fn parse_version_file(
                 version = Some(UnresolvedVersionSpec::parse(constraint)?);
             }
 
-            if version.is_none()
-                && let Some(constraint) = extract_engine_version(&package_json, "bun")
-            {
-                version = Some(UnresolvedVersionSpec::parse(constraint)?);
-            }
-
+            // Like setup-bun, an exact `packageManager` takes precedence over a range
             if version.is_none()
                 && let Some(constraint) = extract_package_manager_version(&package_json, "bun")
             {
                 version = Some(UnresolvedVersionSpec::parse(constraint)?);
             }
+
+            if version.is_none()
+                && let Some(constraint) = extract_engine_version(&package_json, "bun")
+            {
+                version = Some(UnresolvedVersionSpec::parse(constraint)?);
+            }
         }
-    } else if let Some(constraint) = extract_version_from_text(&input.content) {
+    } else if let Some(constraint) = extract_version_from_text(&content) {
         version = Some(UnresolvedVersionSpec::parse(constraint)?);
     }
 
     Ok(Json(ParseVersionFileOutput { version }))
 }
 
+// Version files are detected before `package.json`, so must be updated when they exist
+static VERSION_FILES: [&str; 2] = [".bumrc", ".bun-version"];
+
 #[plugin_fn]
 pub fn pin_version(Json(input): Json<PinVersionInput>) -> FnResult<Json<PinVersionOutput>> {
     let mut output = PinVersionOutput::default();
+
+    for name in VERSION_FILES {
+        let file = input.dir.join(name);
+
+        if file.exists() {
+            fs::write_file(&file, format!("{}\n", input.version))?;
+
+            output.pinned = true;
+            output.file = Some(file);
+
+            return Ok(Json(output));
+        }
+    }
+
     let file = input.dir.join("package.json");
 
     if file.exists() {
+        if let Some(error) = get_dev_engine_version_error(&input.version) {
+            output.error = Some(error);
+
+            return Ok(Json(output));
+        }
+
         let mut package_json: json::Value = starbase_utils::json::read_file(&file)?;
 
         insert_dev_engine_version(
             &mut package_json,
             "runtime".into(),
-            "bun".into(),
-            input.version.to_string(),
-        )?;
-
-        insert_dev_engine_version(
-            &mut package_json,
-            "packageManager".into(),
             "bun".into(),
             input.version.to_string(),
         )?;
@@ -128,6 +147,24 @@ pub fn pin_version(Json(input): Json<PinVersionInput>) -> FnResult<Json<PinVersi
 #[plugin_fn]
 pub fn unpin_version(Json(input): Json<UnpinVersionInput>) -> FnResult<Json<UnpinVersionOutput>> {
     let mut output = UnpinVersionOutput::default();
+
+    for name in VERSION_FILES {
+        let file = input.dir.join(name);
+
+        if file.exists() {
+            if let Some(version) = extract_version_from_text(&fs::read_file(&file)?) {
+                output.version = Some(UnresolvedVersionSpec::parse(version)?);
+            }
+
+            fs::remove_file(&file)?;
+
+            output.unpinned = true;
+            output.file = Some(file);
+
+            return Ok(Json(output));
+        }
+    }
+
     let file = input.dir.join("package.json");
 
     if file.exists() {
@@ -200,6 +237,17 @@ pub fn download_prebuilt(
         targets.insert(HostOS::Windows, windows_arches);
     }
 
+    // FreeBSD was added in v1.3.14
+    let has_freebsd = match version {
+        VersionSpec::Version(version) => *version >= Version::new(1, 3, 14),
+        VersionSpec::Alias(alias) => alias == "latest",
+        _ => true,
+    };
+
+    if has_freebsd {
+        targets.insert(HostOS::FreeBSD, vec![HostArch::X64, HostArch::Arm64]);
+    }
+
     check_supported_os_and_arch(NAME, env, targets)?;
 
     let arch = match env.arch {
@@ -208,15 +256,26 @@ pub fn download_prebuilt(
         _ => unreachable!(),
     };
 
+    // x64 builds before v1.4 require AVX2, otherwise the baseline build is needed
     let mut avx2_suffix = "";
 
-    if env.arch == HostArch::X64 && env.os.is_linux() && command_exists(env, "grep") {
-        let output = exec_captured("grep", ["avx2", "/proc/cpuinfo"])?;
+    if env.arch == HostArch::X64 {
+        let has_avx2 = match env.os {
+            HostOS::Linux if command_exists(env, "grep") => {
+                exec_captured("grep", ["avx2", "/proc/cpuinfo"])?.exit_code == 0
+            }
+            HostOS::MacOS if command_exists(env, "sysctl") => {
+                exec_captured("sysctl", ["machdep.cpu"])?
+                    .stdout
+                    .contains("AVX2")
+            }
+            _ => true,
+        };
 
-        if output.exit_code != 0 {
+        if !has_avx2 {
             avx2_suffix = "-baseline";
         }
-    };
+    }
 
     let mut libc_suffix = "";
 
@@ -237,6 +296,7 @@ pub fn download_prebuilt(
         HostOS::Linux => format!("bun-linux-{arch}{libc_suffix}{avx2_suffix}"),
         HostOS::MacOS => format!("bun-darwin-{arch}{avx2_suffix}"),
         HostOS::Windows => format!("bun-windows-{arch}"),
+        HostOS::FreeBSD => format!("bun-freebsd-{arch}"),
         _ => unreachable!(),
     };
 
@@ -294,7 +354,13 @@ pub fn locate_executables(
             ),
             ("bunx".into(), bunx),
         ]),
-        globals_lookup_dirs: vec!["$HOME/.bun/bin".into()],
+        // Where `bun add --global` links bins, in Bun's lookup order
+        globals_lookup_dirs: vec![
+            "$BUN_INSTALL_BIN".into(),
+            append_env_bin_dir("BUN_INSTALL")?,
+            "$XDG_CACHE_HOME/.bun/bin".into(),
+            "$HOME/.bun/bin".into(),
+        ],
         ..Default::default()
     }))
 }

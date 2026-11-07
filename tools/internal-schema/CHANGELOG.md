@@ -4,7 +4,22 @@
 
 #### 🐞 Fixes
 
+- Fixed a version pattern without a capture group panicking, which surfaced as an unclear WASM
+  error. It now errors with how to fix the pattern.
+- Fixed a format v1 canary with its own `download-url-canary` using the stable `checksum-url` (with
+  `canary` as the version), which doesn't exist. The checksum is now skipped, unless
+  `checksum-url-canary` is configured.
+- Fixed comments in version files, like `1.4 # stable`, failing to parse. The first line with a
+  version is now used, and everything after `#` is ignored.
 - Fixed the `latest` version resolving to a pre-release or a version with build metadata, when configured as such. It now falls back to the highest stable version.
+- Fixed the `year`, `month`, and `day` version pattern groups being ignored, unless a `major` group was also matched.
+- Fixed a single version with leading zeros, like `2024.01.05`, failing to load all versions. Leading zeros are now removed, for example `2024.1.5`.
+- Fixed `{download_file}` not being replaced in the format v1 `checksum-url` setting.
+- Fixed the checksum file being named `CHECKSUM.txt` when the format v1 `checksum-file` setting is not configured, which failed to detect the algorithm of files like `.minisig` and `.sha256`. The name is now extracted from the checksum URL.
+
+#### ⚙️ Internal
+
+- Version files are now read from their path, as the `content` input is deprecated.
 
 ## 0.19.0
 

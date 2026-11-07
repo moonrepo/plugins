@@ -20,7 +20,10 @@ pub fn to_swift_version(spec: &VersionSpec) -> String {
             let version = spec.as_version().unwrap();
             let mut next = version.to_string();
 
-            if let Some(prefix) = next.strip_suffix(".0") {
+            // Releases before 6.4.0 drop a `.0` patch from their names
+            if (version.major, version.minor) < (6, 4)
+                && let Some(prefix) = next.strip_suffix(".0")
+            {
                 next = prefix.to_owned();
             }
 
@@ -52,6 +55,14 @@ mod tests {
         assert_eq!(
             to_swift_version(&VersionSpec::parse("6.1.2").unwrap()),
             "6.1.2"
+        );
+        assert_eq!(
+            to_swift_version(&VersionSpec::parse("6.4.0").unwrap()),
+            "6.4.0"
+        );
+        assert_eq!(
+            to_swift_version(&VersionSpec::parse("7.0.0").unwrap()),
+            "7.0.0"
         );
     }
 }

@@ -21,7 +21,7 @@ All plugins can be configured with a `.prototools` file.
 
 - `bundled-npm` (bool) - When `node` is installed, also install `npm` with the version of npm that came bundled with Node.js. Defaults to `false`.
 - `dist-url` (string) - The distribution URL to download Node.js archives from. Supports `{channel}`, `{version}`, and `{file}` tokens.
-- `dist-url-unofficial` (string) - The distribution URL to download [unofficial Node.js builds](https://github.com/nodejs/unofficial-builds) from, like musl. Supports `{channel}`, `{version}`, and `{file}` tokens.
+- `dist-url-unofficial` (string) - The distribution URL to download [unofficial Node.js builds](https://github.com/nodejs/unofficial-builds) from, like musl, riscv64, and loong64. Supports `{channel}`, `{version}`, and `{file}` tokens.
 - `index-url` (string) - The URL of a Node.js-compatible versions index. Supports the `{channel}` token.
 
 ```toml

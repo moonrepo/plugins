@@ -2,6 +2,20 @@ use proto_pdk_test_utils::*;
 use starbase_sandbox::assert_snapshot;
 use std::fs;
 
+fn version_file(
+    sandbox: &ProtoWasmSandbox,
+    file: &str,
+    content: impl AsRef<str>,
+) -> ParseVersionFileInput {
+    sandbox.create_file(file, content);
+
+    ParseVersionFileInput {
+        file: file.into(),
+        path: VirtualPath::new(sandbox.path().join(file)),
+        ..Default::default()
+    }
+}
+
 mod node_depman_tool {
     use super::*;
 
@@ -17,7 +31,6 @@ mod node_depman_tool {
         assert_eq!(
             plugin
                 .parse_version_file(ParseVersionFileInput {
-                    content: r#"{ "volta": { "extends": "./a.json" } }"#.into(),
                     file: "package.json".into(),
                     path: plugin
                         .tool
@@ -38,12 +51,11 @@ mod node_depman_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: r#"{ "devEngines": { "packageManager": { "name": "npm", "version": "1.2.3" } }, "packageManager": "npm@4.5.6", "volta": { "npm": "7.8.9" }, "engines": { "npm": "^10" } }"#
-                        .into(),
-                    file: "package.json".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    "package.json",
+                    r#"{ "devEngines": { "packageManager": { "name": "npm", "version": "1.2.3" } }, "packageManager": "npm@4.5.6", "volta": { "npm": "7.8.9" }, "engines": { "npm": "^10" } }"#,
+                ))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
@@ -58,12 +70,11 @@ mod node_depman_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: r#"{ "packageManager": "npm@https://registry.npmjs.org/npm/-/npm-9.0.0.tgz", "volta": { "npm": "7.8.9" }, "engines": { "npm": "^10" } }"#
-                        .into(),
-                    file: "package.json".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    "package.json",
+                    r#"{ "packageManager": "npm@https://registry.npmjs.org/npm/-/npm-9.0.0.tgz", "volta": { "npm": "7.8.9" }, "engines": { "npm": "^10" } }"#,
+                ))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("7.8.9").unwrap()),
@@ -78,13 +89,11 @@ mod node_depman_tool {
         let plugin = sandbox.create_plugin("npm-test").await;
 
         plugin
-            .parse_version_file(ParseVersionFileInput {
-                content:
-                    r#"{ "packageManager": "npm@https://registry.npmjs.org/npm/-/npm-9.0.0.tgz" }"#
-                        .into(),
-                file: "package.json".into(),
-                ..Default::default()
-            })
+            .parse_version_file(version_file(
+                &sandbox,
+                "package.json",
+                r#"{ "packageManager": "npm@https://registry.npmjs.org/npm/-/npm-9.0.0.tgz" }"#,
+            ))
             .await;
     }
 
@@ -104,11 +113,11 @@ mod node_depman_tool {
 
             assert_eq!(
                 plugin
-                    .parse_version_file(ParseVersionFileInput {
-                        content: r#"{ "packageManager": "yarn@1.2.3" }"#.into(),
-                        file: "package.json".into(),
-                        ..Default::default()
-                    })
+                    .parse_version_file(version_file(
+                        &sandbox,
+                        "package.json",
+                        r#"{ "packageManager": "yarn@1.2.3" }"#
+                    ))
                     .await,
                 ParseVersionFileOutput { version: None }
             );
@@ -121,11 +130,11 @@ mod node_depman_tool {
 
             assert_eq!(
                 plugin
-                    .parse_version_file(ParseVersionFileInput {
-                        content: r#"{ "packageManager": "npm@1.2.3" }"#.into(),
-                        file: "package.json".into(),
-                        ..Default::default()
-                    })
+                    .parse_version_file(version_file(
+                        &sandbox,
+                        "package.json",
+                        r#"{ "packageManager": "npm@1.2.3" }"#
+                    ))
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
@@ -139,11 +148,11 @@ mod node_depman_tool {
             let plugin = sandbox.create_plugin("npm-test").await;
 
             assert_eq!(
-            plugin.parse_version_file(ParseVersionFileInput {
-                content: r#"{ "packageManager": "npm@1.2.3+sha256.c362077587b1e782e5aef3dcf85826399ae552ad66b760e2585c4ac11102243f" }"#.into(),
-                file: "package.json".into(),
-                    ..Default::default()
-            }).await,
+            plugin.parse_version_file(version_file(
+                &sandbox,
+                "package.json",
+                r#"{ "packageManager": "npm@1.2.3+sha256.c362077587b1e782e5aef3dcf85826399ae552ad66b760e2585c4ac11102243f" }"#,
+            )).await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
             }
@@ -157,11 +166,11 @@ mod node_depman_tool {
 
             assert_eq!(
                 plugin
-                    .parse_version_file(ParseVersionFileInput {
-                        content: r#"{ "packageManager": "npm" }"#.into(),
-                        file: "package.json".into(),
-                        ..Default::default()
-                    })
+                    .parse_version_file(version_file(
+                        &sandbox,
+                        "package.json",
+                        r#"{ "packageManager": "npm" }"#
+                    ))
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("latest").unwrap()),
@@ -176,11 +185,11 @@ mod node_depman_tool {
 
             assert_eq!(
                 plugin
-                    .parse_version_file(ParseVersionFileInput {
-                        content: r#"{ "engines": { "npm": "1.2.3" } }"#.into(),
-                        file: "package.json".into(),
-                        ..Default::default()
-                    })
+                    .parse_version_file(version_file(
+                        &sandbox,
+                        "package.json",
+                        r#"{ "engines": { "npm": "1.2.3" } }"#
+                    ))
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
@@ -195,11 +204,11 @@ mod node_depman_tool {
 
             assert_eq!(
                 plugin
-                    .parse_version_file(ParseVersionFileInput {
-                        content: r#"{ "devEngines": { "packageManager": { "name": "npm", "version": "1.2.3" } } }"#.into(),
-                        file: "package.json".into(),
-                        ..Default::default()
-                    })
+                    .parse_version_file(version_file(
+                        &sandbox,
+                        "package.json",
+                        r#"{ "devEngines": { "packageManager": { "name": "npm", "version": "1.2.3" } } }"#,
+                    ))
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
@@ -214,11 +223,11 @@ mod node_depman_tool {
 
             assert_eq!(
                 plugin
-                    .parse_version_file(ParseVersionFileInput {
-                        content: r#"{ "volta": { "npm": "1.2.3" } }"#.into(),
-                        file: "package.json".into(),
-                        ..Default::default()
-                    })
+                    .parse_version_file(version_file(
+                        &sandbox,
+                        "package.json",
+                        r#"{ "volta": { "npm": "1.2.3" } }"#
+                    ))
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
@@ -243,11 +252,11 @@ mod node_depman_tool {
 
             assert_eq!(
                 plugin
-                    .parse_version_file(ParseVersionFileInput {
-                        content: r#"{ "packageManager": "npm@1.2.3" }"#.into(),
-                        file: "package.json".into(),
-                        ..Default::default()
-                    })
+                    .parse_version_file(version_file(
+                        &sandbox,
+                        "package.json",
+                        r#"{ "packageManager": "npm@1.2.3" }"#
+                    ))
                     .await,
                 ParseVersionFileOutput { version: None }
             );
@@ -260,11 +269,11 @@ mod node_depman_tool {
 
             assert_eq!(
                 plugin
-                    .parse_version_file(ParseVersionFileInput {
-                        content: r#"{ "packageManager": "nub@1.2.3" }"#.into(),
-                        file: "package.json".into(),
-                        ..Default::default()
-                    })
+                    .parse_version_file(version_file(
+                        &sandbox,
+                        "package.json",
+                        r#"{ "packageManager": "nub@1.2.3" }"#
+                    ))
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
@@ -279,11 +288,11 @@ mod node_depman_tool {
 
             assert_eq!(
                 plugin
-                    .parse_version_file(ParseVersionFileInput {
-                        content: r#"{ "packageManager": "nub" }"#.into(),
-                        file: "package.json".into(),
-                        ..Default::default()
-                    })
+                    .parse_version_file(version_file(
+                        &sandbox,
+                        "package.json",
+                        r#"{ "packageManager": "nub" }"#
+                    ))
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("latest").unwrap()),
@@ -298,11 +307,11 @@ mod node_depman_tool {
 
             assert_eq!(
                 plugin
-                    .parse_version_file(ParseVersionFileInput {
-                        content: r#"{ "engines": { "nub": "1.2.3" } }"#.into(),
-                        file: "package.json".into(),
-                        ..Default::default()
-                    })
+                    .parse_version_file(version_file(
+                        &sandbox,
+                        "package.json",
+                        r#"{ "engines": { "nub": "1.2.3" } }"#
+                    ))
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
@@ -317,11 +326,11 @@ mod node_depman_tool {
 
             assert_eq!(
                 plugin
-                    .parse_version_file(ParseVersionFileInput {
-                        content: r#"{ "devEngines": { "packageManager": { "name": "nub", "version": "1.2.3" } } }"#.into(),
-                        file: "package.json".into(),
-                        ..Default::default()
-                    })
+                    .parse_version_file(version_file(
+                        &sandbox,
+                        "package.json",
+                        r#"{ "devEngines": { "packageManager": { "name": "nub", "version": "1.2.3" } } }"#,
+                    ))
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
@@ -336,11 +345,11 @@ mod node_depman_tool {
 
             assert_eq!(
                 plugin
-                    .parse_version_file(ParseVersionFileInput {
-                        content: r#"{ "volta": { "nub": "1.2.3" } }"#.into(),
-                        file: "package.json".into(),
-                        ..Default::default()
-                    })
+                    .parse_version_file(version_file(
+                        &sandbox,
+                        "package.json",
+                        r#"{ "volta": { "nub": "1.2.3" } }"#
+                    ))
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
@@ -365,11 +374,11 @@ mod node_depman_tool {
 
             assert_eq!(
                 plugin
-                    .parse_version_file(ParseVersionFileInput {
-                        content: r#"{ "packageManager": "yarn@1.2.3" }"#.into(),
-                        file: "package.json".into(),
-                        ..Default::default()
-                    })
+                    .parse_version_file(version_file(
+                        &sandbox,
+                        "package.json",
+                        r#"{ "packageManager": "yarn@1.2.3" }"#
+                    ))
                     .await,
                 ParseVersionFileOutput { version: None }
             );
@@ -382,11 +391,11 @@ mod node_depman_tool {
 
             assert_eq!(
                 plugin
-                    .parse_version_file(ParseVersionFileInput {
-                        content: r#"{ "packageManager": "pnpm@1.2.3" }"#.into(),
-                        file: "package.json".into(),
-                        ..Default::default()
-                    })
+                    .parse_version_file(version_file(
+                        &sandbox,
+                        "package.json",
+                        r#"{ "packageManager": "pnpm@1.2.3" }"#
+                    ))
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
@@ -401,11 +410,11 @@ mod node_depman_tool {
 
             assert_eq!(
                 plugin
-                    .parse_version_file(ParseVersionFileInput {
-                        content: r#"{ "packageManager": "pnpm" }"#.into(),
-                        file: "package.json".into(),
-                        ..Default::default()
-                    })
+                    .parse_version_file(version_file(
+                        &sandbox,
+                        "package.json",
+                        r#"{ "packageManager": "pnpm" }"#
+                    ))
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("latest").unwrap()),
@@ -420,11 +429,11 @@ mod node_depman_tool {
 
             assert_eq!(
                 plugin
-                    .parse_version_file(ParseVersionFileInput {
-                        content: r#"{ "engines": { "pnpm": "1.2.3" } }"#.into(),
-                        file: "package.json".into(),
-                        ..Default::default()
-                    })
+                    .parse_version_file(version_file(
+                        &sandbox,
+                        "package.json",
+                        r#"{ "engines": { "pnpm": "1.2.3" } }"#
+                    ))
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
@@ -440,11 +449,11 @@ mod node_depman_tool {
 
             assert_eq!(
                 plugin
-                    .parse_version_file(ParseVersionFileInput {
-                        content: r#"{ "devEngines": { "packageManager": { "name": "pnpm", "version": "1.2.3" } } }"#.into(),
-                        file: "package.json".into(),
-                        ..Default::default()
-                    })
+                    .parse_version_file(version_file(
+                        &sandbox,
+                        "package.json",
+                        r#"{ "devEngines": { "packageManager": { "name": "pnpm", "version": "1.2.3" } } }"#,
+                    ))
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
@@ -459,11 +468,11 @@ mod node_depman_tool {
 
             assert_eq!(
                 plugin
-                    .parse_version_file(ParseVersionFileInput {
-                        content: r#"{ "volta": { "pnpm": "1.2.3" } }"#.into(),
-                        file: "package.json".into(),
-                        ..Default::default()
-                    })
+                    .parse_version_file(version_file(
+                        &sandbox,
+                        "package.json",
+                        r#"{ "volta": { "pnpm": "1.2.3" } }"#
+                    ))
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
@@ -512,11 +521,11 @@ mod node_depman_tool {
 
             assert_eq!(
                 plugin
-                    .parse_version_file(ParseVersionFileInput {
-                        content: r#"{ "packageManager": "pnpm@1.2.3" }"#.into(),
-                        file: "package.json".into(),
-                        ..Default::default()
-                    })
+                    .parse_version_file(version_file(
+                        &sandbox,
+                        "package.json",
+                        r#"{ "packageManager": "pnpm@1.2.3" }"#
+                    ))
                     .await,
                 ParseVersionFileOutput { version: None }
             );
@@ -529,11 +538,11 @@ mod node_depman_tool {
 
             assert_eq!(
                 plugin
-                    .parse_version_file(ParseVersionFileInput {
-                        content: r#"{ "packageManager": "yarn@1.2.3" }"#.into(),
-                        file: "package.json".into(),
-                        ..Default::default()
-                    })
+                    .parse_version_file(version_file(
+                        &sandbox,
+                        "package.json",
+                        r#"{ "packageManager": "yarn@1.2.3" }"#
+                    ))
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
@@ -548,11 +557,11 @@ mod node_depman_tool {
 
             assert_eq!(
                 plugin
-                    .parse_version_file(ParseVersionFileInput {
-                        content: r#"{ "packageManager": "yarn" }"#.into(),
-                        file: "package.json".into(),
-                        ..Default::default()
-                    })
+                    .parse_version_file(version_file(
+                        &sandbox,
+                        "package.json",
+                        r#"{ "packageManager": "yarn" }"#
+                    ))
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("latest").unwrap()),
@@ -567,11 +576,11 @@ mod node_depman_tool {
 
             assert_eq!(
                 plugin
-                    .parse_version_file(ParseVersionFileInput {
-                        content: r#"{ "engines": { "yarn": "1.2.3" } }"#.into(),
-                        file: "package.json".into(),
-                        ..Default::default()
-                    })
+                    .parse_version_file(version_file(
+                        &sandbox,
+                        "package.json",
+                        r#"{ "engines": { "yarn": "1.2.3" } }"#
+                    ))
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
@@ -586,11 +595,11 @@ mod node_depman_tool {
 
             assert_eq!(
                 plugin
-                    .parse_version_file(ParseVersionFileInput {
-                        content: r#"{ "devEngines": { "packageManager": { "name": "yarn", "version": "1.2.3" } } }"#.into(),
-                        file: "package.json".into(),
-                        ..Default::default()
-                    })
+                    .parse_version_file(version_file(
+                        &sandbox,
+                        "package.json",
+                        r#"{ "devEngines": { "packageManager": { "name": "yarn", "version": "1.2.3" } } }"#,
+                    ))
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
@@ -605,11 +614,11 @@ mod node_depman_tool {
 
             assert_eq!(
                 plugin
-                    .parse_version_file(ParseVersionFileInput {
-                        content: r#"{ "volta": { "yarn": "1.2.3" } }"#.into(),
-                        file: "package.json".into(),
-                        ..Default::default()
-                    })
+                    .parse_version_file(version_file(
+                        &sandbox,
+                        "package.json",
+                        r#"{ "volta": { "yarn": "1.2.3" } }"#
+                    ))
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),

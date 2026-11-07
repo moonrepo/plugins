@@ -1,5 +1,19 @@
 use proto_pdk_test_utils::*;
 
+fn version_file(
+    sandbox: &ProtoWasmSandbox,
+    file: &str,
+    content: impl AsRef<str>,
+) -> ParseVersionFileInput {
+    sandbox.create_file(file, content);
+
+    ParseVersionFileInput {
+        file: file.into(),
+        path: VirtualPath::new(sandbox.path().join(file)),
+        ..Default::default()
+    }
+}
+
 mod python_tool {
     use super::*;
     use ::python_tool::PythonToolConfig;
@@ -185,5 +199,54 @@ mod python_tool {
         assert!(output.latest.is_some());
         assert!(output.aliases.contains_key("latest"));
         assert_eq!(output.aliases.get("latest"), output.latest.as_ref());
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn detects_uv_multiple_versions_file() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("python-test").await;
+
+        assert_eq!(
+            plugin
+                .detect_version_files(DetectVersionInput::default())
+                .await
+                .files,
+            [".python-version", ".python-versions"]
+        );
+    }
+
+    async fn parse_version_file(content: &str) -> Option<UnresolvedVersionSpec> {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("python-test").await;
+
+        plugin
+            .parse_version_file(version_file(&sandbox, ".python-version", content))
+            .await
+            .version
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn parses_python_version_file() {
+        for (content, expected) in [
+            ("3.12.1", "3.12.1"),
+            ("3.12", "3.12"),
+            // pyenv writes a line per version, the first being the default
+            ("3.12.1\n3.11.7\n", "3.12.1"),
+            ("# pinned for CI\n\n  3.13 \n", "3.13"),
+            ("3.15.0rc2", "3.15.0-rc.2"),
+        ] {
+            assert_eq!(
+                parse_version_file(content).await,
+                Some(UnresolvedVersionSpec::parse(expected).unwrap()),
+                "for {content:?}"
+            );
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn ignores_other_implementations_in_python_version_file() {
+        for content in ["system", "pypy3.10-7.3.12", "miniconda3-latest"] {
+            assert_eq!(parse_version_file(content).await, None, "for {content:?}");
+        }
     }
 }

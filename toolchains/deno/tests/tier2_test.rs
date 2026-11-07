@@ -87,6 +87,26 @@ mod deno_toolchain_tier2 {
                 [sandbox.path().join(".home").join(".deno").join("bin")]
             );
         }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn uses_install_root_as_is_when_a_bin_dir() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("deno").await;
+            let root = sandbox.path().join("deno").join("bin");
+
+            unsafe { env::set_var("DENO_INSTALL_ROOT", &root) };
+
+            let output = plugin
+                .extend_task_command(ExtendTaskCommandInput {
+                    command: "unknown".into(),
+                    ..Default::default()
+                })
+                .await;
+
+            unsafe { env::remove_var("DENO_INSTALL_ROOT") };
+
+            assert_eq!(output.paths, [root]);
+        }
     }
 
     mod extend_task_script {

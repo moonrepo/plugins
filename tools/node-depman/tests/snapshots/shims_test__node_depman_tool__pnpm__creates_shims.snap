@@ -13,10 +13,16 @@ expression: "std :: fs ::\nread_to_string(sandbox.path().join(\".proto/shims/reg
   },
   "pnpx": {
     "alt_exe": true,
+    "before_args": [
+      "dlx"
+    ],
     "context": "pnpm-test"
   },
   "pnx": {
     "alt_exe": true,
+    "before_args": [
+      "dlx"
+    ],
     "context": "pnpm-test"
   }
 }
