@@ -9,7 +9,7 @@ use nodejs_package_json::PackageJson;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
 use std::collections::HashMap;
-use tool_common::enable_tracing;
+use tool_common::{append_env_bin_dir, enable_tracing};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -320,7 +320,7 @@ pub fn locate_executables(
         // Where `bun add --global` links bins, in Bun's lookup order
         globals_lookup_dirs: vec![
             "$BUN_INSTALL_BIN".into(),
-            "$BUN_INSTALL/bin".into(),
+            append_env_bin_dir("BUN_INSTALL")?,
             "$XDG_CACHE_HOME/.bun/bin".into(),
             "$HOME/.bun/bin".into(),
         ],
