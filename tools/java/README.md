@@ -23,7 +23,7 @@ Java is distributed by many vendors, with prebuilts provided by the [foojay Disc
 java = "temurin-21"
 ```
 
-Versions without a prefix resolve against the default `openjdk` distribution. Vendor prefixes are also supported in `.java-version` files, while `.sdkmanrc` files use SDKMAN's own `<version>-<vendor>` format, whose vendor codes map to the aliases below.
+Versions without a prefix resolve against the default `temurin` distribution. Vendor prefixes are also supported in `.java-version` files, while `.sdkmanrc` files use SDKMAN's own `<version>-<vendor>` format, whose vendor codes map to the aliases below.
 
 | Vendor                             | Scope prefix        | Aliases                     |
 | ---------------------------------- | ------------------- | --------------------------- |
@@ -50,13 +50,13 @@ Versions without a prefix resolve against the default `openjdk` distribution. Ve
 | Microsoft Build of OpenJDK         | `microsoft`         | `ms`, `msoft`               |
 | OJDKBuild                          | `ojdk-build`        |                             |
 | OpenLogic OpenJDK                  | `open-logic`        |                             |
-| Oracle OpenJDK (default)           | `openjdk`           | `open`                      |
+| Oracle OpenJDK                     | `openjdk`           | `open`                      |
 | Oracle JDK                         | `oracle`            |                             |
 | Red Hat Build of OpenJDK           | `redhat`            |                             |
 | SapMachine                         | `sap-machine`       | `sap`, `sapmchn`            |
 | IBM Semeru                         | `semeru`            | `sem`                       |
 | IBM Semeru Certified Edition       | `semeru-certified`  |                             |
-| Eclipse Temurin                    | `temurin`           | `tem`                       |
+| Eclipse Temurin (default)          | `temurin`           | `tem`                       |
 | Trava OpenJDK                      | `trava`             |                             |
 | Azul Zulu                          | `zulu`              |                             |
 | Azul Zulu Prime                    | `zulu-prime`        |                             |

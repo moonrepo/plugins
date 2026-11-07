@@ -41,7 +41,6 @@ pub enum Distribution {
     Microsoft,
     OjdkBuild,
     OpenLogic,
-    #[default]
     #[serde(rename = "openjdk")]
     OpenJdk,
     Oracle,
@@ -49,6 +48,9 @@ pub enum Distribution {
     SapMachine,
     Semeru,
     SemeruCertified,
+    // Like SDKMAN and mise, as jdk.java.net's `openjdk`
+    // builds stop receiving updates after 6 months
+    #[default]
     Temurin,
     Trava,
     Zulu,
@@ -338,8 +340,8 @@ mod tests {
         }
 
         #[test]
-        fn defaults_to_openjdk() {
-            assert_eq!(Distribution::default(), Distribution::OpenJdk);
+        fn defaults_to_temurin() {
+            assert_eq!(Distribution::default(), Distribution::Temurin);
         }
 
         #[test]
