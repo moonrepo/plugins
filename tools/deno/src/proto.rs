@@ -1,7 +1,8 @@
 use crate::config::DenoToolConfig;
 use extism_pdk::*;
 use lang_javascript_common::{
-    extract_dev_engine_runtime_version, insert_dev_engine_version, remove_dev_engine,
+    extract_dev_engine_runtime_version, extract_engine_version, get_dev_engine_version_error,
+    insert_dev_engine_version, remove_dev_engine,
 };
 use nodejs_package_json::PackageJson;
 use proto_pdk::*;
@@ -52,10 +53,14 @@ pub fn parse_version_file(
     let mut version = None;
 
     if input.file == "package.json" {
-        if let Ok(package_json) = json::from_str::<PackageJson>(&input.content)
-            && let Some(constraint) = extract_dev_engine_runtime_version(&package_json, "deno")
-        {
-            version = Some(UnresolvedVersionSpec::parse(constraint)?);
+        if let Ok(package_json) = json::from_str::<PackageJson>(&input.content) {
+            if let Some(constraint) = extract_dev_engine_runtime_version(&package_json, "deno") {
+                version = Some(UnresolvedVersionSpec::parse(constraint)?);
+            }
+            // Deno v2.9+ checks this too
+            else if let Some(constraint) = extract_engine_version(&package_json, "deno") {
+                version = Some(UnresolvedVersionSpec::parse(constraint)?);
+            }
         }
     } else if let Some(constraint) = extract_dvmrc_version(&input.content) {
         version = Some(UnresolvedVersionSpec::parse(constraint)?);
@@ -84,6 +89,12 @@ pub fn pin_version(Json(input): Json<PinVersionInput>) -> FnResult<Json<PinVersi
 
     if file.exists() {
         let mut package_json: json::Value = starbase_utils::json::read_file(&file)?;
+
+        if let Some(error) = get_dev_engine_version_error(&input.version) {
+            output.error = Some(error);
+
+            return Ok(Json(output));
+        }
 
         insert_dev_engine_version(
             &mut package_json,
