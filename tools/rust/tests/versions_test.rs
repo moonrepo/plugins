@@ -41,7 +41,7 @@ mod rust_tool {
         assert_eq!(
             plugin
                 .parse_version_file(ParseVersionFileInput {
-                    content: "1.60.0".into(),
+                    content: "1.60.0 # pinned for CI\n".into(),
                     file: "rust-toolchain".into(),
                     ..Default::default()
                 })
