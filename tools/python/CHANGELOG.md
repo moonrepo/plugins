@@ -9,7 +9,7 @@
   like `3.15.0rc2`. Files for other implementations, like `pypy3.10-7.3.12`, or `system`, are now
   ignored with a warning instead of failing.
 - Added `$PYTHONUSERBASE/bin` as a globals directory on Unix, which is where `pip install --user`
-  writes when the user base is overridden.
+  writes when the user base is overridden. When it already is a `bin` directory, it's used as-is.
 - Added `git`, `bash`, and `libzstd-dev` to the build from source system dependencies, as suggested
   by pyenv. Without them, Alpine couldn't run `python-build`, and Debian/Ubuntu built 3.14+ without
   the `compression.zstd` module.

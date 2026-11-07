@@ -7,7 +7,7 @@ use proto_pdk::*;
 use regex::Regex;
 use schematic::SchemaBuilder;
 use std::collections::{HashMap, HashSet};
-use tool_common::{enable_tracing, registry::*};
+use tool_common::{append_env_bin_dir, enable_tracing, registry::*};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -287,7 +287,7 @@ pub fn locate_executables(
 
     // Where `pip install --user` writes on Unix when the user base is overridden
     if !env.os.is_windows() {
-        globals_lookup_dirs.push("$PYTHONUSERBASE/bin".into());
+        globals_lookup_dirs.push(append_env_bin_dir("PYTHONUSERBASE")?);
     }
 
     globals_lookup_dirs.push("$HOME/.local/bin".into());
