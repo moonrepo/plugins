@@ -5,7 +5,7 @@ use extism_pdk::*;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
 use std::collections::HashMap;
-use tool_common::enable_tracing;
+use tool_common::{enable_tracing, extract_version_from_text};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -51,42 +51,32 @@ pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
 pub fn parse_version_file(
     Json(input): Json<ParseVersionFileInput>,
 ) -> FnResult<Json<ParseVersionFileOutput>> {
-    let mut version = None;
+    let mut value = None;
 
-    for line in input.content.lines() {
-        let line = line.split('#').next().unwrap_or_default().trim();
+    if input.file == ".kotlin-version" {
+        value = extract_version_from_text(&input.content);
+    } else if input.file == ".sdkmanrc" {
+        for line in input.content.lines() {
+            let line = line.split('#').next().unwrap_or_default();
 
-        if line.is_empty() {
-            continue;
-        }
+            if let Some((key, version)) = line.split_once('=')
+                && key.trim() == "kotlin"
+            {
+                let version = version.trim();
 
-        let value = match input.file.as_str() {
-            ".kotlin-version" => line,
-            ".sdkmanrc" => {
-                let Some((key, value)) = line.split_once('=') else {
-                    continue;
-                };
-
-                if key.trim() != "kotlin" {
-                    continue;
-                }
-
-                let value = value.trim();
-
-                if value.is_empty() {
+                if version.is_empty() {
                     return Err(plugin_err!("The Kotlin version in .sdkmanrc is empty."));
                 }
 
-                value
+                value = Some(version);
+                break;
             }
-            _ => break,
-        };
-
-        version = Some(UnresolvedVersionSpec::parse(value)?);
-        break;
+        }
     }
 
-    Ok(Json(ParseVersionFileOutput { version }))
+    Ok(Json(ParseVersionFileOutput {
+        version: value.map(UnresolvedVersionSpec::parse).transpose()?,
+    }))
 }
 
 #[plugin_fn]
