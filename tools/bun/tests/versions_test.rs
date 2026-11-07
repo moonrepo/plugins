@@ -119,7 +119,7 @@ mod bun_tool {
         assert_eq!(
             plugin
                 .parse_version_file(ParseVersionFileInput {
-                    content: "# comment\n^2.1".into(),
+                    content: "# comment\n^2.1 # stable".into(),
                     file: ".bumrc".into(),
                     ..Default::default()
                 })
@@ -157,7 +157,7 @@ mod bun_tool {
         assert_eq!(
             plugin
                 .parse_version_file(ParseVersionFileInput {
-                    content: "# comment\n^2.1".into(),
+                    content: "# comment\n^2.1 # stable".into(),
                     file: ".bun-version".into(),
                     ..Default::default()
                 })

@@ -10,6 +10,8 @@
 
 #### 🐞 Fixes
 
+- Fixed a comment after the version in `.bun-version` or `.bumrc`, like `1.3 # stable`, failing
+  to parse. Everything after `#` is now ignored.
 - Fixed Intel macOS machines without AVX2 (and x64 under Rosetta) installing a Bun build that
   crashes on start. They now install the baseline build, like Bun's own installer. Only affects
   versions before v1.4, where every x64 build became baseline.
