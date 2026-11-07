@@ -4,6 +4,8 @@
 
 #### 🐞 Fixes
 
+- Fixed comments in `.zig-version` and `.zigversion`, like `0.15.2 # stable`, failing to parse.
+  Everything after `#` is now ignored.
 - Removed the archive prefix from downloads, as ZLS archives have no top-level directory.
 - Fixed partial versions and aliases in Zig version files, like `0.15` or `latest` in
   `.zig-version`, failing to parse and stopping ZLS from installing.
