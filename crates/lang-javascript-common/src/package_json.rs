@@ -16,20 +16,6 @@ pub fn extract_valid_version_protocol(version_protocol: &VersionProtocol) -> Opt
     }
 }
 
-pub fn extract_version_from_text(content: &str) -> Option<&str> {
-    for line in content.lines() {
-        let line = line.trim();
-
-        if line.is_empty() || line.starts_with('#') || line.starts_with("//") {
-            continue;
-        } else {
-            return Some(line);
-        }
-    }
-
-    None
-}
-
 pub fn extract_dev_engine_runtime_version(package_json: &PackageJson, key: &str) -> Option<String> {
     if let Some(engines) = &package_json.dev_engines
         && let Some(engine) = &engines.runtime
