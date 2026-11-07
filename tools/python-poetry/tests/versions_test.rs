@@ -69,6 +69,23 @@ mod python_poetry_tool {
     }
 
     #[tokio::test(flavor = "multi_thread")]
+    async fn ignores_untranslatable_pyproject_toml_specifiers() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("poetry-test").await;
+
+        assert_eq!(
+            plugin
+                .parse_version_file(ParseVersionFileInput {
+                    content: "[tool.poetry]\nrequires-poetry = \"~=2\"".into(),
+                    file: "pyproject.toml".into(),
+                    ..Default::default()
+                })
+                .await,
+            ParseVersionFileOutput { version: None }
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
     async fn parses_pyproject_toml_pep_specifiers() {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox.create_plugin("poetry-test").await;
