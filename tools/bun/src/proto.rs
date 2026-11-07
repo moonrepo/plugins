@@ -3,11 +3,12 @@ use extism_pdk::*;
 use lang_javascript_common::{
     extract_dev_engine_package_manager_version, extract_dev_engine_runtime_version,
     extract_engine_version, extract_package_manager_version, extract_volta_version,
-    insert_dev_engine_version, remove_dev_engine,
+    get_dev_engine_version_error, insert_dev_engine_version, remove_dev_engine,
 };
 use nodejs_package_json::PackageJson;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
+use starbase_utils::fs;
 use std::collections::HashMap;
 use tool_common::{append_env_bin_dir, enable_tracing, extract_version_from_text};
 
@@ -73,14 +74,15 @@ pub fn parse_version_file(
                 version = Some(UnresolvedVersionSpec::parse(constraint)?);
             }
 
+            // Like setup-bun, an exact `packageManager` takes precedence over a range
             if version.is_none()
-                && let Some(constraint) = extract_engine_version(&package_json, "bun")
+                && let Some(constraint) = extract_package_manager_version(&package_json, "bun")
             {
                 version = Some(UnresolvedVersionSpec::parse(constraint)?);
             }
 
             if version.is_none()
-                && let Some(constraint) = extract_package_manager_version(&package_json, "bun")
+                && let Some(constraint) = extract_engine_version(&package_json, "bun")
             {
                 version = Some(UnresolvedVersionSpec::parse(constraint)?);
             }
@@ -92,24 +94,40 @@ pub fn parse_version_file(
     Ok(Json(ParseVersionFileOutput { version }))
 }
 
+// Version files are detected before `package.json`, so must be updated when they exist
+static VERSION_FILES: [&str; 2] = [".bumrc", ".bun-version"];
+
 #[plugin_fn]
 pub fn pin_version(Json(input): Json<PinVersionInput>) -> FnResult<Json<PinVersionOutput>> {
     let mut output = PinVersionOutput::default();
+
+    for name in VERSION_FILES {
+        let file = input.dir.join(name);
+
+        if file.exists() {
+            fs::write_file(&file, format!("{}\n", input.version))?;
+
+            output.pinned = true;
+            output.file = Some(file);
+
+            return Ok(Json(output));
+        }
+    }
+
     let file = input.dir.join("package.json");
 
     if file.exists() {
+        if let Some(error) = get_dev_engine_version_error(&input.version) {
+            output.error = Some(error);
+
+            return Ok(Json(output));
+        }
+
         let mut package_json: json::Value = starbase_utils::json::read_file(&file)?;
 
         insert_dev_engine_version(
             &mut package_json,
             "runtime".into(),
-            "bun".into(),
-            input.version.to_string(),
-        )?;
-
-        insert_dev_engine_version(
-            &mut package_json,
-            "packageManager".into(),
             "bun".into(),
             input.version.to_string(),
         )?;
@@ -128,6 +146,24 @@ pub fn pin_version(Json(input): Json<PinVersionInput>) -> FnResult<Json<PinVersi
 #[plugin_fn]
 pub fn unpin_version(Json(input): Json<UnpinVersionInput>) -> FnResult<Json<UnpinVersionOutput>> {
     let mut output = UnpinVersionOutput::default();
+
+    for name in VERSION_FILES {
+        let file = input.dir.join(name);
+
+        if file.exists() {
+            if let Some(version) = extract_version_from_text(&fs::read_file(&file)?) {
+                output.version = Some(UnresolvedVersionSpec::parse(version)?);
+            }
+
+            fs::remove_file(&file)?;
+
+            output.unpinned = true;
+            output.file = Some(file);
+
+            return Ok(Json(output));
+        }
+    }
+
     let file = input.dir.join("package.json");
 
     if file.exists() {
