@@ -4,6 +4,9 @@
 
 #### 💥 Breaking
 
+- The `swift-tools-version` in `Package.swift` is now a minimum requirement (`>=5.9`) instead of a
+  caret range (`^5.9`), as it declares the oldest toolchain that can build the package, and newer
+  toolchains build older manifests. Pin a version in `.swift-version` to stay on a major version.
 - When `linux-platform` isn't configured, the Linux distribution is now detected from
   `/etc/os-release`, like swiftly, instead of always using `ubuntu-24.04`. Other distributions were
   installing an Ubuntu toolchain that can fail with missing or mismatched libraries. Unsupported

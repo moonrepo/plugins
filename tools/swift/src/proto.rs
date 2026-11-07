@@ -92,7 +92,8 @@ pub fn parse_version_file(
                 .and_then(|comment| comment.trim_start().strip_prefix("swift-tools-version:"))
             {
                 let raw_version = raw_version.split(';').next().unwrap_or_default().trim();
-                let range = format!("^{raw_version}");
+                // A minimum, as newer toolchains build older manifests
+                let range = format!(">={raw_version}");
 
                 version = Some(UnresolvedVersionSpec::parse(range)?);
                 break;

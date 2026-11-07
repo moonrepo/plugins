@@ -58,12 +58,12 @@ mod swift_tool {
         for (content, expected) in [
             (
                 "// swift-tools-version:5.9\nimport PackageDescription",
-                "^5.9",
+                ">=5.9",
             ),
-            ("// swift-tools-version: 6.0\n", "^6.0"),
-            ("//swift-tools-version:5.10", "^5.10"),
-            ("//   Swift-Tools-Version:  6.1", "^6.1"),
-            ("// swift-tools-version: 6.3;(experimentalCGen)", "^6.3"),
+            ("// swift-tools-version: 6.0\n", ">=6.0"),
+            ("//swift-tools-version:5.10", ">=5.10"),
+            ("//   Swift-Tools-Version:  6.1", ">=6.1"),
+            ("// swift-tools-version: 6.3;(experimentalCGen)", ">=6.3"),
         ] {
             let output = plugin
                 .parse_version_file(ParseVersionFileInput {
