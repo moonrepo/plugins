@@ -166,7 +166,7 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
 
         for tag in load_git_tags(repository)? {
             if let Some(cap) = pattern.captures(&tag) {
-                versions.insert(VersionSpec::parse(create_version(&cap))?);
+                versions.insert(VersionSpec::parse(create_version(&cap)?)?);
             }
         }
     }
@@ -180,14 +180,14 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
             match row {
                 JsonValue::String(v) => {
                     if let Some(cap) = pattern.captures(&v) {
-                        versions.insert(VersionSpec::parse(create_version(&cap))?);
+                        versions.insert(VersionSpec::parse(create_version(&cap)?)?);
                     }
                 }
                 JsonValue::Object(o) => {
                     if let Some(JsonValue::String(v)) = o.get(version_key)
                         && let Some(cap) = pattern.captures(v)
                     {
-                        versions.insert(VersionSpec::parse(create_version(&cap))?);
+                        versions.insert(VersionSpec::parse(create_version(&cap)?)?);
                     }
                 }
                 _ => {}
@@ -270,11 +270,13 @@ pub fn download_prebuilt(
                 .map(|name| interpolate_tokens(name, env, spec, &platform));
 
             let checksum_url = if is_canary {
-                schema
+                // A canary with its own download URL can't use the stable checksum
+                schema.install.checksum_url_canary.as_ref().or(schema
                     .install
-                    .checksum_url_canary
-                    .as_ref()
-                    .or(schema.install.checksum_url.as_ref())
+                    .download_url_canary
+                    .is_none()
+                    .then_some(schema.install.checksum_url.as_ref())
+                    .flatten())
             } else {
                 schema.install.checksum_url.as_ref()
             };

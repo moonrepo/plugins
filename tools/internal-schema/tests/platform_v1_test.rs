@@ -132,10 +132,8 @@ mod v1_platform {
             output.download_url,
             "https://example.com/canary/tool-linux-amd64-gnu.tar.gz"
         );
-        assert_eq!(
-            output.checksum_url,
-            Some("https://example.com/vcanary/tool-amd64.sha256".into())
-        );
+        // The stable checksum URL doesn't apply to the canary's own download URL
+        assert_eq!(output.checksum_url, None);
     }
 
     #[tokio::test(flavor = "multi_thread")]
