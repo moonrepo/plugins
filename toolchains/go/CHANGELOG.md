@@ -33,6 +33,8 @@
 
 #### 🚀 Updates
 
+- `GOPATH` is now used as-is for the globals directory when it already is a `bin` directory,
+  instead of appending another `bin`.
 - Projects below a `go.mod` without their own, as in single-module monorepos, now get the module's
   install and setup actions. moon only scheduled them for the module root, so `bins` were only
   installed by `moon setup`. The root now reports every directory below it as a member.
