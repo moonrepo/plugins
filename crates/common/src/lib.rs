@@ -1,6 +1,8 @@
+mod paths;
 pub mod registry;
 mod versions;
 
+pub use paths::*;
 pub use versions::*;
 
 use proto_pdk::{WarpgateTracingOptions, get_test_environment, initialize_tracing_with_options};
