@@ -8,7 +8,7 @@ use schematic::SchemaBuilder;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::str::FromStr;
-use tool_common::enable_tracing;
+use tool_common::{enable_tracing, extract_version_from_text};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -75,46 +75,39 @@ pub fn parse_version_file(
         }
     }
 
-    if is_sdkman || input.file == ".java-version" {
+    if is_sdkman {
         for line in input.content.lines() {
             // SDKMAN strips comments and all whitespace from lines
-            let line = if is_sdkman {
-                line.split('#')
-                    .next()
-                    .unwrap_or_default()
-                    .replace(char::is_whitespace, "")
-            } else {
-                line.trim().to_owned()
-            };
+            let line = line
+                .split('#')
+                .next()
+                .unwrap_or_default()
+                .replace(char::is_whitespace, "");
 
-            if line.is_empty() || is_sdkman && !line.starts_with("java=") {
-                continue;
-            }
-
-            if is_sdkman {
-                let (dist, value) =
-                    normalize_sdkman_version(line.strip_prefix("java=").unwrap_or(&line))?;
+            if let Some(value) = line.strip_prefix("java=") {
+                let (dist, value) = normalize_sdkman_version(value)?;
 
                 version = Some(UnresolvedVersionSpec::parse(format!("{dist}-{value}"))?);
-            } else {
-                // Java 8 and below are also known by their legacy
-                // 1.x versions (1.8), which jenv and others write
-                let line = line.strip_prefix("1.").unwrap_or(&line);
-
-                // Lines may already contain a distribution scope (temurin-21),
-                // or be an alias (latest), so only inject the default scope
-                // into unscoped versions and requirements
-                let mut spec = UnresolvedVersionSpec::parse(line)?;
-
-                if spec.get_scope().is_none() {
-                    spec.set_scope(Distribution::default().to_string());
-                }
-
-                version = Some(spec);
+                break;
             }
-
-            break;
         }
+    } else if input.file == ".java-version"
+        && let Some(line) = extract_version_from_text(&input.content)
+    {
+        // Java 8 and below are also known by their legacy
+        // 1.x versions (1.8), which jenv and others write
+        let line = line.strip_prefix("1.").unwrap_or(line);
+
+        // Lines may already contain a distribution scope (temurin-21),
+        // or be an alias (latest), so only inject the default scope
+        // into unscoped versions and requirements
+        let mut spec = UnresolvedVersionSpec::parse(line)?;
+
+        if spec.get_scope().is_none() {
+            spec.set_scope(Distribution::default().to_string());
+        }
+
+        version = Some(spec);
     }
 
     Ok(Json(ParseVersionFileOutput { version }))
