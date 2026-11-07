@@ -21,9 +21,11 @@ Every plugin is a moon project. Project names, like `go-toolchain`, are listed i
 
 ## Plugin structure
 
-- Each plugin crate has a `wasm` feature, on by default. The plugin's exported functions sit behind
-  it, and so do any modules that call the host. Keep parsers and other pure logic outside it, so
-  they can be tested without the WASM host.
+- Each plugin crate has a `wasm` feature, on by default, which also enables the `wasm` feature of
+  the shared crates it uses. Everything that calls the WASM host sits behind it, both the plugin's
+  exported functions and shared helpers like `enable_tracing`. Keep parsers and other pure logic
+  outside it, so they can be tested without the host. That code imports types from
+  `proto_pdk_api`, not `proto_pdk`, or native builds on Windows fail to link the host functions.
 - Tools and backends export proto's plugin API from `src/proto.rs`. Extensions export theirs from
   `src/<name>_ext.rs`.
 - Toolchains split their exports by tier:
