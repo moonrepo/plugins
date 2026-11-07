@@ -192,6 +192,7 @@ mod ruby_tool {
             ("3.3", "3.3"),
             ("ruby-3.3.5\n", "3.3.5"),
             ("# pinned for CI\n\n  3.4.1 \n", "3.4.1"),
+            ("3.4.1#pinned for CI", "3.4.1"),
         ] {
             assert_eq!(
                 parse_version_file(content).await,
