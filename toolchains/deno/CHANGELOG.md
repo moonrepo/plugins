@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed the globals directory not being on `PATH` for tasks when `DENO_INSTALL_ROOT` ends with
+  `bin`, which Deno v2.2.11+ uses as-is instead of its `bin` subdirectory. The same applies to
+  `DENO_HOME`.
+
 ## 1.1.3
 
 #### 🚀 Updates
