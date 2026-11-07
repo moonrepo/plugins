@@ -82,7 +82,7 @@ mod zig_tool {
 
         assert_eq!(
             output.version,
-            Some(UnresolvedVersionSpec::parse(">=0.14.1").unwrap())
+            Some(UnresolvedVersionSpec::parse("~0.14.1").unwrap())
         );
     }
 }

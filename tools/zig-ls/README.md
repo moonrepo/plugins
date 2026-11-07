@@ -37,7 +37,7 @@ index-url = "https://releases.zigtools.org/v1/zls/index.json"
 
 ## Version detection
 
-The plugin detects Zig versions from `.zig-version`, `.zigversion`, and `build.zig.zon`. Stable versions in plain version files are converted to a matching ZLS minor range because Zig and ZLS patch versions may differ. The `minimum_zig_version` field in `build.zig.zon` is preserved as a minimum minor requirement, while development Zig versions resolve to proto's `canary` version, which this plugin can't install yet (ZLS development builds aren't supported).
+The plugin detects Zig versions from `.zig-version`, `.zigversion`, and `build.zig.zon`. Stable versions in plain version files are converted to a matching ZLS minor range because Zig and ZLS patch versions may differ. The `minimum_zig_version` field in `build.zig.zon` is converted to the same minor range, while development Zig versions resolve to proto's `canary` version, which this plugin can't install yet (ZLS development builds aren't supported).
 
 ## Contributing
 

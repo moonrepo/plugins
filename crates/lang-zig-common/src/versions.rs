@@ -11,7 +11,9 @@ impl ZigVersionSource<'_> {
     pub fn to_zig_requirement(self) -> AnyResult<UnresolvedVersionSpec> {
         match self {
             Self::Exact(version) => Ok(UnresolvedVersionSpec::parse(version)?),
-            Self::Minimum(version) => Ok(UnresolvedVersionSpec::parse(format!(">={version}"))?),
+            // Zig breaks APIs between minor versions, so stay within
+            // the minimum's minor, while allowing newer patches
+            Self::Minimum(version) => Ok(UnresolvedVersionSpec::parse(format!("~{version}"))?),
         }
     }
 
@@ -33,13 +35,9 @@ impl ZigVersionSource<'_> {
             return Ok(UnresolvedVersionSpec::parse("canary")?);
         }
 
-        let operator = match self {
-            Self::Exact(_) => "~",
-            Self::Minimum(_) => ">=",
-        };
-
+        // ZLS releases match Zig's minor versions, but not their patches
         Ok(UnresolvedVersionSpec::parse(format!(
-            "{operator}{}.{}",
+            "~{}.{}",
             version.major, version.minor,
         ))?)
     }
@@ -117,7 +115,7 @@ mod tests {
                 .to_zig_requirement()
                 .unwrap()
                 .to_string(),
-            ">=0.15.2"
+            "~0.15.2"
         );
     }
 
@@ -135,7 +133,7 @@ mod tests {
                 .to_zls_requirement()
                 .unwrap()
                 .to_string(),
-            ">=0.15"
+            "~0.15"
         );
         assert_eq!(
             ZigVersionSource::Exact("0.15")
