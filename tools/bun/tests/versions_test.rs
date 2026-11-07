@@ -2,6 +2,20 @@ use proto_pdk_test_utils::*;
 use starbase_sandbox::assert_snapshot;
 use std::fs;
 
+fn version_file(
+    sandbox: &ProtoWasmSandbox,
+    file: &str,
+    content: impl AsRef<str>,
+) -> ParseVersionFileInput {
+    sandbox.create_file(file, content);
+
+    ParseVersionFileInput {
+        file: file.into(),
+        path: VirtualPath::new(sandbox.path().join(file)),
+        ..Default::default()
+    }
+}
+
 mod bun_tool {
     use super::*;
 
@@ -40,11 +54,11 @@ mod bun_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: r#"{ "engines": { "bun": ">=1" } }"#.into(),
-                    file: "package.json".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    "package.json",
+                    r#"{ "engines": { "bun": ">=1" } }"#
+                ))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse(">=1").unwrap()),
@@ -59,12 +73,11 @@ mod bun_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: r#"{ "engines": { "bun": ">=1" }, "packageManager": "bun@1.2.3" }"#
-                        .into(),
-                    file: "package.json".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    "package.json",
+                    r#"{ "engines": { "bun": ">=1" }, "packageManager": "bun@1.2.3" }"#
+                ))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
@@ -79,13 +92,11 @@ mod bun_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content:
-                        r#"{ "devEngines": { "runtime": { "name": "bun", "version": ">=1" } } }"#
-                            .into(),
-                    file: "package.json".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    "package.json",
+                    r#"{ "devEngines": { "runtime": { "name": "bun", "version": ">=1" } } }"#
+                ))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse(">=1").unwrap()),
@@ -100,11 +111,11 @@ mod bun_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: r#"{ "volta": { "bun": "1.20.2" } }"#.into(),
-                    file: "package.json".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    "package.json",
+                    r#"{ "volta": { "bun": "1.20.2" } }"#
+                ))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("1.20.2").unwrap()),
@@ -119,11 +130,7 @@ mod bun_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: "~2".into(),
-                    file: ".bumrc".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(&sandbox, ".bumrc", "~2"))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("~2").unwrap()),
@@ -138,11 +145,7 @@ mod bun_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: "# comment\n^2.1 # stable".into(),
-                    file: ".bumrc".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(&sandbox, ".bumrc", "# comment\n^2.1 # stable"))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("^2.1").unwrap()),
@@ -157,11 +160,7 @@ mod bun_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: "~2".into(),
-                    file: ".bun-version".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(&sandbox, ".bun-version", "~2"))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("~2").unwrap()),
@@ -176,11 +175,11 @@ mod bun_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: "# comment\n^2.1 # stable".into(),
-                    file: ".bun-version".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    ".bun-version",
+                    "# comment\n^2.1 # stable"
+                ))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("^2.1").unwrap()),

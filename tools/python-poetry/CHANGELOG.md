@@ -26,6 +26,10 @@
   now ignored.
 - Install failures now include the installer's output, instead of an empty error.
 
+#### ⚙️ Internal
+
+- Version files are now read from their path, as the `content` input is deprecated.
+
 ## 0.1.9
 
 #### 🚀 Updates

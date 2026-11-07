@@ -24,6 +24,10 @@
 - Fixed building from source, which ran Go's entire test suite with `all.bash`, and then deleted
   everything except `bin`, which Go can't run without.
 
+#### ⚙️ Internal
+
+- Version files are now read from their path, as the `content` input is deprecated.
+
 ## 0.16.8
 
 #### 🚀 Updates

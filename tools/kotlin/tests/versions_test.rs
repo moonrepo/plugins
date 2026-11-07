@@ -1,5 +1,19 @@
 use proto_pdk_test_utils::*;
 
+fn version_file(
+    sandbox: &ProtoWasmSandbox,
+    file: &str,
+    content: impl AsRef<str>,
+) -> ParseVersionFileInput {
+    sandbox.create_file(file, content);
+
+    ParseVersionFileInput {
+        file: file.into(),
+        path: VirtualPath::new(sandbox.path().join(file)),
+        ..Default::default()
+    }
+}
+
 mod kotlin_tool {
     use super::*;
 
@@ -88,11 +102,7 @@ mod kotlin_tool {
             ("build.gradle.kts", "kotlin=2.0.0", None),
         ] {
             let output = plugin
-                .parse_version_file(ParseVersionFileInput {
-                    file: file.into(),
-                    content: content.into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(&sandbox, file, content))
                 .await;
 
             assert_eq!(
@@ -117,11 +127,7 @@ mod kotlin_tool {
                 .plugin
                 .call_func_with::<_, _, ParseVersionFileOutput>(
                     PluginFunction::ParseVersionFile,
-                    ParseVersionFileInput {
-                        file: file.into(),
-                        content: content.into(),
-                        ..Default::default()
-                    },
+                    version_file(&sandbox, file, content),
                 )
                 .await;
             assert!(result.is_err(), "{file}: {content}");

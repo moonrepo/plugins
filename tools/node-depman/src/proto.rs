@@ -71,10 +71,11 @@ pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
 pub fn parse_version_file(
     Json(input): Json<ParseVersionFileInput>,
 ) -> FnResult<Json<ParseVersionFileOutput>> {
+    let content = fs::read_file(&input.path)?;
     let mut version = None;
 
     if input.file == "package.json"
-        && let Ok(package_json) = json::from_str::<PackageJson>(&input.content)
+        && let Ok(package_json) = json::from_str::<PackageJson>(&content)
     {
         let manager_name = PackageManager::detect()?.get_bin_name();
         let mut candidates = vec![];

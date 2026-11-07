@@ -2,6 +2,7 @@ use crate::schema::{Schema, create_version, interpolate_tokens, v1::SchemaType};
 use extism_pdk::*;
 use proto_pdk::*;
 use serde_json::Value as JsonValue;
+use starbase_utils::fs;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use tool_common::{enable_tracing, ensure_stable_latest, extract_version_from_text};
@@ -146,8 +147,9 @@ pub fn detect_version_files(
 pub fn parse_version_file(
     Json(input): Json<ParseVersionFileInput>,
 ) -> FnResult<Json<ParseVersionFileOutput>> {
+    let content = fs::read_file(&input.path)?;
     Ok(Json(ParseVersionFileOutput {
-        version: extract_version_from_text(&input.content)
+        version: extract_version_from_text(&content)
             .map(UnresolvedVersionSpec::parse)
             .transpose()?,
     }))

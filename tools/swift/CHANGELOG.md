@@ -28,6 +28,10 @@
   `// swift-tools-version: 6.3;(experimentalCGen)`, and ignored the spacing and casing that SwiftPM
   allows, like `//swift-tools-version:5.10`.
 
+#### ⚙️ Internal
+
+- Version files are now read from their path, as the `content` input is deprecated.
+
 ## 0.1.0
 
 #### 🚀 Updates

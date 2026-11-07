@@ -19,6 +19,10 @@
 - Fixed a legacy `rust-toolchain` file with TOML content failing to parse.
 - Fixed Windows ARM64 downloading the x64 `rustup-init`.
 
+#### ⚙️ Internal
+
+- Version files are now read from their path, as the `content` input is deprecated.
+
 ## 0.13.12
 
 #### 🚀 Updates

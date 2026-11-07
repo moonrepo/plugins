@@ -246,13 +246,14 @@ pub fn detect_version_files(
 pub fn parse_version_file(
     Json(input): Json<ParseVersionFileInput>,
 ) -> FnResult<Json<ParseVersionFileOutput>> {
+    let content = fs::read_file(&input.path)?;
     let mut output = ParseVersionFileOutput::default();
     let config = get_tool_config::<AsdfToolConfig>()?;
 
     if input.file == ".tool-versions" {
         let id = get_plugin_id()?;
 
-        for line in input.content.lines() {
+        for line in content.lines() {
             let mut parsed_line = String::new();
 
             // Strip comments
@@ -291,7 +292,7 @@ pub fn parse_version_file(
                 output.version = Some(UnresolvedVersionSpec::parse(data.trim())?);
             }
         } else {
-            output.version = Some(UnresolvedVersionSpec::parse(&input.content)?);
+            output.version = Some(UnresolvedVersionSpec::parse(content.trim())?);
         }
     }
 

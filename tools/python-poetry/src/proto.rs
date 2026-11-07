@@ -44,14 +44,15 @@ pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
 pub fn parse_version_file(
     Json(input): Json<ParseVersionFileInput>,
 ) -> FnResult<Json<ParseVersionFileOutput>> {
+    let content = fs::read_file(&input.path)?;
     let mut version = None;
 
     if input.file == ".poetry-version" {
-        if let Some(content) = extract_version_from_text(&input.content) {
-            version = Some(UnresolvedVersionSpec::parse(content)?);
+        if let Some(constraint) = extract_version_from_text(&content) {
+            version = Some(UnresolvedVersionSpec::parse(constraint)?);
         }
     } else if input.file == "pyproject.toml"
-        && let Ok(project_toml) = toml::from_str::<Value>(&input.content)
+        && let Ok(project_toml) = toml::from_str::<Value>(&content)
         && let Some(tool_field) = project_toml.get("tool")
         && let Some(poetry_field) = tool_field.get("poetry")
         && let Some(Value::String(constraint)) = poetry_field.get("requires-poetry")

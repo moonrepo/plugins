@@ -2,6 +2,20 @@ use proto_pdk_test_utils::*;
 use starbase_sandbox::assert_snapshot;
 use std::fs;
 
+fn version_file(
+    sandbox: &ProtoWasmSandbox,
+    file: &str,
+    content: impl AsRef<str>,
+) -> ParseVersionFileInput {
+    sandbox.create_file(file, content);
+
+    ParseVersionFileInput {
+        file: file.into(),
+        path: VirtualPath::new(sandbox.path().join(file)),
+        ..Default::default()
+    }
+}
+
 mod deno_tool {
     use super::*;
 
@@ -40,11 +54,11 @@ mod deno_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: r#"{ "engines": { "deno": ">=2.9" } }"#.into(),
-                    file: "package.json".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    "package.json",
+                    r#"{ "engines": { "deno": ">=2.9" } }"#
+                ))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse(">=2.9").unwrap()),
@@ -59,13 +73,11 @@ mod deno_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content:
-                        r#"{ "devEngines": { "runtime": { "name": "deno", "version": ">=2" } } }"#
-                            .into(),
-                    file: "package.json".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    "package.json",
+                    r#"{ "devEngines": { "runtime": { "name": "deno", "version": ">=2" } } }"#
+                ))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse(">=2").unwrap()),
@@ -80,11 +92,7 @@ mod deno_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: "# comment\n^2.1 # stable".into(),
-                    file: ".dvmrc".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(&sandbox, ".dvmrc", "# comment\n^2.1 # stable"))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("^2.1").unwrap()),
@@ -99,11 +107,11 @@ mod deno_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: "registry_binary=https://github.com/denoland/deno/releases/download/\ndeno_version = 1.40.0".into(),
-                    file: ".dvmrc".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    ".dvmrc",
+                    "registry_binary=https://github.com/denoland/deno/releases/download/\ndeno_version = 1.40.0",
+                ))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("1.40.0").unwrap()),

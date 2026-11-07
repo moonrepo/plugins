@@ -1,6 +1,20 @@
 use proto_pdk_test_utils::*;
 use starbase_sandbox::locate_fixture;
 
+fn version_file(
+    sandbox: &ProtoWasmSandbox,
+    file: &str,
+    content: impl AsRef<str>,
+) -> ParseVersionFileInput {
+    sandbox.create_file(file, content);
+
+    ParseVersionFileInput {
+        file: file.into(),
+        path: VirtualPath::new(sandbox.path().join(file)),
+        ..Default::default()
+    }
+}
+
 mod schema_tool {
     use super::*;
 
@@ -34,11 +48,11 @@ mod schema_tool {
             .await;
 
         let output = plugin
-            .parse_version_file(ParseVersionFileInput {
-                content: "# pinned for CI\n1.4 # stable\n".into(),
-                file: ".moon-version".into(),
-                ..Default::default()
-            })
+            .parse_version_file(version_file(
+                &sandbox,
+                ".moon-version",
+                "# pinned for CI\n1.4 # stable\n",
+            ))
             .await;
 
         assert_eq!(

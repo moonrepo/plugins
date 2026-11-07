@@ -1,5 +1,19 @@
 use proto_pdk_test_utils::*;
 
+fn version_file(
+    sandbox: &ProtoWasmSandbox,
+    file: &str,
+    content: impl AsRef<str>,
+) -> ParseVersionFileInput {
+    sandbox.create_file(file, content);
+
+    ParseVersionFileInput {
+        file: file.into(),
+        path: VirtualPath::new(sandbox.path().join(file)),
+        ..Default::default()
+    }
+}
+
 mod python_uv_tool {
     use super::*;
 
@@ -37,11 +51,11 @@ mod python_uv_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: r#"required-version = "==2.1""#.into(),
-                    file: "uv.toml".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    "uv.toml",
+                    r#"required-version = "==2.1""#
+                ))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("=2.1.0").unwrap()),
@@ -56,11 +70,11 @@ mod python_uv_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: "[tool.uv]\nrequired-version = \"~=2.1\"".into(),
-                    file: "pyproject.toml".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    "pyproject.toml",
+                    "[tool.uv]\nrequired-version = \"~=2.1\""
+                ))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse(">=2.1.0, =2.*").unwrap()),
@@ -75,11 +89,11 @@ mod python_uv_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: r#"required-version = ">=0.5, !=0.5.3""#.into(),
-                    file: "uv.toml".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    "uv.toml",
+                    r#"required-version = ">=0.5, !=0.5.3""#
+                ))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse(">=0.5.0").unwrap()),
@@ -94,11 +108,11 @@ mod python_uv_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: r#"required-version = "===0.5.0""#.into(),
-                    file: "uv.toml".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    "uv.toml",
+                    r#"required-version = "===0.5.0""#
+                ))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("=0.5.0").unwrap()),

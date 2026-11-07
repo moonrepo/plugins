@@ -17,6 +17,10 @@
 - Fixed `{download_file}` not being replaced in the format v1 `checksum-url` setting.
 - Fixed the checksum file being named `CHECKSUM.txt` when the format v1 `checksum-file` setting is not configured, which failed to detect the algorithm of files like `.minisig` and `.sha256`. The name is now extracted from the checksum URL.
 
+#### ⚙️ Internal
+
+- Version files are now read from their path, as the `content` input is deprecated.
+
 ## 0.19.0
 
 #### 🚀 Updates

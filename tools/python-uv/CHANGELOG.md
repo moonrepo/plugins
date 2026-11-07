@@ -20,6 +20,10 @@
 - Fixed `!=` in `required-version` failing version detection. proto can't exclude versions, so it's
   now ignored.
 
+#### ⚙️ Internal
+
+- Version files are now read from their path, as the `content` input is deprecated.
+
 ## 0.3.4
 
 #### 🚀 Updates

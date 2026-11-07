@@ -15,6 +15,10 @@
 - Fixed partial versions and aliases in Zig version files, like `0.15` or `latest` in
   `.zig-version`, failing to parse and stopping ZLS from installing.
 
+#### ⚙️ Internal
+
+- Version files are now read from their path, as the `content` input is deprecated.
+
 ## 0.1.0
 
 #### 🎉 Release

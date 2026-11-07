@@ -30,6 +30,10 @@
   as-is instead of its `bin` subdirectory. The same applies to `DENO_HOME`.
 - Fixed the build from source help links, which pointed to removed documentation pages.
 
+#### ⚙️ Internal
+
+- Version files are now read from their path, as the `content` input is deprecated.
+
 ## 0.15.12
 
 #### 🚀 Updates

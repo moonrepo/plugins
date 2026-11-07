@@ -1,5 +1,19 @@
 use proto_pdk_test_utils::*;
 
+fn version_file(
+    sandbox: &ProtoWasmSandbox,
+    file: &str,
+    content: impl AsRef<str>,
+) -> ParseVersionFileInput {
+    sandbox.create_file(file, content);
+
+    ParseVersionFileInput {
+        file: file.into(),
+        path: VirtualPath::new(sandbox.path().join(file)),
+        ..Default::default()
+    }
+}
+
 mod swift_tool {
     use super::*;
 
@@ -37,11 +51,11 @@ mod swift_tool {
         let plugin = sandbox.create_plugin("swift-test").await;
 
         let output = plugin
-            .parse_version_file(ParseVersionFileInput {
-                content: "\n6.1.2 # pinned for CI\n".into(),
-                file: ".swift-version".into(),
-                ..Default::default()
-            })
+            .parse_version_file(version_file(
+                &sandbox,
+                ".swift-version",
+                "\n6.1.2 # pinned for CI\n",
+            ))
             .await;
 
         assert_eq!(
@@ -66,11 +80,7 @@ mod swift_tool {
             ("// swift-tools-version: 6.3;(experimentalCGen)", ">=6.3"),
         ] {
             let output = plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: content.into(),
-                    file: "Package.swift".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(&sandbox, "Package.swift", content))
                 .await;
 
             assert_eq!(
@@ -87,11 +97,11 @@ mod swift_tool {
         let plugin = sandbox.create_plugin("swift-test").await;
 
         let output = plugin
-            .parse_version_file(ParseVersionFileInput {
-                content: "import PackageDescription\n\nlet package = Package(name: \"a\")".into(),
-                file: "Package.swift".into(),
-                ..Default::default()
-            })
+            .parse_version_file(version_file(
+                &sandbox,
+                "Package.swift",
+                "import PackageDescription\n\nlet package = Package(name: \"a\")",
+            ))
             .await;
 
         assert_eq!(output.version, None);

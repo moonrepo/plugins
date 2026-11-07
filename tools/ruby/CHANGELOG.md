@@ -8,6 +8,10 @@
   chruby) failing to resolve, like `ruby-3.4.5`. Files for other engines, like `jruby-9.4.5.0`, are
   now ignored with a warning instead of failing.
 
+#### ⚙️ Internal
+
+- Version files are now read from their path, as the `content` input is deprecated.
+
 ## 0.3.0
 
 #### 🚀 Updates
