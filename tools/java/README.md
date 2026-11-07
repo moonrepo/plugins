@@ -31,7 +31,6 @@ Versions without a prefix resolve against the default `temurin` distribution. Ve
 | AdoptOpenJDK OpenJ9                | `aoj-openj9`        |                             |
 | Huawei BiSheng                     | `bisheng`           |                             |
 | Amazon Corretto                    | `corretto`          | `amzn`, `amazon`            |
-| Debian OpenJDK                     | `debian`            |                             |
 | Alibaba Dragonwell                 | `dragonwell`        | `albba`, `alibaba`, `dragon` |
 | Gluon GraalVM                      | `gluon-graalvm`     | `gluon`                     |
 | Oracle GraalVM                     | `graalvm`           | `graal`                     |
@@ -40,7 +39,6 @@ Versions without a prefix resolve against the default `temurin` distribution. Ve
 | GraalVM Community Edition (JDK 16) | `graalvm-ce16`      |                             |
 | GraalVM Community Edition (JDK 17) | `graalvm-ce17`      |                             |
 | GraalVM Community Edition (JDK 19) | `graalvm-ce19`      |                             |
-| GraalVM Community Edition (JDK 20) | `graalvm-ce20`      |                             |
 | GraalVM Community                  | `graalvm-community` | `graalce`                   |
 | JetBrains Runtime                  | `jetbrains`         | `jbr`                       |
 | Tencent Kona                       | `kona`              | `tencent`                   |
@@ -59,7 +57,6 @@ Versions without a prefix resolve against the default `temurin` distribution. Ve
 | Eclipse Temurin (default)          | `temurin`           | `tem`                       |
 | Trava OpenJDK                      | `trava`             |                             |
 | Azul Zulu                          | `zulu`              |                             |
-| Azul Zulu Prime                    | `zulu-prime`        |                             |
 
 > Aliases exist primarily for SDKMAN compatibility and are recognized when parsing `.sdkmanrc` files. Use the scope prefix when pinning versions in `.prototools` or `.java-version` files.
 

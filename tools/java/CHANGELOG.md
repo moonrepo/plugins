@@ -4,12 +4,16 @@
 
 #### 💥 Breaking
 
+- Removed the `debian`, `graalvm-ce20`, and `zulu-prime` distributions, which foojay no longer
+  lists or returns packages for.
 - The default distribution is now `temurin` instead of `openjdk`, which applies to versions without a
   vendor, like `21`. jdk.java.net's `openjdk` builds stop receiving updates 6 months after a release,
   so `21` resolved to 21.0.2 from January 2024. Use `openjdk-21` to keep the previous behavior.
 
 #### 🐞 Fixes
 
+- Fixed Linux ppc64 requesting big-endian builds, which most vendors don't publish, instead of the
+  little-endian (`ppc64le`) builds that Linux uses.
 - Fixed comments in `.java-version`, like `21 # LTS`, failing to parse. Everything after `#` is
   now ignored.
 - Fixed versions without build metadata, like `temurin-21.0.11` or `21.0.2` in `.java-version`,
