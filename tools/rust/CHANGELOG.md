@@ -12,6 +12,8 @@
 
 #### 🐞 Fixes
 
+- Fixed comments in a legacy `rust-toolchain` file, like `1.80.0 # MSRV`, failing to parse.
+  Everything after `#` is now ignored.
 - Fixed `rust-toolchain.toml` taking precedence over `rust-toolchain` when both exist. Rustup uses
   the legacy file, so proto now does too.
 - Fixed a legacy `rust-toolchain` file with TOML content failing to parse.

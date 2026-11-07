@@ -4,7 +4,7 @@ use lang_rust_common::*;
 use proto_pdk::*;
 use starbase_utils::fs;
 use std::collections::HashMap;
-use tool_common::{append_env_bin_dir, enable_tracing};
+use tool_common::{append_env_bin_dir, enable_tracing, extract_version_from_text};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -94,7 +94,7 @@ pub fn parse_version_file(
 
     // The legacy file may only contain the channel, or be TOML
     let channel = if input.file == "rust-toolchain" && !input.content.contains("[toolchain]") {
-        Some(input.content.trim().to_owned()).filter(|channel| !channel.is_empty())
+        extract_version_from_text(&input.content).map(|channel| channel.to_owned())
     } else {
         toml::from_str::<ToolchainToml>(&input.content)?
             .toolchain
