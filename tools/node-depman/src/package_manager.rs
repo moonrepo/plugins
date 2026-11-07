@@ -135,9 +135,15 @@ impl PackageManager {
     }
 
     pub fn get_package_name_for_download(&self, env: &HostEnvironment) -> AnyResult<String> {
+        // pnpm v12.4+ also publishes these targets
+        let is_pnpm12 = self == &Self::Pnpm12;
+
         let arch = match env.arch {
             HostArch::Arm64 => "arm64",
             HostArch::X64 => "x64",
+            HostArch::Powerpc64 if is_pnpm12 => "ppc64",
+            HostArch::Riscv64 if is_pnpm12 => "riscv64",
+            HostArch::S390x if is_pnpm12 => "s390x",
             other => {
                 return Err(PluginError::UnsupportedArch {
                     tool: self.get_bin_name(),
@@ -151,6 +157,7 @@ impl PackageManager {
             HostOS::MacOS => "darwin",
             HostOS::Linux => "linux",
             HostOS::Windows => "win32",
+            HostOS::FreeBSD if is_pnpm12 && env.arch == HostArch::X64 => "freebsd",
             other => {
                 return Err(PluginError::UnsupportedOS {
                     tool: self.get_bin_name(),
@@ -203,6 +210,14 @@ impl PackageManager {
             // https://docs.npmjs.com/cli/v11/configuring-npm/folders#executables
             // https://github.com/npm/cli/blob/latest/workspaces/config/lib/index.js#L339
             Self::Npm => {
+                for var in ["NPM_CONFIG_PREFIX", "npm_config_prefix"] {
+                    dirs.push(if npm_on_windows {
+                        format!("${var}")
+                    } else {
+                        append_env_bin_dir(var)?
+                    });
+                }
+
                 dirs.push("$TOOL_DIR/shims".into());
             }
             // Since v0.9, nub links bins into the shared user bin directory
@@ -243,6 +258,8 @@ impl PackageManager {
             }
             // https://github.com/yarnpkg/yarn/blob/master/src/cli/commands/global.js#L84
             Self::Yarn1 | Self::Yarn2to5 | Self::Yarn6 => {
+                dirs.push(append_env_bin_dir("YARN_PREFIX")?);
+
                 if env.os.is_windows() {
                     dirs.push("$LOCALAPPDATA/Yarn/bin".into());
                 }

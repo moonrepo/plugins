@@ -104,6 +104,11 @@ mod node_depman_tool {
             assert!(
                 output
                     .globals_lookup_dirs
+                    .contains(&"$NPM_CONFIG_PREFIX".into())
+            );
+            assert!(
+                output
+                    .globals_lookup_dirs
                     .contains(&"$PROTO_HOME\\tools\\node\\$PROTO_NODE_VERSION".into())
             );
         }
@@ -788,6 +793,43 @@ mod node_depman_tool {
     mod pnpm12 {
         use super::*;
 
+        #[tokio::test(flavor = "multi_thread")]
+        async fn supports_more_prebuilt_targets() {
+            for (os, arch, target) in [
+                (HostOS::Linux, HostArch::S390x, "linux-s390x"),
+                (HostOS::Linux, HostArch::Powerpc64, "linux-ppc64"),
+                (HostOS::Linux, HostArch::Riscv64, "linux-riscv64"),
+                (HostOS::FreeBSD, HostArch::X64, "freebsd-x64"),
+            ] {
+                let sandbox = create_empty_proto_sandbox();
+                let plugin = sandbox
+                    .create_plugin_with_config("pnpm-test", |config| {
+                        config.host_with(|host| {
+                            host.os = os;
+                            host.arch = arch;
+                            host.libc = HostLibc::Gnu;
+                        });
+                    })
+                    .await;
+
+                assert_eq!(
+                    plugin
+                        .download_prebuilt(DownloadPrebuiltInput {
+                            context: PluginContext {
+                                version: VersionSpec::parse("12.18.0").unwrap(),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        })
+                        .await
+                        .download_url,
+                    format!(
+                        "https://registry.npmjs.org/@pnpm/exe.{target}/-/exe.{target}-12.18.0.tgz"
+                    )
+                );
+            }
+        }
+
         // Pnpm >= 12 is Rust based and downloaded from the npm registry
         // as an os/arch specific package: @pnpm/exe.{os}-{arch}
 
@@ -1106,6 +1148,32 @@ mod node_depman_tool {
         use super::*;
 
         generate_download_install_tests!("yarn-test", "1.22.0");
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn locates_globals_in_prefix() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("yarn-test", |config| {
+                    config.host(HostOS::Linux, HostArch::X64);
+                })
+                .await;
+
+            let output = plugin
+                .locate_executables(LocateExecutablesInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("1.22.0").unwrap(),
+                        ..Default::default()
+                    },
+                    install_dir: plugin.tool.to_virtual_path(sandbox.path()),
+                })
+                .await;
+
+            assert!(
+                output
+                    .globals_lookup_dirs
+                    .contains(&"$YARN_PREFIX/bin".into())
+            );
+        }
 
         #[tokio::test(flavor = "multi_thread")]
         async fn supports_prebuilt() {

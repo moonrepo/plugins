@@ -4,8 +4,8 @@ use crate::package_manager::PackageManager;
 use extism_pdk::*;
 use lang_javascript_common::{
     NodeDistVersion, extract_dev_engine_package_manager_version, extract_engine_version,
-    extract_package_manager_version, extract_volta_version, insert_dev_engine_version,
-    remove_dev_engine,
+    extract_package_manager_version, extract_volta_version, get_dev_engine_version_error,
+    insert_dev_engine_version, remove_dev_engine,
 };
 use nodejs_package_json::PackageJson;
 use proto_pdk::*;
@@ -132,6 +132,12 @@ pub fn pin_version(Json(input): Json<PinVersionInput>) -> FnResult<Json<PinVersi
 
     if file.exists() {
         let mut package_json: json::Value = starbase_utils::json::read_file(&file)?;
+
+        if let Some(error) = get_dev_engine_version_error(&input.version) {
+            output.error = Some(error);
+
+            return Ok(Json(output));
+        }
 
         insert_dev_engine_version(
             &mut package_json,
@@ -300,16 +306,6 @@ pub fn resolve_version(
             }
         }
 
-        PackageManager::Pnpm12 => {
-            if input.initial == UnresolvedVersionSpec::Canary {
-                output.candidate = Some(UnresolvedVersionSpec::parse("^12.0.0-rc.0")?);
-            } else if let UnresolvedVersionSpec::Alias(alias) = input.initial
-                && (alias == "rust" || alias == "next")
-            {
-                output.candidate = Some(UnresolvedVersionSpec::parse("^12.0.0-rc.0")?);
-            }
-        }
-
         PackageManager::Yarn1 | PackageManager::Yarn2to5 | PackageManager::Yarn6 => {
             if input.initial == UnresolvedVersionSpec::Canary {
                 output.candidate = Some(UnresolvedVersionSpec::parse("^6.0.0-rc.0")?);
@@ -318,7 +314,9 @@ pub fn resolve_version(
                     // Only pre-releases exist for v6, and requirements
                     // don't match them unless they contain a pre-release
                     output.candidate = Some(UnresolvedVersionSpec::parse("^6.0.0-rc.0")?);
-                } else if alias == "berry" || alias == "latest" {
+                }
+                // `latest` comes from `@yarnpkg/cli-dist` instead
+                else if alias == "berry" {
                     output.candidate = Some(UnresolvedVersionSpec::parse("~4")?);
                 } else if alias == "legacy" || alias == "classic" {
                     output.candidate = Some(UnresolvedVersionSpec::parse("~1")?);
