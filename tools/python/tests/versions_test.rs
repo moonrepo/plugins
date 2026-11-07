@@ -1,5 +1,19 @@
 use proto_pdk_test_utils::*;
 
+fn version_file(
+    sandbox: &ProtoWasmSandbox,
+    file: &str,
+    content: impl AsRef<str>,
+) -> ParseVersionFileInput {
+    sandbox.create_file(file, content);
+
+    ParseVersionFileInput {
+        file: file.into(),
+        path: VirtualPath::new(sandbox.path().join(file)),
+        ..Default::default()
+    }
+}
+
 mod python_tool {
     use super::*;
     use ::python_tool::PythonToolConfig;
@@ -206,11 +220,7 @@ mod python_tool {
         let plugin = sandbox.create_plugin("python-test").await;
 
         plugin
-            .parse_version_file(ParseVersionFileInput {
-                content: content.into(),
-                file: ".python-version".into(),
-                ..Default::default()
-            })
+            .parse_version_file(version_file(&sandbox, ".python-version", content))
             .await
             .version
     }

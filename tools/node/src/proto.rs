@@ -8,6 +8,7 @@ use lang_javascript_common::{
 use nodejs_package_json::PackageJson;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
+use starbase_utils::fs;
 use std::collections::HashMap;
 use tool_common::{enable_tracing, ensure_stable_latest, extract_version_from_text};
 
@@ -55,10 +56,11 @@ pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
 pub fn parse_version_file(
     Json(input): Json<ParseVersionFileInput>,
 ) -> FnResult<Json<ParseVersionFileOutput>> {
+    let content = fs::read_file(&input.path)?;
     let mut version = None;
 
     if input.file == "package.json" {
-        if let Ok(package_json) = json::from_str::<PackageJson>(&input.content) {
+        if let Ok(package_json) = json::from_str::<PackageJson>(&content) {
             let mut candidates = vec![];
 
             if let Some(constraint) = extract_dev_engine_runtime_version(&package_json, "node") {
@@ -95,7 +97,7 @@ pub fn parse_version_file(
                 return Err(plugin_err!("{error}"));
             }
         }
-    } else if let Some(constraint) = extract_version_from_text(&input.content) {
+    } else if let Some(constraint) = extract_version_from_text(&content) {
         // nvm's and fnm's latest LTS, which proto can't parse as an alias
         let constraint = match constraint {
             "lts/*" | "lts-*" => "lts",

@@ -30,6 +30,10 @@
 - Removed `$JAVA_HOME/bin` from the globals directories. It's another JDK, not where globals are
   installed, and was added to `PATH`.
 
+#### ⚙️ Internal
+
+- Version files are now read from their path, as the `content` input is deprecated.
+
 ## 0.1.1
 
 #### 🚀 Updates

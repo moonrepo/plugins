@@ -1,5 +1,19 @@
 use proto_pdk_test_utils::*;
 
+fn version_file(
+    sandbox: &ProtoWasmSandbox,
+    file: &str,
+    content: impl AsRef<str>,
+) -> ParseVersionFileInput {
+    sandbox.create_file(file, content);
+
+    ParseVersionFileInput {
+        file: file.into(),
+        path: VirtualPath::new(sandbox.path().join(file)),
+        ..Default::default()
+    }
+}
+
 mod python_poetry_tool {
     use super::*;
 
@@ -37,11 +51,11 @@ mod python_poetry_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: "2.1.1 # pinned for CI\n".into(),
-                    file: ".poetry-version".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    ".poetry-version",
+                    "2.1.1 # pinned for CI\n"
+                ))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("2.1.1").unwrap()),
@@ -56,11 +70,11 @@ mod python_poetry_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: "[tool.poetry]\nrequires-poetry = \">=2.0\"".into(),
-                    file: "pyproject.toml".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    "pyproject.toml",
+                    "[tool.poetry]\nrequires-poetry = \">=2.0\""
+                ))
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse(">=2.0.0").unwrap()),
@@ -75,11 +89,11 @@ mod python_poetry_tool {
 
         assert_eq!(
             plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: "[tool.poetry]\nrequires-poetry = \"~=2\"".into(),
-                    file: "pyproject.toml".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    "pyproject.toml",
+                    "[tool.poetry]\nrequires-poetry = \"~=2\""
+                ))
                 .await,
             ParseVersionFileOutput { version: None }
         );
@@ -101,11 +115,11 @@ mod python_poetry_tool {
         ] {
             assert_eq!(
                 plugin
-                    .parse_version_file(ParseVersionFileInput {
-                        content: format!("[tool.poetry]\nrequires-poetry = \"{constraint}\""),
-                        file: "pyproject.toml".into(),
-                        ..Default::default()
-                    })
+                    .parse_version_file(version_file(
+                        &sandbox,
+                        "pyproject.toml",
+                        format!("[tool.poetry]\nrequires-poetry = \"{constraint}\"")
+                    ))
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse(expected).unwrap()),

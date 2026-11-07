@@ -29,6 +29,10 @@
 - Fixed globals directories not including `$BUN_INSTALL_BIN`, `$BUN_INSTALL/bin`, and
   `$XDG_CACHE_HOME/.bun/bin`, which `bun add --global` uses when set.
 
+#### ⚙️ Internal
+
+- Version files are now read from their path, as the `content` input is deprecated.
+
 ## 0.16.11
 
 #### 🚀 Updates

@@ -4,6 +4,7 @@ use crate::version::{download_names, versions_from_tags};
 use extism_pdk::*;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
+use starbase_utils::fs;
 use std::collections::HashMap;
 use tool_common::{enable_tracing, extract_version_from_text};
 
@@ -51,12 +52,13 @@ pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
 pub fn parse_version_file(
     Json(input): Json<ParseVersionFileInput>,
 ) -> FnResult<Json<ParseVersionFileOutput>> {
+    let content = fs::read_file(&input.path)?;
     let mut value = None;
 
     if input.file == ".kotlin-version" {
-        value = extract_version_from_text(&input.content);
+        value = extract_version_from_text(&content);
     } else if input.file == ".sdkmanrc" {
-        for line in input.content.lines() {
+        for line in content.lines() {
             let line = line.split('#').next().unwrap_or_default();
 
             if let Some((key, version)) = line.split_once('=')

@@ -90,15 +90,14 @@ pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
 pub fn parse_version_file(
     Json(input): Json<ParseVersionFileInput>,
 ) -> FnResult<Json<ParseVersionFileOutput>> {
+    let content = fs::read_file(&input.path)?;
     let mut output = ParseVersionFileOutput::default();
 
     // The legacy file may only contain the channel, or be TOML
-    let channel = if input.file == "rust-toolchain" && !input.content.contains("[toolchain]") {
-        extract_version_from_text(&input.content).map(|channel| channel.to_owned())
+    let channel = if input.file == "rust-toolchain" && !content.contains("[toolchain]") {
+        extract_version_from_text(&content).map(|channel| channel.to_owned())
     } else {
-        toml::from_str::<ToolchainToml>(&input.content)?
-            .toolchain
-            .channel
+        toml::from_str::<ToolchainToml>(&content)?.toolchain.channel
     };
 
     if let Some(channel) = channel {

@@ -18,6 +18,10 @@
 - No longer creates a `~/.proto/bin/zig.exe` on Windows. It's a copy of the executable, which can't
   find Zig's `lib` directory and fails on every run. Use the `zig` shim instead.
 
+#### ⚙️ Internal
+
+- Version files are now read from their path, as the `content` input is deprecated.
+
 ## 0.1.0
 
 #### 🎉 Release

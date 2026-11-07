@@ -25,6 +25,10 @@
   by pyenv. Without them, Alpine couldn't run `python-build`, and Debian/Ubuntu built 3.14+ without
   the `compression.zstd` module.
 
+#### ⚙️ Internal
+
+- Version files are now read from their path, as the `content` input is deprecated.
+
 ## 0.15.0
 
 #### 🚀 Updates

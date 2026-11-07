@@ -1,5 +1,19 @@
 use proto_pdk_test_utils::*;
 
+fn version_file(
+    sandbox: &ProtoWasmSandbox,
+    file: &str,
+    content: impl AsRef<str>,
+) -> ParseVersionFileInput {
+    sandbox.create_file(file, content);
+
+    ParseVersionFileInput {
+        file: file.into(),
+        path: VirtualPath::new(sandbox.path().join(file)),
+        ..Default::default()
+    }
+}
+
 mod ruby_tool {
     use super::*;
     use ::ruby_tool::RubyToolConfig;
@@ -176,11 +190,7 @@ mod ruby_tool {
         let plugin = sandbox.create_plugin("ruby-test").await;
 
         plugin
-            .parse_version_file(ParseVersionFileInput {
-                content: content.into(),
-                file: ".ruby-version".into(),
-                ..Default::default()
-            })
+            .parse_version_file(version_file(&sandbox, ".ruby-version", content))
             .await
             .version
     }

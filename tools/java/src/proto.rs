@@ -5,6 +5,7 @@ use crate::version::from_java_version;
 use extism_pdk::*;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
+use starbase_utils::fs;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -57,6 +58,7 @@ pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
 pub fn parse_version_file(
     Json(input): Json<ParseVersionFileInput>,
 ) -> FnResult<Json<ParseVersionFileOutput>> {
+    let content = fs::read_file(&input.path)?;
     let mut version = None;
     let is_sdkman = input.file == ".sdkmanrc";
 
@@ -76,7 +78,7 @@ pub fn parse_version_file(
     }
 
     if is_sdkman {
-        for line in input.content.lines() {
+        for line in content.lines() {
             // SDKMAN strips comments and all whitespace from lines
             let line = line
                 .split('#')
@@ -92,7 +94,7 @@ pub fn parse_version_file(
             }
         }
     } else if input.file == ".java-version"
-        && let Some(line) = extract_version_from_text(&input.content)
+        && let Some(line) = extract_version_from_text(&content)
     {
         // Java 8 and below are also known by their legacy
         // 1.x versions (1.8), which jenv and others write

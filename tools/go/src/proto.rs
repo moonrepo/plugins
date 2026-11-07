@@ -3,6 +3,7 @@ use crate::version::{from_go_version, to_go_version};
 use extism_pdk::*;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
+use starbase_utils::fs;
 use std::collections::HashMap;
 use tool_common::{append_env_bin_dir, enable_tracing};
 
@@ -51,11 +52,12 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
 pub fn parse_version_file(
     Json(input): Json<ParseVersionFileInput>,
 ) -> FnResult<Json<ParseVersionFileOutput>> {
+    let content = fs::read_file(&input.path)?;
     let mut go = None;
     let mut toolchain = None;
 
     if input.file == "go.mod" || input.file == "go.work" {
-        for line in input.content.lines() {
+        for line in content.lines() {
             if let Some(value) = line.strip_prefix("go ") {
                 go = Some(value.trim());
             } else if let Some(value) = line.strip_prefix("toolchain ") {

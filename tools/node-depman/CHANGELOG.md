@@ -26,6 +26,10 @@
 - Fixed Yarn v6 on macOS x64 attempting a download that doesn't exist, instead of failing as unsupported.
 - Fixed the archive prefix for Yarn v0 versions.
 
+#### ⚙️ Internal
+
+- Version files are now read from their path, as the `content` input is deprecated.
+
 ## 0.20.2
 
 #### 🐞 Fixes

@@ -32,6 +32,10 @@
 - Fixed `bundled-npm` installing the npm bundled with the Node.js version configured in the working
   directory, instead of the version that was just installed.
 
+#### ⚙️ Internal
+
+- Version files are now read from their path, as the `content` input is deprecated.
+
 ## 0.17.13
 
 #### 🚀 Updates

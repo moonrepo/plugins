@@ -56,10 +56,11 @@ pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
 pub fn parse_version_file(
     Json(input): Json<ParseVersionFileInput>,
 ) -> FnResult<Json<ParseVersionFileOutput>> {
+    let content = fs::read_file(&input.path)?;
     let mut version = None;
 
     if input.file == "package.json" {
-        if let Ok(package_json) = json::from_str::<PackageJson>(&input.content) {
+        if let Ok(package_json) = json::from_str::<PackageJson>(&content) {
             if let Some(constraint) = extract_dev_engine_runtime_version(&package_json, "bun") {
                 version = Some(UnresolvedVersionSpec::parse(constraint)?);
             } else if let Some(constraint) =
@@ -87,7 +88,7 @@ pub fn parse_version_file(
                 version = Some(UnresolvedVersionSpec::parse(constraint)?);
             }
         }
-    } else if let Some(constraint) = extract_version_from_text(&input.content) {
+    } else if let Some(constraint) = extract_version_from_text(&content) {
         version = Some(UnresolvedVersionSpec::parse(constraint)?);
     }
 

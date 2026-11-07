@@ -3,6 +3,7 @@ use crate::version::{from_swift_version, to_swift_version};
 use extism_pdk::*;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
+use starbase_utils::fs;
 use std::collections::HashMap;
 use tool_common::{enable_tracing, extract_version_from_text};
 
@@ -75,16 +76,17 @@ pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
 pub fn parse_version_file(
     Json(input): Json<ParseVersionFileInput>,
 ) -> FnResult<Json<ParseVersionFileOutput>> {
+    let content = fs::read_file(&input.path)?;
     let mut version = None;
 
     if input.file == ".swift-version" {
-        if let Some(line) = extract_version_from_text(&input.content) {
+        if let Some(line) = extract_version_from_text(&content) {
             version = Some(UnresolvedVersionSpec::parse(line)?);
         }
     } else if input.file == "Package.swift" {
         // SwiftPM allows any spacing after `//`, any label casing,
         // and trailing `;` settings like `6.3;(experimentalCGen)`
-        for line in input.content.lines() {
+        for line in content.lines() {
             let line = line.trim().to_ascii_lowercase();
 
             if let Some(raw_version) = line

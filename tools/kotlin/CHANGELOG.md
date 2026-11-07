@@ -1,5 +1,11 @@
 # Kotlin plugin
 
+## Unreleased
+
+#### ⚙️ Internal
+
+- Version files are now read from their path, as the `content` input is deprecated.
+
 ## 0.1.0
 
 #### 🚀 Updates

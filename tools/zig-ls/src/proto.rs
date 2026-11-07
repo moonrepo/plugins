@@ -6,6 +6,7 @@ use lang_zig_common::{
 };
 use proto_pdk::*;
 use schematic::SchemaBuilder;
+use starbase_utils::fs;
 use std::collections::HashMap;
 use tool_common::enable_tracing;
 
@@ -47,7 +48,8 @@ pub fn detect_version_files(_: ()) -> FnResult<Json<DetectVersionOutput>> {
 pub fn parse_version_file(
     Json(input): Json<ParseVersionFileInput>,
 ) -> FnResult<Json<ParseVersionFileOutput>> {
-    let version = parse_zig_version_file(&input.file, &input.content)
+    let content = fs::read_file(&input.path)?;
+    let version = parse_zig_version_file(&input.file, &content)
         .map(|source| source.to_zls_requirement())
         .transpose()?;
 

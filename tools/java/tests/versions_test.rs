@@ -1,5 +1,19 @@
 use proto_pdk_test_utils::*;
 
+fn version_file(
+    sandbox: &ProtoWasmSandbox,
+    file: &str,
+    content: impl AsRef<str>,
+) -> ParseVersionFileInput {
+    sandbox.create_file(file, content);
+
+    ParseVersionFileInput {
+        file: file.into(),
+        path: VirtualPath::new(sandbox.path().join(file)),
+        ..Default::default()
+    }
+}
+
 mod java_tool {
     use super::*;
 
@@ -225,11 +239,7 @@ mod java_tool {
         let plugin = sandbox.create_plugin("java-test").await;
 
         let output = plugin
-            .parse_version_file(ParseVersionFileInput {
-                content: "21.0.11\n".into(),
-                file: ".java-version".into(),
-                ..Default::default()
-            })
+            .parse_version_file(version_file(&sandbox, ".java-version", "21.0.11\n"))
             .await;
 
         // Unscoped versions receive the default distribution
@@ -245,11 +255,11 @@ mod java_tool {
         let plugin = sandbox.create_plugin("java-test").await;
 
         let output = plugin
-            .parse_version_file(ParseVersionFileInput {
-                content: "# pinned for CI\ntemurin-21 # LTS\n".into(),
-                file: ".java-version".into(),
-                ..Default::default()
-            })
+            .parse_version_file(version_file(
+                &sandbox,
+                ".java-version",
+                "# pinned for CI\ntemurin-21 # LTS\n",
+            ))
             .await;
 
         assert_eq!(
@@ -264,11 +274,7 @@ mod java_tool {
         let plugin = sandbox.create_plugin("java-test").await;
 
         let output = plugin
-            .parse_version_file(ParseVersionFileInput {
-                content: "latest\n".into(),
-                file: ".java-version".into(),
-                ..Default::default()
-            })
+            .parse_version_file(version_file(&sandbox, ".java-version", "latest\n"))
             .await;
 
         assert_eq!(
@@ -284,11 +290,7 @@ mod java_tool {
 
         for (content, version) in [("1.8", "temurin-8"), ("1.8.0.392", "temurin-8.0.392")] {
             let output = plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: content.into(),
-                    file: ".java-version".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(&sandbox, ".java-version", content))
                 .await;
 
             assert_eq!(
@@ -305,11 +307,7 @@ mod java_tool {
         let plugin = sandbox.create_plugin("java-test").await;
 
         let output = plugin
-            .parse_version_file(ParseVersionFileInput {
-                content: "java=21.0.11-tem\n".into(),
-                file: ".sdkmanrc".into(),
-                ..Default::default()
-            })
+            .parse_version_file(version_file(&sandbox, ".sdkmanrc", "java=21.0.11-tem\n"))
             .await;
 
         // SDKMAN vendor suffixes map to distribution scopes
@@ -340,11 +338,11 @@ mod java_tool {
             ("oracle", "oracle"),
         ] {
             let output = plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: format!("java=21.0.11-{vendor}\n"),
-                    file: ".sdkmanrc".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    ".sdkmanrc",
+                    format!("java=21.0.11-{vendor}\n"),
+                ))
                 .await;
 
             assert_eq!(
@@ -369,11 +367,11 @@ mod java_tool {
             ("11.0.14.1-jbr", "jetbrains-11.0.14-v1"),
         ] {
             let output = plugin
-                .parse_version_file(ParseVersionFileInput {
-                    content: format!("java={identifier}\n"),
-                    file: ".sdkmanrc".into(),
-                    ..Default::default()
-                })
+                .parse_version_file(version_file(
+                    &sandbox,
+                    ".sdkmanrc",
+                    format!("java={identifier}\n"),
+                ))
                 .await;
 
             assert_eq!(
@@ -390,11 +388,11 @@ mod java_tool {
         let plugin = sandbox.create_plugin("java-test").await;
 
         let output = plugin
-            .parse_version_file(ParseVersionFileInput {
-                content: "# java=17.0.2-zulu\njava = 21.0.2-tem # LTS\n".into(),
-                file: ".sdkmanrc".into(),
-                ..Default::default()
-            })
+            .parse_version_file(version_file(
+                &sandbox,
+                ".sdkmanrc",
+                "# java=17.0.2-zulu\njava = 21.0.2-tem # LTS\n",
+            ))
             .await;
 
         assert_eq!(
@@ -409,11 +407,7 @@ mod java_tool {
         let plugin = sandbox.create_plugin("java-test").await;
 
         let output = plugin
-            .parse_version_file(ParseVersionFileInput {
-                content: "java=21\n".into(),
-                file: ".sdkmanrc".into(),
-                ..Default::default()
-            })
+            .parse_version_file(version_file(&sandbox, ".sdkmanrc", "java=21\n"))
             .await;
 
         assert_eq!(
@@ -429,11 +423,7 @@ mod java_tool {
         let plugin = sandbox.create_plugin("java-test").await;
 
         plugin
-            .parse_version_file(ParseVersionFileInput {
-                content: "java=21.0.11-foobar\n".into(),
-                file: ".sdkmanrc".into(),
-                ..Default::default()
-            })
+            .parse_version_file(version_file(&sandbox, ".sdkmanrc", "java=21.0.11-foobar\n"))
             .await;
     }
 }
