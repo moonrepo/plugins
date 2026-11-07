@@ -8,6 +8,8 @@
 
 #### 🐞 Fixes
 
+- Fixed comments in `.swift-version`, like `6.1.2 # stable`, failing to parse. Everything after
+  `#` is now ignored.
 - Fixed downloads of 6.4.0 and later `.0` releases, which Swift.org names `swift-6.4.0-RELEASE`
   instead of `swift-6.4-RELEASE`.
 - Fixed the globals directory, which pointed at the toolchain's own `usr/bin` instead of
