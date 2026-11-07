@@ -4,6 +4,8 @@
 
 #### 🚀 Updates
 
+- `$CARGO_INSTALL_ROOT` and `$CARGO_HOME` are now used as-is for the globals directories when they
+  already are a `bin` directory, instead of appending another `bin`.
 - Added a warning when a toolchain file uses a partial version like `1.80`, which rustup installs as a
   separate toolchain from proto's.
 - Added `components` and `targets` to the `rust-toolchain.toml` model.

@@ -12,6 +12,7 @@ use moon_pdk_api::*;
 use rustc_hash::FxHashMap;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
+use toolchain_common::append_bin_dir;
 
 #[plugin_fn]
 pub fn extend_project_graph(
@@ -185,11 +186,11 @@ fn gather_shared_paths(
     // Binaries from `cargo install` are written to the install root,
     // while the rustup proxies (`cargo`, `rustc`, etc) remain in the home
     if let Some(value) = get_host_env_var("CARGO_INSTALL_ROOT")? {
-        dirs.push(PathBuf::from(value).join("bin"));
+        dirs.push(append_bin_dir(value));
     }
 
     if let Some(value) = get_host_env_var("CARGO_HOME")? {
-        dirs.push(PathBuf::from(value).join("bin"));
+        dirs.push(append_bin_dir(value));
     } else if let Some(dir) = env.home_dir.join(".cargo").join("bin").to_real_path()? {
         dirs.push(dir.to_path_buf());
     }
