@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+#### 💥 Breaking
+
+- `minimum_zig_version` in `build.zig.zon` now resolves to a ZLS within the same minor version
+  (`~0.14`) instead of any newer version (`>=0.14`), matching the Zig plugin.
+
 #### 🐞 Fixes
 
 - Fixed comments in `.zig-version` and `.zigversion`, like `0.15.2 # stable`, failing to parse.

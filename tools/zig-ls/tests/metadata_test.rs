@@ -64,7 +64,7 @@ mod zig_ls_tool {
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    async fn parses_zon_minimum_version_as_zls_minimum_range() {
+    async fn parses_zon_minimum_version_as_zls_minor_range() {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox.create_plugin("zls-test").await;
 
@@ -82,7 +82,7 @@ mod zig_ls_tool {
 
         assert_eq!(
             output.version,
-            Some(UnresolvedVersionSpec::parse(">=0.15").unwrap())
+            Some(UnresolvedVersionSpec::parse("~0.15").unwrap())
         );
     }
 

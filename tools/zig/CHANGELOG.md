@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+#### 💥 Breaking
+
+- `minimum_zig_version` in `build.zig.zon` now resolves within its minor version (`~0.14.0`) instead
+  of to any newer version (`>=0.14.0`), as Zig changes APIs between minor versions. A 0.14 project
+  was installing the latest Zig, which fails to build it. setup-zig, anyzig, and zvm install the
+  exact version, while this also allows newer patches.
+
 #### 🐞 Fixes
 
 - Fixed comments in `.zig-version` and `.zigversion`, like `0.15.2 # stable`, failing to parse.
