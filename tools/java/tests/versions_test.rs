@@ -3,16 +3,16 @@ use proto_pdk_test_utils::*;
 mod java_tool {
     use super::*;
 
-    // These all resolve against the default openjdk distribution, whose
+    // These all resolve against the openjdk distribution, whose
     // jdk.java.net streams are frozen, so they never drift. All cases in
     // this macro share a plugin instance (and its version cache), so only
     // same-scoped versions may be used!
     generate_resolve_versions_tests!("java-test", {
-        "17" => "openjdk-17.0.2+8",
-        "19" => "openjdk-19.0.2+7",
+        "openjdk-17" => "openjdk-17.0.2+8",
+        "openjdk-19" => "openjdk-19.0.2+7",
         "openjdk-21" => "openjdk-21.0.2+13",
         // Versions without build metadata match the build
-        "21.0.2" => "openjdk-21.0.2+13",
+        "openjdk-21.0.2" => "openjdk-21.0.2+13",
         "openjdk-17.0.2" => "openjdk-17.0.2+8",
     });
 
@@ -131,7 +131,7 @@ mod java_tool {
 
         assert_eq!(
             output.candidate,
-            Some(UnresolvedVersionSpec::parse("openjdk-21").unwrap())
+            Some(UnresolvedVersionSpec::parse("temurin-21").unwrap())
         );
     }
 
@@ -172,7 +172,7 @@ mod java_tool {
 
         for (initial, candidate) in [
             ("temurin-21.0.11", "=temurin-21.0.11"),
-            ("21.0.11", "=openjdk-21.0.11"),
+            ("21.0.11", "=temurin-21.0.11"),
             ("temurin-26.0.2-v1", "=temurin-26.0.2-v1"),
         ] {
             let output = plugin
@@ -235,7 +235,7 @@ mod java_tool {
         // Unscoped versions receive the default distribution
         assert_eq!(
             output.version.unwrap(),
-            UnresolvedVersionSpec::parse("openjdk-21.0.11").unwrap()
+            UnresolvedVersionSpec::parse("temurin-21.0.11").unwrap()
         );
     }
 
@@ -282,7 +282,7 @@ mod java_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox.create_plugin("java-test").await;
 
-        for (content, version) in [("1.8", "openjdk-8"), ("1.8.0.392", "openjdk-8.0.392")] {
+        for (content, version) in [("1.8", "temurin-8"), ("1.8.0.392", "temurin-8.0.392")] {
             let output = plugin
                 .parse_version_file(ParseVersionFileInput {
                     content: content.into(),
@@ -418,7 +418,7 @@ mod java_tool {
 
         assert_eq!(
             output.version.unwrap(),
-            UnresolvedVersionSpec::parse("openjdk-21").unwrap()
+            UnresolvedVersionSpec::parse("temurin-21").unwrap()
         );
     }
 

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+#### 💥 Breaking
+
+- The default distribution is now `temurin` instead of `openjdk`, which applies to versions without a
+  vendor, like `21`. jdk.java.net's `openjdk` builds stop receiving updates 6 months after a release,
+  so `21` resolved to 21.0.2 from January 2024. Use `openjdk-21` to keep the previous behavior.
+
 #### 🐞 Fixes
 
 - Fixed comments in `.java-version`, like `21 # LTS`, failing to parse. Everything after `#` is
