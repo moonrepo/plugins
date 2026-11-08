@@ -51,6 +51,7 @@ fn install_panic_hook() {
 
     static INSTALLED: Once = Once::new();
 
+    // ADR-0004.5 exception: only reads the panic count
     if std::thread::panicking() {
         return;
     }

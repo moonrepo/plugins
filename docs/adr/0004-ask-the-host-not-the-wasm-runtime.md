@@ -1,6 +1,6 @@
 ---
-status: proposed
-date: 2026-11-07
+status: accepted
+date: 2026-11-08
 applies-to: [backends/**, crates/**, extensions/**, toolchains/**, tools/**, clippy.toml]
 ---
 
@@ -47,6 +47,9 @@ so everywhere, and a root `clippy.toml` was added to keep it that way.
 - Native tests, in `tests/` and `#[cfg(test)]` code, run on the host and MAY use these APIs. Where
   clippy reports one, the test allows it with `#[allow(clippy::disallowed_methods)]` or the
   matching lint.
+- The panic hook in `crates/common` MAY call `std::thread::panicking()` (rule 5). It's needed to set
+  up panics, as `std::panic::set_hook` panics if an earlier panic trapped, and it only reads the
+  panic count, which works in WASI.
 
 ## Consequences
 
