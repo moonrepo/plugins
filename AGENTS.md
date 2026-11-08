@@ -93,6 +93,7 @@ defines the process.
   ADR's status to `accepted`.
 - Where code enforces a rule or is an exception to one, cite it in a comment, like `// ADR-0003.1`.
 
-| ADR                                                    | Status   | Applies to    | Decision                                                         |
-| ------------------------------------------------------ | -------- | ------------- | ---------------------------------------------------------------- |
-| [0001](docs/adr/0001-record-architecture-decisions.md) | proposed | `docs/adr/**` | Cross-plugin decisions are ADRs, which only a maintainer accepts |
+| ADR                                                       | Status   | Applies to    | Decision                                                         |
+| --------------------------------------------------------- | -------- | ------------- | ---------------------------------------------------------------- |
+| [0001](docs/adr/0001-record-architecture-decisions.md)    | proposed | `docs/adr/**` | Cross-plugin decisions are ADRs, which only a maintainer accepts |
+| [draft](docs/adr/draft-cache-expensive-work-in-memory.md) | proposed | All crates    | Cache expensive work in memory, and never fail on a var write    |
