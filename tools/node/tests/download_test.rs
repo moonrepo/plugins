@@ -19,7 +19,7 @@ mod node_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("node-test", |config| {
-                config.host(HostOS::Linux, HostArch::Arm64);
+                config.host(HostPlatform::new(HostOS::Linux, HostArch::Arm64));
             })
             .await;
 
@@ -52,7 +52,7 @@ mod node_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("node-test", |config| {
-                config.host(HostOS::Linux, HostArch::Arm);
+                config.host(HostPlatform::new(HostOS::Linux, HostArch::Arm));
             })
             .await;
 
@@ -123,7 +123,7 @@ mod node_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("node-test", |config| {
-                config.host(HostOS::Linux, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::Linux, HostArch::X64));
             })
             .await;
 
@@ -194,7 +194,7 @@ mod node_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("node-test", |config| {
-                config.host(HostOS::Linux, HostArch::S390x);
+                config.host(HostPlatform::new(HostOS::Linux, HostArch::S390x));
             })
             .await;
 
@@ -227,7 +227,7 @@ mod node_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("node-test", |config| {
-                config.host(HostOS::Linux, HostArch::Powerpc64);
+                config.host(HostPlatform::new(HostOS::Linux, HostArch::Powerpc64));
             })
             .await;
 
@@ -260,7 +260,7 @@ mod node_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("node-test", |config| {
-                config.host(HostOS::MacOS, HostArch::Arm64);
+                config.host(HostPlatform::new(HostOS::MacOS, HostArch::Arm64));
             })
             .await;
 
@@ -293,7 +293,7 @@ mod node_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("node-test", |config| {
-                config.host(HostOS::MacOS, HostArch::Arm64);
+                config.host(HostPlatform::new(HostOS::MacOS, HostArch::Arm64));
             })
             .await;
 
@@ -326,7 +326,7 @@ mod node_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("node-test", |config| {
-                config.host(HostOS::Linux, HostArch::Arm64);
+                config.host(HostPlatform::new(HostOS::Linux, HostArch::Arm64));
             })
             .await;
 
@@ -350,7 +350,7 @@ mod node_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("node-test", |config| {
-                config.host(HostOS::Windows, HostArch::Arm64);
+                config.host(HostPlatform::new(HostOS::Windows, HostArch::Arm64));
             })
             .await;
 
@@ -374,7 +374,7 @@ mod node_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("node-test", |config| {
-                config.host(HostOS::Linux, HostArch::Riscv64);
+                config.host(HostPlatform::new(HostOS::Linux, HostArch::Riscv64));
             })
             .await;
 
@@ -408,7 +408,7 @@ mod node_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("node-test", |config| {
-                config.host(HostOS::Linux, HostArch::LongArm64);
+                config.host(HostPlatform::new(HostOS::Linux, HostArch::LongArm64));
             })
             .await;
 
@@ -458,7 +458,7 @@ mod node_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("node-test", |config| {
-                config.host(HostOS::MacOS, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::MacOS, HostArch::X64));
             })
             .await;
 
@@ -491,7 +491,7 @@ mod node_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("node-test", |config| {
-                config.host(HostOS::Windows, HostArch::Arm64);
+                config.host(HostPlatform::new(HostOS::Windows, HostArch::Arm64));
             })
             .await;
 
@@ -523,7 +523,7 @@ mod node_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("node-test", |config| {
-                config.host(HostOS::Windows, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::Windows, HostArch::X64));
             })
             .await;
 
@@ -555,7 +555,7 @@ mod node_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("node-test", |config| {
-                config.host(HostOS::Windows, HostArch::X86);
+                config.host(HostPlatform::new(HostOS::Windows, HostArch::X86));
             })
             .await;
 
@@ -588,7 +588,7 @@ mod node_tool {
         let plugin = sandbox
             .create_plugin_with_config("node-test", |config| {
                 config
-                    .host(HostOS::Linux, HostArch::X64)
+                    .host(HostPlatform::new(HostOS::Linux, HostArch::X64))
                     .tool_config(NodeToolConfig {
                         dist_url: "https://mirror.com/node/{channel}/v{version}/{file}".into(),
                         ..Default::default()
@@ -668,7 +668,7 @@ mod node_tool {
         let plugin = sandbox
             .create_plugin_with_config("node-test", |config| {
                 config
-                    .host(HostOS::Linux, HostArch::X64)
+                    .host(HostPlatform::new(HostOS::Linux, HostArch::X64))
                     .tool_config(NodeToolConfig {
                         dist_url: "https://mirror.com/node/{channel}/v{version}/{file}".into(),
                         ..Default::default()
@@ -736,7 +736,7 @@ mod node_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("bun-test", |config| {
-                config.host(HostOS::Linux, HostArch::Arm64);
+                config.host(HostPlatform::new(HostOS::Linux, HostArch::Arm64));
             })
             .await;
 
@@ -763,7 +763,7 @@ mod node_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("bun-test", |config| {
-                config.host(HostOS::Windows, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::Windows, HostArch::X64));
             })
             .await;
 

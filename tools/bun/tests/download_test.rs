@@ -16,7 +16,7 @@ mod bun_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("bun-test", |config| {
-                config.host(HostOS::Linux, HostArch::Arm64);
+                config.host(HostPlatform::new(HostOS::Linux, HostArch::Arm64));
             })
             .await;
 
@@ -49,7 +49,7 @@ mod bun_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("bun-test", |config| {
-                config.host(HostOS::Linux, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::Linux, HostArch::X64));
             })
             .await;
 
@@ -180,7 +180,7 @@ mod bun_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("bun-test", |config| {
-                config.host(HostOS::MacOS, HostArch::Arm64);
+                config.host(HostPlatform::new(HostOS::MacOS, HostArch::Arm64));
             })
             .await;
 
@@ -213,7 +213,7 @@ mod bun_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("bun-test", |config| {
-                config.host(HostOS::MacOS, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::MacOS, HostArch::X64));
             })
             .await;
 
@@ -252,7 +252,7 @@ mod bun_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("bun-test", |config| {
-                config.host(HostOS::FreeBSD, HostArch::Arm64);
+                config.host(HostPlatform::new(HostOS::FreeBSD, HostArch::Arm64));
             })
             .await;
 
@@ -286,7 +286,7 @@ mod bun_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("bun-test", |config| {
-                config.host(HostOS::FreeBSD, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::FreeBSD, HostArch::X64));
             })
             .await;
 
@@ -321,7 +321,7 @@ mod bun_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("bun-test", |config| {
-                config.host(HostOS::FreeBSD, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::FreeBSD, HostArch::X64));
             })
             .await;
 
@@ -341,7 +341,7 @@ mod bun_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("bun-test", |config| {
-                config.host(HostOS::Windows, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::Windows, HostArch::X64));
             })
             .await;
 
@@ -374,7 +374,7 @@ mod bun_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("bun-test", |config| {
-                config.host(HostOS::Windows, HostArch::Arm64);
+                config.host(HostPlatform::new(HostOS::Windows, HostArch::Arm64));
             })
             .await;
 
@@ -408,7 +408,7 @@ mod bun_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("bun-test", |config| {
-                config.host(HostOS::Windows, HostArch::Arm64);
+                config.host(HostPlatform::new(HostOS::Windows, HostArch::Arm64));
             })
             .await;
 
@@ -429,7 +429,7 @@ mod bun_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("bun-test", |config| {
-                config.host(HostOS::Windows, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::Windows, HostArch::X64));
             })
             .await;
 
@@ -449,7 +449,7 @@ mod bun_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("bun-test", |config| {
-                config.host(HostOS::Linux, HostArch::Arm64);
+                config.host(HostPlatform::new(HostOS::Linux, HostArch::Arm64));
             })
             .await;
 
@@ -476,7 +476,7 @@ mod bun_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("bun-test", |config| {
-                config.host(HostOS::Windows, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::Windows, HostArch::X64));
             })
             .await;
 
