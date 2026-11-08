@@ -10,8 +10,7 @@ pub use npm::*;
 pub use pnpm::*;
 pub use yarn::*;
 
-use moon_pdk::AnyResult;
-use moon_pdk_api::VersionSpec;
+use moon_pdk_api::{AnyResult, VersionSpec};
 
 pub(super) fn parse_version_spec<T: AsRef<str>>(version: T) -> AnyResult<Option<VersionSpec>> {
     let version = version.as_ref();

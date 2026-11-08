@@ -1,7 +1,8 @@
 pub mod config;
 #[cfg(feature = "wasm")]
 mod infer_tasks;
-#[cfg(feature = "wasm")]
+#[cfg(any(feature = "wasm", test))]
+#[cfg_attr(not(feature = "wasm"), allow(dead_code, unused_imports))]
 mod lockfiles;
 pub mod package_json;
 #[cfg(feature = "wasm")]

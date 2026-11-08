@@ -1,7 +1,8 @@
 use super::yarn::parse_yarn_lock_content;
 use super::{parse_name_and_version, parse_version_spec};
-use moon_pdk::{AnyResult, ExecCommandInput, VirtualPath, exec};
-use moon_pdk_api::{LockDependency, ParseLockOutput};
+#[cfg(feature = "wasm")]
+use moon_pdk::{ExecCommandInput, exec};
+use moon_pdk_api::{AnyResult, LockDependency, ParseLockOutput, VirtualPath};
 use serde::Deserialize;
 use starbase_utils::{fs, json, json::JsonValue};
 use std::collections::BTreeMap;
@@ -160,6 +161,7 @@ pub fn parse_bun_lock(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyRe
     Ok(())
 }
 
+#[cfg(feature = "wasm")]
 pub fn parse_bun_lockb(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyResult<()> {
     let content = exec(ExecCommandInput::pipe("bun", ["bun.lockb"]).cwd(path.parent().unwrap()))?;
 

@@ -1,6 +1,5 @@
 use super::parse_version_spec;
-use moon_pdk::{AnyResult, VirtualPath};
-use moon_pdk_api::{LockDependency, ParseLockOutput};
+use moon_pdk_api::{AnyResult, LockDependency, ParseLockOutput, VirtualPath};
 use package_lock_json_parser::{PackageLockJson, V1Dependency, parse};
 use starbase_utils::fs;
 use std::collections::HashMap;
