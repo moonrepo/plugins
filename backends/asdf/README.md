@@ -21,11 +21,11 @@ asdf plugin can be configured with a `.prototools` file.
 
 - `shortname` (string) - The name of the [asdf plugin](https://github.com/asdf-vm/asdf-plugins) if different than the configured ID.
 - `repository` (string) - The Git repository URL in which to locate [scripts](https://asdf-vm.com/plugins/create.html#scripts-overview). If not defined, is extracted from the shortname plugin index.
-- `exes` (string[]) - List of executable file names (relative from `bin`) to be linked as a shim/bin. If not defined, we'll automatically scan the `bin` directory.
+- `exes` (string[]) - List of executable file names (relative from `bin`) to be linked as a shim/bin. If not defined, we'll automatically scan the directories listed by the `list-bin-paths` script, or `bin` if it does not exist.
 
 ```toml
 "asdf:<id>" = "1.2.3"
 
-[tools.<id>]
+[tools."asdf:<id>"]
 shortname = "..."
 ```
