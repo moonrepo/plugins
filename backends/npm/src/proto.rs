@@ -5,6 +5,8 @@ use extism_pdk::*;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
 use starbase_utils::{fs, json::JsonValue};
+use std::fs::File;
+use std::io::Read;
 
 #[host_fn]
 extern "ExtismHost" {
@@ -96,6 +98,8 @@ pub fn native_install(
     } else {
         let install_dir = real_install_dir.to_string();
 
+        // npm v12+ blocks install scripts unless allowed
+        command.args.push(format!("--allow-scripts={id}"));
         command.args.push("--prefix".into());
         command.args.push(install_dir.clone());
         command.env.insert("PREFIX".into(), install_dir);
@@ -144,10 +148,8 @@ pub fn locate_executables(
         .join("package.json");
 
     let create_exe_config = |bin_path: &str, primary: bool| {
-        let mut config = ExecutableConfig::new(format!(
-            "{rel_package_path}/{}",
-            bin_path.trim_start_matches("./")
-        ));
+        let exe_path = format!("{rel_package_path}/{}", bin_path.trim_start_matches("./"));
+        let mut config = ExecutableConfig::new(&exe_path);
 
         config.primary = primary;
 
@@ -158,6 +160,8 @@ pub fn locate_executables(
             .extension()
             .and_then(|ext| ext.to_str())
         {
+            // Native binaries and non-Node scripts run directly
+            None if !is_node_script(&input.install_dir.join(&exe_path)) => {}
             None | Some("js" | "cjs" | "mjs") => {
                 config.parent_exe_name = Some("node".into());
                 config.no_bin = true;
@@ -279,24 +283,14 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
     }
 
     // Fetch versions
-    let result = exec({
-        let mut cmd = command.clone();
-        cmd.args.push("versions".into());
-        cmd
-    })?;
-    let versions: Vec<String> = json::from_str(&result.stdout)?;
+    let versions: Vec<String> = json::from_str(&view_field(&command, "versions")?)?;
 
     for version in versions {
         output.versions.push(VersionSpec::parse(version.trim())?);
     }
 
     // Fetch tags
-    let result = exec({
-        let mut cmd = command.clone();
-        cmd.args.push("dist-tags".into());
-        cmd
-    })?;
-    let tags: DistTags = json::from_str(&result.stdout)?;
+    let tags: DistTags = json::from_str(&view_field(&command, "dist-tags")?)?;
 
     for (alias, version) in tags.into_map() {
         let version = UnresolvedVersionSpec::parse(&version)?;
@@ -311,6 +305,39 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
     ensure_stable_latest(&mut output);
 
     Ok(Json(output))
+}
+
+/// Read a field from the registry with `npm view` or `bun info`.
+fn view_field(command: &ExecCommandInput, field: &str) -> AnyResult<String> {
+    let mut command = command.clone();
+    command.args.push(field.into());
+
+    let result = exec(command)?;
+
+    if result.exit_code != 0 {
+        return Err(PluginError::Message(format!(
+            "Failed to load package {field}: {}",
+            result.stderr.trim()
+        ))
+        .into());
+    }
+
+    Ok(result.stdout)
+}
+
+/// Whether an extensionless bin is a Node.js script, by its shebang
+/// (assumed when the file can't be read).
+fn is_node_script(path: &VirtualPath) -> bool {
+    let mut head = [0; 128];
+
+    match File::open(path).and_then(|mut file| file.read(&mut head)) {
+        Ok(len) => {
+            let line = head[..len].split(|byte| *byte == b'\n').next().unwrap();
+
+            line.starts_with(b"#!") && String::from_utf8_lossy(line).contains("node")
+        }
+        Err(_) => true,
+    }
 }
 
 fn prepare_command(mut command: ExecCommandInput) -> ExecCommandInput {

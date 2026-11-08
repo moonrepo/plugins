@@ -9,6 +9,9 @@
 #### 🐞 Fixes
 
 - Fixed the `latest` version resolving to a pre-release when the `latest` dist-tag points to one. It now falls back to the highest stable version.
+- Fixed extensionless bins that are native binaries or non-Node scripts (like `esbuild` after its postinstall) being run with `node`/`bun`. The shebang is now checked.
+- Fixed the package's install scripts not running with npm v12, which blocks them by default. The package is now passed to `--allow-scripts`.
+- Fixed a cryptic JSON error when loading versions fails (for example, an unknown package). The npm/bun error is now shown.
 
 ## 0.1.4
 

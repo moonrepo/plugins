@@ -22,6 +22,17 @@ mod npm_backend_versions {
             assert!(!output.versions.is_empty());
             assert!(!output.aliases.is_empty());
         }
+
+        #[tokio::test(flavor = "multi_thread")]
+        #[should_panic(expected = "Failed to load package versions")]
+        async fn errors_for_unknown_package() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin("npm:moonrepo-this-package-does-not-exist")
+                .await;
+
+            plugin.load_versions(LoadVersionsInput::default()).await;
+        }
     }
 
     mod with_bun {
@@ -47,6 +58,19 @@ mod npm_backend_versions {
 
             assert!(!output.versions.is_empty());
             assert!(!output.aliases.is_empty());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        #[should_panic(expected = "Failed to load package versions")]
+        async fn errors_for_unknown_package() {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("npm:moonrepo-this-package-does-not-exist", |cfg| {
+                    cfg.backend_config(NpmBackendConfig { bun: true });
+                })
+                .await;
+
+            plugin.load_versions(LoadVersionsInput::default()).await;
         }
     }
 }

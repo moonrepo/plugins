@@ -19,12 +19,14 @@ Cargo plugin can be configured with a `.prototools` file.
 - `features` (string[]) - List of Cargo features to enable for the package.
 - `locked` (boolean) - Use locked versions and don't update `Cargo.lock`.
 - `no-default-features` (bool) - Disable the `default` feature of the package.
-- `registry` (string) - A custom registry to install the package from.
+- `registry` (string) - A custom registry to install the package from. Versions are still resolved from crates.io.
+
+Setting `bin`, `features`, or `no-default-features` builds the package from source with `cargo install`, instead of using cargo-binstall.
 
 ```toml
 "cargo:<id>" = "1.2.3"
 
-[tools.<id>]
+[tools."cargo:<id>"]
 features = ["std"]
 ```
 
@@ -32,7 +34,7 @@ features = ["std"]
 
 - `locked` (boolean) - Use locked versions and don't update `Cargo.lock`.
 - `no-binstall` (bool) - Do not use [cargo-binstall](https://crates.io/crates/cargo-binstall) for installing packages, and instead build from source.
-- `registry` (string) - A custom registry to install packages from.
+- `registry` (string) - A custom registry to install packages from. Versions are still resolved from crates.io.
 
 ```toml
 "cargo:<id>" = "1.2.3"

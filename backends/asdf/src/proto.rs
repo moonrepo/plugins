@@ -252,22 +252,20 @@ pub fn parse_version_file(
 
     if input.file == ".tool-versions" {
         let id = get_plugin_id()?;
+        let shortname = config.get_shortname()?;
 
+        // Lines are `<tool> <version> [<fallback>...]`, and asdf
+        // tries each version in order, so use the first
         for line in content.lines() {
-            let mut parsed_line = String::new();
+            let mut tokens = line
+                .split('#')
+                .next()
+                .unwrap_or_default()
+                .split_whitespace();
 
-            // Strip comments
-            for ch in line.chars() {
-                if ch == '#' {
-                    break;
-                }
-
-                parsed_line.push(ch);
-            }
-
-            let (tool, version) = parsed_line.split_once(' ').unwrap_or((&parsed_line, ""));
-
-            if id == tool && !version.is_empty() {
+            if let (Some(tool), Some(version)) = (tokens.next(), tokens.next())
+                && (id == tool || shortname == tool)
+            {
                 output.version = Some(UnresolvedVersionSpec::parse(version)?);
                 break;
             }
@@ -329,7 +327,7 @@ pub fn native_install(
 
     // https://asdf-vm.com/plugins/create.html#bin-install
     let mut script = create_script_from_context(&install_script_path, &input.context)?;
-    script.env.insert("ASDF_CONCURRENCY".into(), cpu_cores()?);
+    script.env.insert("ASDF_CONCURRENCY?".into(), cpu_cores()?);
 
     exec_script(script)?;
 
@@ -394,45 +392,49 @@ pub fn locate_executables(
                 },
             );
         }
-    } else if let Some(dir) = output.exes_dirs.first() {
-        for entry in fs::read_dir(input.install_dir.join(dir))? {
-            let file = entry.path();
-            let name = fs::file_name(&file);
+    } else {
+        // Like asdf, scan every bin path for files
+        for dir in &output.exes_dirs {
+            for entry in fs::read_dir(input.install_dir.join(dir))? {
+                let file = entry.path();
+                let name = fs::file_name(&file);
 
-            // Some asdf plugins just unpack the entire repository/archive
-            // into the same folder, flooding it with non-sense files. Let's
-            // do our best to filter them out...
-            if name.contains("README")
-                || name.contains("HISTORY")
-                || name.contains("CHANGELOG")
-                || name.contains("LICENSE")
-                || name.starts_with('.')
-            {
-                continue;
-            }
-
-            // Let's also do some filtering based on file extension
-            match file.extension().and_then(|ext| ext.to_str()) {
-                Some("sh" | "exe") | None => {
-                    // Allowed
-                }
-                Some(_) => {
-                    // Unknown extension, not allowed
+                // Some asdf plugins just unpack the entire repository/archive
+                // into the same folder, flooding it with non-sense files. Let's
+                // do our best to filter them out...
+                if file.is_dir()
+                    || name.contains("README")
+                    || name.contains("HISTORY")
+                    || name.contains("CHANGELOG")
+                    || name.contains("LICENSE")
+                    || name.starts_with('.')
+                {
                     continue;
                 }
-            };
 
-            output.exes.insert(
-                name.clone(),
-                ExecutableConfig {
-                    primary: id == name,
-                    exe_path: match file.strip_prefix(&input.install_dir) {
-                        Ok(suffix) => Some(suffix.to_owned()),
-                        Err(_) => Some(dir.join(name)),
+                // Let's also do some filtering based on file extension
+                match file.extension().and_then(|ext| ext.to_str()) {
+                    Some("sh" | "exe") | None => {
+                        // Allowed
+                    }
+                    Some(_) => {
+                        // Unknown extension, not allowed
+                        continue;
+                    }
+                };
+
+                output.exes.insert(
+                    name.clone(),
+                    ExecutableConfig {
+                        primary: id == name,
+                        exe_path: match file.strip_prefix(&input.install_dir) {
+                            Ok(suffix) => Some(suffix.to_owned()),
+                            Err(_) => Some(dir.join(name)),
+                        },
+                        ..Default::default()
                     },
-                    ..Default::default()
-                },
-            );
+                );
+            }
         }
     }
 
@@ -490,14 +492,16 @@ pub fn resolve_version(
 
         // https://asdf-vm.com/plugins/create.html#bin-latest-stable
         if script_path.exists() {
-            let data = exec_script(create_script_from_unresolved_context(
-                &script_path,
-                &input.context,
-            )?)?;
+            let mut script = create_script_from_unresolved_context(&script_path, &input.context)?;
 
-            if !data.is_empty() {
-                output.candidate = UnresolvedVersionSpec::parse(data.trim()).ok();
-            }
+            // asdf always passes the filter query, which is empty when not filtering,
+            // and uses the last version printed
+            script.args.push("".into());
+
+            output.candidate = exec_script(script)?
+                .split_whitespace()
+                .last()
+                .and_then(|version| UnresolvedVersionSpec::parse(version).ok());
         } else {
             output.candidate = Some(UnresolvedVersionSpec::Alias("latest".into()));
         }
@@ -522,27 +526,32 @@ pub fn activate_environment(
     // Because `exec-env` sets environment variables, we simply can't execute
     // the script as-is, we need to execute it and capture the variables that were
     // set. This is complicated, but doable. We will achieve this by running `env`
-    // to capture the existing variables, then `source`ing the `exec-env` script,
-    // then running `env` again to capture the new/different variables.
+    // to capture the existing variables, then sourcing the `exec-env` script with
+    // bash (like asdf), then running `env` again to capture the new/different variables.
+    // Variables are NUL separated, as values may span multiple lines.
     let mut script = create_script_from_context(&script_path, &input.context)?;
     let real_script_path = script.args.remove(0);
 
+    script.command = "bash".into();
     script.args.push("-c".into());
     script.args.push(format!(
-        "env; echo \"###\"; source \"{real_script_path}\"; env;"
+        "env -0; printf '###\\0'; . \"{real_script_path}\"; env -0"
     ));
 
     let stdout = handle_exec_result(real_script_path, exec(script)?)?;
     let mut existing_env = FxHashMap::default();
     let mut after_source = false;
 
-    for line in stdout.lines() {
+    for line in stdout.split('\0') {
         if line == "###" {
             after_source = true;
             continue;
         }
 
-        if let Some((key, value)) = line.split_once('=') {
+        // bash 5.1+ lowers SHLVL when it execs the last command directly
+        if let Some((key, value)) = line.split_once('=')
+            && key != "SHLVL"
+        {
             if after_source {
                 if let Some(existing_value) = existing_env.get(key)
                     && value == *existing_value

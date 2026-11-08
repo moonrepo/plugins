@@ -4,11 +4,17 @@
 
 #### 🚀 Updates
 
+- Improved the error when a tool is not in the asdf shortname index, to point to the `shortname` and `repository` settings.
 - Panics now report their message, instead of an `unreachable` WASM trap error.
 
 #### 🐞 Fixes
 
 - Fixed the `latest` version resolving to a pre-release, as it was not set and proto used the highest version.
+- Fixed `bin/latest-stable` not receiving an (empty) filter query argument like asdf, which failed scripts that read `$1` (asdf-golang).
+- Fixed only the first `bin/list-bin-paths` directory being scanned for executables (asdf-golang's `go` was missing), and directories being returned as executables.
+- Fixed `.tool-versions` lines with fallback versions or extra whitespace failing to parse. The first version is used, and lines are also matched by the `shortname` setting.
+- Fixed `bin/exec-env` multi-line variables being split into bogus variables. The script is now always sourced with bash, like asdf.
+- Fixed `ASDF_CONCURRENCY` overriding the variable when already set in the environment.
 
 #### ⚙️ Internal
 
