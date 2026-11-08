@@ -1,4 +1,5 @@
 #[cfg(unix)]
+#[allow(clippy::disallowed_macros)] // generate_build_install_tests! prints, natively
 mod python_tool {
     use proto_pdk_test_utils::*;
 

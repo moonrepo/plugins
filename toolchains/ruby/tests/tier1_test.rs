@@ -152,6 +152,7 @@ mod ruby_toolchain_tier1 {
         // Requires Bundler 2.1+, which added `bundle config set`, as macOS ships
         // 1.17 with its system Ruby, and proto's shim runs the system `ruby`
         // instead when no Ruby is pinned. Returns the gem directory of its Ruby ABI.
+        #[allow(clippy::disallowed_methods)] // Runs natively, on the host
         fn get_ruby_abi(dir: &Path) -> Option<String> {
             let run = |args: &[&str]| {
                 Command::new("bundle")

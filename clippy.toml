@@ -1,0 +1,28 @@
+# Plugins run inside WASI, where these APIs describe the sandbox instead of the
+# user's machine. See the "Ask the host, not the WASM runtime" ADR in docs/adr.
+
+disallowed-macros = [
+  { path = "std::println", reason = "Extism drops WASI output, use `host_log!` or `debug!`" },
+  { path = "std::eprintln", reason = "Extism drops WASI output, use `host_log!` or `debug!`" },
+  { path = "std::print", reason = "Extism drops WASI output, use `host_log!` or `debug!`" },
+  { path = "std::eprint", reason = "Extism drops WASI output, use `host_log!` or `debug!`" },
+  { path = "std::dbg", reason = "Extism drops WASI output, use `debug!`" },
+]
+
+disallowed-methods = [
+  { path = "std::env::var", reason = "reads the WASI environment, use `get_host_env_var`" },
+  { path = "std::env::var_os", reason = "reads the WASI environment, use `get_host_env_var`" },
+  { path = "std::env::vars", reason = "reads the WASI environment, use `get_host_env_var`" },
+  { path = "std::env::vars_os", reason = "reads the WASI environment, use `get_host_env_var`" },
+  { path = "std::env::current_dir", reason = "WASI's directory, use the paths in the input" },
+  { path = "std::env::temp_dir", reason = "WASI's directory, use the paths in the input" },
+  { path = "std::env::home_dir", reason = "WASI's directory, use `get_host_environment()`" },
+  { path = "std::process::Command::new", reason = "not supported by WASI, use `exec`" },
+  { path = "std::thread::spawn", reason = "not supported by WASI" },
+]
+
+disallowed-types = [
+  { path = "std::net::TcpListener", reason = "not supported by WASI, use `fetch_*`" },
+  { path = "std::net::TcpStream", reason = "not supported by WASI, use `fetch_*`" },
+  { path = "std::net::UdpSocket", reason = "not supported by WASI, use `fetch_*`" },
+]

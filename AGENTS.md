@@ -45,7 +45,7 @@ Use `moon` for all Rust tasks. **Always run format, lint, and test before finish
 
 - `moon run <project>:build` - Builds the WASM plugin.
 - `moon run <project>:check` - Checks the plugin without producing binaries.
-- `moon run <project>:lint` - Lints the plugin with `clippy`.
+- `moon run <project>:lint` - Lints the plugin with `clippy`, failing on any warning.
 - `moon run <project>:test` - Runs all tests in the plugin with `cargo nextest`.
 - `moon run root:format` - Checks the formatting of all Rust code with `rustfmt`.
 - `moon run root:format-write` - Formats all Rust code with `rustfmt`.
@@ -57,8 +57,8 @@ Refer to `.moon/workspace.yml` for all available projects.
 - **Shared target cache.** When running Cargo or any Just commands, the `$CARGO_TARGET_DIR`
   environment variable MUST be defined. If it's not provided by the shell, it should default to
   `~/.cargo/shared-target`.
-- **No warnings.** Treat every clippy warning as an error. The `lint` task doesn't pass
-  `-D warnings`, so it won't fail on them for you.
+- **No warnings.** Clippy runs with `-D warnings`; treat every warning as an error. When running
+  clippy directly, pass `-- -D warnings` too.
 - **Snapshots** use [`insta`](https://insta.rs/); review changes with `cargo insta review`.
 - **Tests** run under [`nextest`](https://nexte.st/). Tests must pass with `STARBASE_TEST=true`.
 
@@ -95,10 +95,11 @@ defines the process.
   ADR's status to `accepted`.
 - Where code enforces a rule or is an exception to one, cite it in a comment, like `// ADR-0003.1`.
 
-| ADR                                                        | Status   | Applies to    | Decision                                                                 |
-| ---------------------------------------------------------- | -------- | ------------- | ------------------------------------------------------------------------ |
-| [0001](docs/adr/0001-record-architecture-decisions.md)     | proposed | `docs/adr/**` | Cross-plugin decisions are ADRs, which only a maintainer accepts         |
-| [0002](docs/adr/0002-wasm-feature-gates-host-code.md)      | accepted | All crates    | PDK crates are optional, and only used behind the `wasm` feature         |
-| [0003](docs/adr/0003-prefer-starbase-for-file-access.md)   | accepted | All crates    | Prefer `starbase_utils` for reading and writing files                    |
-| [draft](docs/adr/draft-cache-expensive-work-in-memory.md)  | proposed | All crates    | Cache expensive work in memory, and never fail on a var write            |
-| [draft](docs/adr/draft-unit-tests-outside-wasm-feature.md) | proposed | All crates    | Unit tests live outside the `wasm` feature, so the `test` task runs them |
+| ADR                                                          | Status   | Applies to    | Decision                                                                 |
+| ------------------------------------------------------------ | -------- | ------------- | ------------------------------------------------------------------------ |
+| [0001](docs/adr/0001-record-architecture-decisions.md)       | proposed | `docs/adr/**` | Cross-plugin decisions are ADRs, which only a maintainer accepts         |
+| [0002](docs/adr/0002-wasm-feature-gates-host-code.md)        | accepted | All crates    | PDK crates are optional, and only used behind the `wasm` feature         |
+| [0003](docs/adr/0003-prefer-starbase-for-file-access.md)     | accepted | All crates    | Prefer `starbase_utils` for reading and writing files                    |
+| [draft](docs/adr/draft-cache-expensive-work-in-memory.md)    | proposed | All crates    | Cache expensive work in memory, and never fail on a var write            |
+| [draft](docs/adr/draft-unit-tests-outside-wasm-feature.md)   | proposed | All crates    | Unit tests live outside the `wasm` feature, so the `test` task runs them |
+| [draft](docs/adr/draft-ask-the-host-not-the-wasm-runtime.md) | proposed | All crates    | Ask the host for env vars, the OS, commands and output, not WASI         |
