@@ -163,7 +163,10 @@ pub fn parse_bun_lock(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyRe
 
 #[cfg(feature = "wasm")]
 pub fn parse_bun_lockb(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyResult<()> {
-    let content = exec(ExecCommandInput::pipe("bun", ["bun.lockb"]).cwd(path.parent().unwrap()))?;
+    let content = exec(
+        ExecCommandInput::pipe("bun", ["bun.lockb"])
+            .cwd(path.parent().expect("file path should have a parent")),
+    )?;
 
     parse_yarn_lock_content(content.stdout.trim(), output)
 }

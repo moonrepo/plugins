@@ -156,7 +156,7 @@ pub fn locate_executables(
         match config
             .exe_path
             .as_ref()
-            .unwrap()
+            .expect("`exe_path` should be set by `ExecutableConfig::new`")
             .extension()
             .and_then(|ext| ext.to_str())
         {
@@ -227,7 +227,7 @@ pub fn locate_executables(
                 entry
                     .path()
                     .strip_prefix(&input.install_dir)
-                    .unwrap()
+                    .expect("entries should be inside the install directory")
                     .to_string_lossy(),
             );
 
@@ -332,7 +332,10 @@ fn is_node_script(path: &VirtualPath) -> bool {
 
     match File::open(path).and_then(|mut file| file.read(&mut head)) {
         Ok(len) => {
-            let line = head[..len].split(|byte| *byte == b'\n').next().unwrap();
+            let line = head[..len]
+                .split(|byte| *byte == b'\n')
+                .next()
+                .expect("split should always yield an item");
 
             line.starts_with(b"#!") && String::from_utf8_lossy(line).contains("node")
         }

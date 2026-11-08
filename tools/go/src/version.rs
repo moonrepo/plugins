@@ -26,7 +26,9 @@ pub fn to_go_version(spec: &VersionSpec) -> String {
         VersionSpec::Canary => "canary".into(),
         VersionSpec::Alias(alias) => alias.to_string(),
         _ => {
-            let version = spec.as_version().unwrap();
+            let version = spec
+                .as_version()
+                .expect("only versions should be left after Canary and Alias");
 
             // Versioning changed in >= 1.21.0, but prereleases
             // are still named like `go1.21rc1`

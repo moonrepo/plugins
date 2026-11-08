@@ -64,7 +64,9 @@ pub fn to_java_version(spec: &VersionSpec) -> String {
         VersionSpec::Canary => "canary".into(),
         VersionSpec::Alias(alias) => alias.to_string(),
         _ => {
-            let version = spec.as_version().unwrap();
+            let version = spec
+                .as_version()
+                .expect("only versions should be left after Canary and Alias");
 
             // Decode a `vN`-encoded 4th "vendor" component from the
             // pre-release (see `from_java_version`)

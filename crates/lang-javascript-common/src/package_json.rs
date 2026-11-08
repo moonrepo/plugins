@@ -96,7 +96,10 @@ pub fn extract_volta_version(
         }
 
         if let Some(json::JsonValue::String(extends_from)) = volta.get("extends") {
-            let extends_path = package_path.parent().unwrap().join(extends_from);
+            let extends_path = package_path
+                .parent()
+                .expect("file path should have a parent")
+                .join(extends_from);
 
             if extends_path.exists() && extends_path.is_file() {
                 let content = fs::read_file(&extends_path)?;
