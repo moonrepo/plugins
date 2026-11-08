@@ -14,6 +14,8 @@ pub fn enable_tracing() {
 
     static TRACING_ENABLED: AtomicBool = AtomicBool::new(false);
 
+    install_panic_hook();
+
     // Disable tracing while running tests!
     if let Ok(Some(_)) = get_test_environment() {
         return;
@@ -38,4 +40,26 @@ pub fn enable_tracing() {
     });
 
     TRACING_ENABLED.store(true, Ordering::Release);
+}
+
+/// Pass panic messages to Extism as the call's error, so the host shows them
+/// instead of a WASM trap. A panic that traps never finishes, and `set_hook`
+/// panics while panicking, so this must run before the first panic.
+#[cfg(feature = "wasm")]
+fn install_panic_hook() {
+    use std::sync::Once;
+
+    static INSTALLED: Once = Once::new();
+
+    if std::thread::panicking() {
+        return;
+    }
+
+    INSTALLED.call_once(|| {
+        std::panic::set_hook(Box::new(|info| {
+            if let Ok(memory) = extism_pdk::Memory::from_bytes(info.to_string()) {
+                unsafe { extism_pdk::extism::error_set(memory.offset()) };
+            }
+        }));
+    });
 }

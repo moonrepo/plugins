@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+#### 🚀 Updates
+
+- Panics now report their message, instead of an `unreachable` WASM trap error.
+
 #### 🐞 Fixes
 
 - Fixed the globals directory not being on `PATH` for tasks when `DENO_INSTALL_ROOT` ends with

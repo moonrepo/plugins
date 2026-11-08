@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+#### 🚀 Updates
+
+- Panics now report their message, instead of an `unreachable` WASM trap error.
+
 #### 🐞 Fixes
 
 - Fixed a version pattern without a capture group panicking, which surfaced as an unclear WASM

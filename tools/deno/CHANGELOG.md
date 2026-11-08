@@ -12,6 +12,7 @@
 - Added `engines.deno` in `package.json` as a fallback for version detection, which Deno v2.9+
   also checks.
 - Added checksum verification for `canary` downloads.
+- Panics now report their message, instead of an `unreachable` WASM trap error.
 
 #### 🐞 Fixes
 

@@ -10,6 +10,7 @@
 #### 🚀 Updates
 
 - Added Windows arm64 and x86, and Linux x86, arm, ppc64le, s390x, and riscv64 support.
+- Panics now report their message, instead of an `unreachable` WASM trap error.
 
 #### 🐞 Fixes
 

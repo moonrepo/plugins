@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+#### 🚀 Updates
+
+- Panics now report their message, instead of an `unreachable` WASM trap error.
+
 #### 🐞 Fixes
 
 - Fixed the post-install hook writing `virtualenvs.use-poetry-python` to the global Poetry config

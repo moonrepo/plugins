@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+#### 🚀 Updates
+
+- Panics now report their message, instead of an `unreachable` WASM trap error.
+
 #### 🐞 Fixes
 
 - Fixed the `latest` version resolving to a pre-release, as it was not set and proto used the highest version.

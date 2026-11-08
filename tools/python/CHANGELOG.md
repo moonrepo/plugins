@@ -5,6 +5,7 @@
 #### 🚀 Updates
 
 - Added uv's `.python-versions` file to version detection, after `.python-version`.
+- Panics now report their message, instead of an `unreachable` WASM trap error.
 
 #### 🐞 Fixes
 

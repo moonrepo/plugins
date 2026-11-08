@@ -9,6 +9,10 @@
   was installing the latest Zig, which fails to build it. setup-zig, anyzig, and zvm install the
   exact version, while this also allows newer patches.
 
+#### 🚀 Updates
+
+- Panics now report their message, instead of an `unreachable` WASM trap error.
+
 #### 🐞 Fixes
 
 - Fixed comments in `.zig-version` and `.zigversion`, like `0.15.2 # stable`, failing to parse.

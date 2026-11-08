@@ -9,6 +9,7 @@
 - Added a warning when a toolchain file uses a partial version like `1.80`, which rustup installs as a
   separate toolchain from proto's.
 - Added `components` and `targets` to the `rust-toolchain.toml` model.
+- Panics now report their message, instead of an `unreachable` WASM trap error.
 
 #### 🐞 Fixes
 

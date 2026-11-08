@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+#### 🚀 Updates
+
+- Panics now report their message, instead of an `unreachable` WASM trap error.
+
 #### ⚙️ Internal
 
 - Version files are now read from their path, as the `content` input is deprecated.

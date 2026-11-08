@@ -12,6 +12,7 @@
 - `$BUN_INSTALL` is now used as-is for the globals directory when it already is a `bin` directory,
   instead of appending another `bin`.
 - Added support for FreeBSD (x64 and arm64), which Bun added in v1.3.14.
+- Panics now report their message, instead of an `unreachable` WASM trap error.
 
 #### 🐞 Fixes
 

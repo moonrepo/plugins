@@ -6,6 +6,7 @@
 
 - Added Linux riscv64 and loong64 support, using [unofficial builds](https://github.com/nodejs/unofficial-builds).
 - Windows arm64 now uses x64 builds (through emulation) for versions before v20, which have no arm64 builds.
+- Panics now report their message, instead of an `unreachable` WASM trap error.
 
 #### 🐞 Fixes
 

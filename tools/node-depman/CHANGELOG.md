@@ -12,6 +12,7 @@
   they already are a `bin` directory, instead of appending another `bin`.
 - Added a `nubr` executable for Nub v0.9.3+.
 - Added Windows x64 support for Yarn v6 (from `6.0.0-rc.23`).
+- Panics now report their message, instead of an `unreachable` WASM trap error.
 
 #### 🐞 Fixes
 

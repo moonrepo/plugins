@@ -51,6 +51,7 @@
   project's inferred relationships. Other failures are logged as a warning.
 - `go.sum`, `go.work.sum` and `go.work` are now parsed with [winnow](https://docs.rs/winnow)
   grammars. A line that can't be parsed is skipped instead of failing the file.
+- Panics now report their message, instead of an `unreachable` WASM trap error.
 
 #### 🐞 Fixes
 

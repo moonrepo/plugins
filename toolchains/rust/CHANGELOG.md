@@ -21,6 +21,7 @@
   `cargo install`, which took minutes on cold CI runners. It falls back to `cargo install` when the
   download or unpacking (with `tar`) fails, or on hosts other than x64 and arm64 Linux, macOS, and
   Windows.
+- Panics now report their message, instead of an `unreachable` WASM trap error.
 
 #### 🐞 Fixes
 
