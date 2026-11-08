@@ -19,8 +19,8 @@ crate-type = ["cdylib"]
 
 [dependencies]
 backend_common = { path = "../../crates/backend-common" }
-extism-pdk = { workspace = true }
-proto_pdk = { workspace = true }
+extism-pdk = { workspace = true, optional = true }
+proto_pdk = { workspace = true, optional = true }
 rustc-hash = { workspace = true }
 schematic = { workspace = true }
 serde = { workspace = true }
@@ -33,4 +33,4 @@ tokio = { workspace = true }
 
 [features]
 default = ["wasm"]
-wasm = ["backend_common/wasm"]
+wasm = ["dep:extism-pdk", "dep:proto_pdk", "backend_common/wasm"]

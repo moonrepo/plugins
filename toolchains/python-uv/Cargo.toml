@@ -20,7 +20,7 @@ crate-type = ["cdylib"]
 [dependencies]
 toolchain_common = { path = "../../crates/toolchain-common" }
 python_uv_tool = { path = "../../tools/python-uv", default-features = false }
-extism-pdk = { workspace = true }
+extism-pdk = { workspace = true, optional = true }
 moon_config = { workspace = true }
 moon_pdk_api = { workspace = true }
 schematic = { workspace = true }
@@ -28,4 +28,4 @@ serde = { workspace = true }
 
 [features]
 default = ["wasm"]
-wasm = ["toolchain_common/wasm", "python_uv_tool/wasm"]
+wasm = ["dep:extism-pdk", "toolchain_common/wasm", "python_uv_tool/wasm"]

@@ -25,7 +25,9 @@ Every plugin is a moon project. Project names, like `go-toolchain`, are listed i
   the shared crates it uses. Everything that calls the WASM host sits behind it, both the plugin's
   exported functions and shared helpers like `enable_tracing`. Keep parsers and other pure logic
   outside it, so they can be tested without the host. That code imports types from
-  `proto_pdk_api`, not `proto_pdk`, or native builds on Windows fail to link the host functions.
+  `proto_pdk_api` or `moon_pdk_api`. The PDK crates are optional dependencies that only `wasm`
+  enables, so using them outside the feature fails to compile
+  ([ADR-0002](docs/adr/0002-wasm-feature-gates-host-code.md)).
 - Tools and backends export proto's plugin API from `src/proto.rs`. Extensions export theirs from
   `src/<name>_ext.rs`.
 - Toolchains split their exports by tier:
@@ -96,4 +98,5 @@ defines the process.
 | ADR                                                       | Status   | Applies to    | Decision                                                         |
 | --------------------------------------------------------- | -------- | ------------- | ---------------------------------------------------------------- |
 | [0001](docs/adr/0001-record-architecture-decisions.md)    | proposed | `docs/adr/**` | Cross-plugin decisions are ADRs, which only a maintainer accepts |
+| [0002](docs/adr/0002-wasm-feature-gates-host-code.md)     | accepted | All crates    | PDK crates are optional, and only used behind the `wasm` feature |
 | [draft](docs/adr/draft-cache-expensive-work-in-memory.md) | proposed | All crates    | Cache expensive work in memory, and never fail on a var write    |

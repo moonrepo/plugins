@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use proto_pdk::VersionSpec;
+use proto_pdk_api::VersionSpec;
 
 pub fn from_swift_version(version: &str) -> String {
     let suffix = match version.matches('.').count() {

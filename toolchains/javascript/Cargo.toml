@@ -20,10 +20,10 @@ crate-type = ["cdylib", "lib"]
 [dependencies]
 toolchain_common = { path = "../../crates/toolchain-common" }
 lang_javascript_common = { path = "../../crates/lang-javascript-common" }
-extism-pdk = { workspace = true }
+extism-pdk = { workspace = true, optional = true }
 moon_common = { workspace = true }
 moon_config = { workspace = true }
-moon_pdk = { workspace = true, features = ["schematic"] }
+moon_pdk = { workspace = true, features = ["schematic"], optional = true }
 moon_pdk_api = { workspace = true }
 moon_target = { workspace = true }
 nodejs_package_json = { workspace = true, features = ["serialize"] }
@@ -47,4 +47,4 @@ tokio = { workspace = true }
 
 [features]
 default = ["wasm"]
-wasm = ["toolchain_common/wasm"]
+wasm = ["dep:extism-pdk", "dep:moon_pdk", "toolchain_common/wasm"]

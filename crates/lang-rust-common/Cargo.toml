@@ -6,9 +6,9 @@ license = "MIT"
 publish = false
 
 [dependencies]
-extism-pdk = { workspace = true }
-proto_pdk = { workspace = true }
+extism-pdk = { workspace = true, optional = true }
+proto_pdk = { workspace = true, optional = true }
 
 [features]
 default = []
-wasm = []
+wasm = ["dep:extism-pdk", "dep:proto_pdk"]

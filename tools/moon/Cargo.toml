@@ -19,8 +19,8 @@ crate-type = ["cdylib"]
 
 [dependencies]
 tool_common = { path = "../../crates/tool-common" }
-extism-pdk = { workspace = true }
-proto_pdk = { workspace = true }
+extism-pdk = { workspace = true, optional = true }
+proto_pdk = { workspace = true, optional = true }
 serde = { workspace = true }
 
 [dev-dependencies]
@@ -30,4 +30,4 @@ tokio = { workspace = true }
 
 [features]
 default = ["wasm"]
-wasm = ["tool_common/wasm"]
+wasm = ["dep:extism-pdk", "dep:proto_pdk", "tool_common/wasm"]

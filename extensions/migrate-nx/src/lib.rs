@@ -1,6 +1,7 @@
 #[cfg(feature = "wasm")]
 mod migrate_nx_ext;
 mod nx_json;
+#[cfg(feature = "wasm")]
 mod nx_migrator;
 mod nx_project_json;
 

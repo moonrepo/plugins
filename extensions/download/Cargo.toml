@@ -19,8 +19,8 @@ pre-release-replacements = [
 
 [dependencies]
 extension_common = { path = "../../crates/extension-common" }
-extism-pdk = { workspace = true }
-moon_pdk = { workspace = true }
+extism-pdk = { workspace = true, optional = true }
+moon_pdk = { workspace = true, optional = true }
 moon_pdk_api = { workspace = true }
 
 [dev-dependencies]
@@ -30,4 +30,4 @@ tokio = { workspace = true }
 
 [features]
 default = ["wasm"]
-wasm = ["extension_common/wasm"]
+wasm = ["dep:extism-pdk", "dep:moon_pdk", "extension_common/wasm"]
