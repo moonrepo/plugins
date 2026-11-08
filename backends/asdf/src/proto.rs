@@ -548,7 +548,10 @@ pub fn activate_environment(
             continue;
         }
 
-        if let Some((key, value)) = line.split_once('=') {
+        // bash 5.1+ lowers SHLVL when it execs the last command directly
+        if let Some((key, value)) = line.split_once('=')
+            && key != "SHLVL"
+        {
             if after_source {
                 if let Some(existing_value) = existing_env.get(key)
                     && value == *existing_value
