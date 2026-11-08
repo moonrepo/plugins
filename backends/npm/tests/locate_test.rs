@@ -151,6 +151,68 @@ mod npm_backend_locate {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn includes_parent_for_extensionless_node_shebang() {
+            let sandbox = create_empty_proto_sandbox();
+            sandbox.create_file(
+                "node_modules/typescript/package.json",
+                r#"{"bin":{"tsc":"./bin/tsc"}}"#,
+            );
+            sandbox.create_file(
+                "node_modules/typescript/bin/tsc",
+                "#!/usr/bin/env node\nrequire('../lib/tsc.js')",
+            );
+
+            let plugin = sandbox.create_plugin("npm:typescript").await;
+            let output = plugin
+                .locate_executables(locate_input(&sandbox, &plugin))
+                .await;
+
+            let tsc = output.exes.get("tsc").unwrap();
+            assert_eq!(tsc.parent_exe_name, Some("node".into()));
+            assert!(tsc.no_bin);
+        }
+
+        // esbuild replaces its JS bin with the native binary on install
+        #[tokio::test(flavor = "multi_thread")]
+        async fn runs_extensionless_binary_directly() {
+            let sandbox = create_empty_proto_sandbox();
+            sandbox.create_file(
+                "node_modules/esbuild/package.json",
+                r#"{"bin":{"esbuild":"bin/esbuild"}}"#,
+            );
+            sandbox.create_file("node_modules/esbuild/bin/esbuild", "\u{7f}ELF\u{2}\u{1}");
+
+            let plugin = sandbox.create_plugin("npm:esbuild").await;
+            let output = plugin
+                .locate_executables(locate_input(&sandbox, &plugin))
+                .await;
+
+            let esbuild = output.exes.get("esbuild").unwrap();
+            assert_eq!(
+                esbuild.exe_path,
+                Some(PathBuf::from("node_modules/esbuild/bin/esbuild"))
+            );
+            assert_eq!(esbuild.parent_exe_name, None);
+            assert!(!esbuild.no_bin);
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn runs_extensionless_shell_script_directly() {
+            let sandbox = create_empty_proto_sandbox();
+            sandbox.create_file("node_modules/tool/package.json", r#"{"bin":"./bin/tool"}"#);
+            sandbox.create_file("node_modules/tool/bin/tool", "#!/bin/sh\necho tool");
+
+            let plugin = sandbox.create_plugin("npm:tool").await;
+            let output = plugin
+                .locate_executables(locate_input(&sandbox, &plugin))
+                .await;
+
+            let tool = output.exes.get("tool").unwrap();
+            assert_eq!(tool.parent_exe_name, None);
+            assert!(!tool.no_bin);
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn falls_back_to_bin_dir_when_no_package_json() {
             let sandbox = create_empty_proto_sandbox();
             sandbox.create_file("bin/typescript", "");
@@ -302,6 +364,56 @@ mod npm_backend_locate {
                 Some(PathBuf::from("lib/node_modules/@moonrepo/cli/moon"))
             );
             assert!(cli.primary);
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn uses_bun_parent_for_extensionless_node_shebang() {
+            let sandbox = create_empty_proto_sandbox();
+            sandbox.create_file(
+                "lib/node_modules/typescript/package.json",
+                r#"{"bin":{"tsc":"./bin/tsc"}}"#,
+            );
+            sandbox.create_file(
+                "lib/node_modules/typescript/bin/tsc",
+                "#!/usr/bin/env node\nrequire('../lib/tsc.js')",
+            );
+
+            let plugin = sandbox
+                .create_plugin_with_config("npm:typescript", |cfg| {
+                    cfg.backend_config(NpmBackendConfig { bun: true });
+                })
+                .await;
+            let output = plugin
+                .locate_executables(locate_input(&sandbox, &plugin))
+                .await;
+
+            let tsc = output.exes.get("tsc").unwrap();
+            assert_eq!(tsc.parent_exe_name, Some("bun".into()));
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn runs_extensionless_binary_directly() {
+            let sandbox = create_empty_proto_sandbox();
+            sandbox.create_file(
+                "lib/node_modules/esbuild/package.json",
+                r#"{"bin":{"esbuild":"bin/esbuild"}}"#,
+            );
+            sandbox.create_file(
+                "lib/node_modules/esbuild/bin/esbuild",
+                "\u{7f}ELF\u{2}\u{1}",
+            );
+
+            let plugin = sandbox
+                .create_plugin_with_config("npm:esbuild", |cfg| {
+                    cfg.backend_config(NpmBackendConfig { bun: true });
+                })
+                .await;
+            let output = plugin
+                .locate_executables(locate_input(&sandbox, &plugin))
+                .await;
+
+            let esbuild = output.exes.get("esbuild").unwrap();
+            assert_eq!(esbuild.parent_exe_name, None);
         }
     }
 }
