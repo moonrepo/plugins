@@ -73,7 +73,7 @@ The node-depman tool was the only plugin to convert `/` to `\`, for its global l
    documented as "real or virtual".
 5. When a path can't be mapped, plugin code MUST return an error, or skip the path when it's
    optional. It MAY use `.expect()` for directories the host always maps, like `install_dir` and
-   `tool_dir`, under the no-panics ADR's rule 3.
+   `tool_dir`, under ADR-0005.3.
 6. Plugins SHOULD take directories from the input, the context or `get_host_environment()`, instead
    of hard-coding a virtual prefix. A prefix MAY be hard-coded when the host provides no input for
    that directory, like moon's temp directory.

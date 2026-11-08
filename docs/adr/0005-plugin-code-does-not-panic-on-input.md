@@ -1,6 +1,6 @@
 ---
-status: proposed
-date: 2026-11-07
+status: accepted
+date: 2026-11-08
 applies-to: [backends/**, crates/**, extensions/**, toolchains/**, tools/**]
 ---
 
@@ -52,5 +52,6 @@ When this ADR was written, non-test plugin code had 40 `.unwrap()` calls:
   source location. The plugin instance is left in an unknown state for later calls.
 - Only review enforces rules 1 to 4. Clippy's `unwrap_used` and `expect_used` lints can't tell a
   literal from input, so they would flag code that rule 1 allows.
-- proto's loader calls `register_tool` when it loads a plugin, so tools get the hook before their
-  other functions. moon's order for toolchains and extensions hasn't been checked.
+- proto and moon call `register_tool`, `register_toolchain` and `register_extension` when they load
+  a plugin, so the hook is installed before its other functions. Backends get it from
+  `register_tool`, which proto calls before `register_backend`.

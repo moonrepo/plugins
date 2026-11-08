@@ -104,7 +104,7 @@ pub fn native_install(
         args: vec![
             script_path
                 .to_real_path()?
-                .expect("Invalid script path!")
+                .expect("script should be in the temp directory, which is always mapped")
                 .to_string(),
             "--force".into(),
             "--yes".into(),
@@ -115,7 +115,7 @@ pub fn native_install(
                 input
                     .install_dir
                     .to_real_path()?
-                    .expect("Invalid install directory!")
+                    .expect("install directory should be in proto's store, which is always mapped")
                     .to_string(),
             ),
             (
@@ -170,7 +170,7 @@ pub fn post_install(Json(input): Json<InstallHook>) -> FnResult<()> {
         .tool_dir
         .join(env.os.get_exe_name("bin/poetry"))
         .to_real_path()?
-        .expect("Invalid tool directory!")
+        .expect("tool directory should be in proto's store, which is always mapped")
         .to_string();
 
     exec_captured(

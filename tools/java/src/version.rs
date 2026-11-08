@@ -19,7 +19,7 @@ pub fn from_java_version(version: &str) -> String {
     let mut out = String::new();
 
     // major
-    out.push_str(parts.next().expect("Expected a major version"));
+    out.push_str(parts.next().expect("split should always yield an item"));
 
     // minor
     out.push('.');

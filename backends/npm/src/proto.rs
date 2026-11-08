@@ -79,7 +79,7 @@ pub fn native_install(
     let real_install_dir = input
         .install_dir
         .to_real_path()?
-        .expect("Invalid install directory!");
+        .expect("install directory should be in proto's store, which is always mapped");
 
     if config.bun {
         command.command = "bun".into();

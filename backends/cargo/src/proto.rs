@@ -118,7 +118,7 @@ pub fn native_install(
         input
             .install_dir
             .to_real_path()?
-            .expect("Invalid install directory!")
+            .expect("install directory should be in proto's store, which is always mapped")
             .to_string(),
     );
 

@@ -94,7 +94,7 @@ fn create_script(
     input.args.push(
         virtual_script_path
             .to_real_path()?
-            .expect("Invalid script path!")
+            .expect("script should be in the backend directory, which is always mapped")
             .to_string(),
     );
 
@@ -276,13 +276,15 @@ pub fn parse_version_file(
         // https://asdf-vm.com/plugins/create.html#bin-parse-legacy-file
         if script_path.exists() {
             let mut script = create_script_from_unresolved_context(&script_path, &input.context)?;
-            script.args.push(
-                input
-                    .path
-                    .to_real_path()?
-                    .expect("Invalid version file path!")
-                    .to_string(),
-            );
+            // Version files above the working directory may not be mapped
+            let real_path = input.path.to_real_path()?.ok_or_else(|| {
+                plugin_err!(
+                    "Version file <path>{}</path> is outside of the directories that proto can access.",
+                    input.path
+                )
+            })?;
+
+            script.args.push(real_path.to_string());
 
             let data = exec_script(script)?;
 

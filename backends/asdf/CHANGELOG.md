@@ -15,6 +15,7 @@
 - Fixed `.tool-versions` lines with fallback versions or extra whitespace failing to parse. The first version is used, and lines are also matched by the `shortname` setting.
 - Fixed `bin/exec-env` multi-line variables being split into bogus variables. The script is now always sourced with bash, like asdf.
 - Fixed `ASDF_CONCURRENCY` overriding the variable when already set in the environment.
+- Fixed a version file outside of the directories that proto can access panicking instead of returning an error.
 
 #### ⚙️ Internal
 

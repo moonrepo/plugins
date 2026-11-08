@@ -6,6 +6,10 @@
 
 - Panics now report their message, instead of an `unreachable` WASM trap error.
 
+#### 🐞 Fixes
+
+- Fixed an empty workspace entry in `bun.lock` panicking while parsing the lockfile.
+
 ## 1.3.2
 
 #### 🚀 Updates

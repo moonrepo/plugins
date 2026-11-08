@@ -275,7 +275,9 @@ pub fn resolve_version(
             if let Some(node_version) = get_host_env_var("PROTO_NODE_VERSION")? {
                 for node_release in &response {
                     // Theirs starts with v, ours does not
-                    if node_release.version[1..] == node_version && node_release.npm.is_some() {
+                    if node_release.version.trim_start_matches('v') == node_version
+                        && node_release.npm.is_some()
+                    {
                         output.version = Some(VersionSpec::parse(
                             node_release
                                 .npm

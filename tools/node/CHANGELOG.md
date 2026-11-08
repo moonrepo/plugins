@@ -32,6 +32,7 @@
   official nightly it resolved.
 - Fixed `bundled-npm` installing the npm bundled with the Node.js version configured in the working
   directory, instead of the version that was just installed.
+- Fixed an empty nightly index, or an empty version in an index, panicking instead of returning an error.
 
 #### ⚙️ Internal
 

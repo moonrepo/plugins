@@ -174,7 +174,7 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
         fetch_json(config.index_url.replace("{channel}", "release"))?;
 
     for (index, item) in response.iter().enumerate() {
-        let version = UnresolvedVersionSpec::parse(&item.version[1..])?;
+        let version = UnresolvedVersionSpec::parse(item.version.trim_start_matches('v'))?;
 
         // First item is always the latest
         if index == 0 {
@@ -382,7 +382,8 @@ pub fn download_prebuilt(
         let entry = response
             .iter()
             .find(|row| row.files.iter().any(|file| file == &file_to_match))
-            .unwrap_or(&response[0]);
+            .or(response.first())
+            .ok_or_else(|| plugin_err!("No Node.js nightly versions were found in the index."))?;
 
         channel = "nightly";
         version = VersionSpec::parse(&entry.version)?;

@@ -90,7 +90,9 @@ pub fn parse_bun_lock(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyRe
     for package in lock.packages.into_values() {
         let (name, version, integrity) = match &package {
             BunLockPackage::Workspace(values) => {
-                if let Some((name, ref_name)) = values[0].split_once("@workspace:")
+                if let Some((name, ref_name)) = values
+                    .first()
+                    .and_then(|value| value.split_once("@workspace:"))
                     && let Some(ref_package) = lock.workspaces.get(ref_name)
                 {
                     output

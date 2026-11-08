@@ -81,12 +81,12 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
             [
                 src_file
                     .to_real_path()?
-                    .expect("Invalid source")
+                    .expect("source should be mapped, as it exists")
                     .to_string(),
                 "-d".into(),
                 dest_dir
                     .to_real_path()?
-                    .expect("Invalid destination")
+                    .expect("destination should be mapped, as it was created")
                     .to_string(),
             ],
         )?;
@@ -97,12 +97,12 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
                 "-xf".into(),
                 src_file
                     .to_real_path()?
-                    .expect("Invalid source")
+                    .expect("source should be mapped, as it exists")
                     .to_string(),
                 "-C".into(),
                 dest_dir
                     .to_real_path()?
-                    .expect("Invalid destination")
+                    .expect("destination should be mapped, as it was created")
                     .to_string(),
             ],
         )?;
