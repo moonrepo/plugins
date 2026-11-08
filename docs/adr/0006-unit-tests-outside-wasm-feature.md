@@ -1,6 +1,6 @@
 ---
-status: proposed
-date: 2026-11-07
+status: accepted
+date: 2026-11-08
 applies-to: [backends/**, crates/**, extensions/**, toolchains/**, tools/**]
 ---
 
@@ -8,9 +8,10 @@ applies-to: [backends/**, crates/**, extensions/**, toolchains/**, tools/**]
 
 ## Context
 
-The `test` task runs `cargo nextest run --no-default-features`, and no other task runs tests. A unit
-test in code behind the `wasm` feature isn't compiled in that build, so it never runs, locally or in
-CI. `check` still compiles it, so it looks like coverage when it isn't.
+Each plugin's `test` task runs `cargo nextest run --no-default-features`, and `root:test-crates`
+does the same for `crates/*`, which aren't moon projects. These are the only tests that CI runs. A
+unit test in code behind the `wasm` feature isn't compiled in those builds, so it never runs,
+locally or in CI. `check` still compiles it, so it looks like coverage when it isn't.
 
 When this was found, 48 unit tests were in this state: 18 in the JavaScript toolchain's `lockfiles`
 module, and 30 in the Java tool's `config` and `foojay` modules. They all passed when run by hand.
@@ -19,7 +20,8 @@ The Kotlin tool already avoided the problem by gating its modules with
 
 ## Decision
 
-1. `#[test]` functions MUST NOT be behind the `wasm` feature, so that the `test` task runs them.
+1. `#[test]` functions MUST NOT be behind the `wasm` feature, so that the `test` and
+   `root:test-crates` tasks run them.
 2. Logic that needs tests but sits next to host calls SHOULD be moved out of the feature, either by
    gating only the items that call the host (ADR-0002.4), or by splitting it into its own module.
 3. A module that only code behind the feature uses, but that has tests, SHOULD be gated with
@@ -40,7 +42,7 @@ None.
 
 ## Consequences
 
-- Every unit test runs in the `test` task, locally and in CI.
+- Every unit test runs in the `test` or `root:test-crates` task, locally and in CI.
 - A module gated with `any(feature = "wasm", test)` can't use the PDK crates, because they're
   optional (ADR-0002.1), so its test build would fail to compile. Host calls in it need their own
   `#[cfg(feature = "wasm")]`.
