@@ -62,7 +62,10 @@ impl AsdfToolConfig {
 
         let repo_config = match repo_response.status {
             200 => Ok::<String, Error>(repo_response.text()?),
-            404 => Err(PluginError::Message(format!("URL not found: {filepath}")).into()),
+            404 => Err(PluginError::Message(format!(
+                "asdf plugin <id>{id}</id> not found in the shortname index (<url>{filepath}</url>), configure the <property>shortname</property> or <property>repository</property> setting."
+            ))
+            .into()),
             _ => Err(PluginError::Message(format!("Failed to fetch URL: {filepath}")).into()),
         }?;
 
