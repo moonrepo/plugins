@@ -10,10 +10,11 @@ applies-to: [backends/**, crates/**, extensions/**, toolchains/**, tools/**]
 
 Plugins can't see the host's file system directly. moon and proto map a few host directories to
 virtual paths that WASI can open: `/userhome` for the home directory, `/workspace` for moon's
-workspace root, `/moon` for moon's store, and `/proto` and `/cwd` for proto's. `VirtualPath` holds
-a path inside that mapping, and `RealPath` a path on the host. warpgate's `VirtualPath::create()`
-turns a real path into a virtual one, and `.to_real_path()` turns it back. Both fail, or return
-`None`, for a path outside the mapping.
+workspace root, `/moon` for moon's store, and `/proto` for proto's store. proto also maps `/temp`
+from v0.64, and `/cwd` when the working directory is outside of the home directory. `VirtualPath`
+holds a path inside that mapping, and `RealPath` a path on the host. warpgate's
+`VirtualPath::create()` turns a real path into a virtual one, and `.to_real_path()` turns it back.
+Both fail, or return `None`, for a path outside the mapping.
 
 The host converts some paths itself, and passes others on as they are:
 
@@ -30,16 +31,17 @@ The host converts some paths itself, and passes others on as they are:
 Inside WASM, `Path` only treats `/` as a separator, so `join`, `parent` and `strip_prefix` can't
 split a path that uses `\`. The host sends its directories in native form, and warpgate's separator
 handling is behind `#[cfg(windows)]`, which never applies to a plugin compiled for WASI. On a
-Windows host, that has two effects:
+Windows host, that had two effects:
 
-- `.to_real_path()` returns mixed separators, like `C:\Users\me\.proto/tools/node`.
-- `VirtualPath::create()` can't match a real path below a mapped directory, like
-  `C:\Users\me\.cargo`, because `C:\Users\me` isn't one of its components. The Rust toolchain's
-  `get_relative_path` already works around this by comparing strings.
+- `.to_real_path()` returned mixed separators, like `C:\Users\me\.proto/tools/node`.
+- `VirtualPath::create()` couldn't match a real path below a mapped directory, like
+  `C:\Users\me\.cargo`, because `C:\Users\me` isn't one of its components.
 
-To fix both, `warpgate_pdk` has to use `/` for the host directories in its path map and for the
-input to `create()`. Converting real paths to `\` instead would break `parent` and `join`, which
-would see one long component. None of this has been tested on Windows.
+proto v0.64's `warpgate_pdk` fixes both, by using `/` for the host directories in its path map and
+for the input to `create()`. Converting real paths to `\` instead would break `parent` and `join`,
+which would see one long component. The fix is compiled into each plugin, so it only applies to
+plugins built with that release. Its tests simulate a Windows host, and it hasn't run on a real
+one.
 
 When this ADR was written, plugin code had 30 `.to_real_path()` calls:
 
@@ -56,6 +58,8 @@ proto v0.64 adds a `temp_dir` to its build, download and native install inputs. 
 for a temp directory.
 
 The node-depman tool was the only plugin to convert `/` to `\`, for its global lookup directories.
+The Rust toolchain's `get_relative_path` compares paths from `cargo metadata`'s output as strings,
+and replaces `\` with `/` in the result, as warpgate never sees that text.
 
 ## Decision
 
@@ -87,11 +91,11 @@ The node-depman tool was the only plugin to convert `/` to `\`, for its global l
 
 ## Consequences
 
-- This ADR can't be accepted until `warpgate_pdk` uses `/` as described above.
+- This ADR can't be accepted until plugins build against `proto_pdk` and `moon_pdk` releases that
+  use proto v0.64's `warpgate_pdk`.
 - Real paths in command arguments and environment variable values use `/` on Windows, like
   `C:/Users/me/.proto/tools/go`. Windows APIs accept that, but a tool that compares paths as text,
   or a command run through `cmd.exe`, may not.
-
 - Inside WASM, paths are always virtual, so file access works the same on every host.
 - Only review enforces these rules. `VirtualPath` and `RealPath` both display as plain strings, so
   the compiler can't tell which one a command argument holds.
