@@ -44,6 +44,53 @@ mod bun_tool {
     );
     }
 
+
+    // The `foreign` field isn't in this version of the PDK, so insert it directly
+    fn foreign_host(os: HostOS, arch: HostArch) -> serde_json::Value {
+        let mut env = serde_json::to_value(HostEnvironment {
+            arch,
+            os,
+            libc: HostLibc::Gnu,
+            home_dir: VirtualPath::new("/userhome"),
+            ..Default::default()
+        })
+        .unwrap();
+
+        env["foreign"] = true.into();
+        env
+    }
+
+    // AVX2 can't be detected for another platform, so the regular build is used
+    #[tokio::test(flavor = "multi_thread")]
+    async fn uses_regular_build_when_targeting_another_platform() {
+        for (os, file) in [
+            (HostOS::Linux, "bun-linux-x64.zip"),
+            (HostOS::MacOS, "bun-darwin-x64.zip"),
+        ] {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("bun-test", |config| {
+                    config.insert("host_environment", foreign_host(os, HostArch::X64));
+                })
+                .await;
+
+            let result = plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("1.2.0").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                result.download_url,
+                format!("https://github.com/oven-sh/bun/releases/download/bun-v1.2.0/{file}")
+            );
+        }
+    }
+
     #[tokio::test(flavor = "multi_thread")]
     async fn supports_linux_x64() {
         let sandbox = create_empty_proto_sandbox();

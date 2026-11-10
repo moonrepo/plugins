@@ -15,6 +15,9 @@
 
 #### 🐞 Fixes
 
+- When proto locks another platform (`proto lock --platform`), the regular build is now used for x64,
+  instead of checking AVX2 support on the machine running proto, which recorded the `-baseline`
+  build when locking `x64-linux` from a machine without AVX2, like an arm64 Mac.
 - Fixed pinning when `.bumrc` or `.bun-version` exists, which overrode the `package.json` it wrote
   to. The existing version file is now updated (and removed when unpinning). `package.json` pins now
   only write `devEngines.runtime`, as also writing `devEngines.packageManager` turned another package

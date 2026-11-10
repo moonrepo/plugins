@@ -195,6 +195,63 @@ mod swift_tool {
         );
     }
 
+
+    // The `foreign` field isn't in this version of the PDK, so insert it directly
+    fn foreign_host(os: HostOS, arch: HostArch) -> serde_json::Value {
+        let mut env = serde_json::to_value(HostEnvironment {
+            arch,
+            os,
+            libc: HostLibc::Gnu,
+            home_dir: VirtualPath::new("/userhome"),
+            ..Default::default()
+        })
+        .unwrap();
+
+        env["foreign"] = true.into();
+        env
+    }
+
+    // The distribution can't be detected for another platform, so the
+    // configured or default platform is used
+    #[tokio::test(flavor = "multi_thread")]
+    async fn uses_default_or_configured_platform_when_targeting_another_platform() {
+        for (linux_platform, platform, archive_suffix) in [
+            (None, "ubuntu2404", "ubuntu24.04"),
+            (Some(LinuxPlatform::Debian12), "debian12", "debian12"),
+        ] {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("swift-test", |config| {
+                    config
+                        .insert(
+                            "host_environment",
+                            foreign_host(HostOS::Linux, HostArch::X64),
+                        )
+                        .tool_config(SwiftToolConfig {
+                            linux_platform: linux_platform.clone(),
+                            ..Default::default()
+                        });
+                })
+                .await;
+
+            assert_eq!(
+                plugin
+                    .download_prebuilt(DownloadPrebuiltInput {
+                        context: PluginContext {
+                            version: VersionSpec::parse("6.1.2").unwrap(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .await
+                    .download_url,
+                format!(
+                    "https://download.swift.org/swift-6.1.2-release/{platform}/swift-6.1.2-RELEASE/swift-6.1.2-RELEASE-{archive_suffix}.tar.gz"
+                )
+            );
+        }
+    }
+
     #[tokio::test(flavor = "multi_thread")]
     async fn supports_linux_x64() {
         let sandbox = create_empty_proto_sandbox();

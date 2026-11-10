@@ -5,7 +5,7 @@ use proto_pdk::*;
 use schematic::SchemaBuilder;
 use starbase_utils::fs;
 use std::collections::HashMap;
-use tool_common::{enable_tracing, extract_version_from_text};
+use tool_common::{enable_tracing, extract_version_from_text, is_foreign_platform};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -19,6 +19,18 @@ static NAME: &str = "Swift";
 fn detect_linux_platform(config: &SwiftToolConfig) -> AnyResult<Option<LinuxPlatform>> {
     if config.linux_platform.is_some() {
         return Ok(config.linux_platform.clone());
+    }
+
+    // The os-release file only describes this machine, not the targeted platform
+    if is_foreign_platform() {
+        let platform = LinuxPlatform::default();
+
+        host_log!(
+            debug,
+            "Targeting another platform, so using {platform} instead of detecting the Linux distribution. Configure the <property>linux-platform</property> setting to choose another.",
+        );
+
+        return Ok(Some(platform));
     }
 
     let output = exec_captured("cat", ["/etc/os-release"])?;

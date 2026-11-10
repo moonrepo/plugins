@@ -10,11 +10,14 @@ use proto_pdk::*;
 use schematic::SchemaBuilder;
 use starbase_utils::fs;
 use std::collections::HashMap;
-use tool_common::{append_env_bin_dir, enable_tracing, extract_version_from_text};
+use tool_common::{
+    append_env_bin_dir, enable_tracing, extract_version_from_text, is_foreign_platform,
+};
 
 #[host_fn]
 extern "ExtismHost" {
     fn exec_command(input: Json<ExecCommandInput>) -> Json<ExecCommandOutput>;
+    fn host_log(input: Json<HostLogInput>);
 }
 
 static NAME: &str = "Bun";
@@ -260,16 +263,26 @@ pub fn download_prebuilt(
     let mut avx2_suffix = "";
 
     if env.arch == HostArch::X64 {
-        let has_avx2 = match env.os {
-            HostOS::Linux if command_exists(env, "grep") => {
-                exec_captured("grep", ["avx2", "/proc/cpuinfo"])?.exit_code == 0
+        let has_avx2 = if is_foreign_platform() {
+            // Commands only inspect this machine, not the targeted platform
+            host_log!(
+                debug,
+                "Targeting another platform, so assuming it supports AVX2 and using the regular build, instead of the baseline build"
+            );
+
+            true
+        } else {
+            match env.os {
+                HostOS::Linux if command_exists(env, "grep") => {
+                    exec_captured("grep", ["avx2", "/proc/cpuinfo"])?.exit_code == 0
+                }
+                HostOS::MacOS if command_exists(env, "sysctl") => {
+                    exec_captured("sysctl", ["machdep.cpu"])?
+                        .stdout
+                        .contains("AVX2")
+                }
+                _ => true,
             }
-            HostOS::MacOS if command_exists(env, "sysctl") => {
-                exec_captured("sysctl", ["machdep.cpu"])?
-                    .stdout
-                    .contains("AVX2")
-            }
-            _ => true,
         };
 
         if !has_avx2 {

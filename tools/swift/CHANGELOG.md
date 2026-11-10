@@ -18,6 +18,8 @@
 
 #### 🐞 Fixes
 
+- When proto locks another platform (`proto lock --platform`), the `linux-platform` setting or
+  `ubuntu-24.04` is now used, instead of detecting the distribution of the machine running proto.
 - Fixed comments in `.swift-version`, like `6.1.2 # stable`, failing to parse. Everything after
   `#` is now ignored.
 - Fixed downloads of 6.4.0 and later `.0` releases, which Swift.org names `swift-6.4.0-RELEASE`
