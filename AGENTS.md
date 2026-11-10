@@ -106,3 +106,4 @@ defines the process.
 | [0006](docs/adr/0006-unit-tests-outside-wasm-feature.md)               | accepted | All crates    | Unit tests live outside the `wasm` feature, so the `test` task runs them |
 | [draft](docs/adr/draft-cache-expensive-work-in-memory.md)              | proposed | All crates    | Cache expensive work in memory, and never fail on a var write            |
 | [draft](docs/adr/draft-virtual-paths-in-wasm-real-paths-in-strings.md) | proposed | All crates    | Virtual paths inside WASM, real paths only in strings the host passes on |
+| [draft](docs/adr/draft-check-exit-codes-before-output.md)              | proposed | All crates    | Check a command's exit code before using its output                      |
