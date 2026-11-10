@@ -10,9 +10,7 @@ use proto_pdk::*;
 use schematic::SchemaBuilder;
 use starbase_utils::fs;
 use std::collections::HashMap;
-use tool_common::{
-    append_env_bin_dir, enable_tracing, extract_version_from_text, is_foreign_platform,
-};
+use tool_common::{append_env_bin_dir, enable_tracing, extract_version_from_text};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -95,7 +93,10 @@ pub fn parse_version_file(
         version = Some(UnresolvedVersionSpec::parse(constraint)?);
     }
 
-    Ok(Json(ParseVersionFileOutput { version }))
+    Ok(Json(ParseVersionFileOutput {
+        version,
+        ..Default::default()
+    }))
 }
 
 // Version files are detected before `package.json`, so must be updated when they exist
@@ -259,19 +260,24 @@ pub fn download_prebuilt(
         _ => unreachable!(),
     };
 
-    // x64 builds before v1.4 require AVX2, otherwise the baseline build is needed
+    // x64 builds before v1.4 require AVX2, otherwise the baseline build is needed.
+    // Only Linux and macOS use the baseline build
     let mut avx2_suffix = "";
 
-    if env.arch == HostArch::X64 {
-        let has_avx2 = if is_foreign_platform() {
-            // Commands only inspect this machine, not the targeted platform
+    if env.arch == HostArch::X64 && matches!(env.os, HostOS::Linux | HostOS::MacOS) {
+        let has_avx2 = if env.foreign {
+            // Details and commands only describe this machine, not the targeted platform
             host_log!(
                 debug,
                 "Targeting another platform, so assuming it supports AVX2 and using the regular build, instead of the baseline build"
             );
 
             true
+        } else if let Some(level) = env.details.as_ref().and_then(|details| details.x64_level) {
+            // AVX2 is part of the x86-64-v3 microarchitecture level
+            level >= 3
         } else {
+            // Older versions of proto don't detect details
             match env.os {
                 HostOS::Linux if command_exists(env, "grep") => {
                     exec_captured("grep", ["avx2", "/proc/cpuinfo"])?.exit_code == 0
@@ -336,6 +342,8 @@ pub fn download_prebuilt(
                     .replace("{file}", "SHASUMS256.txt"),
             )
         },
+        // Recorded separately in the lockfile, as it's a different download
+        variant: (!avx2_suffix.is_empty()).then(|| "baseline".into()),
         ..Default::default()
     }))
 }

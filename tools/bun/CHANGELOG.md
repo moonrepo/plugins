@@ -12,6 +12,10 @@
 - `$BUN_INSTALL` is now used as-is for the globals directory when it already is a `bin` directory,
   instead of appending another `bin`.
 - Added support for FreeBSD (x64 and arm64), which Bun added in v1.3.14.
+- AVX2 support is now detected from the x86-64 level that proto detects (level 3 and above),
+  instead of running `grep` or `sysctl`. Older versions of proto still run them.
+- The `-baseline` build is now recorded as the `baseline` variant in the lockfile, so machines with
+  and without AVX2 each verify their own build's checksum, instead of failing the other's.
 
 #### 🐞 Fixes
 

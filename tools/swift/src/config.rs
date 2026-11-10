@@ -84,6 +84,12 @@ impl LinuxPlatform {
             }
         }
 
+        Self::from_distro(id, id_like, version)
+    }
+
+    /// Detect the platform from a distribution's identifier, the identifiers it's
+    /// like (space separated), and version, as defined by `/etc/os-release`.
+    pub fn from_distro(id: &str, id_like: &str, version: &str) -> Option<Self> {
         Some(match (id, version) {
             ("ubuntu", "20.04") => Self::Ubuntu2004,
             ("ubuntu", "22.04") => Self::Ubuntu2204,

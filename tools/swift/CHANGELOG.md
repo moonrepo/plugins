@@ -20,6 +20,12 @@
 
 - When proto locks another platform (`proto lock --platform`), the `linux-platform` setting or
   `ubuntu-24.04` is now used, instead of detecting the distribution of the machine running proto.
+- The Linux distribution is now detected by proto, instead of running `cat /etc/os-release`.
+  Older versions of proto, and derivatives that are only identified by `ID_LIKE` (like Rocky
+  Linux), still run it.
+- Distributions other than `ubuntu-24.04` are now recorded as a variant in the lockfile (for
+  example, `debian-12`), so machines with different distributions each verify their own
+  toolchain's checksum, instead of failing the other's.
 - Fixed comments in `.swift-version`, like `6.1.2 # stable`, failing to parse. Everything after
   `#` is now ignored.
 - Fixed downloads of 6.4.0 and later `.0` releases, which Swift.org names `swift-6.4.0-RELEASE`

@@ -420,7 +420,6 @@ dependencies = [
  "proto_pdk_test_utils",
  "schematic",
  "serde",
- "serde_json",
  "starbase_sandbox",
  "starbase_utils",
  "tokio",
@@ -828,7 +827,6 @@ dependencies = [
 name = "common"
 version = "0.0.0"
 dependencies = [
- "extism-pdk",
  "indexmap",
  "proto_pdk",
  "proto_pdk_api",
@@ -6533,7 +6531,6 @@ dependencies = [
  "proto_pdk_test_utils",
  "schematic",
  "serde",
- "serde_json",
  "starbase_sandbox",
  "starbase_utils",
  "tokio",

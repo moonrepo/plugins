@@ -38,7 +38,7 @@ mod swift_tool {
             let plugin = sandbox
                 .create_plugin_with_config("swift-test", |config| {
                     config
-                        .host(HostOS::Linux, HostArch::X64)
+                        .host(HostPlatform::new(HostOS::Linux, HostArch::X64))
                         .tool_config(SwiftToolConfig {
                             linux_platform: Some(linux_platform.clone()),
                             ..Default::default()
@@ -68,6 +68,9 @@ mod swift_tool {
                     download_url: format!(
                         "https://download.swift.org/swift-6.1.2-release/{platform}/{folder}/{archive_prefix}.tar.gz"
                     ),
+                    // Each distribution is a variant, except for the default
+                    variant: (linux_platform != LinuxPlatform::default())
+                        .then(|| linux_platform.to_string()),
                     ..Default::default()
                 }
             );
@@ -87,7 +90,7 @@ mod swift_tool {
             let plugin = sandbox
                 .create_plugin_with_config("swift-test", |config| {
                     config
-                        .host(HostOS::Linux, HostArch::X64)
+                        .host(HostPlatform::new(HostOS::Linux, HostArch::X64))
                         .tool_config(SwiftToolConfig {
                             linux_platform: Some(linux_platform.clone()),
                             ..Default::default()
@@ -141,7 +144,9 @@ mod swift_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("swift-test", |config| {
-                    config.host(os, arch).tool_config(ubuntu_2404());
+                    config
+                        .host(HostPlatform::new(os, arch))
+                        .tool_config(ubuntu_2404());
                 })
                 .await;
 
@@ -166,7 +171,7 @@ mod swift_tool {
         let plugin = sandbox
             .create_plugin_with_config("swift-test", |config| {
                 config
-                    .host(HostOS::Linux, HostArch::Arm64)
+                    .host(HostPlatform::new(HostOS::Linux, HostArch::Arm64))
                     .tool_config(ubuntu_2404());
             })
             .await;
@@ -195,38 +200,30 @@ mod swift_tool {
         );
     }
 
-
-    // The `foreign` field isn't in this version of the PDK, so insert it directly
-    fn foreign_host(os: HostOS, arch: HostArch) -> serde_json::Value {
-        let mut env = serde_json::to_value(HostEnvironment {
-            arch,
-            os,
-            libc: HostLibc::Gnu,
-            home_dir: VirtualPath::new("/userhome"),
-            ..Default::default()
-        })
-        .unwrap();
-
-        env["foreign"] = true.into();
-        env
-    }
-
     // The distribution can't be detected for another platform, so the
     // configured or default platform is used
     #[tokio::test(flavor = "multi_thread")]
     async fn uses_default_or_configured_platform_when_targeting_another_platform() {
-        for (linux_platform, platform, archive_suffix) in [
-            (None, "ubuntu2404", "ubuntu24.04"),
-            (Some(LinuxPlatform::Debian12), "debian12", "debian12"),
+        for (linux_platform, platform, archive_suffix, variant) in [
+            (None, "ubuntu2404", "ubuntu24.04", None),
+            (
+                Some(LinuxPlatform::Debian12),
+                "debian12",
+                "debian12",
+                Some("debian-12"),
+            ),
         ] {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("swift-test", |config| {
                     config
-                        .insert(
-                            "host_environment",
-                            foreign_host(HostOS::Linux, HostArch::X64),
-                        )
+                        .host_with(|host| {
+                            host.os = HostOS::Linux;
+                            host.arch = HostArch::X64;
+                            host.libc = HostLibc::Gnu;
+                            host.foreign = true;
+                            host.details = None;
+                        })
                         .tool_config(SwiftToolConfig {
                             linux_platform: linux_platform.clone(),
                             ..Default::default()
@@ -234,21 +231,76 @@ mod swift_tool {
                 })
                 .await;
 
-            assert_eq!(
-                plugin
-                    .download_prebuilt(DownloadPrebuiltInput {
-                        context: PluginContext {
-                            version: VersionSpec::parse("6.1.2").unwrap(),
-                            ..Default::default()
-                        },
+            let output = plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("6.1.2").unwrap(),
                         ..Default::default()
-                    })
-                    .await
-                    .download_url,
+                    },
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.download_url,
                 format!(
                     "https://download.swift.org/swift-6.1.2-release/{platform}/swift-6.1.2-RELEASE/swift-6.1.2-RELEASE-{archive_suffix}.tar.gz"
                 )
             );
+            assert_eq!(output.variant.as_deref(), variant);
+        }
+    }
+
+    // The distribution detected by proto is used instead of reading `/etc/os-release`
+    #[tokio::test(flavor = "multi_thread")]
+    async fn uses_platform_for_detected_distro() {
+        for (id, version_id, platform, archive_suffix, variant) in [
+            ("ubuntu", "24.04", "ubuntu2404", "ubuntu24.04", None),
+            (
+                "ubuntu",
+                "22.04",
+                "ubuntu2204",
+                "ubuntu22.04",
+                Some("ubuntu-22.04"),
+            ),
+            ("debian", "12", "debian12", "debian12", Some("debian-12")),
+            ("fedora", "41", "fedora41", "fedora41", Some("fedora-41")),
+        ] {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("swift-test", |config| {
+                    config.host_with(|host| {
+                        host.os = HostOS::Linux;
+                        host.arch = HostArch::X64;
+                        host.libc = HostLibc::Gnu;
+                        host.details = Some(HostDetails {
+                            distro: Some(HostDistro {
+                                id: id.into(),
+                                version_id: Some(version_id.into()),
+                            }),
+                            ..Default::default()
+                        });
+                    });
+                })
+                .await;
+
+            let output = plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("6.1.2").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.download_url,
+                format!(
+                    "https://download.swift.org/swift-6.1.2-release/{platform}/swift-6.1.2-RELEASE/swift-6.1.2-RELEASE-{archive_suffix}.tar.gz"
+                )
+            );
+            assert_eq!(output.variant.as_deref(), variant);
         }
     }
 
@@ -258,7 +310,7 @@ mod swift_tool {
         let plugin = sandbox
             .create_plugin_with_config("swift-test", |config| {
                 config
-                    .host(HostOS::Linux, HostArch::X64)
+                    .host(HostPlatform::new(HostOS::Linux, HostArch::X64))
                     .tool_config(ubuntu_2404());
             })
             .await;
@@ -293,7 +345,7 @@ mod swift_tool {
         let plugin = sandbox
             .create_plugin_with_config("swift-test", |config| {
                 config
-                    .host(HostOS::Linux, HostArch::X64)
+                    .host(HostPlatform::new(HostOS::Linux, HostArch::X64))
                     .tool_config(ubuntu_2404());
             })
             .await;
@@ -329,7 +381,7 @@ mod swift_tool {
         let plugin = sandbox
             .create_plugin_with_config("swift-test", |config| {
                 config
-                    .host(HostOS::Linux, HostArch::X64)
+                    .host(HostPlatform::new(HostOS::Linux, HostArch::X64))
                     .tool_config(ubuntu_2404());
             })
             .await;
@@ -350,7 +402,7 @@ mod swift_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("swift-test", |config| {
-                config.host(HostOS::MacOS, HostArch::Arm64);
+                config.host(HostPlatform::new(HostOS::MacOS, HostArch::Arm64));
             })
             .await;
 
@@ -378,7 +430,7 @@ mod swift_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("swift-test", |config| {
-                config.host(HostOS::MacOS, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::MacOS, HostArch::X64));
             })
             .await;
 
@@ -407,7 +459,7 @@ mod swift_tool {
         let plugin = sandbox
             .create_plugin_with_config("swift-test", |config| {
                 config
-                    .host(HostOS::Linux, HostArch::X64)
+                    .host(HostPlatform::new(HostOS::Linux, HostArch::X64))
                     .tool_config(ubuntu_2404());
             })
             .await;

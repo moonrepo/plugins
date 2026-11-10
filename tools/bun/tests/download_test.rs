@@ -16,7 +16,7 @@ mod bun_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("bun-test", |config| {
-                config.host(HostOS::Linux, HostArch::Arm64);
+                config.host(HostPlatform::new(HostOS::Linux, HostArch::Arm64));
             })
             .await;
 
@@ -44,22 +44,6 @@ mod bun_tool {
     );
     }
 
-
-    // The `foreign` field isn't in this version of the PDK, so insert it directly
-    fn foreign_host(os: HostOS, arch: HostArch) -> serde_json::Value {
-        let mut env = serde_json::to_value(HostEnvironment {
-            arch,
-            os,
-            libc: HostLibc::Gnu,
-            home_dir: VirtualPath::new("/userhome"),
-            ..Default::default()
-        })
-        .unwrap();
-
-        env["foreign"] = true.into();
-        env
-    }
-
     // AVX2 can't be detected for another platform, so the regular build is used
     #[tokio::test(flavor = "multi_thread")]
     async fn uses_regular_build_when_targeting_another_platform() {
@@ -70,7 +54,13 @@ mod bun_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("bun-test", |config| {
-                    config.insert("host_environment", foreign_host(os, HostArch::X64));
+                    config.host_with(|host| {
+                        host.os = os;
+                        host.arch = HostArch::X64;
+                        host.libc = HostLibc::Gnu;
+                        host.foreign = true;
+                        host.details = None;
+                    });
                 })
                 .await;
 
@@ -88,7 +78,95 @@ mod bun_tool {
                 result.download_url,
                 format!("https://github.com/oven-sh/bun/releases/download/bun-v1.2.0/{file}")
             );
+            assert_eq!(result.variant, None);
         }
+    }
+
+    // AVX2 is part of the x86-64-v3 level, which proto detects
+    #[tokio::test(flavor = "multi_thread")]
+    async fn uses_build_for_detected_x64_level() {
+        for (os, level, file, variant) in [
+            (
+                HostOS::Linux,
+                2,
+                "bun-linux-x64-baseline.zip",
+                Some("baseline"),
+            ),
+            (HostOS::Linux, 3, "bun-linux-x64.zip", None),
+            (HostOS::Linux, 4, "bun-linux-x64.zip", None),
+            (
+                HostOS::MacOS,
+                2,
+                "bun-darwin-x64-baseline.zip",
+                Some("baseline"),
+            ),
+            (HostOS::MacOS, 3, "bun-darwin-x64.zip", None),
+        ] {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("bun-test", |config| {
+                    config.host_with(|host| {
+                        host.os = os;
+                        host.arch = HostArch::X64;
+                        host.libc = HostLibc::Gnu;
+                        host.details = Some(HostDetails {
+                            x64_level: Some(level),
+                            ..Default::default()
+                        });
+                    });
+                })
+                .await;
+
+            let result = plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("1.2.0").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                result.download_url,
+                format!("https://github.com/oven-sh/bun/releases/download/bun-v1.2.0/{file}")
+            );
+            assert_eq!(result.variant.as_deref(), variant);
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn uses_baseline_build_for_musl_without_avx2() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("bun-test", |config| {
+                config.host_with(|host| {
+                    host.os = HostOS::Linux;
+                    host.arch = HostArch::X64;
+                    host.libc = HostLibc::Musl;
+                    host.details = Some(HostDetails {
+                        x64_level: Some(2),
+                        ..Default::default()
+                    });
+                });
+            })
+            .await;
+
+        let result = plugin
+            .download_prebuilt(DownloadPrebuiltInput {
+                context: PluginContext {
+                    version: VersionSpec::parse("1.2.0").unwrap(),
+                    ..Default::default()
+                },
+                ..Default::default()
+            })
+            .await;
+
+        assert_eq!(
+            result.download_url,
+            "https://github.com/oven-sh/bun/releases/download/bun-v1.2.0/bun-linux-x64-musl-baseline.zip"
+        );
+        assert_eq!(result.variant.as_deref(), Some("baseline"));
     }
 
     #[tokio::test(flavor = "multi_thread")]
@@ -96,7 +174,7 @@ mod bun_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("bun-test", |config| {
-                config.host(HostOS::Linux, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::Linux, HostArch::X64));
             })
             .await;
 
@@ -227,7 +305,7 @@ mod bun_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("bun-test", |config| {
-                config.host(HostOS::MacOS, HostArch::Arm64);
+                config.host(HostPlatform::new(HostOS::MacOS, HostArch::Arm64));
             })
             .await;
 
@@ -260,7 +338,7 @@ mod bun_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("bun-test", |config| {
-                config.host(HostOS::MacOS, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::MacOS, HostArch::X64));
             })
             .await;
 
@@ -299,7 +377,7 @@ mod bun_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("bun-test", |config| {
-                config.host(HostOS::FreeBSD, HostArch::Arm64);
+                config.host(HostPlatform::new(HostOS::FreeBSD, HostArch::Arm64));
             })
             .await;
 
@@ -333,7 +411,7 @@ mod bun_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("bun-test", |config| {
-                config.host(HostOS::FreeBSD, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::FreeBSD, HostArch::X64));
             })
             .await;
 
@@ -368,7 +446,7 @@ mod bun_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("bun-test", |config| {
-                config.host(HostOS::FreeBSD, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::FreeBSD, HostArch::X64));
             })
             .await;
 
@@ -388,7 +466,7 @@ mod bun_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("bun-test", |config| {
-                config.host(HostOS::Windows, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::Windows, HostArch::X64));
             })
             .await;
 
@@ -421,7 +499,7 @@ mod bun_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("bun-test", |config| {
-                config.host(HostOS::Windows, HostArch::Arm64);
+                config.host(HostPlatform::new(HostOS::Windows, HostArch::Arm64));
             })
             .await;
 
@@ -455,7 +533,7 @@ mod bun_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("bun-test", |config| {
-                config.host(HostOS::Windows, HostArch::Arm64);
+                config.host(HostPlatform::new(HostOS::Windows, HostArch::Arm64));
             })
             .await;
 
@@ -476,7 +554,7 @@ mod bun_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("bun-test", |config| {
-                config.host(HostOS::Windows, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::Windows, HostArch::X64));
             })
             .await;
 
@@ -496,7 +574,7 @@ mod bun_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("bun-test", |config| {
-                config.host(HostOS::Linux, HostArch::Arm64);
+                config.host(HostPlatform::new(HostOS::Linux, HostArch::Arm64));
             })
             .await;
 
@@ -523,7 +601,7 @@ mod bun_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("bun-test", |config| {
-                config.host(HostOS::Windows, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::Windows, HostArch::X64));
             })
             .await;
 

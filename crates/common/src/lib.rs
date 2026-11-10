@@ -5,30 +5,6 @@ mod versions;
 pub use paths::*;
 pub use versions::*;
 
-/// Return true if the plugin is targeting a platform other than the machine it's
-/// running on, for example, when proto locks other platforms. The host environment
-/// then describes the targeted platform, but commands and files still describe the
-/// machine, so they must not be used to inspect the platform.
-///
-/// The `foreign` field is read from the host environment directly, as the PDK
-/// doesn't have it yet. Versions of proto without it never target another platform.
-#[cfg(feature = "wasm")]
-pub fn is_foreign_platform() -> bool {
-    use extism_pdk::{config, json};
-
-    #[derive(serde::Deserialize)]
-    struct ForeignHost {
-        #[serde(default)]
-        foreign: bool,
-    }
-
-    config::get("host_environment")
-        .ok()
-        .flatten()
-        .and_then(|value| json::from_str::<ForeignHost>(&value).ok())
-        .is_some_and(|host| host.foreign)
-}
-
 #[cfg(feature = "wasm")]
 pub fn enable_tracing() {
     use proto_pdk::{
