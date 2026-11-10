@@ -42,7 +42,10 @@
 - Fixed bare dependency requirements (`1.2.3`) being parsed as exact versions instead of caret
   requirements, so task hashes with `hasher.optimization: accuracy` now track the resolved version
   from `Cargo.lock`. `[target.*]` dependencies are now included as well.
-- Includes `rust_tool` fixes for toolchain file precedence and Windows ARM64.
+- Includes `rust_tool` fixes for toolchain file precedence, Windows ARM64, and failed `rustup`
+  commands.
+- Fixed a failed `cargo metadata` while pruning for Docker showing a JSON parse error, instead of
+  cargo's error.
 
 ## 1.0.12
 

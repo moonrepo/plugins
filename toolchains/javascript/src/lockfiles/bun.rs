@@ -2,6 +2,8 @@ use super::yarn::parse_yarn_lock_content;
 use super::{parse_name_and_version, parse_version_spec};
 #[cfg(feature = "wasm")]
 use moon_pdk::{ExecCommandInput, exec};
+#[cfg(feature = "wasm")]
+use moon_pdk_api::anyhow;
 use moon_pdk_api::{AnyResult, LockDependency, ParseLockOutput, VirtualPath};
 use serde::Deserialize;
 use starbase_utils::{fs, json, json::JsonValue};
@@ -169,6 +171,13 @@ pub fn parse_bun_lockb(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyR
         ExecCommandInput::pipe("bun", ["bun.lockb"])
             .cwd(path.parent().expect("file path should have a parent")),
     )?;
+
+    if content.exit_code != 0 {
+        return Err(anyhow!(
+            "Failed to read <file>bun.lockb</file> with <shell>bun</shell>: {}",
+            content.stderr.trim()
+        ));
+    }
 
     parse_yarn_lock_content(content.stdout.trim(), output)
 }

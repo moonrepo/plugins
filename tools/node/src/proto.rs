@@ -15,6 +15,7 @@ use tool_common::{enable_tracing, ensure_stable_latest, extract_version_from_tex
 #[host_fn]
 extern "ExtismHost" {
     fn exec_command(input: Json<ExecCommandInput>) -> Json<ExecCommandOutput>;
+    fn host_log(input: Json<HostLogInput>);
     fn send_request(input: Json<SendRequestInput>) -> Json<SendRequestOutput>;
 }
 
@@ -503,7 +504,16 @@ pub fn post_install(Json(input): Json<InstallHook>) -> FnResult<()> {
         input.context.version.to_string(),
     );
 
-    exec(command)?;
+    let result = exec(command)?;
+
+    // Node.js still works without it, so don't fail the install
+    if result.exit_code != 0 {
+        host_log!(
+            warn,
+            "Failed to install the npm that comes bundled with Node.js, as <shell>proto install npm bundled</shell> returned a {} exit code.",
+            result.exit_code
+        );
+    }
 
     Ok(())
 }

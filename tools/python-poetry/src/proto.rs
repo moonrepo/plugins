@@ -127,22 +127,22 @@ pub fn native_install(
         ..Default::default()
     })?;
 
+    let installed = result.exit_code == 0;
+
     Ok(Json(NativeInstallOutput {
-        error: if !result.stdout.is_empty()
-            && result.stdout.contains("poetry-installer-error")
-            && result.stdout.contains(".log")
+        error: if installed {
+            None
+        } else if result.stdout.contains("poetry-installer-error") && result.stdout.contains(".log")
         {
             Some("An error log has been written to the current directory.".into())
         } else if !result.stderr.is_empty() {
             Some(result.stderr)
         }
         // The installer reports errors, like an unknown version, on stdout
-        else if result.exit_code != 0 {
+        else {
             Some(result.stdout.trim().to_owned())
-        } else {
-            None
         },
-        installed: result.exit_code == 0,
+        installed,
         ..Default::default()
     }))
 }
@@ -173,10 +173,19 @@ pub fn post_install(Json(input): Json<InstallHook>) -> FnResult<()> {
         .expect("tool directory should be in proto's store, which is always mapped")
         .to_string();
 
-    exec_captured(
+    let result = exec_captured(
         poetry,
         ["config", "virtualenvs.prefer-active-python", "true"],
     )?;
+
+    // Poetry still works without it, so don't fail the install
+    if result.exit_code != 0 {
+        host_log!(
+            warn,
+            "Failed to set <property>virtualenvs.prefer-active-python</property> with <shell>poetry config</shell>: {}",
+            result.stderr.trim(),
+        );
+    }
 
     Ok(())
 }

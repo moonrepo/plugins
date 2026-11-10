@@ -30,7 +30,12 @@ fn cpu_cores() -> AnyResult<String> {
         exec_captured("nproc", Vec::<String>::new())?
     };
 
-    let value = result.stdout.trim().to_string();
+    // Assume a single core when the count can't be detected
+    let value = if result.exit_code == 0 {
+        result.stdout.trim().to_string()
+    } else {
+        "1".to_string()
+    };
 
     var::set("cpu_count", &value)?;
 

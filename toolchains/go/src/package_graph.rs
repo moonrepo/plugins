@@ -51,6 +51,7 @@ fn execute_go_list(
 
     let result = exec(ExecCommandInput::pipe("go", args).cwd(dir.to_owned()))?;
 
+    // ADR-0007.3 exception: parse the packages that `go list -e` could load, even when it fails
     if result.exit_code != 0 {
         host_log!(
             warn,

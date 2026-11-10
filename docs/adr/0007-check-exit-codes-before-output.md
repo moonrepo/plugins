@@ -1,6 +1,6 @@
 ---
-status: proposed
-date: 2026-11-09
+status: accepted
+date: 2026-11-10
 applies-to: [backends/**, crates/**, extensions/**, toolchains/**, tools/**]
 ---
 

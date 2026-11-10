@@ -9,6 +9,7 @@
 #### 🐞 Fixes
 
 - Fixed an empty workspace entry in `bun.lock` panicking while parsing the lockfile.
+- Fixed a failed `bun bun.lockb` being parsed as an empty lockfile. It now returns an error.
 
 ## 1.3.2
 

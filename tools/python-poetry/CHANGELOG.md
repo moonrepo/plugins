@@ -29,6 +29,7 @@
 - Fixed `!=` in `requires-poetry` failing version detection. proto can't exclude versions, so it's
   now ignored.
 - Install failures now include the installer's output, instead of an empty error.
+- Fixed a failed `poetry config` in the post-install hook being ignored. It now logs a warning.
 
 #### ⚙️ Internal
 

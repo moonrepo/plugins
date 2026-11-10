@@ -265,9 +265,10 @@ pub fn download_prebuilt(
                 exec_captured("grep", ["avx2", "/proc/cpuinfo"])?.exit_code == 0
             }
             HostOS::MacOS if command_exists(env, "sysctl") => {
-                exec_captured("sysctl", ["machdep.cpu"])?
-                    .stdout
-                    .contains("AVX2")
+                let result = exec_captured("sysctl", ["machdep.cpu"])?;
+
+                // Use the baseline build when AVX2 can't be detected
+                result.exit_code == 0 && result.stdout.contains("AVX2")
             }
             _ => true,
         };

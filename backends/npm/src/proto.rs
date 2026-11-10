@@ -108,10 +108,12 @@ pub fn native_install(
     command.cwd = Some(input.install_dir.clone());
 
     let result = exec(prepare_command(command))?;
+    let installed = result.exit_code == 0;
 
     Ok(Json(NativeInstallOutput {
-        installed: result.exit_code == 0,
-        error: if result.stderr.is_empty() {
+        installed,
+        // Progress and warnings also go to stderr, so only use it on failure
+        error: if installed || result.stderr.is_empty() {
             None
         } else {
             Some(result.stderr)

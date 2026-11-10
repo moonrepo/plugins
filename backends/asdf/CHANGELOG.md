@@ -16,6 +16,7 @@
 - Fixed `bin/exec-env` multi-line variables being split into bogus variables. The script is now always sourced with bash, like asdf.
 - Fixed `ASDF_CONCURRENCY` overriding the variable when already set in the environment.
 - Fixed a version file outside of the directories that proto can access panicking instead of returning an error.
+- Fixed a failed `nproc` or `sysctl` setting an empty `ASDF_CONCURRENCY`. It now falls back to 1.
 
 #### ⚙️ Internal
 

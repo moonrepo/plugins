@@ -119,6 +119,21 @@ pub fn parse_version_file(
     Ok(Json(output))
 }
 
+/// Run a `rustup` command that streams its output, and error if it fails.
+fn exec_rustup(args: &[&str]) -> AnyResult<()> {
+    let result = exec_streamed("rustup", args)?;
+
+    if result.exit_code != 0 {
+        return Err(anyhow!(
+            "Command <shell>rustup {}</shell> failed with a {} exit code.",
+            args.join(" "),
+            result.exit_code
+        ));
+    }
+
+    Ok(())
+}
+
 #[plugin_fn]
 pub fn native_install(
     Json(input): Json<NativeInstallInput>,
@@ -149,7 +164,7 @@ pub fn native_install(
             )?;
         }
 
-        exec(ExecCommandInput {
+        let result = exec(ExecCommandInput {
             command: script_path
                 .to_real_path()?
                 .expect("script should be in the temp directory, which is always mapped")
@@ -159,6 +174,13 @@ pub fn native_install(
             stream: true,
             ..Default::default()
         })?;
+
+        if result.exit_code != 0 {
+            return Err(plugin_err!(
+                "Failed to install <shell>rustup</shell>, as its installer returned a {} exit code.",
+                result.exit_code
+            ));
+        }
 
         // Update PATH explicitly, since we can't "reload the shell"
         // on the host side. This is good enough since it's deterministic.
@@ -178,6 +200,14 @@ pub fn native_install(
 
     // Install if not already installed
     let installed_list = exec_captured("rustup", ["toolchain", "list"])?;
+
+    if installed_list.exit_code != 0 {
+        return Err(plugin_err!(
+            "Failed to list toolchains with <shell>rustup toolchain list</shell>: {}",
+            installed_list.stderr.trim()
+        ));
+    }
+
     let mut do_install = true;
 
     if installed_list
@@ -195,12 +225,12 @@ pub fn native_install(
         } else {
             debug!("Detected a broken toolchain, uninstalling it");
 
-            exec_streamed("rustup", ["toolchain", "uninstall", &triple])?;
+            exec_rustup(&["toolchain", "uninstall", &triple])?;
         }
     }
 
     if do_install {
-        exec_streamed("rustup", ["toolchain", "install", &triple, "--force"])?;
+        exec_rustup(&["toolchain", "install", &triple, "--force"])?;
     }
 
     // Always mark as installed so that binaries can be located!
@@ -218,7 +248,7 @@ pub fn native_uninstall(
     let channel = get_channel_from_version(&input.context.version);
     let triple = format!("{}-{}", channel, get_target_triple(env, NAME)?);
 
-    exec_streamed("rustup", ["toolchain", "uninstall", &triple])?;
+    exec_rustup(&["toolchain", "uninstall", &triple])?;
 
     Ok(Json(NativeUninstallOutput {
         uninstalled: true,

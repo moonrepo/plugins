@@ -33,6 +33,7 @@
 - Fixed `bundled-npm` installing the npm bundled with the Node.js version configured in the working
   directory, instead of the version that was just installed.
 - Fixed an empty nightly index, or an empty version in an index, panicking instead of returning an error.
+- Fixed a failed install of the bundled npm being ignored. It now logs a warning.
 
 #### ⚙️ Internal
 
