@@ -53,6 +53,7 @@ pub fn register_toolchain(
             "rubocop".into(),
         ],
         vendor_dir_name: Some(config.bundle_path),
+        ..Default::default()
     }))
 }
 

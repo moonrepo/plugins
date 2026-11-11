@@ -1,0 +1,23 @@
+---
+source: extensions/migrate-nx/tests/migrate_nx_test.rs
+expression: "fs::read_to_string(sandbox.path().join(\"apps/web-e2e/moon.yml\")).unwrap()"
+---
+id: web-e2e
+language: javascript
+tasks:
+  e2e:
+    command: playwright test
+    deps:
+    - target: acme/web:serve
+      type: wait
+    - ^:build
+    - ~:setup
+  e2e-local:
+    command: playwright test --ui
+    deps:
+    - target: acme/web:serve
+      type: wait
+  setup:
+    command: playwright install
+toolchains:
+  default: node

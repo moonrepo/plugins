@@ -7,6 +7,11 @@ publish = false
 
 [dependencies]
 common = { path = "../common" }
+moon_pdk_api = { workspace = true }
+rustc-hash = { workspace = true }
+
+[dev-dependencies]
+starbase_sandbox = { workspace = true }
 
 [features]
 wasm = ["common/wasm"]

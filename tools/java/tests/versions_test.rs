@@ -45,7 +45,7 @@ mod java_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("java-test", |config| {
-                    config.host(HostOS::Linux, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::X64));
                 })
                 .await;
             let mut spec = ToolSpec::parse(requested).unwrap();

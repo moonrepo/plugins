@@ -11,7 +11,7 @@ mod kotlin_tool {
                 let sandbox = create_empty_proto_sandbox();
                 let plugin = sandbox
                     .create_plugin_with_config("kotlin-test", |config| {
-                        config.host(os, HostArch::X64);
+                        config.host(HostPlatform::new(os, HostArch::X64));
                     })
                     .await;
                 let suffix = if os.is_windows() { ".bat" } else { "" };
@@ -75,7 +75,7 @@ mod kotlin_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("kotlin-test", |config| {
-                    config.host(os, HostArch::X64);
+                    config.host(HostPlatform::new(os, HostArch::X64));
                 })
                 .await;
             let suffix = if os.is_windows() { ".bat" } else { "" };

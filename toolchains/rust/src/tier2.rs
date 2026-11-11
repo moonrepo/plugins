@@ -5,14 +5,14 @@ use cargo_toml::{Dependency, DepsSet, Publish};
 use extism_pdk::*;
 use moon_config::DependencyScope;
 use moon_pdk::{
-    VirtualPathExt, command_exists, get_host_env_var, get_host_environment, locate_root,
-    locate_root_with_check, parse_toolchain_config,
+    VirtualPathExt, command_exists, get_host_env_var, get_host_environment, locate_root_with_check,
+    parse_toolchain_config,
 };
 use moon_pdk_api::*;
 use rustc_hash::FxHashMap;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
-use toolchain_common::append_bin_dir;
+use toolchain_common::{DirCache, RootLocator, append_bin_dir};
 
 #[plugin_fn]
 pub fn extend_project_graph(
@@ -311,46 +311,68 @@ pub fn extend_task_script(
 pub fn locate_dependencies_root(
     Json(input): Json<LocateDependenciesRootInput>,
 ) -> FnResult<Json<LocateDependenciesRootOutput>> {
-    let mut output = LocateDependenciesRootOutput::default();
+    let mut roots = locate_roots(&[input.starting_dir])?;
 
-    // Attempt to find `Cargo.lock` first
-    if let Some(root) = locate_root(&input.starting_dir, "Cargo.lock") {
-        output.members = CargoToml::load(root.join("Cargo.toml"))?.extract_members();
-        output.root = Some(root);
+    Ok(Json(roots.pop().unwrap_or_default()))
+}
+
+#[plugin_fn]
+pub fn locate_dependencies_roots(
+    Json(input): Json<LocateDependenciesRootsInput>,
+) -> FnResult<Json<LocateDependenciesRootsOutput>> {
+    Ok(Json(LocateDependenciesRootsOutput {
+        roots: locate_roots(&input.starting_dirs)?,
+    }))
+}
+
+fn locate_roots(starting_dirs: &[VirtualPath]) -> AnyResult<Vec<LocateDependenciesRootOutput>> {
+    let mut locator = RootLocator::default();
+    let mut manifests = DirCache::default();
+    let mut roots = vec![];
+
+    let load_manifest = |dir: &VirtualPath| CargoToml::load(dir.join("Cargo.toml"));
+
+    for starting_dir in starting_dirs {
+        let mut output = LocateDependenciesRootOutput::default();
+
+        // Attempt to find `Cargo.lock` first
+        if let Some(root) = locator.locate(starting_dir, &["Cargo.lock"]) {
+            output.members = manifests
+                .get_or_load(&root, load_manifest)?
+                .extract_members();
+            output.root = Some(root);
+        }
+        // Otherwise find a `Cargo.toml` workspace
+        else if let Some((root, members)) =
+            locator.locate_with_check(starting_dir, &["Cargo.toml"], |dir| {
+                let manifest = manifests.get_or_load(dir, load_manifest)?;
+
+                Ok(manifest
+                    .workspace
+                    .is_some()
+                    .then(|| manifest.extract_members()))
+            })?
+        {
+            output.members = members;
+            output.root = Some(root);
+        }
+        // Else may be a stand-alone project
+        else if let Some((root, _)) =
+            locator.locate_with_check(starting_dir, &["Cargo.toml"], |dir| {
+                Ok(manifests
+                    .get_or_load(dir, load_manifest)?
+                    .package
+                    .is_some()
+                    .then_some(()))
+            })?
+        {
+            output.root = Some(root);
+        }
+
+        roots.push(output);
     }
 
-    // Otherwise find a `Cargo.toml` workspace
-    if output.root.is_none() {
-        locate_root_with_check(&input.starting_dir, "Cargo.toml", |root| {
-            let manifest = CargoToml::load(root.join("Cargo.toml"))?;
-            let mut found = false;
-
-            if manifest.workspace.is_some() {
-                output.root = Some(root.to_owned());
-                output.members = manifest.extract_members();
-                found = true;
-            }
-
-            Ok(found)
-        })?;
-    }
-
-    // Else may be a stand-alone project
-    if output.root.is_none() {
-        locate_root_with_check(&input.starting_dir, "Cargo.toml", |root| {
-            let manifest = CargoToml::load(root.join("Cargo.toml"))?;
-            let mut found = false;
-
-            if manifest.package.is_some() {
-                output.root = Some(root.to_owned());
-                found = true;
-            }
-
-            Ok(found)
-        })?;
-    }
-
-    Ok(Json(output))
+    Ok(roots)
 }
 
 #[plugin_fn]
@@ -466,8 +488,13 @@ pub fn parse_manifest(
         }
     }
 
+    // Dependencies that members inherit with `workspace = true`, which aren't
+    // dependencies of a root package, so are kept apart from its own
     if let Some(workspace) = &manifest.workspace {
-        extract_deps(&workspace.dependencies, &mut output.dependencies)?;
+        extract_deps(
+            &workspace.dependencies,
+            &mut output.inheritable_dependencies,
+        )?;
     }
 
     // Extracted before the main tables, so those take precedence

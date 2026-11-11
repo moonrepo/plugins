@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Added support for the latest Turborepo v2 features:
+  - `turbo.jsonc` files.
+  - `global` settings (`futureFlags.globalConfiguration`).
+  - `tasks.*.description` and `tasks.*.tags`.
+  - `tasks.*.extends: false` (excludes the inherited task).
+  - `tasks.*.inputs` structured objects (`startup`, `jit`, `dependencyOutputs` modes).
+  - `tasks.*.with` (maps to `wait` dependencies).
+  - `$TURBO_ROOT$` and `$TURBO_EXTENDS$` microsyntax.
+
+#### 🐞 Fixes
+
+- Fixed `globalDependencies` being migrated as project relative inputs, instead of workspace relative.
+- Fixed `$TURBO_DEFAULT$` inputs being dropped, instead of mapping to `**/*`.
+- Fixed wildcard and negated `globalEnv` variables not being migrated as env globs.
+
 ## 1.0.5
 
 #### 🚀 Updates

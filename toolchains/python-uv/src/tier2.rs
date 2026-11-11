@@ -8,9 +8,11 @@ pub fn define_requirements(
     Json(_): Json<DefineRequirementsInput>,
 ) -> FnResult<Json<DefineRequirementsOutput>> {
     Ok(Json(DefineRequirementsOutput {
-        requires: vec!["unstable_python".into()],
-        for_setup_environment: false,
         // Aligns with other package managers
-        for_setup_toolchain: true,
+        requires: vec![ToolchainRequirement {
+            id: "unstable_python".into(),
+            setup_toolchain: Some(RequirementPhase::Before),
+            setup_environment: Some(RequirementPhase::Before),
+        }],
     }))
 }

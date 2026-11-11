@@ -5,13 +5,14 @@ use extism_pdk::*;
 use moon_config::DependencyScope;
 use moon_pdk::VirtualPathExt;
 use moon_pdk::{
-    load_project_toolchain_config, load_toolchain_config, locate_root, locate_root_many,
-    locate_root_many_with_check, parse_toolchain_config_schema,
+    load_project_toolchain_config, load_toolchain_config, locate_root,
+    parse_toolchain_config_schema,
 };
 use moon_pdk_api::*;
 use pep508_rs::{Requirement, VersionOrUrl};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
+use toolchain_common::{DirCache, RootLocator};
 
 #[plugin_fn]
 pub fn define_requirements(
@@ -21,16 +22,13 @@ pub fn define_requirements(
 
     Ok(Json(DefineRequirementsOutput {
         requires: match config.package_manager {
-            Some(package_manager) => vec![format!("unstable_{package_manager}")],
+            Some(package_manager) => vec![ToolchainRequirement {
+                id: format!("unstable_{package_manager}"),
+                setup_toolchain: Some(RequirementPhase::After),
+                setup_environment: Some(RequirementPhase::After),
+            }],
             None => vec![],
         },
-        // We must ensure package managers are fully installed
-        // before we setup the environment, otherwise commands fail
-        for_setup_environment: true,
-        // However, we don't want this when we setup this toolchain,
-        // because the package managers depend on us, and it would
-        // introduce a cycle
-        for_setup_toolchain: false,
     }))
 }
 
@@ -167,11 +165,31 @@ pub fn extend_command(
 pub fn locate_dependencies_root(
     Json(input): Json<LocateDependenciesRootInput>,
 ) -> FnResult<Json<LocateDependenciesRootOutput>> {
-    let config = parse_toolchain_config_schema::<PythonToolchainConfig>(input.toolchain_config)?;
-    let mut output = LocateDependenciesRootOutput::default();
+    let mut roots = locate_roots(&[input.starting_dir], input.toolchain_config)?;
+
+    Ok(Json(roots.pop().unwrap_or_default()))
+}
+
+#[plugin_fn]
+pub fn locate_dependencies_roots(
+    Json(input): Json<LocateDependenciesRootsInput>,
+) -> FnResult<Json<LocateDependenciesRootsOutput>> {
+    Ok(Json(LocateDependenciesRootsOutput {
+        roots: locate_roots(&input.starting_dirs, input.toolchain_config)?,
+    }))
+}
+
+fn locate_roots(
+    starting_dirs: &[VirtualPath],
+    toolchain_config: json::Value,
+) -> AnyResult<Vec<LocateDependenciesRootOutput>> {
+    let config = parse_toolchain_config_schema::<PythonToolchainConfig>(toolchain_config)?;
 
     let Some(package_manager) = config.package_manager else {
-        return Ok(Json(output));
+        return Ok(starting_dirs
+            .iter()
+            .map(|_| LocateDependenciesRootOutput::default())
+            .collect());
     };
 
     let manifest_names = match package_manager {
@@ -190,37 +208,41 @@ pub fn locate_dependencies_root(
         PythonPackageManager::Uv => vec!["uv.lock"],
     };
 
-    // First attempt: find lock files
-    if let Some(root) = locate_root_many(&input.starting_dir, &lock_names) {
-        output.members = PyProjectTomlWithTools::load(root.join("pyproject.toml"))?
-            .extract_members(package_manager)?;
-        output.root = Some(root);
+    let mut locator = RootLocator::default();
+    let mut workspace_members = DirCache::default();
+    let mut roots = vec![];
+
+    // Members are only extracted from tools (like uv workspaces)
+    let load_members = |dir: &VirtualPath| {
+        PyProjectTomlWithTools::load(dir.join("pyproject.toml"))?.extract_members(package_manager)
+    };
+
+    for starting_dir in starting_dirs {
+        let mut output = LocateDependenciesRootOutput::default();
+
+        // First attempt: find lock files
+        if let Some(root) = locator.locate(starting_dir, &lock_names) {
+            output.members = workspace_members.get_or_load(&root, load_members)?.clone();
+            output.root = Some(root);
+        }
+        // Second attempt: find workspace-compatible manifest files
+        else if let Some((root, members)) =
+            locator.locate_with_check(starting_dir, &manifest_names, |dir| {
+                Ok(workspace_members.get_or_load(dir, load_members)?.clone())
+            })?
+        {
+            output.members = Some(members);
+            output.root = Some(root);
+        }
+        // Last attempt: find a manifest file (project only)
+        else {
+            output.root = locator.locate(starting_dir, &manifest_names);
+        }
+
+        roots.push(output);
     }
 
-    // Second attempt: find workspace-compatible manifest files
-    if output.root.is_none() {
-        locate_root_many_with_check(&input.starting_dir, &manifest_names, |root| {
-            let manifest = PyProjectTomlWithTools::load(root.join("pyproject.toml"))?;
-            let mut found = false;
-
-            if manifest.tool.is_some()
-                && let Some(members) = manifest.extract_members(package_manager)?
-            {
-                output.root = Some(root.to_owned());
-                output.members = Some(members);
-                found = true;
-            }
-
-            Ok(found)
-        })?;
-    }
-
-    // Last attempt: find a manifest file (project only)
-    if output.root.is_none() {
-        output.root = locate_root_many(&input.starting_dir, &manifest_names);
-    }
-
-    Ok(Json(output))
+    Ok(roots)
 }
 
 #[plugin_fn]

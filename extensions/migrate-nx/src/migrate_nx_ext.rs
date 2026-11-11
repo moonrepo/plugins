@@ -109,6 +109,7 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
 
     // Fill in any missing but required settings
     migrator.use_default_settings()?;
+    migrator.wait_for_continuous_deps()?;
 
     // Write the new config files
     migrator.inner.save_configs()?;

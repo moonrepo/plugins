@@ -7,12 +7,12 @@ use extism_pdk::*;
 use moon_config::BinEntry;
 use moon_pdk::{
     HostLogInput, HostLogTarget, VirtualPathExt, command_exists, get_host_env_var,
-    get_host_environment, host_log, locate_root, parse_toolchain_config_schema,
+    get_host_environment, host_log, parse_toolchain_config_schema,
 };
 use moon_pdk_api::*;
 use starbase_utils::fs;
 use std::path::PathBuf;
-use toolchain_common::append_bin_dir;
+use toolchain_common::{DirCache, RootLocator, append_bin_dir};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -143,33 +143,60 @@ pub fn extend_task_script(
 pub fn locate_dependencies_root(
     Json(input): Json<LocateDependenciesRootInput>,
 ) -> FnResult<Json<LocateDependenciesRootOutput>> {
-    let config = parse_toolchain_config_schema::<GoToolchainConfig>(input.toolchain_config)?;
-    let mut output = LocateDependenciesRootOutput::default();
+    let mut roots = locate_roots(&[input.starting_dir], input.toolchain_config)?;
 
-    // Find `go.work` first
-    if use_workspaces(&config)?
-        && let Some(root) = locate_root(&input.starting_dir, "go.work")
-    {
-        let go_work = GoWork::parse(fs::read_file(root.join("go.work"))?)?;
+    Ok(Json(roots.pop().unwrap_or_default()))
+}
 
-        if !go_work.modules.is_empty() {
-            output.members = Some(go_work.modules);
+#[plugin_fn]
+pub fn locate_dependencies_roots(
+    Json(input): Json<LocateDependenciesRootsInput>,
+) -> FnResult<Json<LocateDependenciesRootsOutput>> {
+    Ok(Json(LocateDependenciesRootsOutput {
+        roots: locate_roots(&input.starting_dirs, input.toolchain_config)?,
+    }))
+}
+
+fn locate_roots(
+    starting_dirs: &[VirtualPath],
+    toolchain_config: json::Value,
+) -> AnyResult<Vec<LocateDependenciesRootOutput>> {
+    let config = parse_toolchain_config_schema::<GoToolchainConfig>(toolchain_config)?;
+    let mut locator = RootLocator::default();
+    let mut workspace_members = DirCache::default();
+    let mut roots = vec![];
+
+    for starting_dir in starting_dirs {
+        let mut output = LocateDependenciesRootOutput::default();
+
+        // Find `go.work` first
+        if use_workspaces(&config)?
+            && let Some(root) = locator.locate(starting_dir, &["go.work"])
+        {
+            output.members = workspace_members
+                .get_or_load(&root, |root| {
+                    let go_work = GoWork::parse(fs::read_file(root.join("go.work"))?)?;
+
+                    Ok((!go_work.modules.is_empty()).then_some(go_work.modules))
+                })?
+                .clone();
+            output.root = Some(root);
         }
 
-        output.root = Some(root);
+        // Otherwise the nearest `go.mod`, as `go.sum` always sits beside it.
+        // Every directory below it is part of the module (nested modules find
+        // their own `go.mod` first), so projects there share its install
+        if output.root.is_none()
+            && let Some(root) = locator.locate(starting_dir, &["go.mod"])
+        {
+            output.members = Some(vec!["**/*".into()]);
+            output.root = Some(root);
+        }
+
+        roots.push(output);
     }
 
-    // Otherwise the nearest `go.mod`, as `go.sum` always sits beside it.
-    // Every directory below it is part of the module (nested modules find
-    // their own `go.mod` first), so projects there share its install
-    if output.root.is_none()
-        && let Some(root) = locate_root(&input.starting_dir, "go.mod")
-    {
-        output.members = Some(vec!["**/*".into()]);
-        output.root = Some(root);
-    }
-
-    Ok(Json(output))
+    Ok(roots)
 }
 
 #[plugin_fn]
