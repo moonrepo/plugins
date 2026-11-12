@@ -16,9 +16,13 @@
 - `resolve.index_version_key` (format v2) and `resolve.manifest-version-key` (format v1) now accept
   a JSON path, like `releases[*].tag`, or `*~` for an index keyed by version. A plain key, like
   `version`, still selects that key of each object.
+- Added a `revision` group to version patterns, for a 4th version number. The default pattern now
+  matches versions like `1.2.3.4`, which were skipped.
 
 #### 🐞 Fixes
 
+- Fixed an override's `range` matching a requested range with a `!=` requirement, when no version
+  satisfies both, for example `<=1.2.3` and `>=1.2.3, !=1.2.3`.
 - Fixed a version pattern without a capture group panicking, which surfaced as an unclear WASM
   error. It now errors with how to fix the pattern.
 - Fixed a format v1 canary with its own `download-url-canary` using the stable `checksum-url` (with

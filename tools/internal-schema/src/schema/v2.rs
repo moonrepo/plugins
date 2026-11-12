@@ -1,8 +1,8 @@
 use super::{PlatformMapper, VERSION_REGEX};
 use proto_pdk_api::{
-    Clause, DetectVersionOutput, DownloadPrebuiltOutput, HostEnvironment, HostOS,
-    LoadVersionsOutput, LocateExecutablesOutput, MatchesRequirement, MatchesVersion, Op,
-    PluginError, Range, RegisterToolOutput, SpecError, UnresolvedVersionSpec, Version, VersionSpec,
+    DetectVersionOutput, DownloadPrebuiltOutput, HostEnvironment, HostOS, LoadVersionsOutput,
+    LocateExecutablesOutput, MatchesRange, MatchesVersion, PluginError, Range, RegisterToolOutput,
+    SpecError, UnresolvedVersionSpec, Version, VersionSpec,
 };
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -98,11 +98,10 @@ impl OverrideRange {
             (Self::Range(range), UnresolvedVersionSpec::Version(version)) => {
                 matches_version(range, version)
             }
-            (Self::Range(range), UnresolvedVersionSpec::Requirement(req)) => range.matches_req(req),
-            (Self::Range(range), UnresolvedVersionSpec::Range(other)) => other
-                .clauses
-                .iter()
-                .any(|clause| overlaps_clause(range, clause)),
+            (Self::Range(range), UnresolvedVersionSpec::Requirement(req)) => {
+                req.matches_range(range)
+            }
+            (Self::Range(range), UnresolvedVersionSpec::Range(other)) => other.matches_range(range),
             _ => false,
         }
     }
@@ -117,28 +116,6 @@ fn matches_version(range: &Range, version: &Version) -> bool {
                 prerelease: None,
                 ..version.clone()
             })
-}
-
-// Versions are ordered, so a clause overlaps one of the range's clauses
-// if it overlaps each of the clause's requirements (Helly's theorem)
-fn overlaps_clause(range: &Range, clause: &Clause) -> bool {
-    let reqs = match clause {
-        Clause::All(reqs) => reqs.to_owned(),
-        Clause::Between(lower, upper) => vec![
-            lower.to_requirement(Op::GreaterEq),
-            upper.to_requirement(Op::LessEq),
-        ],
-        Clause::Only(req) => vec![req.to_owned()],
-    };
-
-    if range.clauses.is_empty() {
-        return reqs.iter().all(|req| range.matches_req(req));
-    }
-
-    range
-        .clauses
-        .iter()
-        .any(|own| reqs.iter().all(|req| own.matches_req(req)))
 }
 
 impl TryFrom<String> for OverrideRange {
@@ -321,6 +298,9 @@ mod tests {
         assert!(!matches(">=1.5 <3", ">=1 <1.5"));
         // Each requirement overlaps a different clause, but none overlap both
         assert!(!matches("<1 || >=3", ">=1 <2"));
+        // Each requirement overlaps, but no version satisfies both
+        assert!(!matches("<=1.2.3", ">=1.2.3, !=1.2.3"));
+        assert!(matches("<=1.2.4", ">=1.2.3, !=1.2.3"));
     }
 
     #[test]
