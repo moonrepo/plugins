@@ -32,7 +32,7 @@ mod java_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("java-test", |config| {
-                    config.host(HostOS::Linux, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::X64));
                 })
                 .await;
 
@@ -57,7 +57,7 @@ mod java_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("java-test", |config| {
-                    config.host(HostOS::MacOS, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::MacOS, HostArch::Arm64));
                 })
                 .await;
 
@@ -82,7 +82,7 @@ mod java_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("java-test", |config| {
-                    config.host(HostOS::Windows, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::Windows, HostArch::X64));
                 })
                 .await;
 
@@ -113,7 +113,7 @@ mod java_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("java-test", |config| {
-                    config.host(HostOS::Linux, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::X64));
                 })
                 .await;
 
@@ -139,7 +139,7 @@ mod java_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("java-test", |config| {
-                    config.host(HostOS::Windows, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::Windows, HostArch::X64));
                 })
                 .await;
 
@@ -163,7 +163,7 @@ mod java_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("java-test", |config| {
-                    config.host(HostOS::Linux, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::X64));
                 })
                 .await;
 
@@ -204,7 +204,7 @@ mod java_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("java-test", |config| {
-                    config.host(HostOS::MacOS, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::MacOS, HostArch::Arm64));
                 })
                 .await;
 
@@ -224,7 +224,7 @@ mod java_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("java-test", |config| {
-                    config.host(HostOS::Linux, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::X64));
                 })
                 .await;
 
@@ -256,7 +256,7 @@ mod java_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("java-test", |config| {
-                    config.host(HostOS::Linux, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::X64));
                 })
                 .await;
 
@@ -283,7 +283,7 @@ mod java_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("java-test", |config| {
-                    config.host(HostOS::Linux, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::X64));
                 })
                 .await;
 
@@ -315,7 +315,7 @@ mod java_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("java-test", |config| {
-                    config.host(HostOS::Linux, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::X64));
                 })
                 .await;
 
@@ -348,7 +348,7 @@ mod java_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("java-test", |config| {
-                    config.host(HostOS::MacOS, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::MacOS, HostArch::Arm64));
                 })
                 .await;
 
@@ -368,7 +368,7 @@ mod java_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("java-test", |config| {
-                    config.host(HostOS::MacOS, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::MacOS, HostArch::X64));
                 })
                 .await;
 
@@ -389,7 +389,7 @@ mod java_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("java-test", |config| {
-                    config.host(HostOS::Linux, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::X64));
                 })
                 .await;
 
@@ -411,7 +411,7 @@ mod java_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("jre", |config| {
-                    config.host(HostOS::Linux, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::X64));
                 })
                 .await;
 
@@ -430,7 +430,7 @@ mod java_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("jre", |config| {
-                    config.host(HostOS::Linux, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::X64));
                 })
                 .await;
 
@@ -452,7 +452,7 @@ mod java_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("java-test", |config| {
-                    config.host(HostOS::Linux, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::X64));
                 })
                 .await;
 
@@ -493,7 +493,7 @@ mod java_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("java-test", |config| {
-                    config.host(HostOS::Windows, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::Windows, HostArch::X64));
                 })
                 .await;
 
@@ -518,7 +518,7 @@ mod java_tool {
 
             let plugin = sandbox
                 .create_plugin_with_config("java-test", |config| {
-                    config.host(HostOS::MacOS, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::MacOS, HostArch::Arm64));
                 })
                 .await;
 
@@ -541,7 +541,7 @@ mod java_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("java-test", |config| {
-                    config.host(HostOS::MacOS, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::MacOS, HostArch::Arm64));
                 })
                 .await;
 

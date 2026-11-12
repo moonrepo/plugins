@@ -20,7 +20,7 @@ mod node_depman_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("npm-test", |config| {
-                    config.host(HostOS::Linux, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::Arm64));
                 })
                 .await;
 
@@ -47,7 +47,7 @@ mod node_depman_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("npm-test", |config| {
-                    config.host(HostOS::Linux, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::Arm64));
                 })
                 .await;
 
@@ -74,7 +74,7 @@ mod node_depman_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("npm-test", |config| {
-                    config.host(HostOS::Windows, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::Windows, HostArch::X64));
                 })
                 .await;
 
@@ -119,7 +119,7 @@ mod node_depman_tool {
             let plugin = sandbox
                 .create_plugin_with_config("npm-test", |config| {
                     config
-                        .host(HostOS::MacOS, HostArch::X64)
+                        .host(HostPlatform::new(HostOS::MacOS, HostArch::X64))
                         .tool_config(NodeDepmanPluginConfig {
                             registry_url: "https://some-internal-url.example".into(),
                         });
@@ -151,7 +151,7 @@ mod node_depman_tool {
 
             let plugin = sandbox
                 .create_plugin_with_config("npm-test", |config| {
-                    config.host(HostOS::Linux, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::Arm64));
                 })
                 .await;
 
@@ -185,7 +185,7 @@ mod node_depman_tool {
 
             let plugin = sandbox
                 .create_plugin_with_config("npm-test", |config| {
-                    config.host(HostOS::Linux, HostArch::Arm64).tool_config(
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::Arm64)).tool_config(
                         NodeDepmanPluginConfig {
                             registry_url: "https://registry.yarnpkg.com".into(),
                         },
@@ -230,7 +230,7 @@ mod node_depman_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("nub-test", |config| {
-                    config.host(HostOS::MacOS, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::MacOS, HostArch::Arm64));
                 })
                 .await;
 
@@ -322,7 +322,7 @@ mod node_depman_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("nub-test", |config| {
-                    config.host(HostOS::Windows, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::Windows, HostArch::X64));
                 })
                 .await;
 
@@ -352,7 +352,7 @@ mod node_depman_tool {
             let plugin = sandbox
                 .create_plugin_with_config("nub-test", |config| {
                     config
-                        .host(HostOS::MacOS, HostArch::X64)
+                        .host(HostPlatform::new(HostOS::MacOS, HostArch::X64))
                         .tool_config(NodeDepmanPluginConfig {
                             registry_url: "https://some-internal-url.example".into(),
                         });
@@ -384,7 +384,7 @@ mod node_depman_tool {
 
             let plugin = sandbox
                 .create_plugin_with_config("nub-test", |config| {
-                    config.host(HostOS::Linux, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::Arm64));
                 })
                 .await;
 
@@ -417,7 +417,7 @@ mod node_depman_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("nub-test", |config| {
-                    config.host(HostOS::Linux, HostArch::X86);
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::X86));
                 })
                 .await;
 
@@ -438,7 +438,7 @@ mod node_depman_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("nub-test", |config| {
-                    config.host(HostOS::FreeBSD, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::FreeBSD, HostArch::Arm64));
                 })
                 .await;
 
@@ -459,7 +459,7 @@ mod node_depman_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("nub-test", |config| {
-                    config.host(HostOS::MacOS, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::MacOS, HostArch::Arm64));
                 })
                 .await;
 
@@ -479,7 +479,7 @@ mod node_depman_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("nub-test", |config| {
-                    config.host(HostOS::MacOS, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::MacOS, HostArch::Arm64));
                 })
                 .await;
 
@@ -517,7 +517,7 @@ mod node_depman_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("nub-test", |config| {
-                    config.host(HostOS::Windows, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::Windows, HostArch::X64));
                 })
                 .await;
 
@@ -544,7 +544,7 @@ mod node_depman_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("nub-test", |config| {
-                    config.host(HostOS::MacOS, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::MacOS, HostArch::Arm64));
                 })
                 .await;
 
@@ -575,7 +575,7 @@ mod node_depman_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("pnpm-test", |config| {
-                    config.host(HostOS::Windows, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::Windows, HostArch::X64));
                 })
                 .await;
 
@@ -602,7 +602,7 @@ mod node_depman_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("pnpm-test", |config| {
-                    config.host(HostOS::MacOS, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::MacOS, HostArch::Arm64));
                 })
                 .await;
 
@@ -630,7 +630,7 @@ mod node_depman_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("pnpm-test", |config| {
-                    config.host(HostOS::Windows, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::Windows, HostArch::X64));
                 })
                 .await;
 
@@ -657,7 +657,7 @@ mod node_depman_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("pnpm-test", |config| {
-                    config.host(HostOS::MacOS, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::MacOS, HostArch::Arm64));
                 })
                 .await;
 
@@ -692,7 +692,7 @@ mod node_depman_tool {
             let plugin = sandbox
                 .create_plugin_with_config("pnpm-test", |config| {
                     config
-                        .host(HostOS::MacOS, HostArch::X64)
+                        .host(HostPlatform::new(HostOS::MacOS, HostArch::X64))
                         .tool_config(NodeDepmanPluginConfig {
                             registry_url: "https://some-internal-url.example".into(),
                         });
@@ -724,7 +724,7 @@ mod node_depman_tool {
 
             let plugin = sandbox
                 .create_plugin_with_config("pnpm-test", |config| {
-                    config.host(HostOS::Linux, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::Arm64));
                 })
                 .await;
 
@@ -758,7 +758,7 @@ mod node_depman_tool {
 
             let plugin = sandbox
                 .create_plugin_with_config("pnpm-test", |config| {
-                    config.host(HostOS::Linux, HostArch::Arm64).tool_config(
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::Arm64)).tool_config(
                         NodeDepmanPluginConfig {
                             registry_url: "https://registry.yarnpkg.com".into(),
                         },
@@ -838,7 +838,7 @@ mod node_depman_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("pnpm-test", |config| {
-                    config.host(HostOS::MacOS, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::MacOS, HostArch::Arm64));
                 })
                 .await;
 
@@ -930,7 +930,7 @@ mod node_depman_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("pnpm-test", |config| {
-                    config.host(HostOS::Windows, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::Windows, HostArch::X64));
                 })
                 .await;
 
@@ -962,7 +962,7 @@ mod node_depman_tool {
 
             let plugin = sandbox
                 .create_plugin_with_config("pnpm-test", |config| {
-                    config.host(HostOS::Linux, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::Arm64));
                 })
                 .await;
 
@@ -995,7 +995,7 @@ mod node_depman_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("pnpm-test", |config| {
-                    config.host(HostOS::Linux, HostArch::X86);
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::X86));
                 })
                 .await;
 
@@ -1016,7 +1016,7 @@ mod node_depman_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("pnpm-test", |config| {
-                    config.host(HostOS::FreeBSD, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::FreeBSD, HostArch::Arm64));
                 })
                 .await;
 
@@ -1037,7 +1037,7 @@ mod node_depman_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("pnpm-test", |config| {
-                    config.host(HostOS::MacOS, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::MacOS, HostArch::Arm64));
                 })
                 .await;
 
@@ -1057,7 +1057,7 @@ mod node_depman_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("pnpm-test", |config| {
-                    config.host(HostOS::MacOS, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::MacOS, HostArch::Arm64));
                 })
                 .await;
 
@@ -1096,7 +1096,7 @@ mod node_depman_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("pnpm-test", |config| {
-                    config.host(HostOS::Windows, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::Windows, HostArch::X64));
                 })
                 .await;
 
@@ -1120,7 +1120,7 @@ mod node_depman_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("pnpm-test", |config| {
-                    config.host(HostOS::MacOS, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::MacOS, HostArch::Arm64));
                 })
                 .await;
 
@@ -1154,7 +1154,7 @@ mod node_depman_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("yarn-test", |config| {
-                    config.host(HostOS::Linux, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::X64));
                 })
                 .await;
 
@@ -1180,7 +1180,7 @@ mod node_depman_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("yarn-test", |config| {
-                    config.host(HostOS::MacOS, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::MacOS, HostArch::X64));
                 })
                 .await;
 
@@ -1207,7 +1207,7 @@ mod node_depman_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("yarn-test", |config| {
-                    config.host(HostOS::MacOS, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::MacOS, HostArch::X64));
                 })
                 .await;
 
@@ -1234,7 +1234,7 @@ mod node_depman_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("yarn-test", |config| {
-                    config.host(HostOS::MacOS, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::MacOS, HostArch::X64));
                 })
                 .await;
 
@@ -1262,7 +1262,7 @@ mod node_depman_tool {
             let plugin = sandbox
                 .create_plugin_with_config("yarn-test", |config| {
                     config
-                        .host(HostOS::MacOS, HostArch::X64)
+                        .host(HostPlatform::new(HostOS::MacOS, HostArch::X64))
                         .tool_config(NodeDepmanPluginConfig {
                             registry_url: "https://registry.yarnpkg.com".into(),
                         });
@@ -1305,7 +1305,7 @@ mod node_depman_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("yarn-test", |config| {
-                    config.host(HostOS::MacOS, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::MacOS, HostArch::X64));
                 })
                 .await;
 
@@ -1333,7 +1333,7 @@ mod node_depman_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("yarn-test", |config| {
-                    config.host(HostOS::MacOS, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::MacOS, HostArch::X64));
                 })
                 .await;
 
@@ -1362,7 +1362,7 @@ mod node_depman_tool {
 
             let plugin = sandbox
                 .create_plugin_with_config("yarn-test", |config| {
-                    config.host(HostOS::Linux, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::Arm64));
                 })
                 .await;
 
@@ -1406,7 +1406,7 @@ npmRegistries:
 
             let plugin = sandbox
                 .create_plugin_with_config("yarn-test", |config| {
-                    config.host(HostOS::Linux, HostArch::Arm64).tool_config(
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::Arm64)).tool_config(
                         NodeDepmanPluginConfig {
                             registry_url: "https://registry.yarnpkg.com".into(),
                         },
@@ -1457,7 +1457,7 @@ npmRegistries:
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("yarn-test", |config| {
-                    config.host(HostOS::MacOS, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::MacOS, HostArch::Arm64));
                 })
                 .await;
 
@@ -1581,7 +1581,7 @@ npmRegistries:
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("yarn-test", |config| {
-                    config.host(HostOS::Windows, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::Windows, HostArch::X64));
                 })
                 .await;
 
@@ -1610,7 +1610,7 @@ npmRegistries:
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("yarn-test", |config| {
-                    config.host(HostOS::MacOS, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::MacOS, HostArch::X64));
                 })
                 .await;
 
@@ -1631,7 +1631,7 @@ npmRegistries:
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("yarn-test", |config| {
-                    config.host(HostOS::Windows, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::Windows, HostArch::X64));
                 })
                 .await;
 
@@ -1684,7 +1684,7 @@ npmRegistries:
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("yarn-test", |config| {
-                    config.host(HostOS::Linux, HostArch::Riscv64);
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::Riscv64));
                 })
                 .await;
 
@@ -1705,7 +1705,7 @@ npmRegistries:
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("yarn-test", |config| {
-                    config.host(HostOS::MacOS, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::MacOS, HostArch::Arm64));
                 })
                 .await;
 
@@ -1725,7 +1725,7 @@ npmRegistries:
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("yarn-test", |config| {
-                    config.host(HostOS::MacOS, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::MacOS, HostArch::Arm64));
                 })
                 .await;
 
@@ -1754,7 +1754,7 @@ npmRegistries:
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("yarn-test", |config| {
-                    config.host(HostOS::Windows, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::Windows, HostArch::X64));
                 })
                 .await;
 

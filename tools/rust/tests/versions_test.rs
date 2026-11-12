@@ -62,6 +62,7 @@ mod rust_tool {
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("1.60.0").unwrap()),
+                ..Default::default()
             }
         );
     }
@@ -95,6 +96,7 @@ mod rust_tool {
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("1.70.0").unwrap()),
+                ..Default::default()
             }
         );
     }
@@ -108,7 +110,7 @@ mod rust_tool {
             plugin
                 .parse_version_file(version_file(&sandbox, "rust-toolchain", ""))
                 .await,
-            ParseVersionFileOutput { version: None }
+            ParseVersionFileOutput::default()
         );
     }
 
@@ -127,6 +129,7 @@ mod rust_tool {
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("1.70.0").unwrap()),
+                ..Default::default()
             }
         );
     }
@@ -147,6 +150,7 @@ mod rust_tool {
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("1.70").unwrap()),
+                ..Default::default()
             }
         );
     }
@@ -160,7 +164,7 @@ mod rust_tool {
             plugin
                 .parse_version_file(version_file(&sandbox, "rust-toolchain.toml", "[toolchain]"))
                 .await,
-            ParseVersionFileOutput { version: None }
+            ParseVersionFileOutput::default()
         );
     }
 }

@@ -62,6 +62,7 @@ mod bun_tool {
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse(">=1").unwrap()),
+                ..Default::default()
             }
         );
     }
@@ -81,6 +82,7 @@ mod bun_tool {
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
+                ..Default::default()
             }
         );
     }
@@ -100,6 +102,7 @@ mod bun_tool {
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse(">=1").unwrap()),
+                ..Default::default()
             }
         );
     }
@@ -119,6 +122,7 @@ mod bun_tool {
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("1.20.2").unwrap()),
+                ..Default::default()
             }
         );
     }
@@ -134,6 +138,7 @@ mod bun_tool {
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("~2").unwrap()),
+                ..Default::default()
             }
         );
     }
@@ -149,6 +154,7 @@ mod bun_tool {
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("^2.1").unwrap()),
+                ..Default::default()
             }
         );
     }
@@ -164,6 +170,7 @@ mod bun_tool {
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("~2").unwrap()),
+                ..Default::default()
             }
         );
     }
@@ -183,6 +190,7 @@ mod bun_tool {
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("^2.1").unwrap()),
+                ..Default::default()
             }
         );
     }

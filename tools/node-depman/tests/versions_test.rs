@@ -40,6 +40,7 @@ mod node_depman_tool {
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
+                ..Default::default()
             }
         );
     }
@@ -59,6 +60,7 @@ mod node_depman_tool {
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
+                ..Default::default()
             }
         );
     }
@@ -78,6 +80,7 @@ mod node_depman_tool {
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("7.8.9").unwrap()),
+                ..Default::default()
             }
         );
     }
@@ -119,7 +122,7 @@ mod node_depman_tool {
                         r#"{ "packageManager": "yarn@1.2.3" }"#
                     ))
                     .await,
-                ParseVersionFileOutput { version: None }
+                ParseVersionFileOutput::default()
             );
         }
 
@@ -138,6 +141,7 @@ mod node_depman_tool {
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
+                    ..Default::default()
                 }
             );
         }
@@ -155,6 +159,7 @@ mod node_depman_tool {
             )).await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
+                ..Default::default()
             }
         );
         }
@@ -174,6 +179,7 @@ mod node_depman_tool {
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("latest").unwrap()),
+                    ..Default::default()
                 }
             );
         }
@@ -193,6 +199,7 @@ mod node_depman_tool {
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
+                    ..Default::default()
                 }
             );
         }
@@ -212,6 +219,7 @@ mod node_depman_tool {
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
+                    ..Default::default()
                 }
             );
         }
@@ -231,6 +239,7 @@ mod node_depman_tool {
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
+                    ..Default::default()
                 }
             );
         }
@@ -258,7 +267,7 @@ mod node_depman_tool {
                         r#"{ "packageManager": "npm@1.2.3" }"#
                     ))
                     .await,
-                ParseVersionFileOutput { version: None }
+                ParseVersionFileOutput::default()
             );
         }
 
@@ -277,6 +286,7 @@ mod node_depman_tool {
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
+                    ..Default::default()
                 }
             );
         }
@@ -296,6 +306,7 @@ mod node_depman_tool {
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("latest").unwrap()),
+                    ..Default::default()
                 }
             );
         }
@@ -315,6 +326,7 @@ mod node_depman_tool {
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
+                    ..Default::default()
                 }
             );
         }
@@ -334,6 +346,7 @@ mod node_depman_tool {
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
+                    ..Default::default()
                 }
             );
         }
@@ -353,6 +366,7 @@ mod node_depman_tool {
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
+                    ..Default::default()
                 }
             );
         }
@@ -380,7 +394,7 @@ mod node_depman_tool {
                         r#"{ "packageManager": "yarn@1.2.3" }"#
                     ))
                     .await,
-                ParseVersionFileOutput { version: None }
+                ParseVersionFileOutput::default()
             );
         }
 
@@ -399,6 +413,7 @@ mod node_depman_tool {
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
+                    ..Default::default()
                 }
             );
         }
@@ -418,6 +433,7 @@ mod node_depman_tool {
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("latest").unwrap()),
+                    ..Default::default()
                 }
             );
         }
@@ -437,6 +453,7 @@ mod node_depman_tool {
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
+                    ..Default::default()
                 }
             );
         }
@@ -457,6 +474,7 @@ mod node_depman_tool {
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
+                    ..Default::default()
                 }
             );
         }
@@ -476,6 +494,7 @@ mod node_depman_tool {
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
+                    ..Default::default()
                 }
             );
         }
@@ -527,7 +546,7 @@ mod node_depman_tool {
                         r#"{ "packageManager": "pnpm@1.2.3" }"#
                     ))
                     .await,
-                ParseVersionFileOutput { version: None }
+                ParseVersionFileOutput::default()
             );
         }
 
@@ -546,6 +565,7 @@ mod node_depman_tool {
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
+                    ..Default::default()
                 }
             );
         }
@@ -565,6 +585,7 @@ mod node_depman_tool {
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("latest").unwrap()),
+                    ..Default::default()
                 }
             );
         }
@@ -584,6 +605,7 @@ mod node_depman_tool {
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
+                    ..Default::default()
                 }
             );
         }
@@ -603,6 +625,7 @@ mod node_depman_tool {
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
+                    ..Default::default()
                 }
             );
         }
@@ -622,6 +645,7 @@ mod node_depman_tool {
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse("1.2.3").unwrap()),
+                    ..Default::default()
                 }
             );
         }

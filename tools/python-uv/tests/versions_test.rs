@@ -59,6 +59,7 @@ mod python_uv_tool {
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("=2.1.0").unwrap()),
+                ..Default::default()
             }
         );
     }
@@ -78,6 +79,7 @@ mod python_uv_tool {
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse(">=2.1.0, =2.*").unwrap()),
+                ..Default::default()
             }
         );
     }
@@ -97,6 +99,7 @@ mod python_uv_tool {
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse(">=0.5.0").unwrap()),
+                ..Default::default()
             }
         );
     }
@@ -116,6 +119,7 @@ mod python_uv_tool {
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("=0.5.0").unwrap()),
+                ..Default::default()
             }
         );
     }

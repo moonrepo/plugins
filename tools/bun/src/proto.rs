@@ -92,7 +92,10 @@ pub fn parse_version_file(
         version = Some(UnresolvedVersionSpec::parse(constraint)?);
     }
 
-    Ok(Json(ParseVersionFileOutput { version }))
+    Ok(Json(ParseVersionFileOutput {
+        version,
+        ..Default::default()
+    }))
 }
 
 // Version files are detected before `package.json`, so must be updated when they exist

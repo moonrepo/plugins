@@ -152,6 +152,7 @@ pub fn parse_version_file(
         version: extract_version_from_text(&content)
             .map(UnresolvedVersionSpec::parse)
             .transpose()?,
+        ..Default::default()
     }))
 }
 

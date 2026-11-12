@@ -78,6 +78,7 @@ pub fn parse_version_file(
 
     Ok(Json(ParseVersionFileOutput {
         version: value.map(UnresolvedVersionSpec::parse).transpose()?,
+        ..Default::default()
     }))
 }
 

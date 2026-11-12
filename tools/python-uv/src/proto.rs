@@ -55,7 +55,10 @@ pub fn parse_version_file(
         version = Some(parse_pep440_spec(constraint)?);
     }
 
-    Ok(Json(ParseVersionFileOutput { version }))
+    Ok(Json(ParseVersionFileOutput {
+        version,
+        ..Default::default()
+    }))
 }
 
 #[plugin_fn]

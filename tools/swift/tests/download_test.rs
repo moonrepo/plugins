@@ -38,7 +38,7 @@ mod swift_tool {
             let plugin = sandbox
                 .create_plugin_with_config("swift-test", |config| {
                     config
-                        .host(HostOS::Linux, HostArch::X64)
+                        .host(HostPlatform::new(HostOS::Linux, HostArch::X64))
                         .tool_config(SwiftToolConfig {
                             linux_platform: Some(linux_platform.clone()),
                             ..Default::default()
@@ -87,7 +87,7 @@ mod swift_tool {
             let plugin = sandbox
                 .create_plugin_with_config("swift-test", |config| {
                     config
-                        .host(HostOS::Linux, HostArch::X64)
+                        .host(HostPlatform::new(HostOS::Linux, HostArch::X64))
                         .tool_config(SwiftToolConfig {
                             linux_platform: Some(linux_platform.clone()),
                             ..Default::default()
@@ -141,7 +141,7 @@ mod swift_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("swift-test", |config| {
-                    config.host(os, arch).tool_config(ubuntu_2404());
+                    config.host(HostPlatform::new(os, arch)).tool_config(ubuntu_2404());
                 })
                 .await;
 
@@ -166,7 +166,7 @@ mod swift_tool {
         let plugin = sandbox
             .create_plugin_with_config("swift-test", |config| {
                 config
-                    .host(HostOS::Linux, HostArch::Arm64)
+                    .host(HostPlatform::new(HostOS::Linux, HostArch::Arm64))
                     .tool_config(ubuntu_2404());
             })
             .await;
@@ -201,7 +201,7 @@ mod swift_tool {
         let plugin = sandbox
             .create_plugin_with_config("swift-test", |config| {
                 config
-                    .host(HostOS::Linux, HostArch::X64)
+                    .host(HostPlatform::new(HostOS::Linux, HostArch::X64))
                     .tool_config(ubuntu_2404());
             })
             .await;
@@ -236,7 +236,7 @@ mod swift_tool {
         let plugin = sandbox
             .create_plugin_with_config("swift-test", |config| {
                 config
-                    .host(HostOS::Linux, HostArch::X64)
+                    .host(HostPlatform::new(HostOS::Linux, HostArch::X64))
                     .tool_config(ubuntu_2404());
             })
             .await;
@@ -272,7 +272,7 @@ mod swift_tool {
         let plugin = sandbox
             .create_plugin_with_config("swift-test", |config| {
                 config
-                    .host(HostOS::Linux, HostArch::X64)
+                    .host(HostPlatform::new(HostOS::Linux, HostArch::X64))
                     .tool_config(ubuntu_2404());
             })
             .await;
@@ -293,7 +293,7 @@ mod swift_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("swift-test", |config| {
-                config.host(HostOS::MacOS, HostArch::Arm64);
+                config.host(HostPlatform::new(HostOS::MacOS, HostArch::Arm64));
             })
             .await;
 
@@ -321,7 +321,7 @@ mod swift_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("swift-test", |config| {
-                config.host(HostOS::MacOS, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::MacOS, HostArch::X64));
             })
             .await;
 
@@ -350,7 +350,7 @@ mod swift_tool {
         let plugin = sandbox
             .create_plugin_with_config("swift-test", |config| {
                 config
-                    .host(HostOS::Linux, HostArch::X64)
+                    .host(HostPlatform::new(HostOS::Linux, HostArch::X64))
                     .tool_config(ubuntu_2404());
             })
             .await;

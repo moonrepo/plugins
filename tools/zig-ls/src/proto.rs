@@ -53,7 +53,10 @@ pub fn parse_version_file(
         .map(|source| source.to_zls_requirement())
         .transpose()?;
 
-    Ok(Json(ParseVersionFileOutput { version }))
+    Ok(Json(ParseVersionFileOutput {
+        version,
+        ..Default::default()
+    }))
 }
 
 #[plugin_fn]
