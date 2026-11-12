@@ -89,9 +89,7 @@ pub fn native_install(
     Json(input): Json<NativeInstallInput>,
 ) -> FnResult<Json<NativeInstallOutput>> {
     let env = get_host_environment()?;
-    let script_path = input.context.temp_dir.join("get-poetry.py");
-
-    // Fetched for every install, as it's written to the tool's shared temp directory
+    let script_path = input.temp_dir.join("get-poetry.py");
     let mut script = fetch_text("https://install.python-poetry.org")?;
 
     // https://stackoverflow.com/a/77120044

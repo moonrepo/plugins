@@ -28,6 +28,8 @@
 
 #### ⚙️ Internal
 
+- `rustup-init` is now downloaded to a temporary directory for each install, which proto removes
+  afterwards, instead of reusing a copy in the tool's temporary directory.
 - Version files are now read from their path, as the `content` input is deprecated.
 
 ## 0.13.12

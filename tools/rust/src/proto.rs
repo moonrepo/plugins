@@ -130,24 +130,22 @@ pub fn native_install(
         debug!("Installing <shell>rustup</shell>");
 
         let is_windows = env.os.is_windows();
-        let script_path = input.context.temp_dir.join(if is_windows {
+        let script_path = input.temp_dir.join(if is_windows {
             "rustup-init.exe"
         } else {
             "rustup-init.sh"
         });
 
-        if !script_path.exists() {
-            fs::write_file(
-                &script_path,
-                fetch_bytes(if !is_windows {
-                    "https://sh.rustup.rs"
-                } else if env.arch == HostArch::Arm64 {
-                    "https://win.rustup.rs/aarch64"
-                } else {
-                    "https://win.rustup.rs/x86_64"
-                })?,
-            )?;
-        }
+        fs::write_file(
+            &script_path,
+            fetch_bytes(if !is_windows {
+                "https://sh.rustup.rs"
+            } else if env.arch == HostArch::Arm64 {
+                "https://win.rustup.rs/aarch64"
+            } else {
+                "https://win.rustup.rs/x86_64"
+            })?,
+        )?;
 
         exec(ExecCommandInput {
             command: script_path

@@ -38,6 +38,8 @@
 
 #### ⚙️ Internal
 
+- The installer script is now downloaded to a temporary directory for each install, which proto
+  removes afterwards.
 - Version files are now read from their path, as the `content` input is deprecated.
 
 ## 0.1.9
