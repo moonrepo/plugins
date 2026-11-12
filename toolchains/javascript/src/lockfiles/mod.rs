@@ -10,15 +10,23 @@ pub use npm::*;
 pub use pnpm::*;
 pub use yarn::*;
 
-use moon_pdk_api::{AnyResult, VersionSpec};
+use moon_pdk_api::VersionSpec;
 
-pub(super) fn parse_version_spec<T: AsRef<str>>(version: T) -> AnyResult<Option<VersionSpec>> {
+// ADR-0008.5: Skip a version that can't be parsed, instead of failing the whole lockfile
+pub(super) fn parse_version_spec<T: AsRef<str>>(name: &str, version: T) -> Option<VersionSpec> {
     let version = version.as_ref();
 
     if version.is_empty() || version.contains('#') || version.contains(':') {
-        Ok(None)
-    } else {
-        Ok(Some(VersionSpec::parse(version)?))
+        return None;
+    }
+
+    match VersionSpec::parse(version) {
+        Ok(spec) => Some(spec),
+        Err(error) => {
+            tracing::debug!("Skipping the locked version {version} of {name}: {error}");
+
+            None
+        }
     }
 }
 
@@ -60,6 +68,20 @@ pub(super) fn parse_name_and_version<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    mod parse_version_spec {
+        use super::*;
+
+        #[test]
+        fn parses_versions() {
+            assert!(parse_version_spec("a", "1.2.3").is_some());
+        }
+
+        #[test]
+        fn skips_invalid_versions() {
+            assert!(parse_version_spec("a", "1..2").is_none());
+        }
+    }
 
     mod parse_name_and_version {
         use super::*;

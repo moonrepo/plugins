@@ -60,10 +60,12 @@ pub fn parse_version_file(
 pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
     let config = get_tool_config::<ZigToolConfig>()?;
     let index: ZigReleaseIndex = fetch_json(&config.index_url)?;
-    let canary = index
-        .master()
-        .map(|release| UnresolvedVersionSpec::parse(&release.version))
-        .transpose()?;
+    // ADR-0008.5: Skip the canary when its version can't be parsed
+    let canary = index.master().and_then(|release| {
+        UnresolvedVersionSpec::parse(&release.version)
+            .inspect_err(|error| debug!("Skipping the canary {}: {error}", release.version))
+            .ok()
+    });
     let mut output = LoadVersionsOutput::from(index.stable_versions())?;
 
     if let Some(canary) = canary {

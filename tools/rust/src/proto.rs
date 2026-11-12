@@ -49,8 +49,9 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
     let tags = load_git_tags("https://github.com/rust-lang/rust")?
         .into_iter()
         .filter_map(|tag| {
-            // Filter out old versions
-            if tag.starts_with("release-") || tag.starts_with("0.") {
+            // ADR-0008.7: Skip tags that aren't versions, like the old `release-0.1`,
+            // and versions before 1.0
+            if !tag.starts_with(|ch: char| ch.is_ascii_digit()) || tag.starts_with("0.") {
                 None
             } else {
                 Some(tag)

@@ -29,7 +29,7 @@ pub(crate) fn parse_yarn_lock_content<T: AsRef<str>>(
                 .entry(entry.name.to_string())
                 .or_default()
                 .push(LockDependency {
-                    version: parse_version_spec(entry.version)?,
+                    version: parse_version_spec(entry.name, entry.version),
                     ..Default::default()
                 });
         } else {
@@ -38,7 +38,7 @@ pub(crate) fn parse_yarn_lock_content<T: AsRef<str>>(
                 .entry(entry.name.to_string())
                 .or_default()
                 .push(LockDependency {
-                    version: parse_version_spec(entry.version)?,
+                    version: parse_version_spec(entry.name, entry.version),
                     hash: Some(entry.integrity.into()),
                     ..Default::default()
                 });

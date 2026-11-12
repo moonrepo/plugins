@@ -105,7 +105,12 @@ pub fn parse_manifest(
             if let Some(index) = specifier.rfind('@')
                 && index != 4
             {
-                config.version = Some(UnresolvedVersionSpec::parse(&specifier[index + 1..])?);
+                // ADR-0008.5
+                config.version = UnresolvedVersionSpec::parse(&specifier[index + 1..])
+                    .inspect_err(|error| {
+                        debug!("Skipping the version of {name} in deno.json: {error}")
+                    })
+                    .ok();
                 config.reference = Some(specifier[0..index].into());
             } else {
                 config.reference = Some(specifier.into());
@@ -119,8 +124,11 @@ pub fn parse_manifest(
             .insert(name.to_owned(), ManifestDependency::Config(config));
     }
 
+    // ADR-0008.5
     if let Some(version) = &manifest.version {
-        output.version = Some(Version::parse(version)?);
+        output.version = Version::parse(version)
+            .inspect_err(|error| debug!("Skipping the version in deno.json: {error}"))
+            .ok();
     }
 
     // https://docs.deno.com/runtime/reference/cli/publish/#package-requirements

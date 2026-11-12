@@ -32,6 +32,7 @@ schematic = { workspace = true, features = ["config"] }
 serde = { workspace = true }
 shell-words = { workspace = true }
 starbase_utils = { workspace = true, features = ["json", "yaml"] }
+tracing = { workspace = true }
 
 # Lockfiles
 # chaste-pnpm = "0.5.0"

@@ -31,7 +31,7 @@ pub fn parse_poetry_lock(path: &VirtualPath, output: &mut ParseLockOutput) -> An
 
     for package in lock.package {
         let mut dep = LockDependency {
-            version: parse_version_spec(package.version)?,
+            version: parse_version_spec(&package.name, package.version),
             ..Default::default()
         };
 

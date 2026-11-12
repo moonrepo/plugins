@@ -105,6 +105,6 @@ defines the process.
 | [0005](docs/adr/0005-plugin-code-does-not-panic-on-input.md)           | accepted | All crates    | Return errors on bad input, and `unwrap` only values the code wrote      |
 | [0006](docs/adr/0006-unit-tests-outside-wasm-feature.md)               | accepted | All crates    | Unit tests live outside the `wasm` feature, so the `test` task runs them |
 | [0007](docs/adr/0007-check-exit-codes-before-output.md)                | accepted | All crates    | Check a command's exit code before using its output                      |
+| [0008](docs/adr/0008-parse-other-tools-formats-leniently.md)           | accepted | All crates    | Skip what can't be parsed in other tools' formats, instead of failing    |
 | [draft](docs/adr/draft-cache-expensive-work-in-memory.md)              | proposed | All crates    | Cache expensive work in memory, and never fail on a var write            |
 | [draft](docs/adr/draft-virtual-paths-in-wasm-real-paths-in-strings.md) | proposed | All crates    | Virtual paths inside WASM, real paths only in strings the host passes on |
-| [draft](docs/adr/draft-parse-other-tools-formats-leniently.md)         | proposed | All crates    | Skip what can't be parsed in other tools' formats, instead of failing    |

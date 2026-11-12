@@ -6,6 +6,10 @@
 
 - Panics now report their message, instead of an `unreachable` WASM trap error.
 
+#### 🐞 Fixes
+
+- Fixed input kinds from newer Nx versions failing the migration. They're now skipped.
+
 ## 1.0.5
 
 #### 🚀 Updates

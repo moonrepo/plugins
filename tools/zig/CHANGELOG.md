@@ -12,6 +12,7 @@
 #### 🚀 Updates
 
 - Panics now report their message, instead of an `unreachable` WASM trap error.
+- A `master` version that can't be parsed is now skipped, instead of failing to load versions.
 
 #### 🐞 Fixes
 

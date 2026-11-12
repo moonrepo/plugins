@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-11-10
 applies-to: [backends/**, crates/**, extensions/**, toolchains/**, tools/**]
 ---
@@ -125,7 +125,11 @@ Version lists work differently, and that's intended:
 
 ## Exceptions
 
-None.
+- A tool's `parse_version_file` MAY return an error when the version it finds for its tool can't
+  be parsed, instead of skipping it (rule 5). This covers a field in a larger file too, like
+  `engines` in `package.json` or `required-version` in `uv.toml`. Skipped entries are only logged
+  with `debug!`, so skipping would make proto use a different version from the one the user
+  pinned, without telling them.
 
 ## Consequences
 

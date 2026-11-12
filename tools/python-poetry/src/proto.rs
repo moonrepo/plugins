@@ -60,9 +60,9 @@ pub fn parse_version_file(
         match parse_pep440_spec(constraint) {
             Ok(spec) => version = Some(spec),
             Err(error) => {
-                host_log!(
-                    warn,
-                    "Unable to use <property>requires-poetry</property> <version>{constraint}</version> from <file>pyproject.toml</file>, ignoring it: {error}",
+                // ADR-0008.6
+                debug!(
+                    "Skipping requires-poetry {constraint} in pyproject.toml, as it can't be parsed: {error}"
                 );
             }
         };
@@ -75,6 +75,8 @@ pub fn parse_version_file(
 pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
     let tags = load_git_tags("https://github.com/python-poetry/poetry")?
         .into_iter()
+        // ADR-0008.7: Releases are tagged with the version alone
+        .filter(|tag| tag.starts_with(|ch: char| ch.is_ascii_digit()))
         .map(|tag| from_pep_version(&tag))
         .collect::<Vec<_>>();
 

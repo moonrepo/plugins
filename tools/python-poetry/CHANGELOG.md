@@ -5,6 +5,9 @@
 #### 🚀 Updates
 
 - Panics now report their message, instead of an `unreachable` WASM trap error.
+- Git tags that aren't versions are now skipped when loading versions, instead of failing.
+- A `requires-poetry` in `pyproject.toml` that can't be parsed is now logged at the debug level,
+  instead of with a warning.
 
 #### 🐞 Fixes
 

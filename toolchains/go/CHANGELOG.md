@@ -52,6 +52,7 @@
 - `go.sum`, `go.work.sum` and `go.work` are now parsed with [winnow](https://docs.rs/winnow)
   grammars. A line that can't be parsed is skipped instead of failing the file.
 - Panics now report their message, instead of an `unreachable` WASM trap error.
+- A `go.mod` that can't be parsed is now logged at the debug level, instead of with a warning.
 
 #### 🐞 Fixes
 
@@ -70,6 +71,8 @@
 - Fixed `go.sum` checksums that contain `//`, like `golang.org/x/net v0.10.0`, being cut off as if
   the rest were a comment.
 - Updated `go_tool` with the fixes below, which the toolchain uses for tier 3.
+- Fixed a version that can't be parsed in `go.sum` or `go.mod` failing every task hash. The version
+  is now skipped.
 
 ## 1.5.3
 

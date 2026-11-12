@@ -2470,6 +2470,7 @@ dependencies = [
  "starbase_utils",
  "tokio",
  "toolchain_common",
+ "tracing",
  "winnow 1.0.4",
 ]
 
@@ -3129,6 +3130,7 @@ dependencies = [
  "starbase_utils",
  "tokio",
  "toolchain_common",
+ "tracing",
  "yarn-lock-parser",
 ]
 

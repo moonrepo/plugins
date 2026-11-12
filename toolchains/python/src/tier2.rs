@@ -318,13 +318,18 @@ pub fn install_dependencies(
 pub fn parse_lock(Json(input): Json<ParseLockInput>) -> FnResult<Json<ParseLockOutput>> {
     let mut output = ParseLockOutput::default();
 
-    match input.path.file_name().and_then(|name| name.to_str()) {
-        Some("pylock.toml") => parse_pylock_toml(&input.path, &mut output)?,
-        Some("poetry.lock") => parse_poetry_lock(&input.path, &mut output)?,
-        Some("requirements.txt") => parse_requirements_txt(&input.path, &mut output)?,
-        Some("uv.lock") => parse_uv_lock(&input.path, &mut output)?,
-        _ => {}
+    let result = match input.path.file_name().and_then(|name| name.to_str()) {
+        Some("pylock.toml") => parse_pylock_toml(&input.path, &mut output),
+        Some("poetry.lock") => parse_poetry_lock(&input.path, &mut output),
+        Some("requirements.txt") => parse_requirements_txt(&input.path, &mut output),
+        Some("uv.lock") => parse_uv_lock(&input.path, &mut output),
+        _ => Ok(()),
     };
+
+    // ADR-0008.8
+    if let Err(error) = result {
+        return Err(anyhow!("Failed to parse <file>{}</file>: {error}", input.path).into());
+    }
 
     Ok(Json(output))
 }

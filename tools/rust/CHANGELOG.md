@@ -10,6 +10,7 @@
   separate toolchain from proto's.
 - Added `components` and `targets` to the `rust-toolchain.toml` model.
 - Panics now report their message, instead of an `unreachable` WASM trap error.
+- Git tags that aren't versions are now skipped when loading versions, instead of failing.
 
 #### 🐞 Fixes
 

@@ -64,9 +64,13 @@ pub enum BunLockPackage {
         JsonValue, // object
     ),
 
-    // Must be last!
+    // Must be last, other than `Unknown`!
     #[allow(dead_code)]
     Workspace(Vec<String>),
+
+    // ADR-0008.4: Shapes from newer Bun versions, which are skipped
+    #[allow(dead_code)]
+    Unknown(JsonValue),
 }
 
 // Only fields that are actually used are defined, as other fields
@@ -89,8 +93,15 @@ pub fn parse_bun_lock(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyRe
     let content = fs::read_file(path)?;
     let lock: BunLock = json::parse(&content)?; // JSON5
 
-    for package in lock.packages.into_values() {
+    for (key, package) in lock.packages {
         let (name, version, integrity) = match &package {
+            BunLockPackage::Unknown(_) => {
+                tracing::debug!(
+                    "Skipping the package {key} in bun.lock, as its entry has an unknown shape"
+                );
+
+                continue;
+            }
             BunLockPackage::Workspace(values) => {
                 if let Some((name, ref_name)) = values
                     .first()
@@ -102,10 +113,10 @@ pub fn parse_bun_lock(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyRe
                         .entry(name.to_string())
                         .or_default()
                         .push(LockDependency {
-                            version: match &ref_package.version {
-                                Some(version) => parse_version_spec(version)?,
-                                None => None,
-                            },
+                            version: ref_package
+                                .version
+                                .as_ref()
+                                .and_then(|version| parse_version_spec(name, version)),
                             ..Default::default()
                         });
                 }
@@ -156,7 +167,7 @@ pub fn parse_bun_lock(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyRe
             .entry(name.to_string())
             .or_default()
             .push(LockDependency {
-                version: parse_version_spec(version)?,
+                version: parse_version_spec(name, version),
                 hash: integrity.cloned(),
                 ..Default::default()
             });
@@ -233,6 +244,14 @@ mod tests {
         assert!(matches!(
             parse(r#"["a@workspace:packages/a"]"#),
             BunLockPackage::Workspace(..)
+        ));
+    }
+
+    #[test]
+    fn parses_unknown_entry() {
+        assert!(matches!(
+            parse(r#"{ "name": "a" }"#),
+            BunLockPackage::Unknown(..)
         ));
     }
 }

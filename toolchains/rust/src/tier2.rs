@@ -377,11 +377,18 @@ pub fn install_dependencies(
 #[plugin_fn]
 pub fn parse_lock(Json(input): Json<ParseLockInput>) -> FnResult<Json<ParseLockOutput>> {
     let mut output = ParseLockOutput::default();
-    let lock = cargo_lock::Lockfile::load(input.path)?;
+    // ADR-0008.8
+    let lock = cargo_lock::Lockfile::load(&input.path)
+        .map_err(|error| anyhow!("Failed to parse <file>{}</file>: {error}", input.path))?;
 
     for package in lock.packages {
         let mut dep = LockDependency {
-            version: VersionSpec::parse(package.version.to_string()).ok(),
+            // ADR-0008.5
+            version: VersionSpec::parse(package.version.to_string())
+                .inspect_err(|error| {
+                    debug!("Skipping the locked version of {}: {error}", package.name)
+                })
+                .ok(),
             ..Default::default()
         };
 
@@ -454,8 +461,11 @@ pub fn parse_manifest(
     };
 
     if let Some(package) = &manifest.package {
+        // ADR-0008.5
         if let Ok(version) = package.version.get() {
-            output.version = Some(Version::parse(version)?);
+            output.version = Version::parse(version)
+                .inspect_err(|error| debug!("Skipping the version in Cargo.toml: {error}"))
+                .ok();
         }
 
         if let Ok(publish) = package.publish.get() {
@@ -485,15 +495,17 @@ pub fn parse_manifest(
 }
 
 // Cargo treats bare requirements (`1.2.3`) as caret, so they can match the
-// resolved version in the lockfile. Unsupported syntax is skipped.
+// resolved version in the lockfile. Unsupported syntax is skipped (ADR-0008.5).
 fn parse_requirement(req: &str) -> Option<UnresolvedVersionSpec> {
     let req = req.trim();
 
     if req.starts_with(|ch: char| ch.is_ascii_digit()) {
-        UnresolvedVersionSpec::parse(format!("^{req}")).ok()
+        UnresolvedVersionSpec::parse(format!("^{req}"))
     } else {
-        UnresolvedVersionSpec::parse(req).ok()
+        UnresolvedVersionSpec::parse(req)
     }
+    .inspect_err(|error| debug!("Skipping the requirement {req} in Cargo.toml: {error}"))
+    .ok()
 }
 
 #[plugin_fn]
