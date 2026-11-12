@@ -48,6 +48,43 @@ mod swift_tool {
     }
 
     #[tokio::test(flavor = "multi_thread")]
+    async fn registers_linux_platform_from_host_distro() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("swift-test", |config| {
+                config.host_with(|host| {
+                    host.os = HostOS::Linux;
+                    host.arch = HostArch::X64;
+                    host.libc = HostLibc::Gnu;
+                    host.details = Some(HostDetails {
+                        distro: Some(HostDistro {
+                            id: "rocky".into(),
+                            id_like: vec!["rhel".into(), "centos".into(), "fedora".into()],
+                            version_id: Some("10.0".into()),
+                        }),
+                        ..Default::default()
+                    });
+                });
+            })
+            .await;
+
+        let metadata = plugin
+            .register_tool(RegisterToolInput {
+                id: Id::raw("swift"),
+            })
+            .await;
+
+        assert_eq!(
+            metadata
+                .lock_options
+                .metadata
+                .get("platform")
+                .map(String::as_str),
+            Some("redhat-ubi-10")
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
     async fn registers_linux_platform_lock_metadata() {
         let platforms = [
             (LinuxPlatform::AmazonLinux2, "amazon-linux-2"),

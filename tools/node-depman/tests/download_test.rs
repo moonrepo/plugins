@@ -185,11 +185,11 @@ mod node_depman_tool {
 
             let plugin = sandbox
                 .create_plugin_with_config("npm-test", |config| {
-                    config.host(HostPlatform::new(HostOS::Linux, HostArch::Arm64)).tool_config(
-                        NodeDepmanPluginConfig {
+                    config
+                        .host(HostPlatform::new(HostOS::Linux, HostArch::Arm64))
+                        .tool_config(NodeDepmanPluginConfig {
                             registry_url: "https://registry.yarnpkg.com".into(),
-                        },
-                    );
+                        });
                 })
                 .await;
 
@@ -758,11 +758,11 @@ mod node_depman_tool {
 
             let plugin = sandbox
                 .create_plugin_with_config("pnpm-test", |config| {
-                    config.host(HostPlatform::new(HostOS::Linux, HostArch::Arm64)).tool_config(
-                        NodeDepmanPluginConfig {
+                    config
+                        .host(HostPlatform::new(HostOS::Linux, HostArch::Arm64))
+                        .tool_config(NodeDepmanPluginConfig {
                             registry_url: "https://registry.yarnpkg.com".into(),
-                        },
-                    );
+                        });
                 })
                 .await;
 
@@ -1406,11 +1406,11 @@ npmRegistries:
 
             let plugin = sandbox
                 .create_plugin_with_config("yarn-test", |config| {
-                    config.host(HostPlatform::new(HostOS::Linux, HostArch::Arm64)).tool_config(
-                        NodeDepmanPluginConfig {
+                    config
+                        .host(HostPlatform::new(HostOS::Linux, HostArch::Arm64))
+                        .tool_config(NodeDepmanPluginConfig {
                             registry_url: "https://registry.yarnpkg.com".into(),
-                        },
-                    );
+                        });
                 })
                 .await;
 

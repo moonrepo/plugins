@@ -4,6 +4,7 @@
 
 #### 🚀 Updates
 
+- Updated to support proto v0.64 release.
 - Added Linux riscv64 and loong64 support, using [unofficial builds](https://github.com/nodejs/unofficial-builds).
 - Windows arm64 now uses x64 builds (through emulation) for versions before v20, which have no arm64 builds.
 

@@ -4,6 +4,7 @@
 
 #### 🚀 Updates
 
+- Updated to support proto v0.64 release.
 - Added uv's `.python-versions` file to version detection, after `.python-version`.
 
 #### 🐞 Fixes

@@ -9,6 +9,7 @@
 
 #### 🚀 Updates
 
+- Updated to support proto v0.64 release.
 - `moon upgrade` is no longer blocked by proto. moon v2.2.2+ detects that proto installed it, and
   upgrades with `proto install moon latest --pin local`.
 

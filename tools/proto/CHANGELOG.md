@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+#### 🚀 Updates
+
+- Updated to support proto v0.64 release.
+
 #### 🐞 Fixes
 
 - Fixed downloads of proto before v0.14.2, which failed verifying a checksum file that those

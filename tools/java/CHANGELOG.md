@@ -10,6 +10,10 @@
   vendor, like `21`. jdk.java.net's `openjdk` builds stop receiving updates 6 months after a release,
   so `21` resolved to 21.0.2 from January 2024. Use `openjdk-21` to keep the previous behavior.
 
+#### 🚀 Updates
+
+- Updated to support proto v0.64 release.
+
 #### 🐞 Fixes
 
 - Fixed Linux ppc64 requesting big-endian builds, which most vendors don't publish, instead of the

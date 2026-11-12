@@ -4,6 +4,7 @@
 
 #### 🚀 Updates
 
+- Updated to support proto v0.64 release.
 - Added Linux s390x, ppc64, and riscv64, and FreeBSD x64 support for pnpm v12.4+, which were only
   supported by pnpm v11 and below.
 - Added `$NPM_CONFIG_PREFIX` (npm) and `$YARN_PREFIX` (Yarn) to the globals directories.

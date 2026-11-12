@@ -14,6 +14,10 @@
 
 #### 🚀 Updates
 
+- Updated to support proto v0.64 release.
+- The Linux distribution is now read from the host details that proto provides, instead of
+  running `cat /etc/os-release`. Locking another platform uses `ubuntu-24.04`, unless
+  `linux-platform` is configured.
 - Added `debian-13`, `redhat-ubi-10`, and `ubuntu-26.04` Linux platforms, available from Swift 6.4.
 
 #### 🐞 Fixes

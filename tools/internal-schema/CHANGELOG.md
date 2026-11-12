@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+#### 🚀 Updates
+
+- Updated to support proto v0.64 release.
+
 #### 🐞 Fixes
 
 - Fixed a version pattern without a capture group panicking, which surfaced as an unclear WASM

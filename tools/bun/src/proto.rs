@@ -10,7 +10,7 @@ use proto_pdk::*;
 use schematic::SchemaBuilder;
 use starbase_utils::fs;
 use std::collections::HashMap;
-use tool_common::{append_env_bin_dir, enable_tracing, extract_version_from_text};
+use tool_common::{append_env_bin_dir, enable_tracing};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -260,25 +260,8 @@ pub fn download_prebuilt(
     };
 
     // x64 builds before v1.4 require AVX2, otherwise the baseline build is needed
-    let mut avx2_suffix = "";
-
-    if env.arch == HostArch::X64 {
-        let has_avx2 = match env.os {
-            HostOS::Linux if command_exists(env, "grep") => {
-                exec_captured("grep", ["avx2", "/proc/cpuinfo"])?.exit_code == 0
-            }
-            HostOS::MacOS if command_exists(env, "sysctl") => {
-                exec_captured("sysctl", ["machdep.cpu"])?
-                    .stdout
-                    .contains("AVX2")
-            }
-            _ => true,
-        };
-
-        if !has_avx2 {
-            avx2_suffix = "-baseline";
-        }
-    }
+    let baseline = env.arch == HostArch::X64 && !has_avx2(env)?;
+    let baseline_suffix = if baseline { "-baseline" } else { "" };
 
     let mut libc_suffix = "";
 
@@ -296,10 +279,10 @@ pub fn download_prebuilt(
     }
 
     let prefix = match env.os {
-        HostOS::Linux => format!("bun-linux-{arch}{libc_suffix}{avx2_suffix}"),
-        HostOS::MacOS => format!("bun-darwin-{arch}{avx2_suffix}"),
-        HostOS::Windows => format!("bun-windows-{arch}"),
-        HostOS::FreeBSD => format!("bun-freebsd-{arch}"),
+        HostOS::Linux => format!("bun-linux-{arch}{libc_suffix}{baseline_suffix}"),
+        HostOS::MacOS => format!("bun-darwin-{arch}{baseline_suffix}"),
+        HostOS::Windows => format!("bun-windows-{arch}{baseline_suffix}"),
+        HostOS::FreeBSD => format!("bun-freebsd-{arch}{baseline_suffix}"),
         _ => unreachable!(),
     };
 
@@ -326,8 +309,29 @@ pub fn download_prebuilt(
                     .replace("{file}", "SHASUMS256.txt"),
             )
         },
+        variant: baseline.then(|| "baseline".into()),
         ..Default::default()
     }))
+}
+
+// AVX2 is x86-64 level 3
+fn has_avx2(env: &HostEnvironment) -> AnyResult<bool> {
+    if let Some(level) = env.details.as_ref().and_then(|details| details.x64_level) {
+        return Ok(level >= 3);
+    }
+
+    // Foreign platforms have no details, and commands would inspect this machine,
+    // so use the default build. Older proto versions don't provide details.
+    Ok(match env.os {
+        _ if env.foreign => true,
+        HostOS::Linux if command_exists(env, "grep") => {
+            exec_captured("grep", ["avx2", "/proc/cpuinfo"])?.exit_code == 0
+        }
+        HostOS::MacOS if command_exists(env, "sysctl") => exec_captured("sysctl", ["machdep.cpu"])?
+            .stdout
+            .contains("AVX2"),
+        _ => true,
+    })
 }
 
 #[plugin_fn]

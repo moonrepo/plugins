@@ -56,8 +56,9 @@ pub fn parse_version_file(
     }
 
     Ok(Json(ParseVersionFileOutput {
+        // uv ignores `[tool.uv]` in pyproject.toml when uv.toml exists
+        stop: version.is_none() && input.file == "uv.toml",
         version,
-        ..Default::default()
     }))
 }
 

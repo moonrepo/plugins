@@ -141,7 +141,9 @@ mod swift_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("swift-test", |config| {
-                    config.host(HostPlatform::new(os, arch)).tool_config(ubuntu_2404());
+                    config
+                        .host(HostPlatform::new(os, arch))
+                        .tool_config(ubuntu_2404());
                 })
                 .await;
 

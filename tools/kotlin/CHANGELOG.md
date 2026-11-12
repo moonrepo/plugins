@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+#### 🚀 Updates
+
+- Updated to support proto v0.64 release.
+
 #### ⚙️ Internal
 
 - Version files are now read from their path, as the `content` input is deprecated.

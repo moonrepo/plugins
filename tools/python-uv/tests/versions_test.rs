@@ -65,6 +65,28 @@ mod python_uv_tool {
     }
 
     #[tokio::test(flavor = "multi_thread")]
+    async fn stops_at_uv_toml_without_version() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("uv-test").await;
+
+        assert_eq!(
+            plugin
+                .parse_version_file(version_file(&sandbox, "uv.toml", "native-tls = true"))
+                .await,
+            ParseVersionFileOutput {
+                version: None,
+                stop: true,
+            }
+        );
+        assert_eq!(
+            plugin
+                .parse_version_file(version_file(&sandbox, "pyproject.toml", "[tool.uv]"))
+                .await,
+            ParseVersionFileOutput::default()
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
     async fn parses_pyproject_toml() {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox.create_plugin("uv-test").await;
@@ -85,7 +107,7 @@ mod python_uv_tool {
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    async fn ignores_exclusions() {
+    async fn supports_exclusions() {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox.create_plugin("uv-test").await;
 
@@ -98,7 +120,7 @@ mod python_uv_tool {
                 ))
                 .await,
             ParseVersionFileOutput {
-                version: Some(UnresolvedVersionSpec::parse(">=0.5.0").unwrap()),
+                version: Some(UnresolvedVersionSpec::parse(">=0.5.0, !=0.5.3").unwrap()),
                 ..Default::default()
             }
         );

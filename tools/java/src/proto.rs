@@ -9,7 +9,7 @@ use starbase_utils::fs;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::str::FromStr;
-use tool_common::{enable_tracing, extract_version_from_text};
+use tool_common::enable_tracing;
 
 #[host_fn]
 extern "ExtismHost" {

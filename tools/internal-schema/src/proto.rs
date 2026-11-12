@@ -5,7 +5,7 @@ use serde_json::Value as JsonValue;
 use starbase_utils::fs;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
-use tool_common::{enable_tracing, ensure_stable_latest, extract_version_from_text};
+use tool_common::{enable_tracing, ensure_stable_latest};
 
 macro_rules! override_option {
     ($prev:ident, $next:ident, [ $($prop:ident),* ]) => {

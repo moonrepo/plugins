@@ -9,6 +9,7 @@
 
 #### 🚀 Updates
 
+- Updated to support proto v0.64 release.
 - Added `engines.deno` in `package.json` as a fallback for version detection, which Deno v2.9+
   also checks.
 - Added checksum verification for `canary` downloads.

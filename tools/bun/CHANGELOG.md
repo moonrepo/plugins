@@ -9,6 +9,11 @@
 
 #### 🚀 Updates
 
+- Updated to support proto v0.64 release.
+- The baseline build, for x64 CPUs without AVX2, is now chosen from the CPU level that proto
+  provides, instead of running `grep` or `sysctl`, and is now also used on Windows and FreeBSD.
+  It's recorded as the `baseline` variant in the lockfile, so machines with different CPUs no
+  longer fail checksum verification. Locking another platform uses the default build.
 - `$BUN_INSTALL` is now used as-is for the globals directory when it already is a `bin` directory,
   instead of appending another `bin`.
 - Added support for FreeBSD (x64 and arm64), which Bun added in v1.3.14.

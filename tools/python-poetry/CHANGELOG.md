@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+#### 🚀 Updates
+
+- Updated to support proto v0.64 release.
+
 #### 🐞 Fixes
 
 - Fixed the post-install hook writing `virtualenvs.use-poetry-python` to the global Poetry config
@@ -22,8 +26,8 @@
   now resolves to the latest 2.x.
 - Fixed `==X.Y` in `requires-poetry` resolving to the latest `X.Y` patch, instead of `X.Y.0`. Short
   versions are now zero-padded, as PEP 440 compares them.
-- Fixed `!=` in `requires-poetry` failing version detection. proto can't exclude versions, so it's
-  now ignored.
+- Fixed `!=` in `requires-poetry` failing version detection. It's now converted to a proto `!=`
+  requirement, for example, `>=2.0, !=2.1.0`.
 - Install failures now include the installer's output, instead of an empty error.
 
 #### ⚙️ Internal

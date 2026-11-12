@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+#### 🚀 Updates
+
+- Updated to support proto v0.64 release.
+
 #### 🐞 Fixes
 
 - Fixed `.ruby-version` files with the `ruby-` prefix (written by RVM, and accepted by rbenv and

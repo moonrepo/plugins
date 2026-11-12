@@ -3,6 +3,13 @@ use proto_pdk_test_utils::*;
 mod bun_tool {
     use super::*;
 
+    fn x64_details(level: u8) -> HostDetails {
+        HostDetails {
+            x64_level: Some(level),
+            ..Default::default()
+        }
+    }
+
     generate_download_install_tests!("bun-test", "1.1.0");
 
     mod canary {
@@ -49,36 +56,106 @@ mod bun_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("bun-test", |config| {
-                config.host(HostPlatform::new(HostOS::Linux, HostArch::X64));
+                config.host_with(|host| {
+                    host.os = HostOS::Linux;
+                    host.arch = HostArch::X64;
+                    host.libc = HostLibc::Gnu;
+                    host.details = Some(x64_details(3));
+                });
+            })
+            .await;
+
+        assert_eq!(
+            plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("1.2.0").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await,
+            DownloadPrebuiltOutput {
+                archive_prefix: Some("bun-linux-x64".into()),
+                checksum_url: Some(
+                    "https://github.com/oven-sh/bun/releases/download/bun-v1.2.0/SHASUMS256.txt"
+                        .into()
+                ),
+                download_name: Some("bun-linux-x64.zip".into()),
+                download_url:
+                    "https://github.com/oven-sh/bun/releases/download/bun-v1.2.0/bun-linux-x64.zip"
+                        .into(),
+                ..Default::default()
+            }
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn uses_baseline_without_avx2() {
+        for (os, prefix) in [
+            (HostOS::Linux, "bun-linux-x64-baseline"),
+            (HostOS::MacOS, "bun-darwin-x64-baseline"),
+            (HostOS::Windows, "bun-windows-x64-baseline"),
+            (HostOS::FreeBSD, "bun-freebsd-x64-baseline"),
+        ] {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("bun-test", |config| {
+                    config.host_with(|host| {
+                        host.os = os;
+                        host.arch = HostArch::X64;
+                        host.libc = HostPlatform::default_libc(os);
+                        host.details = Some(x64_details(2));
+                    });
+                })
+                .await;
+
+            let result = plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("1.4.0").unwrap(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(result.archive_prefix.as_deref(), Some(prefix));
+            assert_eq!(
+                result.download_url,
+                format!("https://github.com/oven-sh/bun/releases/download/bun-v1.4.0/{prefix}.zip")
+            );
+            assert_eq!(result.variant.as_deref(), Some("baseline"));
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn uses_default_build_for_foreign_platforms() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("bun-test", |config| {
+                config.host_with(|host| {
+                    host.os = HostOS::Linux;
+                    host.arch = HostArch::X64;
+                    host.libc = HostLibc::Gnu;
+                    host.details = None;
+                    host.foreign = true;
+                });
             })
             .await;
 
         let result = plugin
             .download_prebuilt(DownloadPrebuiltInput {
                 context: PluginContext {
-                    version: VersionSpec::parse("1.2.0").unwrap(),
+                    version: VersionSpec::parse("1.4.0").unwrap(),
                     ..Default::default()
                 },
                 ..Default::default()
             })
             .await;
 
-        assert_eq!(
-            result.checksum_url,
-            Some(
-                "https://github.com/oven-sh/bun/releases/download/bun-v1.2.0/SHASUMS256.txt".into()
-            )
-        );
-
-        // This is different between boxes in CI, so impossible to capture!
-        // assert_eq!(result.archive_prefix, Some("bun-linux-x64".into()));
-        // assert_eq!(result.download_name, Some("bun-linux-x64.zip".into()));
-        assert!(
-            result.download_url
-                == "https://github.com/oven-sh/bun/releases/download/bun-v1.2.0/bun-linux-x64.zip"
-                || result.download_url
-                    == "https://github.com/oven-sh/bun/releases/download/bun-v1.2.0/bun-linux-x64-baseline.zip"
-        );
+        assert_eq!(result.archive_prefix.as_deref(), Some("bun-linux-x64"));
+        assert_eq!(result.variant, None);
     }
 
     #[tokio::test(flavor = "multi_thread")]
@@ -127,6 +204,7 @@ mod bun_tool {
                     host.os = HostOS::Linux;
                     host.arch = HostArch::X64;
                     host.libc = HostLibc::Musl;
+                    host.details = Some(x64_details(2));
                 });
             })
             .await;
@@ -141,13 +219,11 @@ mod bun_tool {
             })
             .await;
 
-        // The baseline suffix is different between boxes in CI!
-        assert!(
-            result.download_url
-                == "https://github.com/oven-sh/bun/releases/download/bun-v1.4.0/bun-linux-x64-musl.zip"
-                || result.download_url
-                    == "https://github.com/oven-sh/bun/releases/download/bun-v1.4.0/bun-linux-x64-musl-baseline.zip"
+        assert_eq!(
+            result.download_url,
+            "https://github.com/oven-sh/bun/releases/download/bun-v1.4.0/bun-linux-x64-musl-baseline.zip"
         );
+        assert_eq!(result.variant.as_deref(), Some("baseline"));
     }
 
     #[tokio::test(flavor = "multi_thread")]
@@ -213,37 +289,37 @@ mod bun_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("bun-test", |config| {
-                config.host(HostPlatform::new(HostOS::MacOS, HostArch::X64));
+                config.host_with(|host| {
+                    host.os = HostOS::MacOS;
+                    host.arch = HostArch::X64;
+                    host.libc = HostLibc::Unknown;
+                    host.details = Some(x64_details(3));
+                });
             })
             .await;
 
-        let result = plugin
-            .download_prebuilt(DownloadPrebuiltInput {
-                context: PluginContext {
-                    version: VersionSpec::parse("1.2.0").unwrap(),
+        assert_eq!(
+            plugin
+                .download_prebuilt(DownloadPrebuiltInput {
+                    context: PluginContext {
+                        version: VersionSpec::parse("1.2.0").unwrap(),
+                        ..Default::default()
+                    },
                     ..Default::default()
-                },
+                })
+                .await,
+            DownloadPrebuiltOutput {
+                archive_prefix: Some("bun-darwin-x64".into()),
+                checksum_url: Some(
+                    "https://github.com/oven-sh/bun/releases/download/bun-v1.2.0/SHASUMS256.txt"
+                        .into()
+                ),
+                download_name: Some("bun-darwin-x64.zip".into()),
+                download_url:
+                    "https://github.com/oven-sh/bun/releases/download/bun-v1.2.0/bun-darwin-x64.zip"
+                        .into(),
                 ..Default::default()
-            })
-            .await;
-
-        assert_eq!(
-            result.checksum_url,
-            Some(
-                "https://github.com/oven-sh/bun/releases/download/bun-v1.2.0/SHASUMS256.txt".into()
-            )
-        );
-
-        // The baseline suffix depends on the host CPU (always baseline on Apple Silicon)
-        assert!(
-            result.download_url
-                == "https://github.com/oven-sh/bun/releases/download/bun-v1.2.0/bun-darwin-x64.zip"
-                || result.download_url
-                    == "https://github.com/oven-sh/bun/releases/download/bun-v1.2.0/bun-darwin-x64-baseline.zip"
-        );
-        assert_eq!(
-            result.archive_prefix.map(|prefix| format!("{prefix}.zip")),
-            result.download_name
+            }
         );
     }
 

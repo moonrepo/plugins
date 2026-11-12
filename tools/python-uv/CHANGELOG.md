@@ -9,6 +9,9 @@
 
 #### 🚀 Updates
 
+- Updated to support proto v0.64 release.
+- A `uv.toml` without a `required-version` now stops detection in its directory, as uv ignores
+  `[tool.uv]` in a `pyproject.toml` next to it.
 - Added Windows arm64 and x86, and Linux x86, arm, ppc64le, s390x, and riscv64 support.
 
 #### 🐞 Fixes
@@ -17,8 +20,8 @@
 - Fixed exact versions in `required-version`, like `==0.5`, `0.5`, or `===0.5.0`, resolving to the
   latest 0.5 patch instead of 0.5.0, which uv then refused to run. Short versions are now
   zero-padded, as PEP 440 compares them, which also applies to `<=`.
-- Fixed `!=` in `required-version` failing version detection. proto can't exclude versions, so it's
-  now ignored.
+- Fixed `!=` in `required-version` failing version detection. It's now converted to a proto `!=`
+  requirement, for example, `>=2.0, !=2.1.0`.
 
 #### ⚙️ Internal
 

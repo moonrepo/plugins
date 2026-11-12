@@ -10,7 +10,7 @@ use proto_pdk::*;
 use schematic::SchemaBuilder;
 use starbase_utils::fs;
 use std::collections::HashMap;
-use tool_common::{enable_tracing, ensure_stable_latest, extract_version_from_text};
+use tool_common::{enable_tracing, ensure_stable_latest};
 
 #[host_fn]
 extern "ExtismHost" {

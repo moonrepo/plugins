@@ -4,6 +4,7 @@
 
 #### 🚀 Updates
 
+- Updated to support proto v0.64 release.
 - Improved the error when a tool is not in the asdf shortname index, to point to the `shortname` and `repository` settings.
 
 #### 🐞 Fixes

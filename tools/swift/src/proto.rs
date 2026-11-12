@@ -5,7 +5,7 @@ use proto_pdk::*;
 use schematic::SchemaBuilder;
 use starbase_utils::fs;
 use std::collections::HashMap;
-use tool_common::{enable_tracing, extract_version_from_text};
+use tool_common::enable_tracing;
 
 #[host_fn]
 extern "ExtismHost" {
@@ -16,15 +16,29 @@ extern "ExtismHost" {
 static NAME: &str = "Swift";
 
 // Swift.org builds each Linux toolchain against a specific distribution
-fn detect_linux_platform(config: &SwiftToolConfig) -> AnyResult<Option<LinuxPlatform>> {
+fn detect_linux_platform(
+    env: &HostEnvironment,
+    config: &SwiftToolConfig,
+) -> AnyResult<Option<LinuxPlatform>> {
     if config.linux_platform.is_some() {
         return Ok(config.linux_platform.clone());
+    }
+
+    if let Some(details) = &env.details {
+        return Ok(details.distro.as_ref().and_then(LinuxPlatform::from_distro));
+    }
+
+    // Foreign platforms have no details, and commands would inspect this machine.
+    // Older proto versions don't provide details.
+    if env.foreign {
+        return Ok(None);
     }
 
     let output = exec_captured("cat", ["/etc/os-release"])?;
 
     Ok(if output.exit_code == 0 {
-        LinuxPlatform::from_os_release(&output.stdout)
+        HostDistro::parse_os_release(&output.stdout)
+            .and_then(|distro| LinuxPlatform::from_distro(&distro))
     } else {
         None
     })
@@ -39,7 +53,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
 
     if env.os.is_linux() {
         let config: SwiftToolConfig = get_tool_config()?;
-        let platform = detect_linux_platform(&config)?.unwrap_or_default();
+        let platform = detect_linux_platform(env, &config)?.unwrap_or_default();
 
         lock_options
             .metadata
@@ -158,7 +172,7 @@ pub fn download_prebuilt(
 
     let (platform, archive_prefix, filename) = match env.os {
         HostOS::Linux => {
-            let linux_platform = match detect_linux_platform(&config)? {
+            let linux_platform = match detect_linux_platform(env, &config)? {
                 Some(platform) => platform,
                 None => {
                     let platform = LinuxPlatform::default();
