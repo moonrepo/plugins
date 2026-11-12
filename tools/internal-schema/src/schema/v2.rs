@@ -21,6 +21,7 @@ pub struct ResolveSchema {
     pub version_pattern: Option<String>,
     // Manifest
     pub index_url: Option<String>,
+    #[serde(alias = "index_version_path")]
     pub index_version_key: Option<String>,
     // Tags
     pub git_url: Option<String>,
@@ -38,8 +39,17 @@ impl ResolveSchema {
             .unwrap_or_else(|| self.get_version_pattern())
     }
 
-    pub fn get_index_version_key(&self) -> &str {
-        self.index_version_key.as_deref().unwrap_or("version")
+    /// The JSON path to the versions in the index, selected with `select_json_path`
+    /// (for example, `releases[*].tag`, or `*~` for an index keyed by version).
+    /// A plain key is the key of each entry, so `version` selects `*.version`.
+    pub fn get_index_version_path(&self) -> String {
+        let key = self.index_version_key.as_deref().unwrap_or("version");
+
+        if key.contains(['.', '[', '*', '$', '~']) {
+            key.to_owned()
+        } else {
+            format!("*.{key}")
+        }
     }
 
     pub fn override_with(&mut self, other: &ResolveSchema) {
@@ -311,6 +321,24 @@ mod tests {
         assert!(!matches(">=1.5 <3", ">=1 <1.5"));
         // Each requirement overlaps a different clause, but none overlap both
         assert!(!matches("<1 || >=3", ">=1 <2"));
+    }
+
+    #[test]
+    fn index_version_path_supports_keys_and_paths() {
+        let path = |key: Option<&str>| {
+            ResolveSchema {
+                index_version_key: key.map(str::to_owned),
+                ..Default::default()
+            }
+            .get_index_version_path()
+        };
+
+        assert_eq!(path(None), "*.version");
+        assert_eq!(path(Some("name")), "*.name");
+        assert_eq!(path(Some("releases[*].tag")), "releases[*].tag");
+        assert_eq!(path(Some("$.versions.*~")), "$.versions.*~");
+        assert_eq!(path(Some("*~")), "*~");
+        assert_eq!(path(Some("*")), "*");
     }
 
     #[test]

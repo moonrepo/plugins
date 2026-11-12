@@ -186,8 +186,8 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
                 .map(|output| output.versions)
         };
 
-        // The index is a list of objects with a version key, or a list of versions
-        let values = load_index(format!("*.{}", resolve.get_index_version_key()))
+        // When the path doesn't match, the index may be a list of versions
+        let values = load_index(resolve.get_index_version_path())
             .or_else(|error| load_index("*".into()).map_err(|_| error))?;
 
         for value in values {

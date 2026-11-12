@@ -13,6 +13,9 @@
 - Updated to support proto v0.64 release.
 - Versions from `git-url` and `index-url` are now loaded with proto's `load_tool_versions` host
   function, so they can be replaced with `[tools.<id>.versions-source]`.
+- `resolve.index_version_key` (format v2) and `resolve.manifest-version-key` (format v1) now accept
+  a JSON path, like `releases[*].tag`, or `*~` for an index keyed by version. A plain key, like
+  `version`, still selects that key of each object.
 
 #### 🐞 Fixes
 
