@@ -14,6 +14,9 @@
 #### 🚀 Updates
 
 - Updated to support proto v0.64 release.
+- Versions with a 4th number, like `18.0.2.1`, now use proto's revision support, instead of
+  encoding it into the pre-release (`18.0.2-v1`), including those in `.sdkmanrc`. Existing pins
+  with the encoding still resolve, to the revision.
 
 #### 🐞 Fixes
 

@@ -1,7 +1,7 @@
 use crate::config::{Distribution, JavaToolConfig, PackageType};
 use crate::foojay::{fetch_package_info, fetch_packages, find_package};
 use crate::java::JavaContext;
-use crate::version::from_java_version;
+use crate::version::{decode_legacy_revision, from_java_version};
 use extism_pdk::*;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
@@ -190,6 +190,15 @@ pub fn resolve_version(
             output.candidate = Some(initial.clone());
         }
         None => {}
+    }
+
+    // Versions with a revision (18.0.2.1) were listed with it encoded
+    // into the pre-release (18.0.2-v1), so convert existing pins
+    if let UnresolvedVersionSpec::Version(version) = &initial
+        && let Some(version) = decode_legacy_revision(version)
+    {
+        initial = UnresolvedVersionSpec::Version(version);
+        output.candidate = Some(initial.clone());
     }
 
     // Java versions have build metadata (21.0.11+10), but are written

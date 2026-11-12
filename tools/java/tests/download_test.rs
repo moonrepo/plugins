@@ -28,6 +28,28 @@ mod java_tool {
         use super::*;
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn downloads_revisions_and_their_legacy_encoding() {
+            for version in ["temurin-17.0.4.1+1", "temurin-17.0.4-v1+1"] {
+                let sandbox = create_empty_proto_sandbox();
+                let plugin = sandbox
+                    .create_plugin_with_config("java-test", |config| {
+                        config.host(HostPlatform::new(HostOS::Linux, HostArch::X64));
+                    })
+                    .await;
+
+                let output = plugin
+                    .download_prebuilt(create_download_input(version))
+                    .await;
+
+                assert_eq!(
+                    output.download_name.as_deref(),
+                    Some("OpenJDK17U-jdk_x64_linux_hotspot_17.0.4.1_1.tar.gz"),
+                    "for {version}"
+                );
+            }
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn supports_linux_x64() {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
