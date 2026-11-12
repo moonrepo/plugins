@@ -101,7 +101,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
                     SchemaType::Language => PluginType::Language,
                     SchemaType::VersionManager => PluginType::VersionManager,
                 },
-                minimum_proto_version: Some(Version::new(0, 60, 0)),
+                minimum_proto_version: Some(Version::new(0, 64, 0)),
                 default_version: schema.metadata.default_version,
                 plugin_version: match schema.metadata.plugin_version {
                     Some(version) => Some(version),
@@ -115,10 +115,15 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
         }
 
         Schema::V2(schema) => RegisterToolOutput {
-            minimum_proto_version: schema
-                .metadata
-                .minimum_proto_version
-                .or_else(|| Some(Version::new(0, 60, 0))),
+            // The plugin itself requires v0.64, whatever the schema declares
+            minimum_proto_version: Some(
+                schema
+                    .metadata
+                    .minimum_proto_version
+                    .map_or(Version::new(0, 64, 0), |version| {
+                        version.max(Version::new(0, 64, 0))
+                    }),
+            ),
             plugin_version: schema
                 .metadata
                 .plugin_version

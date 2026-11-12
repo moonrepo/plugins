@@ -4,6 +4,7 @@
 
 #### 💥 Breaking
 
+- Requires proto v0.64 or later.
 - Installing on musl Linux (like Alpine) now errors, as Deno only publishes glibc builds. A glibc
   build was installed instead, which fails to run without a glibc compatibility layer.
 

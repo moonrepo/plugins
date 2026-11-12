@@ -22,7 +22,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
         name: "Ruby".into(),
         type_of: PluginType::Language,
         default_install_strategy: InstallStrategy::DownloadPrebuilt,
-        minimum_proto_version: Some(Version::new(0, 60, 0)),
+        minimum_proto_version: Some(Version::new(0, 64, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         unstable: Switch::Message("Windows is currently not supported.".into()),
         ..Default::default()

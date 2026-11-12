@@ -26,7 +26,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
     Ok(Json(RegisterToolOutput {
         name: NAME.into(),
         type_of: PluginType::Language,
-        minimum_proto_version: Some(Version::new(0, 60, 0)),
+        minimum_proto_version: Some(Version::new(0, 64, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         self_upgrade_commands: vec!["upgrade".into()],
         ..Default::default()
@@ -259,8 +259,14 @@ pub fn download_prebuilt(
         _ => unreachable!(),
     };
 
-    // x64 builds before v1.4 require AVX2, otherwise the baseline build is needed
-    let baseline = env.arch == HostArch::X64 && !has_avx2(env)?;
+    // x64 builds before v1.4 require AVX2 (x86-64 level 3), otherwise the baseline build
+    // is needed. Foreign platforms have no level, so use the default build.
+    let baseline = env.arch == HostArch::X64
+        && env
+            .details
+            .as_ref()
+            .and_then(|details| details.x64_level)
+            .is_some_and(|level| level < 3);
     let baseline_suffix = if baseline { "-baseline" } else { "" };
 
     let mut libc_suffix = "";
@@ -312,26 +318,6 @@ pub fn download_prebuilt(
         variant: baseline.then(|| "baseline".into()),
         ..Default::default()
     }))
-}
-
-// AVX2 is x86-64 level 3
-fn has_avx2(env: &HostEnvironment) -> AnyResult<bool> {
-    if let Some(level) = env.details.as_ref().and_then(|details| details.x64_level) {
-        return Ok(level >= 3);
-    }
-
-    // Foreign platforms have no details, and commands would inspect this machine,
-    // so use the default build. Older proto versions don't provide details.
-    Ok(match env.os {
-        _ if env.foreign => true,
-        HostOS::Linux if command_exists(env, "grep") => {
-            exec_captured("grep", ["avx2", "/proc/cpuinfo"])?.exit_code == 0
-        }
-        HostOS::MacOS if command_exists(env, "sysctl") => exec_captured("sysctl", ["machdep.cpu"])?
-            .stdout
-            .contains("AVX2"),
-        _ => true,
-    })
 }
 
 #[plugin_fn]

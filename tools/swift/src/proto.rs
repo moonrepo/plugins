@@ -16,32 +16,16 @@ extern "ExtismHost" {
 static NAME: &str = "Swift";
 
 // Swift.org builds each Linux toolchain against a specific distribution
-fn detect_linux_platform(
-    env: &HostEnvironment,
-    config: &SwiftToolConfig,
-) -> AnyResult<Option<LinuxPlatform>> {
+fn detect_linux_platform(env: &HostEnvironment, config: &SwiftToolConfig) -> Option<LinuxPlatform> {
     if config.linux_platform.is_some() {
-        return Ok(config.linux_platform.clone());
+        return config.linux_platform.clone();
     }
 
-    if let Some(details) = &env.details {
-        return Ok(details.distro.as_ref().and_then(LinuxPlatform::from_distro));
-    }
-
-    // Foreign platforms have no details, and commands would inspect this machine.
-    // Older proto versions don't provide details.
-    if env.foreign {
-        return Ok(None);
-    }
-
-    let output = exec_captured("cat", ["/etc/os-release"])?;
-
-    Ok(if output.exit_code == 0 {
-        HostDistro::parse_os_release(&output.stdout)
-            .and_then(|distro| LinuxPlatform::from_distro(&distro))
-    } else {
-        None
-    })
+    // Foreign platforms have no details, so use the default
+    env.details
+        .as_ref()
+        .and_then(|details| details.distro.as_ref())
+        .and_then(LinuxPlatform::from_distro)
 }
 
 #[plugin_fn]
@@ -53,7 +37,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
 
     if env.os.is_linux() {
         let config: SwiftToolConfig = get_tool_config()?;
-        let platform = detect_linux_platform(env, &config)?.unwrap_or_default();
+        let platform = detect_linux_platform(env, &config).unwrap_or_default();
 
         lock_options
             .metadata
@@ -63,7 +47,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
     Ok(Json(RegisterToolOutput {
         name: NAME.into(),
         type_of: PluginType::Language,
-        minimum_proto_version: Some(Version::new(0, 61, 0)),
+        minimum_proto_version: Some(Version::new(0, 64, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         unstable: Switch::Toggle(true),
         lock_options,
@@ -172,7 +156,7 @@ pub fn download_prebuilt(
 
     let (platform, archive_prefix, filename) = match env.os {
         HostOS::Linux => {
-            let linux_platform = match detect_linux_platform(env, &config)? {
+            let linux_platform = match detect_linux_platform(env, &config) {
                 Some(platform) => platform,
                 None => {
                     let platform = LinuxPlatform::default();

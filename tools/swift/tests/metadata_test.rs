@@ -21,7 +21,7 @@ mod swift_tool {
 
         assert_eq!(metadata.name, "Swift");
         assert!(metadata.lock_options.metadata.is_empty());
-        assert_eq!(metadata.minimum_proto_version, Some(Version::new(0, 61, 0)));
+        assert_eq!(metadata.minimum_proto_version, Some(Version::new(0, 64, 0)));
         assert_eq!(
             metadata.plugin_version.unwrap().to_string(),
             env!("CARGO_PKG_VERSION")
@@ -43,7 +43,7 @@ mod swift_tool {
             })
             .await;
 
-        // Detected from the machine running the tests, or the default
+        // No host details, so the default
         assert!(metadata.lock_options.metadata.contains_key("platform"));
     }
 

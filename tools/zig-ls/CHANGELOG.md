@@ -4,6 +4,7 @@
 
 #### 💥 Breaking
 
+- Requires proto v0.64 or later.
 - `minimum_zig_version` in `build.zig.zon` now resolves to a ZLS within the same minor version
   (`~0.14`) instead of any newer version (`>=0.14`), matching the Zig plugin.
 

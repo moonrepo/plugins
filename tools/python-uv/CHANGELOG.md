@@ -4,6 +4,7 @@
 
 #### 💥 Breaking
 
+- Requires proto v0.64 or later.
 - `~=X.Y` in `required-version` now allows any `X.*` from `X.Y`, as PEP 440 and uv define it. For
   example, `~=0.5` resolves to the latest 0.x, instead of the latest 0.5.x.
 

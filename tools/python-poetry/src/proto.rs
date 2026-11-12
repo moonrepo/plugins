@@ -24,7 +24,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
             ignore_os_arch: true,
             ..Default::default()
         },
-        minimum_proto_version: Some(Version::new(0, 60, 0)),
+        minimum_proto_version: Some(Version::new(0, 64, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         requires: vec!["python".into()],
         self_upgrade_commands: vec!["self update".into()],

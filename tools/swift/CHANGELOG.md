@@ -4,6 +4,7 @@
 
 #### 💥 Breaking
 
+- Requires proto v0.64 or later.
 - The `swift-tools-version` in `Package.swift` is now a minimum requirement (`>=5.9`) instead of a
   caret range (`^5.9`), as it declares the oldest toolchain that can build the package, and newer
   toolchains build older manifests. Pin a version in `.swift-version` to stay on a major version.

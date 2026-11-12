@@ -4,6 +4,7 @@
 
 #### 💥 Breaking
 
+- Requires proto v0.64 or later.
 - `packageManager` (`bun@x`) in `package.json` now takes precedence over `engines.bun`, like
   setup-bun, as an exact version should win over a range.
 

@@ -4,6 +4,7 @@
 
 #### 💥 Breaking
 
+- Requires proto v0.64 or later.
 - The `canary` version now errors. moon stopped publishing canary builds in v2, and the old `canary`
   release on GitHub only has a moon v1 build from December 2025, which was installed instead.
 

@@ -4,6 +4,7 @@
 
 #### 💥 Breaking
 
+- Requires proto v0.64 or later.
 - Removed the `debian`, `graalvm-ce20`, and `zulu-prime` distributions, which foojay no longer
   lists or returns packages for.
 - The default distribution is now `temurin` instead of `openjdk`, which applies to versions without a

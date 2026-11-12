@@ -4,6 +4,7 @@
 
 #### 💥 Breaking
 
+- Requires proto v0.64 or later.
 - The `toolchain` line in `go.mod` and `go.work` now takes precedence over the `go` line when
   detecting a version, as Go runs at least that toolchain and would otherwise download it itself.
 - Added `activate_environment`, which sets `GOROOT` to the installed Go. An inherited `GOROOT` for

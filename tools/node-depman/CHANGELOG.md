@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+#### 💥 Breaking
+
+- Requires proto v0.64 or later.
+
 #### 🚀 Updates
 
 - Updated to support proto v0.64 release.
