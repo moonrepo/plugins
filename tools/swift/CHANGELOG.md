@@ -25,6 +25,9 @@
 
 #### 🐞 Fixes
 
+- Fixed a lockfile shared by machines with different Linux distributions failing checksum
+  verification, as each downloads a different toolchain. Distributions other than `ubuntu-24.04`
+  are now recorded as a variant in the lockfile (for example, `debian-12`).
 - Fixed comments in `.swift-version`, like `6.1.2 # stable`, failing to parse. Everything after
   `#` is now ignored.
 - Fixed downloads of 6.4.0 and later `.0` releases, which Swift.org names `swift-6.4.0-RELEASE`

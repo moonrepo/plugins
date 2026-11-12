@@ -16,16 +16,31 @@ extern "ExtismHost" {
 static NAME: &str = "Swift";
 
 // Swift.org builds each Linux toolchain against a specific distribution
-fn detect_linux_platform(env: &HostEnvironment, config: &SwiftToolConfig) -> Option<LinuxPlatform> {
+fn detect_linux_platform(
+    env: &HostEnvironment,
+    config: &SwiftToolConfig,
+) -> AnyResult<Option<LinuxPlatform>> {
     if config.linux_platform.is_some() {
-        return config.linux_platform.clone();
+        return Ok(config.linux_platform.clone());
     }
 
-    // Foreign platforms have no details, so use the default
-    env.details
+    // The distribution only describes this machine, not the targeted platform
+    if env.foreign {
+        let platform = LinuxPlatform::default();
+
+        host_log!(
+            debug,
+            "Targeting another platform, so using {platform} instead of detecting the Linux distribution. Configure the <property>linux-platform</property> setting to choose another.",
+        );
+
+        return Ok(Some(platform));
+    }
+
+    Ok(env
+        .details
         .as_ref()
         .and_then(|details| details.distro.as_ref())
-        .and_then(LinuxPlatform::from_distro)
+        .and_then(LinuxPlatform::from_distro))
 }
 
 #[plugin_fn]
@@ -37,7 +52,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
 
     if env.os.is_linux() {
         let config: SwiftToolConfig = get_tool_config()?;
-        let platform = detect_linux_platform(env, &config).unwrap_or_default();
+        let platform = detect_linux_platform(env, &config)?.unwrap_or_default();
 
         lock_options
             .metadata
@@ -154,9 +169,11 @@ pub fn download_prebuilt(
     let release = format!("swift-{version}-release");
     let folder = format!("swift-{version}-RELEASE");
 
+    let mut variant = None;
+
     let (platform, archive_prefix, filename) = match env.os {
         HostOS::Linux => {
-            let linux_platform = match detect_linux_platform(env, &config) {
+            let linux_platform = match detect_linux_platform(env, &config)? {
                 Some(platform) => platform,
                 None => {
                     let platform = LinuxPlatform::default();
@@ -171,6 +188,12 @@ pub fn download_prebuilt(
             };
             let download_platform = linux_platform.get_download_platform();
             let archive_suffix = linux_platform.get_archive_suffix();
+
+            // Each distribution is a different download, so is recorded
+            // separately in the lockfile, except for the default
+            if linux_platform != LinuxPlatform::default() {
+                variant = Some(linux_platform.to_string());
+            }
 
             let (platform, archive_suffix) = match env.arch {
                 HostArch::Arm64 => (
@@ -225,6 +248,7 @@ pub fn download_prebuilt(
         checksum_url,
         download_name: Some(filename),
         download_url,
+        variant,
         ..Default::default()
     }))
 }
