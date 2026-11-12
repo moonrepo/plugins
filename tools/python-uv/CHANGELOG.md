@@ -11,6 +11,8 @@
 #### 🚀 Updates
 
 - Updated to support proto v0.64 release.
+- Versions are now loaded with proto's `load_tool_versions` host function, so another Git
+  repository or index can be configured with `[tools.uv.versions-source]`.
 - A `uv.toml` without a `required-version` now stops detection in its directory, as uv ignores
   `[tool.uv]` in a `pyproject.toml` next to it.
 - Added Windows arm64 and x86, and Linux x86, arm, ppc64le, s390x, and riscv64 support.

@@ -15,6 +15,8 @@
 #### 🚀 Updates
 
 - Updated to support proto v0.64 release.
+- Versions are now loaded with proto's `load_tool_versions` host function, so another Git
+  repository or index can be configured with `[tools.go.versions-source]`.
 - `$GOPATH` is now used as-is for the globals directory when it already is a `bin` directory,
   instead of appending another `bin`.
 - Added Linux riscv64, ppc64le and loong64, and FreeBSD arm64 support.

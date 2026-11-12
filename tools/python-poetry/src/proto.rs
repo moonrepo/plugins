@@ -5,7 +5,7 @@ use proto_pdk::*;
 use starbase_utils::fs;
 use std::collections::HashMap;
 use toml::Value;
-use tool_common::enable_tracing;
+use tool_common::{enable_tracing, load_git_tags};
 
 #[host_fn]
 extern "ExtismHost" {

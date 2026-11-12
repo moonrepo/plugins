@@ -9,6 +9,9 @@
 #### 🚀 Updates
 
 - Updated to support proto v0.64 release.
+- Versions are now loaded with proto's `load_tool_versions` host function, so another Git
+  repository or index can be configured with `[tools.node.versions-source]`. LTS aliases are only
+  available from the default index.
 - Added Linux riscv64 and loong64 support, using [unofficial builds](https://github.com/nodejs/unofficial-builds).
 - Windows arm64 now uses x64 builds (through emulation) for versions before v20, which have no arm64 builds.
 

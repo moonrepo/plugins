@@ -10,7 +10,7 @@ use proto_pdk::*;
 use schematic::SchemaBuilder;
 use starbase_utils::fs;
 use std::collections::HashMap;
-use tool_common::{enable_tracing, ensure_stable_latest};
+use tool_common::{enable_tracing, load_tool_versions};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -171,21 +171,25 @@ pub fn unpin_version(Json(input): Json<UnpinVersionInput>) -> FnResult<Json<Unpi
 
 #[plugin_fn]
 pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
-    let mut output = LoadVersionsOutput::default();
     let config = get_tool_config::<NodeToolConfig>()?;
-    let response: Vec<NodeDistVersion> =
-        fetch_json(config.index_url.replace("{channel}", "release"))?;
+    let response = load_tool_versions(LoadToolVersionsInput::Index {
+        url: config.index_url.replace("{channel}", "release"),
+        version_key: Some("*.version".into()),
+        headers: Default::default(),
+        include_body: true,
+    })?;
+    let mut output = LoadVersionsOutput::from(response.versions)?;
 
-    for (index, item) in response.iter().enumerate() {
-        let version = UnresolvedVersionSpec::parse(&item.version[1..])?;
+    // The body isn't returned for a source configured by the user
+    let items: Vec<NodeDistVersion> = match response.body {
+        Some(body) => json::from_str(&body)?,
+        None => vec![],
+    };
 
-        // First item is always the latest
-        if index == 0 {
-            output.latest = Some(version.clone());
-        }
-
+    for item in items {
         if let NodeDistLTS::Name(alias) = &item.lts {
             let alias = alias.to_lowercase();
+            let version = UnresolvedVersionSpec::parse(&item.version[1..])?;
 
             // The first encounter of an lts is the latest stable
             if !output.aliases.contains_key("stable") {
@@ -193,15 +197,9 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
             }
 
             // The first encounter of an lts is the latest version for that alias
-            if !output.aliases.contains_key(&alias) {
-                output.aliases.insert(alias.clone(), version.clone());
-            }
+            output.aliases.entry(alias).or_insert(version);
         }
-
-        output.versions.push(version.to_resolved_spec());
     }
-
-    ensure_stable_latest(&mut output);
 
     Ok(Json(output))
 }

@@ -41,6 +41,22 @@ mod schema_tool {
     }
 
     #[tokio::test(flavor = "multi_thread")]
+    async fn loads_versions_from_index() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_schema_plugin("schema-test", locate_fixture("schemas").join("index.toml"))
+            .await;
+
+        let output = plugin.load_versions(LoadVersionsInput::default()).await;
+
+        assert!(
+            output
+                .versions
+                .contains(&VersionSpec::parse("20.0.0").unwrap())
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
     async fn parses_version_file_without_comments() {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox

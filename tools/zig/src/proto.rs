@@ -62,12 +62,30 @@ pub fn parse_version_file(
 #[plugin_fn]
 pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
     let config = get_tool_config::<ZigToolConfig>()?;
-    let index: ZigReleaseIndex = fetch_json(&config.index_url)?;
-    let canary = index
-        .master()
-        .map(|release| UnresolvedVersionSpec::parse(&release.version))
-        .transpose()?;
-    let mut output = LoadVersionsOutput::from(index.stable_versions())?;
+
+    // The index is keyed by version, and the canary by master
+    let response = load_tool_versions(LoadToolVersionsInput::Index {
+        url: config.index_url,
+        version_key: Some("*~".into()),
+        headers: Default::default(),
+        include_body: true,
+    })?;
+    let mut output = LoadVersionsOutput::from(
+        response
+            .versions
+            .into_iter()
+            .filter(|version| version != "master")
+            .collect(),
+    )?;
+
+    // The body isn't returned for a source configured by the user
+    let canary = match response.body {
+        Some(body) => json::from_str::<ZigReleaseIndex>(&body)?
+            .master()
+            .map(|release| UnresolvedVersionSpec::parse(&release.version))
+            .transpose()?,
+        None => None,
+    };
 
     if let Some(canary) = canary {
         // proto only resolves an alias to a listed version

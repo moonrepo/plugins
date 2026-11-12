@@ -4,7 +4,7 @@ use lang_rust_common::*;
 use proto_pdk::*;
 use starbase_utils::fs;
 use std::collections::HashMap;
-use tool_common::{append_env_bin_dir, enable_tracing};
+use tool_common::{append_env_bin_dir, enable_tracing, load_git_tags};
 
 #[host_fn]
 extern "ExtismHost" {

@@ -11,6 +11,8 @@
 #### 🚀 Updates
 
 - Updated to support proto v0.64 release.
+- Versions are now loaded with proto's `load_tool_versions` host function, so another Git
+  repository or index can be configured with `[tools.moon.versions-source]`.
 - `moon upgrade` is no longer blocked by proto. moon v2.2.2+ detects that proto installed it, and
   upgrades with `proto install moon latest --pin local`.
 

@@ -1,5 +1,5 @@
 use crate::config::ZlsToolConfig;
-use crate::releases::ZlsReleaseIndex;
+use crate::releases::{ZlsReleaseIndex, stable_versions};
 use extism_pdk::*;
 use lang_zig_common::{
     create_download_prebuilt_output, detect_zig_version_files, parse_zig_version_file,
@@ -62,9 +62,16 @@ pub fn parse_version_file(
 #[plugin_fn]
 pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
     let config = get_tool_config::<ZlsToolConfig>()?;
-    let index: ZlsReleaseIndex = fetch_json(&config.index_url)?;
 
-    Ok(Json(LoadVersionsOutput::from(index.stable_versions())?))
+    // The index is keyed by version
+    let output = load_tool_versions(LoadToolVersionsInput::index(
+        config.index_url,
+        Some("*~".into()),
+    ))?;
+
+    Ok(Json(LoadVersionsOutput::from(stable_versions(
+        output.versions,
+    ))?))
 }
 
 #[plugin_fn]

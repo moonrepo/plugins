@@ -9,6 +9,8 @@
 #### 🚀 Updates
 
 - Updated to support proto v0.64 release.
+- Versions are now loaded with proto's `load_tool_versions` host function, so another Git
+  repository or index can be configured with `[tools.rust.versions-source]`.
 - `$CARGO_INSTALL_ROOT` and `$CARGO_HOME` are now used as-is for the globals directories when they
   already are a `bin` directory, instead of appending another `bin`.
 - Added a warning when a toolchain file uses a partial version like `1.80`, which rustup installs as a

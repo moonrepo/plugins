@@ -16,6 +16,8 @@
 #### 🚀 Updates
 
 - Updated to support proto v0.64 release.
+- Versions are now loaded with proto's `load_tool_versions` host function, so another Git
+  repository or index can be configured with `[tools.swift.versions-source]`.
 - The Linux distribution is now read from the host details that proto provides, instead of
   running `cat /etc/os-release`. Locking another platform uses `ubuntu-24.04`, unless
   `linux-platform` is configured.

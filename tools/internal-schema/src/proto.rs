@@ -181,24 +181,18 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
     // URL endpoint
     else if let Some(endpoint) = resolve.index_url.as_deref() {
         let pattern = regex::Regex::new(resolve.get_version_pattern())?;
-        let version_key = resolve.get_index_version_key();
-        let response: Vec<JsonValue> = fetch_json(endpoint)?;
+        let load_index = |version_key: String| {
+            load_tool_versions(LoadToolVersionsInput::index(endpoint, Some(version_key)))
+                .map(|output| output.versions)
+        };
 
-        for row in response {
-            match row {
-                JsonValue::String(v) => {
-                    if let Some(cap) = pattern.captures(&v) {
-                        versions.insert(VersionSpec::parse(create_version(&cap)?)?);
-                    }
-                }
-                JsonValue::Object(o) => {
-                    if let Some(JsonValue::String(v)) = o.get(version_key)
-                        && let Some(cap) = pattern.captures(v)
-                    {
-                        versions.insert(VersionSpec::parse(create_version(&cap)?)?);
-                    }
-                }
-                _ => {}
+        // The index is a list of objects with a version key, or a list of versions
+        let values = load_index(format!("*.{}", resolve.get_index_version_key()))
+            .or_else(|error| load_index("*".into()).map_err(|_| error))?;
+
+        for value in values {
+            if let Some(cap) = pattern.captures(&value) {
+                versions.insert(VersionSpec::parse(create_version(&cap)?)?);
             }
         }
     }

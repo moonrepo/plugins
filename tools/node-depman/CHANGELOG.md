@@ -9,6 +9,9 @@
 #### 🚀 Updates
 
 - Updated to support proto v0.64 release.
+- Versions are now loaded with proto's `load_tool_versions` host function, so another Git
+  repository or index can be configured with `[tools.<id>.versions-source]` (for example,
+  `[tools.pnpm.versions-source]`). Dist-tag aliases are only available from the registry.
 - Added Linux s390x, ppc64, and riscv64, and FreeBSD x64 support for pnpm v12.4+, which were only
   supported by pnpm v11 and below.
 - Added `$NPM_CONFIG_PREFIX` (npm) and `$YARN_PREFIX` (Yarn) to the globals directories.

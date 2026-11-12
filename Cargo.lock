@@ -847,7 +847,7 @@ version = "0.0.0"
 dependencies = [
  "indexmap",
  "proto_pdk",
- "proto_pdk_api 0.36.0",
+ "proto_pdk_api 0.36.1",
  "serde",
  "serde_json",
 ]
@@ -2467,7 +2467,7 @@ version = "0.16.8"
 dependencies = [
  "extism-pdk",
  "proto_pdk",
- "proto_pdk_api 0.36.0",
+ "proto_pdk_api 0.36.1",
  "proto_pdk_test_utils 0.52.0",
  "schematic",
  "serde",
@@ -3139,7 +3139,7 @@ version = "0.1.1"
 dependencies = [
  "extism-pdk",
  "proto_pdk",
- "proto_pdk_api 0.36.0",
+ "proto_pdk_api 0.36.1",
  "proto_pdk_test_utils 0.52.0",
  "schematic",
  "serde",
@@ -3310,7 +3310,7 @@ version = "0.1.0"
 dependencies = [
  "extism-pdk",
  "proto_pdk",
- "proto_pdk_api 0.36.0",
+ "proto_pdk_api 0.36.1",
  "proto_pdk_test_utils 0.52.0",
  "schematic",
  "serde",
@@ -3325,7 +3325,7 @@ name = "lang_javascript_common"
 version = "0.1.0"
 dependencies = [
  "nodejs_package_json",
- "proto_pdk_api 0.36.0",
+ "proto_pdk_api 0.36.1",
  "serde",
  "serde_json",
  "starbase_utils",
@@ -3335,7 +3335,7 @@ dependencies = [
 name = "lang_python_common"
 version = "0.1.0"
 dependencies = [
- "proto_pdk_api 0.36.0",
+ "proto_pdk_api 0.36.1",
 ]
 
 [[package]]
@@ -3351,7 +3351,7 @@ name = "lang_zig_common"
 version = "0.1.0"
 dependencies = [
  "common",
- "proto_pdk_api 0.36.0",
+ "proto_pdk_api 0.36.1",
  "serde",
  "serde_json",
 ]
@@ -3923,7 +3923,7 @@ dependencies = [
  "nodejs_package_json",
  "npmrc-config-rs",
  "proto_pdk",
- "proto_pdk_api 0.36.0",
+ "proto_pdk_api 0.36.1",
  "proto_pdk_test_utils 0.52.0",
  "regex",
  "rustc-hash",
@@ -3946,7 +3946,7 @@ dependencies = [
  "moon_pdk_api",
  "moon_pdk_test_utils",
  "node_depman_tool",
- "proto_pdk_api 0.36.0",
+ "proto_pdk_api 0.36.1",
  "schematic",
  "serde",
  "serde_json",
@@ -4937,7 +4937,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b570b25f7617e43d59005d0990ccb79e950a423952cea19671b7a876da390adf"
 dependencies = [
  "anyhow",
- "itertools 0.14.0",
+ "itertools 0.13.0",
  "proc-macro2",
  "quote",
  "syn 2.0.119",
@@ -4988,9 +4988,9 @@ dependencies = [
 
 [[package]]
 name = "proto_core"
-version = "0.64.0"
+version = "0.64.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f5b3bf2fffc8fddd616b37b0b0a8616ca9f6c2febcbd50fe14e742fc6b6f64bf"
+checksum = "4a5c4ac9c4593b0e8e3b0db45c9656107d3b9fb7b556dd3e0a4041b0156e04e6"
 dependencies = [
  "ai_env",
  "ci_env",
@@ -5005,7 +5005,7 @@ dependencies = [
  "oci-client",
  "once_cell",
  "pgp 0.21.1",
- "proto_pdk_api 0.36.0",
+ "proto_pdk_api 0.36.1",
  "proto_shim 0.10.0",
  "regex",
  "reqwest",
@@ -5033,12 +5033,12 @@ dependencies = [
 
 [[package]]
 name = "proto_pdk"
-version = "0.37.0"
+version = "0.37.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfbe08898a44a0080cf5775ca1d5963f4dc461d5e813b50d6af573301b3500e9"
+checksum = "bf029467bec52429bb6c445e32ea834b6076a8fba993ab46f04676297be39871"
 dependencies = [
  "extism-pdk",
- "proto_pdk_api 0.36.0",
+ "proto_pdk_api 0.36.1",
  "rustc-hash",
  "serde",
  "warpgate_pdk 0.20.0",
@@ -5063,9 +5063,9 @@ dependencies = [
 
 [[package]]
 name = "proto_pdk_api"
-version = "0.36.0"
+version = "0.36.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c9b641dbc06e62ae751bb005a5999eec01dacce2d0aaca0eaa00853eee17805"
+checksum = "d3d843b0557769a60123cabd8b2edcbfb839476419706afd6f51c4585902d6b8"
 dependencies = [
  "derive_setters",
  "rustc-hash",
@@ -5075,7 +5075,7 @@ dependencies = [
  "system_env",
  "thiserror 2.0.21",
  "version_spec",
- "warpgate_api 0.21.0",
+ "warpgate_api 0.21.1",
 ]
 
 [[package]]
@@ -5100,8 +5100,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77a0ed7ea074a3f1514db03afc9db66f68a7fe98b0fb2484ac95cda7f7ebbd0f"
 dependencies = [
  "extism",
- "proto_core 0.64.0",
- "proto_pdk_api 0.36.0",
+ "proto_core 0.64.1",
+ "proto_pdk_api 0.36.1",
  "serde",
  "serde_json",
  "starbase_sandbox",
@@ -5234,7 +5234,7 @@ version = "0.15.0"
 dependencies = [
  "extism-pdk",
  "proto_pdk",
- "proto_pdk_api 0.36.0",
+ "proto_pdk_api 0.36.1",
  "proto_pdk_test_utils 0.52.0",
  "regex",
  "schematic",
@@ -5775,7 +5775,7 @@ version = "0.3.0"
 dependencies = [
  "extism-pdk",
  "proto_pdk",
- "proto_pdk_api 0.36.0",
+ "proto_pdk_api 0.36.1",
  "proto_pdk_test_utils 0.52.0",
  "schematic",
  "serde",
@@ -5845,7 +5845,7 @@ dependencies = [
  "moon_pdk",
  "moon_pdk_api",
  "moon_pdk_test_utils",
- "proto_pdk_api 0.36.0",
+ "proto_pdk_api 0.36.1",
  "rust_tool",
  "rustc-hash",
  "schematic",
@@ -6044,7 +6044,7 @@ version = "0.19.0"
 dependencies = [
  "extism-pdk",
  "proto_pdk",
- "proto_pdk_api 0.36.0",
+ "proto_pdk_api 0.36.1",
  "proto_pdk_test_utils 0.52.0",
  "regex",
  "serde",
@@ -7766,7 +7766,7 @@ dependencies = [
  "tracing",
  "ureq",
  "url",
- "warpgate_api 0.21.0",
+ "warpgate_api 0.21.1",
 ]
 
 [[package]]
@@ -7788,9 +7788,9 @@ dependencies = [
 
 [[package]]
 name = "warpgate_api"
-version = "0.21.0"
+version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "51f4b5bd90de9efb77ba1de5fd2d00fc84be61d8dd92ecf581c9341a8a539a3a"
+checksum = "2de5f6f18098f0245747ca74e84bfd0e294045eb8522cdd839ec59bf124fa650"
 dependencies = [
  "anyhow",
  "derive_setters",
@@ -7825,7 +7825,7 @@ dependencies = [
  "serde",
  "tracing",
  "tracing-subscriber",
- "warpgate_api 0.21.0",
+ "warpgate_api 0.21.1",
 ]
 
 [[package]]
@@ -8901,7 +8901,7 @@ dependencies = [
  "extism-pdk",
  "lang_zig_common",
  "proto_pdk",
- "proto_pdk_api 0.36.0",
+ "proto_pdk_api 0.36.1",
  "proto_pdk_test_utils 0.52.0",
  "schematic",
  "serde",
@@ -8919,7 +8919,7 @@ dependencies = [
  "extism-pdk",
  "lang_zig_common",
  "proto_pdk",
- "proto_pdk_api 0.36.0",
+ "proto_pdk_api 0.36.1",
  "proto_pdk_test_utils 0.52.0",
  "schematic",
  "serde",

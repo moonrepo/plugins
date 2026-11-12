@@ -21,13 +21,10 @@ mod python_poetry_tool {
             })
             .await;
 
+        let error = output.error.unwrap_or_default();
+
         assert!(!output.installed);
-        assert!(
-            output
-                .error
-                .unwrap()
-                .contains("Version 0.0.1 does not exist")
-        );
+        assert!(error.contains("Version 0.0.1 does not exist"), "{error}");
     }
 
     #[cfg(unix)]

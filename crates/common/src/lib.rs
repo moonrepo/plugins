@@ -39,3 +39,12 @@ pub fn enable_tracing() {
 
     TRACING_ENABLED.store(true, Ordering::Release);
 }
+
+#[cfg(all(feature = "wasm", not(feature = "tool-versions-fallback")))]
+pub use proto_pdk::{load_git_tags, load_tool_versions};
+
+#[cfg(feature = "tool-versions-fallback")]
+mod tool_versions_fallback;
+
+#[cfg(feature = "tool-versions-fallback")]
+pub use tool_versions_fallback::*;

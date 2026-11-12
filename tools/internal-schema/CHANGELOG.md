@@ -5,10 +5,14 @@
 #### 💥 Breaking
 
 - Requires proto v0.64 or later.
+- An `index-url` index of objects now fails when an object doesn't have the version key, instead
+  of skipping it, as proto selects every object's version key.
 
 #### 🚀 Updates
 
 - Updated to support proto v0.64 release.
+- Versions from `git-url` and `index-url` are now loaded with proto's `load_tool_versions` host
+  function, so they can be replaced with `[tools.<id>.versions-source]`.
 
 #### 🐞 Fixes
 

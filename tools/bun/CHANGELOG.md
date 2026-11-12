@@ -11,6 +11,8 @@
 #### 🚀 Updates
 
 - Updated to support proto v0.64 release.
+- Versions are now loaded with proto's `load_tool_versions` host function, so another Git
+  repository or index can be configured with `[tools.bun.versions-source]`.
 - The baseline build, for x64 CPUs without AVX2, is now chosen from the CPU level that proto
   provides, instead of running `grep` or `sysctl`, and is now also used on Windows and FreeBSD.
   It's recorded as the `baseline` variant in the lockfile, so machines with different CPUs no

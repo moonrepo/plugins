@@ -9,4 +9,6 @@ publish = false
 common = { path = "../common" }
 
 [features]
-wasm = ["common/wasm"]
+# moon doesn't provide proto's `load_tool_versions` host function, so tools
+# embedded in toolchains load versions within the plugin instead
+wasm = ["common/wasm", "common/tool-versions-fallback"]

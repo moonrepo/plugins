@@ -13,6 +13,9 @@
 #### 🚀 Updates
 
 - Updated to support proto v0.64 release.
+- Versions are now loaded with proto's `load_tool_versions` host function, so another Git
+  repository or index can be configured with `[tools.zig.versions-source]`. The `master` build is
+  only available from the default index.
 
 #### 🐞 Fixes
 
