@@ -319,9 +319,10 @@ mod go_tool {
             })
             .await;
 
+        // Real paths in WASM only use `/`, even on Windows
         assert_eq!(
             output.env.get("GOROOT").unwrap(),
-            &tool_dir.to_string_lossy().to_string()
+            &tool_dir.to_string_lossy().replace('\\', "/")
         );
     }
 }
