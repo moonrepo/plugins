@@ -357,6 +357,27 @@ pub fn download_prebuilt(
         arch = "x64".into();
     }
 
+    // ARMv7 builds don't run on ARMv6 (like the Raspberry Pi Zero and 1), which
+    // Node.js built until v11, and unofficial builds until v22. Foreign platforms
+    // have no details, so use the ARMv7 build.
+    let armv6 = env.arch == HostArch::Arm
+        && env
+            .details
+            .as_ref()
+            .and_then(|details| details.arm_version)
+            .is_some_and(|arm_version| arm_version < 7);
+
+    if armv6 && let Some(version) = version.as_version() {
+        if version.major >= 23 {
+            return Err(plugin_err!(
+                "No pre-built Node.js archive is available for ARMv6 from v23, use v22 or earlier."
+            ));
+        }
+
+        arch = "armv6l".into();
+        unofficial = version.major >= 12;
+    }
+
     if env.os.is_linux() && env.libc == HostLibc::Musl {
         if !matches!(env.arch, HostArch::X64 | HostArch::Arm64) {
             return Err(plugin_err!(
@@ -423,6 +444,7 @@ pub fn download_prebuilt(
                 .replace("{file}", "SHASUMS256.txt")
                 .replace("{channel}", channel),
         ),
+        variant: (arch == "armv6l").then(|| arch.clone()),
         ..Default::default()
     }))
 }

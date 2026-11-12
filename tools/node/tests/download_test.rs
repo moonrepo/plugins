@@ -47,6 +47,74 @@ mod node_tool {
         );
     }
 
+    async fn download_for_arm_version(
+        arm_version: Option<u8>,
+        version: &str,
+    ) -> DownloadPrebuiltOutput {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("node-test", |config| {
+                config.host_with(|host| {
+                    host.os = HostOS::Linux;
+                    host.arch = HostArch::Arm;
+                    host.libc = HostLibc::Gnu;
+                    host.details = Some(HostDetails {
+                        arm_version,
+                        ..Default::default()
+                    });
+                });
+            })
+            .await;
+
+        plugin
+            .download_prebuilt(DownloadPrebuiltInput {
+                context: PluginContext {
+                    version: VersionSpec::parse(version).unwrap(),
+                    ..Default::default()
+                },
+                ..Default::default()
+            })
+            .await
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn supports_linux_armv6() {
+        for (version, url) in [
+            (
+                "10.24.1",
+                "https://nodejs.org/download/release/v10.24.1/node-v10.24.1-linux-armv6l.tar.xz",
+            ),
+            (
+                "22.23.5",
+                "https://unofficial-builds.nodejs.org/download/release/v22.23.5/node-v22.23.5-linux-armv6l.tar.xz",
+            ),
+        ] {
+            let output = download_for_arm_version(Some(6), version).await;
+
+            assert_eq!(output.download_url, url);
+            assert_eq!(output.variant.as_deref(), Some("armv6l"));
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn uses_armv7_build_without_armv6() {
+        for arm_version in [None, Some(7)] {
+            let output = download_for_arm_version(arm_version, "24.0.0").await;
+
+            assert_eq!(
+                output.download_url,
+                "https://nodejs.org/download/release/v24.0.0/node-v24.0.0-linux-armv7l.tar.xz"
+            );
+            assert_eq!(output.variant, None);
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    #[should_panic(expected = "No pre-built Node.js archive is available for ARMv6 from v23")]
+    async fn errors_for_armv6_from_v23() {
+        download_for_arm_version(Some(6), "23.0.0").await;
+    }
+
     #[tokio::test(flavor = "multi_thread")]
     async fn supports_linux_arm() {
         let sandbox = create_empty_proto_sandbox();

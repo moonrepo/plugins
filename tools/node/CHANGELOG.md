@@ -12,6 +12,9 @@
 - Versions are now loaded with proto's `load_tool_versions` host function, so another Git
   repository or index can be configured with `[tools.node.versions-source]`. LTS aliases are only
   available from the default index.
+- Added Linux ARMv6 support (like the Raspberry Pi Zero and 1), which proto detects. It installs
+  `armv6l` builds (unofficial builds from v12 to v22), instead of ARMv7 builds that can't run.
+  v23 and later have no ARMv6 builds.
 - Added Linux riscv64 and loong64 support, using [unofficial builds](https://github.com/nodejs/unofficial-builds).
 - Windows arm64 now uses x64 builds (through emulation) for versions before v20, which have no arm64 builds.
 
