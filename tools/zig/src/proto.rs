@@ -88,8 +88,6 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
     };
 
     if let Some(canary) = canary {
-        // proto only resolves an alias to a listed version
-        output.versions.push(canary.to_resolved_spec());
         output.canary = Some(canary.clone());
         output.aliases.insert("master".into(), canary);
     }
