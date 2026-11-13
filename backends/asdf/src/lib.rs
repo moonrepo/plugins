@@ -1,3 +1,4 @@
+#[cfg(feature = "wasm")]
 mod config;
 
 #[cfg(feature = "wasm")]

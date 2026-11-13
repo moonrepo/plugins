@@ -56,6 +56,8 @@ pub enum NxInput {
         runtime: String, // command line
     },
     Source(String), // path, glob, group reference
+    // ADR-0008.4: Kinds from newer Nx versions, which are skipped
+    Unknown(JsonValue),
 }
 
 pub type NxNamedInputs = FxHashMap<String, Vec<NxInput>>;
@@ -105,4 +107,17 @@ pub struct NxJson {
 #[serde(rename_all = "camelCase")]
 pub struct NxWorkspaceJson {
     pub projects: FxHashMap<String, String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use starbase_utils::json;
+
+    #[test]
+    fn parses_unknown_inputs() {
+        let input: NxInput = json::parse(r#"{ "somethingNew": true }"#).unwrap();
+
+        assert!(matches!(input, NxInput::Unknown(..)));
+    }
 }

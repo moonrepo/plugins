@@ -20,8 +20,8 @@ crate-type = ["cdylib", "lib"]
 [dependencies]
 lang_rust_common = { path = "../../crates/lang-rust-common" }
 tool_common = { path = "../../crates/tool-common" }
-extism-pdk = { workspace = true }
-proto_pdk = { workspace = true }
+extism-pdk = { workspace = true, optional = true }
+proto_pdk = { workspace = true, optional = true }
 serde = { workspace = true }
 starbase_utils = { workspace = true }
 toml = { workspace = true }
@@ -33,4 +33,4 @@ tokio = { workspace = true }
 
 [features]
 default = ["wasm"]
-wasm = ["tool_common/wasm", "lang_rust_common/wasm"]
+wasm = ["dep:extism-pdk", "dep:proto_pdk", "tool_common/wasm", "lang_rust_common/wasm"]

@@ -1,6 +1,7 @@
 use crate::nx_json::*;
 use crate::nx_project_json::*;
 use extension_common::migrator::*;
+use extism_pdk::debug;
 use moon_common::Id;
 use moon_config::EnvMap;
 use moon_config::{
@@ -308,6 +309,9 @@ fn migrate_inputs(raw_inputs: &[NxInput], for_file_groups: bool) -> AnyResult<Ve
             }
             NxInput::Runtime { .. } => {
                 // Not supported, moon includes tool version automatically
+            }
+            NxInput::Unknown(value) => {
+                debug!("Skipping the input {value}, as it's an unknown kind");
             }
             NxInput::Source(source) => {
                 // File path or glob

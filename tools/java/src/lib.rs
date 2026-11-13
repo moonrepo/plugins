@@ -1,6 +1,8 @@
-#[cfg(feature = "wasm")]
+#[cfg(any(feature = "wasm", test))]
+#[cfg_attr(not(feature = "wasm"), allow(dead_code, unused_imports))]
 mod config;
-#[cfg(feature = "wasm")]
+#[cfg(any(feature = "wasm", test))]
+#[cfg_attr(not(feature = "wasm"), allow(dead_code, unused_imports))]
 mod foojay;
 #[cfg(feature = "wasm")]
 mod java;

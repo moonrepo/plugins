@@ -10,6 +10,7 @@
 
 - Updated to support proto v0.64 release.
 - Updated `cargo-binstall` detection to also find the executable on `PATH`, not just in `CARGO_HOME/bin`.
+- Panics now report their message, instead of an `unreachable` WASM trap error.
 
 #### 🐞 Fixes
 

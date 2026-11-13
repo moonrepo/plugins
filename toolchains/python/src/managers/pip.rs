@@ -1,5 +1,6 @@
 use super::parse_version_spec;
 use crate::pyproject_toml::PyProjectToml;
+use extism_pdk::debug;
 use moon_config::{UnresolvedVersionSpec, Version};
 use moon_pdk::{AnyResult, VirtualPath};
 use moon_pdk_api::{
@@ -29,11 +30,19 @@ fn create_manifest_dep_from_requirement(req: &Requirement) -> ManifestDependency
                     && (spec.operator() == &Operator::Equal
                         || spec.operator() == &Operator::ExactEqual)
                 {
-                    dep.version = UnresolvedVersionSpec::parse(spec.version().to_string()).ok();
+                    dep.version = UnresolvedVersionSpec::parse(spec.version().to_string())
+                        .inspect_err(|error| {
+                            debug!("Skipping the version of {}: {error}", req.name)
+                        })
+                        .ok();
                 }
                 // Version range
                 else {
-                    dep.version = UnresolvedVersionSpec::parse(specs.to_string()).ok();
+                    dep.version = UnresolvedVersionSpec::parse(specs.to_string())
+                        .inspect_err(|error| {
+                            debug!("Skipping the version of {}: {error}", req.name)
+                        })
+                        .ok();
                 }
             }
         };
@@ -104,7 +113,9 @@ pub fn parse_pyproject_toml(path: &VirtualPath, output: &mut ParseManifestOutput
     };
 
     if let Some(version) = &project.version {
-        output.version = Version::parse(version.to_string()).ok();
+        output.version = Version::parse(version.to_string())
+            .inspect_err(|error| debug!("Skipping the version in pyproject.toml: {error}"))
+            .ok();
     }
 
     if let Some(dependencies) = &project.dependencies {
@@ -152,10 +163,9 @@ pub fn parse_pylock_toml(path: &VirtualPath, output: &mut ParseLockOutput) -> An
 
     for package in lock.packages {
         let mut dep = LockDependency {
-            version: match package.version {
-                Some(version) => parse_version_spec(version)?,
-                None => None,
-            },
+            version: package
+                .version
+                .and_then(|version| parse_version_spec(&package.name, version)),
             ..Default::default()
         };
 

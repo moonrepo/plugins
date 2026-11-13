@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Panics now report their message, instead of an `unreachable` WASM trap error.
+- Lockfile parse errors now name the lockfile.
+
+#### 🐞 Fixes
+
+- Fixed a version that can't be parsed in `poetry.lock`, `uv.lock` or `pylock.toml` failing every
+  task hash. The version is now skipped.
+
 ## 0.3.2
 
 #### 🐞 Fixes

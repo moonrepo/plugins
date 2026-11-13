@@ -64,7 +64,11 @@ pub fn parse_version_file(
 
 #[plugin_fn]
 pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
-    let tags = load_git_tags("https://github.com/astral-sh/uv")?;
+    // ADR-0008.7: Releases are tagged with the version alone
+    let tags = load_git_tags("https://github.com/astral-sh/uv")?
+        .into_iter()
+        .filter(|tag| tag.starts_with(|ch: char| ch.is_ascii_digit()))
+        .collect::<Vec<_>>();
 
     Ok(Json(LoadVersionsOutput::from(tags)?))
 }

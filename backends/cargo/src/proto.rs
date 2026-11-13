@@ -118,7 +118,7 @@ pub fn native_install(
         input
             .install_dir
             .to_real_path()?
-            .expect("Invalid install directory!")
+            .expect("install directory should be in proto's store, which is always mapped")
             .to_string(),
     );
 
@@ -147,10 +147,12 @@ pub fn native_install(
     }
 
     let result = exec(command)?;
+    let installed = result.exit_code == 0;
 
     Ok(Json(NativeInstallOutput {
-        installed: result.exit_code == 0,
-        error: if result.stderr.is_empty() {
+        installed,
+        // Progress and warnings also go to stderr, so only use it on failure
+        error: if installed || result.stderr.is_empty() {
             None
         } else {
             Some(result.stderr)

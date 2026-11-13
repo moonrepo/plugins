@@ -12,6 +12,7 @@
 - Versions are now loaded with proto's `load_tool_versions` host function, so another Git
   repository or index can be configured with `[tools.python.versions-source]`.
 - Added uv's `.python-versions` file to version detection, after `.python-version`.
+- Panics now report their message, instead of an `unreachable` WASM trap error.
 
 #### 🐞 Fixes
 

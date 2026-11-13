@@ -39,7 +39,7 @@ extern "ExtismHost" {
 }
 
 fn get_schema() -> Result<Schema, Error> {
-    let data = config::get("proto_schema")?.expect("Missing schema!");
+    let data = config::get("proto_schema")?.expect("proto should always configure the schema");
     let value: JsonValue = json::from_str(&data)?;
 
     let schema = if value.get("format").is_some_and(|format| {

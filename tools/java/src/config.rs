@@ -1,7 +1,7 @@
 // https://github.com/foojayio/discoapi
 // https://sdkman.io/jdks/
 
-use proto_pdk::{AnyResult, anyhow, get_plugin_id};
+use proto_pdk_api::{AnyResult, anyhow};
 use schematic::{ConfigEnum, derive_enum};
 use serde::{Deserialize, Deserializer, de};
 use std::fmt;
@@ -167,9 +167,10 @@ derive_enum!(
     }
 );
 
+#[cfg(feature = "wasm")]
 impl PackageType {
     pub fn detect() -> AnyResult<Self> {
-        let id = get_plugin_id()?;
+        let id = proto_pdk::get_plugin_id()?;
 
         Ok(if id == "jre" { Self::Jre } else { Self::Jdk })
     }

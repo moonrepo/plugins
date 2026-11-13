@@ -20,9 +20,9 @@ crate-type = ["cdylib"]
 [dependencies]
 toolchain_common = { path = "../../crates/toolchain-common" }
 node_depman_tool = { path = "../../tools/node-depman", default-features = false }
-extism-pdk = { workspace = true }
+extism-pdk = { workspace = true, optional = true }
 moon_config = { workspace = true }
-moon_pdk = { workspace = true, features = ["schematic"] }
+moon_pdk = { workspace = true, features = ["schematic"], optional = true }
 moon_pdk_api = { workspace = true }
 schematic = { workspace = true }
 serde = { workspace = true }
@@ -39,4 +39,4 @@ tokio = { workspace = true }
 
 [features]
 default = ["wasm"]
-wasm = ["toolchain_common/wasm", "node_depman_tool/wasm"]
+wasm = ["dep:extism-pdk", "dep:moon_pdk", "toolchain_common/wasm", "node_depman_tool/wasm"]

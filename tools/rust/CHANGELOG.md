@@ -16,6 +16,8 @@
 - Added a warning when a toolchain file uses a partial version like `1.80`, which rustup installs as a
   separate toolchain from proto's.
 - Added `components` and `targets` to the `rust-toolchain.toml` model.
+- Panics now report their message, instead of an `unreachable` WASM trap error.
+- Git tags that aren't versions are now skipped when loading versions, instead of failing.
 
 #### 🐞 Fixes
 
@@ -25,6 +27,8 @@
   the legacy file, so proto now does too.
 - Fixed a legacy `rust-toolchain` file with TOML content failing to parse.
 - Fixed Windows ARM64 downloading the x64 `rustup-init`.
+- Fixed failed `rustup` commands being ignored, which reported toolchains as installed or
+  uninstalled when they weren't. They now return an error.
 
 #### ⚙️ Internal
 

@@ -1,8 +1,9 @@
-use crate::{
-    config::{ArchiveType, Distribution, JavaToolConfig, LibcType, PackageType, ReleaseType},
-    java::JavaContext,
-};
-use proto_pdk::{AnyResult, HostArch, HostEnvironment, HostLibc, HostOS, PluginError, fetch_json};
+use crate::config::{ArchiveType, Distribution, LibcType, PackageType, ReleaseType};
+#[cfg(feature = "wasm")]
+use crate::{config::JavaToolConfig, java::JavaContext};
+#[cfg(feature = "wasm")]
+use proto_pdk::fetch_json;
+use proto_pdk_api::{AnyResult, HostArch, HostEnvironment, HostLibc, HostOS, PluginError};
 use serde::Deserialize;
 
 #[derive(Debug, Default, Deserialize)]
@@ -111,6 +112,7 @@ pub fn find_package<'a>(
 
 // https://github.com/foojayio/discoapi#endpoint-packages
 
+#[cfg(feature = "wasm")]
 pub fn fetch_packages(
     env: &HostEnvironment,
     config: &JavaToolConfig,
@@ -173,6 +175,7 @@ impl FoojayPackageInfo {
 }
 
 // https://github.com/foojayio/discoapi#endpoint-packages
+#[cfg(feature = "wasm")]
 pub fn fetch_package_info(config: &JavaToolConfig, id: &str) -> AnyResult<FoojayPackageInfo> {
     let url = format!("{}/ids/{id}", config.api_url.trim_end_matches('/'));
     let mut response: FoojayResponse<FoojayPackageInfo> = fetch_json(&url)?;

@@ -15,6 +15,7 @@ use tool_common::{enable_tracing, load_tool_versions};
 #[host_fn]
 extern "ExtismHost" {
     fn exec_command(input: Json<ExecCommandInput>) -> Json<ExecCommandOutput>;
+    fn host_log(input: Json<HostLogInput>);
     fn send_request(input: Json<SendRequestInput>) -> Json<SendRequestOutput>;
 }
 
@@ -189,7 +190,7 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
     for item in items {
         if let NodeDistLTS::Name(alias) = &item.lts {
             let alias = alias.to_lowercase();
-            let version = UnresolvedVersionSpec::parse(&item.version[1..])?;
+            let version = UnresolvedVersionSpec::parse(item.version.trim_start_matches('v'))?;
 
             // The first encounter of an lts is the latest stable
             if !output.aliases.contains_key("stable") {
@@ -404,7 +405,8 @@ pub fn download_prebuilt(
         let entry = response
             .iter()
             .find(|row| row.files.iter().any(|file| file == &file_to_match))
-            .unwrap_or(&response[0]);
+            .or(response.first())
+            .ok_or_else(|| plugin_err!("No Node.js nightly versions were found in the index."))?;
 
         channel = "nightly";
         version = VersionSpec::parse(&entry.version)?;
@@ -525,7 +527,16 @@ pub fn post_install(Json(input): Json<InstallHook>) -> FnResult<()> {
         input.context.version.to_string(),
     );
 
-    exec(command)?;
+    let result = exec(command)?;
+
+    // Node.js still works without it, so don't fail the install
+    if result.exit_code != 0 {
+        host_log!(
+            warn,
+            "Failed to install the npm that comes bundled with Node.js, as <shell>proto install npm bundled</shell> returned a {} exit code.",
+            result.exit_code
+        );
+    }
 
     Ok(())
 }

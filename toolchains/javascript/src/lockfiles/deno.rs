@@ -1,8 +1,7 @@
 use super::{parse_name_and_version, parse_version_spec};
 use crate::config::CatalogsMap;
 use deno_lockfile::LockfileContent;
-use moon_pdk::{AnyResult, VirtualPath};
-use moon_pdk_api::{LockDependency, ParseLockOutput};
+use moon_pdk_api::{AnyResult, LockDependency, ParseLockOutput, VirtualPath};
 use nodejs_package_json::VersionProtocol;
 use rustc_hash::FxHashMap;
 use serde::Deserialize;
@@ -22,7 +21,7 @@ pub fn parse_deno_lock(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyR
             .push(LockDependency {
                 hash: Some(value.integrity),
                 // Version is fully qualified
-                version: parse_version_spec(key.version.to_string())?,
+                version: parse_version_spec(&key.name, key.version.to_string()),
                 ..Default::default()
             });
     }
@@ -39,7 +38,7 @@ pub fn parse_deno_lock(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyR
             .push(LockDependency {
                 hash: value.integrity,
                 // Version is fully qualified
-                version: parse_version_spec(version)?,
+                version: parse_version_spec(name, version),
                 ..Default::default()
             });
     }

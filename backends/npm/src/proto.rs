@@ -79,7 +79,7 @@ pub fn native_install(
     let real_install_dir = input
         .install_dir
         .to_real_path()?
-        .expect("Invalid install directory!");
+        .expect("install directory should be in proto's store, which is always mapped");
 
     if config.bun {
         command.command = "bun".into();
@@ -108,10 +108,12 @@ pub fn native_install(
     command.cwd = Some(input.install_dir.clone());
 
     let result = exec(prepare_command(command))?;
+    let installed = result.exit_code == 0;
 
     Ok(Json(NativeInstallOutput {
-        installed: result.exit_code == 0,
-        error: if result.stderr.is_empty() {
+        installed,
+        // Progress and warnings also go to stderr, so only use it on failure
+        error: if installed || result.stderr.is_empty() {
             None
         } else {
             Some(result.stderr)
@@ -156,7 +158,7 @@ pub fn locate_executables(
         match config
             .exe_path
             .as_ref()
-            .unwrap()
+            .expect("`exe_path` should be set by `ExecutableConfig::new`")
             .extension()
             .and_then(|ext| ext.to_str())
         {
@@ -227,7 +229,7 @@ pub fn locate_executables(
                 entry
                     .path()
                     .strip_prefix(&input.install_dir)
-                    .unwrap()
+                    .expect("entries should be inside the install directory")
                     .to_string_lossy(),
             );
 
@@ -332,7 +334,10 @@ fn is_node_script(path: &VirtualPath) -> bool {
 
     match File::open(path).and_then(|mut file| file.read(&mut head)) {
         Ok(len) => {
-            let line = head[..len].split(|byte| *byte == b'\n').next().unwrap();
+            let line = head[..len]
+                .split(|byte| *byte == b'\n')
+                .next()
+                .expect("split should always yield an item");
 
             line.starts_with(b"#!") && String::from_utf8_lossy(line).contains("node")
         }

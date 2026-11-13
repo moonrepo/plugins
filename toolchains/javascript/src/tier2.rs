@@ -675,36 +675,53 @@ pub fn install_dependencies(
 pub fn parse_lock(Json(input): Json<ParseLockInput>) -> FnResult<Json<ParseLockOutput>> {
     let mut output = ParseLockOutput::default();
 
-    match input.path.file_name().and_then(|name| name.to_str()) {
-        Some("bun.lock") => parse_bun_lock(&input.path, &mut output)?,
-        Some("bun.lockb") => parse_bun_lockb(&input.path, &mut output)?,
-        Some("deno.lock") => parse_deno_lock(&input.path, &mut output)?,
+    let result = match input.path.file_name().and_then(|name| name.to_str()) {
+        Some("bun.lock") => parse_bun_lock(&input.path, &mut output),
+        Some("bun.lockb") => parse_bun_lockb(&input.path, &mut output),
+        Some("deno.lock") => parse_deno_lock(&input.path, &mut output),
         Some("package-lock.json" | "npm-shrinkwrap.json") => {
-            parse_package_lock_json(&input.path, &mut output)?
+            parse_package_lock_json(&input.path, &mut output)
         }
         // `nub.lock` uses the pnpm lockfile format
-        Some("nub.lock") | Some("pnpm-lock.yaml") => {
-            parse_pnpm_lock_yaml(&input.path, &mut output)?
-        }
-        Some("yarn.lock") => parse_yarn_lock(&input.path, &mut output)?,
-        _ => {}
+        Some("nub.lock") | Some("pnpm-lock.yaml") => parse_pnpm_lock_yaml(&input.path, &mut output),
+        Some("yarn.lock") => parse_yarn_lock(&input.path, &mut output),
+        _ => Ok(()),
     };
 
+    // ADR-0008.8
+    if let Err(error) = result {
+        return Err(anyhow!("Failed to parse <file>{}</file>: {error}", input.path).into());
+    }
+
     Ok(Json(output))
+}
+
+// ADR-0008.5: Skip a dependency whose version can't be parsed
+fn parse_manifest_version(name: &str, version: impl AsRef<str>) -> Option<ManifestDependency> {
+    let version = version.as_ref();
+
+    match UnresolvedVersionSpec::parse(version) {
+        Ok(spec) => Some(ManifestDependency::Version(spec)),
+        Err(error) => {
+            debug!("Skipping the dependency {name} {version} in package.json: {error}");
+
+            None
+        }
+    }
 }
 
 fn create_manifest_dependency(
     name: &str,
     version: &VersionProtocol,
     catalogs: &CatalogsMap,
-) -> AnyResult<Option<ManifestDependency>> {
+) -> Option<ManifestDependency> {
     let dep = match version {
         VersionProtocol::Alias(_)
         | VersionProtocol::Exec(_)
         | VersionProtocol::Patch(_)
         | VersionProtocol::Unknown(_)
         | VersionProtocol::CustomProtocol(_, _) => {
-            return Ok(None);
+            return None;
         }
         VersionProtocol::Catalog(key) => {
             let catalog = match key {
@@ -718,7 +735,7 @@ fn create_manifest_dependency(
                 return create_manifest_dependency(name, version, catalogs);
             }
 
-            return Ok(None);
+            return None;
         }
         VersionProtocol::File(path)
         | VersionProtocol::Link(path)
@@ -733,36 +750,37 @@ fn create_manifest_dependency(
             reference.as_deref().unwrap_or("master")
         )),
         VersionProtocol::Range(version_reqs) => {
-            ManifestDependency::Version(UnresolvedVersionSpec::parse(
+            return parse_manifest_version(
+                name,
                 version_reqs
                     .iter()
                     .map(|req| req.to_string())
                     .collect::<Vec<_>>()
                     .join(" || "),
-            )?)
+            );
         }
         VersionProtocol::Requirement(version_req) => {
-            ManifestDependency::Version(UnresolvedVersionSpec::parse(version_req.to_string())?)
+            return parse_manifest_version(name, version_req.to_string());
         }
         VersionProtocol::Tag(tag) => {
-            ManifestDependency::Version(UnresolvedVersionSpec::parse(tag)?)
+            return parse_manifest_version(name, tag);
         }
         VersionProtocol::Url(url) => ManifestDependency::url(url.to_owned()),
         VersionProtocol::Version(version) => {
-            ManifestDependency::Version(UnresolvedVersionSpec::parse(version.to_string())?)
+            return parse_manifest_version(name, version.to_string());
         }
         VersionProtocol::Workspace(ws) => match ws {
             WorkspaceProtocol::File(path) => ManifestDependency::path(path.to_owned()),
             WorkspaceProtocol::Version(version) => {
-                ManifestDependency::Version(UnresolvedVersionSpec::parse(version.to_string())?)
+                return parse_manifest_version(name, version.to_string());
             }
             _ => {
-                return Ok(None);
+                return None;
             }
         },
     };
 
-    Ok(Some(dep))
+    Some(dep)
 }
 
 #[plugin_fn]
@@ -773,36 +791,38 @@ pub fn parse_manifest(
     let catalogs = load_catalogs(&input.root)?;
     let mut output = ParseManifestOutput::default();
 
-    let extract_deps = |in_deps: &BTreeMap<String, VersionProtocol>,
-                        out_deps: &mut BTreeMap<String, ManifestDependency>|
-     -> AnyResult<()> {
-        for (name, version) in in_deps {
-            if let Some(dep) = create_manifest_dependency(name, version, &catalogs)? {
-                out_deps.insert(name.to_owned(), dep);
+    let extract_deps =
+        |in_deps: &BTreeMap<String, VersionProtocol>,
+         out_deps: &mut BTreeMap<String, ManifestDependency>| {
+            for (name, version) in in_deps {
+                if let Some(dep) = create_manifest_dependency(name, version, &catalogs) {
+                    out_deps.insert(name.to_owned(), dep);
+                }
             }
-        }
-
-        Ok(())
-    };
+        };
 
     if let Some(deps) = &manifest.dependencies {
-        extract_deps(deps, &mut output.dependencies)?;
+        extract_deps(deps, &mut output.dependencies);
     }
 
     if let Some(deps) = &manifest.dev_dependencies {
-        extract_deps(deps, &mut output.dev_dependencies)?;
+        extract_deps(deps, &mut output.dev_dependencies);
     }
 
     if let Some(deps) = &manifest.peer_dependencies {
-        extract_deps(deps, &mut output.peer_dependencies)?;
+        extract_deps(deps, &mut output.peer_dependencies);
     }
 
     if let Some(deps) = &manifest.optional_dependencies {
-        extract_deps(deps, &mut output.build_dependencies)?;
+        extract_deps(deps, &mut output.build_dependencies);
     }
 
+    // ADR-0008.5
     if let Some(version) = &manifest.version {
-        output.version = Some(Version::parse(version.to_string())?);
+        match Version::parse(version.to_string()) {
+            Ok(version) => output.version = Some(version),
+            Err(error) => debug!("Skipping the version {version} in package.json: {error}"),
+        };
     }
 
     output.publishable = manifest.version.is_some()

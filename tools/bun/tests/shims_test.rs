@@ -1,8 +1,6 @@
-use proto_pdk_test_utils::*;
-
+#[cfg(not(windows))]
 mod bun_tool {
-    use super::*;
+    use proto_pdk_test_utils::*;
 
-    #[cfg(not(windows))]
     generate_shims_test!("bun-test", ["bun", "bunx"]);
 }

@@ -2,11 +2,17 @@
 
 ## Unreleased
 
+#### 🚀 Updates
+
+- Panics now report their message, instead of an `unreachable` WASM trap error.
+
 #### 🐞 Fixes
 
 - Fixed the globals directory not being on `PATH` for tasks when `DENO_INSTALL_ROOT` ends with
   `bin`, which Deno v2.2.11+ uses as-is instead of its `bin` subdirectory. The same applies to
   `DENO_HOME`.
+- Fixed a version that can't be parsed in `deno.json` failing every task hash. The version is now
+  skipped.
 
 ## 1.1.3
 

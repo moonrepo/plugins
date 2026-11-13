@@ -1,4 +1,4 @@
-use proto_pdk::HostDistro;
+use proto_pdk_api::HostDistro;
 use schematic::{ConfigEnum, derive_enum};
 
 derive_enum!(

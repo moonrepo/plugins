@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use proto_pdk::VersionSpec;
+use proto_pdk_api::VersionSpec;
 
 pub fn from_swift_version(version: &str) -> String {
     let suffix = match version.matches('.').count() {
@@ -17,7 +17,9 @@ pub fn to_swift_version(spec: &VersionSpec) -> String {
         VersionSpec::Canary => "canary".into(),
         VersionSpec::Alias(alias) => alias.to_string(),
         _ => {
-            let version = spec.as_version().unwrap();
+            let version = spec
+                .as_version()
+                .expect("only versions should be left after Canary and Alias");
             let mut next = version.to_string();
 
             // Releases before 6.4.0 drop a `.0` patch from their names

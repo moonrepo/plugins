@@ -20,6 +20,7 @@
   they already are a `bin` directory, instead of appending another `bin`.
 - Added a `nubr` executable for Nub v0.9.3+.
 - Added Windows x64 support for Yarn v6 (from `6.0.0-rc.23`).
+- Panics now report their message, instead of an `unreachable` WASM trap error.
 
 #### 🐞 Fixes
 
@@ -33,6 +34,7 @@
 - Fixed `shared-globals-dir` for pnpm v10 and below, which ignore `pnpm_config_*` environment variables. They now receive `npm_config_global_dir` and `npm_config_global_bin_dir`.
 - Fixed Yarn v6 on macOS x64 attempting a download that doesn't exist, instead of failing as unsupported.
 - Fixed the archive prefix for Yarn v0 versions.
+- Fixed an empty version in the Node.js index panicking while inferring the npm version.
 
 #### ⚙️ Internal
 

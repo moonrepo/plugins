@@ -1,10 +1,14 @@
 use super::yarn::parse_yarn_lock_content;
 use super::{parse_name_and_version, parse_version_spec};
-use moon_pdk::{AnyResult, ExecCommandInput, VirtualPath, exec};
-use moon_pdk_api::{LockDependency, ParseLockOutput};
+#[cfg(feature = "wasm")]
+use moon_pdk::{ExecCommandInput, exec};
+#[cfg(feature = "wasm")]
+use moon_pdk_api::anyhow;
+use moon_pdk_api::{AnyResult, LockDependency, ParseLockOutput, VirtualPath};
 use serde::Deserialize;
 use starbase_utils::{fs, json, json::JsonValue};
 use std::collections::BTreeMap;
+use toolchain_common::debug;
 
 #[derive(Debug, Deserialize, Default)]
 #[serde(default, rename_all = "camelCase")]
@@ -61,9 +65,13 @@ pub enum BunLockPackage {
         JsonValue, // object
     ),
 
-    // Must be last!
+    // Must be last, other than `Unknown`!
     #[allow(dead_code)]
     Workspace(Vec<String>),
+
+    // ADR-0008.4: Shapes from newer Bun versions, which are skipped
+    #[allow(dead_code)]
+    Unknown(JsonValue),
 }
 
 // Only fields that are actually used are defined, as other fields
@@ -86,10 +94,17 @@ pub fn parse_bun_lock(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyRe
     let content = fs::read_file(path)?;
     let lock: BunLock = json::parse(&content)?; // JSON5
 
-    for package in lock.packages.into_values() {
+    for (key, package) in lock.packages {
         let (name, version, integrity) = match &package {
+            BunLockPackage::Unknown(_) => {
+                debug!("Skipping the package {key} in bun.lock, as its entry has an unknown shape");
+
+                continue;
+            }
             BunLockPackage::Workspace(values) => {
-                if let Some((name, ref_name)) = values[0].split_once("@workspace:")
+                if let Some((name, ref_name)) = values
+                    .first()
+                    .and_then(|value| value.split_once("@workspace:"))
                     && let Some(ref_package) = lock.workspaces.get(ref_name)
                 {
                     output
@@ -97,10 +112,10 @@ pub fn parse_bun_lock(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyRe
                         .entry(name.to_string())
                         .or_default()
                         .push(LockDependency {
-                            version: match &ref_package.version {
-                                Some(version) => parse_version_spec(version)?,
-                                None => None,
-                            },
+                            version: ref_package
+                                .version
+                                .as_ref()
+                                .and_then(|version| parse_version_spec(name, version)),
                             ..Default::default()
                         });
                 }
@@ -151,7 +166,7 @@ pub fn parse_bun_lock(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyRe
             .entry(name.to_string())
             .or_default()
             .push(LockDependency {
-                version: parse_version_spec(version)?,
+                version: parse_version_spec(name, version),
                 hash: integrity.cloned(),
                 ..Default::default()
             });
@@ -160,8 +175,19 @@ pub fn parse_bun_lock(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyRe
     Ok(())
 }
 
+#[cfg(feature = "wasm")]
 pub fn parse_bun_lockb(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyResult<()> {
-    let content = exec(ExecCommandInput::pipe("bun", ["bun.lockb"]).cwd(path.parent().unwrap()))?;
+    let content = exec(
+        ExecCommandInput::pipe("bun", ["bun.lockb"])
+            .cwd(path.parent().expect("file path should have a parent")),
+    )?;
+
+    if content.exit_code != 0 {
+        return Err(anyhow!(
+            "Failed to read <file>bun.lockb</file> with <shell>bun</shell>: {}",
+            content.stderr.trim()
+        ));
+    }
 
     parse_yarn_lock_content(content.stdout.trim(), output)
 }
@@ -217,6 +243,14 @@ mod tests {
         assert!(matches!(
             parse(r#"["a@workspace:packages/a"]"#),
             BunLockPackage::Workspace(..)
+        ));
+    }
+
+    #[test]
+    fn parses_unknown_entry() {
+        assert!(matches!(
+            parse(r#"{ "name": "a" }"#),
+            BunLockPackage::Unknown(..)
         ));
     }
 }

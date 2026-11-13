@@ -60,9 +60,9 @@ pub fn parse_version_file(
         match parse_pep440_spec(constraint) {
             Ok(spec) => version = Some(spec),
             Err(error) => {
-                host_log!(
-                    warn,
-                    "Unable to use <property>requires-poetry</property> <version>{constraint}</version> from <file>pyproject.toml</file>, ignoring it: {error}",
+                // ADR-0008.6
+                debug!(
+                    "Skipping requires-poetry {constraint} in pyproject.toml, as it can't be parsed: {error}"
                 );
             }
         };
@@ -78,6 +78,8 @@ pub fn parse_version_file(
 pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
     let tags = load_git_tags("https://github.com/python-poetry/poetry")?
         .into_iter()
+        // ADR-0008.7: Releases are tagged with the version alone
+        .filter(|tag| tag.starts_with(|ch: char| ch.is_ascii_digit()))
         .map(|tag| from_pep_version(&tag))
         .collect::<Vec<_>>();
 
@@ -105,7 +107,7 @@ pub fn native_install(
         args: vec![
             script_path
                 .to_real_path()?
-                .expect("Invalid script path!")
+                .expect("script should be in the temp directory, which is always mapped")
                 .to_string(),
             "--force".into(),
             "--yes".into(),
@@ -116,7 +118,7 @@ pub fn native_install(
                 input
                     .install_dir
                     .to_real_path()?
-                    .expect("Invalid install directory!")
+                    .expect("install directory should be in proto's store, which is always mapped")
                     .to_string(),
             ),
             (
@@ -128,22 +130,22 @@ pub fn native_install(
         ..Default::default()
     })?;
 
+    let installed = result.exit_code == 0;
+
     Ok(Json(NativeInstallOutput {
-        error: if !result.stdout.is_empty()
-            && result.stdout.contains("poetry-installer-error")
-            && result.stdout.contains(".log")
+        error: if installed {
+            None
+        } else if result.stdout.contains("poetry-installer-error") && result.stdout.contains(".log")
         {
             Some("An error log has been written to the current directory.".into())
         } else if !result.stderr.is_empty() {
             Some(result.stderr)
         }
         // The installer reports errors, like an unknown version, on stdout
-        else if result.exit_code != 0 {
+        else {
             Some(result.stdout.trim().to_owned())
-        } else {
-            None
         },
-        installed: result.exit_code == 0,
+        installed,
         ..Default::default()
     }))
 }
@@ -171,13 +173,22 @@ pub fn post_install(Json(input): Json<InstallHook>) -> FnResult<()> {
         .tool_dir
         .join(env.os.get_exe_name("bin/poetry"))
         .to_real_path()?
-        .expect("Invalid tool directory!")
+        .expect("tool directory should be in proto's store, which is always mapped")
         .to_string();
 
-    exec_captured(
+    let result = exec_captured(
         poetry,
         ["config", "virtualenvs.prefer-active-python", "true"],
     )?;
+
+    // Poetry still works without it, so don't fail the install
+    if result.exit_code != 0 {
+        host_log!(
+            warn,
+            "Failed to set <property>virtualenvs.prefer-active-python</property> with <shell>poetry config</shell>: {}",
+            result.stderr.trim(),
+        );
+    }
 
     Ok(())
 }

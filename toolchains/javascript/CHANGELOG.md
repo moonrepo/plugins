@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Panics now report their message, instead of an `unreachable` WASM trap error.
+- Lockfile parse errors now name the lockfile.
+
+#### 🐞 Fixes
+
+- Fixed an empty workspace entry in `bun.lock` panicking while parsing the lockfile.
+- Fixed a failed `bun bun.lockb` being parsed as an empty lockfile. It now returns an error.
+- Fixed a version that can't be parsed in `bun.lock`, `deno.lock`, `package-lock.json`,
+  `pnpm-lock.yaml`, `yarn.lock` or `package.json` failing every task hash. The version is now
+  skipped.
+- Fixed `bun.lock` entries with an unknown shape failing to parse the lockfile. They're now skipped.
+- Fixed `package-lock.json` files with a `lockfileVersion` above 3 returning no dependencies.
+  They're now parsed like version 3.
+
 ## 1.3.2
 
 #### 🚀 Updates

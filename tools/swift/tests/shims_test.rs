@@ -1,8 +1,6 @@
-use proto_pdk_test_utils::*;
-
+#[cfg(not(windows))]
 mod swift_tool {
-    use super::*;
+    use proto_pdk_test_utils::*;
 
-    #[cfg(not(windows))]
     generate_shims_test!("swift-test", ["swift", "swiftc", "sourcekit-lsp"]);
 }

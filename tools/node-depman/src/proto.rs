@@ -283,9 +283,15 @@ pub fn resolve_version(
             if let Some(node_version) = get_host_env_var("PROTO_NODE_VERSION")? {
                 for node_release in &response {
                     // Theirs starts with v, ours does not
-                    if node_release.version[1..] == node_version && node_release.npm.is_some() {
-                        output.version =
-                            Some(VersionSpec::parse(node_release.npm.as_ref().unwrap())?);
+                    if node_release.version.trim_start_matches('v') == node_version
+                        && node_release.npm.is_some()
+                    {
+                        output.version = Some(VersionSpec::parse(
+                            node_release
+                                .npm
+                                .as_ref()
+                                .expect("npm version should have been checked above"),
+                        )?);
                         found_version = true;
                         break;
                     }
@@ -295,15 +301,23 @@ pub fn resolve_version(
             // Otherwise call the current `node` binary and infer from that
             if !found_version {
                 let result = exec_captured("node", ["--version"])?;
-                let node_version = result.stdout.trim();
 
-                for node_release in &response {
-                    // Both start with v
-                    if node_release.version == node_version && node_release.npm.is_some() {
-                        output.version =
-                            Some(VersionSpec::parse(node_release.npm.as_ref().unwrap())?);
-                        found_version = true;
-                        break;
+                // A failed `node` has no version to infer from
+                if result.exit_code == 0 {
+                    let node_version = result.stdout.trim();
+
+                    for node_release in &response {
+                        // Both start with v
+                        if node_release.version == node_version && node_release.npm.is_some() {
+                            output.version = Some(VersionSpec::parse(
+                                node_release
+                                    .npm
+                                    .as_ref()
+                                    .expect("npm version should have been checked above"),
+                            )?);
+                            found_version = true;
+                            break;
+                        }
                     }
                 }
             }
@@ -587,7 +601,10 @@ pub fn activate_environment(
         // Includes trailing /bin folder
         let globals_bin_dir = globals_dir.to_string();
         // Parent directory, doesn't include /bin folder
-        let globals_root_dir = globals_dir.parent().unwrap().to_string();
+        let globals_root_dir = globals_dir
+            .parent()
+            .expect("globals directory should end in bin")
+            .to_string();
 
         let env = get_host_environment()?;
         let manager = PackageManager::detect_from_version(&input.context.version)?;

@@ -21,6 +21,8 @@
   `cargo install`, which took minutes on cold CI runners. It falls back to `cargo install` when the
   download or unpacking (with `tar`) fails, or on hosts other than x64 and arm64 Linux, macOS, and
   Windows.
+- Panics now report their message, instead of an `unreachable` WASM trap error.
+- `Cargo.lock` parse errors now name the lockfile.
 
 #### 🐞 Fixes
 
@@ -41,7 +43,12 @@
 - Fixed bare dependency requirements (`1.2.3`) being parsed as exact versions instead of caret
   requirements, so task hashes with `hasher.optimization: accuracy` now track the resolved version
   from `Cargo.lock`. `[target.*]` dependencies are now included as well.
-- Includes `rust_tool` fixes for toolchain file precedence and Windows ARM64.
+- Includes `rust_tool` fixes for toolchain file precedence, Windows ARM64, and failed `rustup`
+  commands.
+- Fixed a failed `cargo metadata` while pruning for Docker showing a JSON parse error, instead of
+  cargo's error.
+- Fixed a package version that can't be parsed in `Cargo.toml` failing every task hash. The version
+  is now skipped.
 
 ## 1.0.12
 

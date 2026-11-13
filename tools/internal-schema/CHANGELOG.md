@@ -18,6 +18,7 @@
   `version`, still selects that key of each object.
 - Added a `revision` group to version patterns, for a 4th version number. The default pattern now
   matches versions like `1.2.3.4`, which were skipped.
+- Panics now report their message, instead of an `unreachable` WASM trap error.
 
 #### 🐞 Fixes
 

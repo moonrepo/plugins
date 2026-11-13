@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Panics now report their message, instead of an `unreachable` WASM trap error.
+
+#### 🐞 Fixes
+
+- Fixed a URL without a `/`, like `http:file.zip`, panicking instead of returning an error.
+- Fixed a failed `tar` or `unzip` reporting the archive as unpacked. It now returns an error.
+
 ## 1.0.4
 
 #### 🚀 Updates

@@ -1,7 +1,6 @@
 use super::parse_version_spec;
 use crate::config::CatalogsMap;
-use moon_pdk::{AnyResult, VirtualPath};
-use moon_pdk_api::{LockDependency, ParseLockOutput};
+use moon_pdk_api::{AnyResult, LockDependency, ParseLockOutput, VirtualPath};
 use nodejs_package_json::VersionProtocol;
 use rustc_hash::FxHashMap;
 use serde::Deserialize;
@@ -30,7 +29,7 @@ pub(crate) fn parse_yarn_lock_content<T: AsRef<str>>(
                 .entry(entry.name.to_string())
                 .or_default()
                 .push(LockDependency {
-                    version: parse_version_spec(entry.version)?,
+                    version: parse_version_spec(entry.name, entry.version),
                     ..Default::default()
                 });
         } else {
@@ -39,7 +38,7 @@ pub(crate) fn parse_yarn_lock_content<T: AsRef<str>>(
                 .entry(entry.name.to_string())
                 .or_default()
                 .push(LockDependency {
-                    version: parse_version_spec(entry.version)?,
+                    version: parse_version_spec(entry.name, entry.version),
                     hash: Some(entry.integrity.into()),
                     ..Default::default()
                 });

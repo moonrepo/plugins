@@ -32,7 +32,7 @@ tasks:
     env: *env
 
   lint:
-    command: cargo clippy --all-targets
+    command: cargo clippy --all-targets -- -D warnings
     inputs:
       - "@group(cargo)"
       - "@group(sources)"

@@ -46,12 +46,19 @@ impl TurboMigrator {
             let package_json: PackageJson = json::read_file(&package_json_path)?;
 
             if let Some(name) = package_json.name {
-                let package_root = package_json_path.parent().unwrap();
-                let package_source = package_root.strip_prefix(&context.workspace_root).unwrap();
+                let package_root = package_json_path
+                    .parent()
+                    .expect("file path should have a parent");
+                let package_source = package_root
+                    .strip_prefix(&context.workspace_root)
+                    .expect("path should be inside the workspace root it was walked from");
 
                 package_globs.insert(format!(
                     "{}/*",
-                    package_source.parent().unwrap().to_string_lossy()
+                    package_source
+                        .parent()
+                        .expect("package should be in a subdirectory")
+                        .to_string_lossy()
                 ));
 
                 packages.push(PackageEntry {
@@ -72,8 +79,10 @@ impl TurboMigrator {
 
     fn find_project_task_from_script(&self, script: &str) -> AnyResult<(&PackageEntry, String)> {
         let mut parts = script.split('#');
-        let package_name = parts.next().unwrap();
-        let task_id = parts.next().unwrap();
+        let package_name = parts.next().expect("split should always yield an item");
+        let task_id = parts
+            .next()
+            .expect("callers should check that the script contains #");
         let project = self.find_project_in_packages(package_name)?;
 
         Ok((project, task_id.to_owned()))

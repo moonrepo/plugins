@@ -12,6 +12,7 @@
 - Versions with a 4th number, like `1.2.3.4`, are now listed, as proto supports a revision. They
   were skipped.
 - Improved the error when a tool is not in the asdf shortname index, to point to the `shortname` and `repository` settings.
+- Panics now report their message, instead of an `unreachable` WASM trap error.
 
 #### 🐞 Fixes
 
@@ -21,6 +22,8 @@
 - Fixed `.tool-versions` lines with fallback versions or extra whitespace failing to parse. The first version is used, and lines are also matched by the `shortname` setting.
 - Fixed `bin/exec-env` multi-line variables being split into bogus variables. The script is now always sourced with bash, like asdf.
 - Fixed `ASDF_CONCURRENCY` overriding the variable when already set in the environment.
+- Fixed a version file outside of the directories that proto can access panicking instead of returning an error.
+- Fixed a failed `nproc` or `sysctl` setting an empty `ASDF_CONCURRENCY`. It now falls back to 1.
 
 #### ⚙️ Internal
 

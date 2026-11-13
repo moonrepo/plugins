@@ -78,8 +78,13 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
             "project.json",
         ],
     )? {
-        let rel_config_path = project_config_path.strip_prefix(workspace_root).unwrap();
-        let project_source = rel_config_path.parent().unwrap().to_string_lossy();
+        let rel_config_path = project_config_path
+            .strip_prefix(workspace_root)
+            .expect("path should be inside the workspace root it was walked from");
+        let project_source = rel_config_path
+            .parent()
+            .expect("file path should have a parent")
+            .to_string_lossy();
 
         host_log!(
             stdout,

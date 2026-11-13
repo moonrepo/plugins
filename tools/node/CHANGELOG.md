@@ -17,6 +17,7 @@
   v23 and later have no ARMv6 builds.
 - Added Linux riscv64 and loong64 support, using [unofficial builds](https://github.com/nodejs/unofficial-builds).
 - Windows arm64 now uses x64 builds (through emulation) for versions before v20, which have no arm64 builds.
+- Panics now report their message, instead of an `unreachable` WASM trap error.
 
 #### 🐞 Fixes
 
@@ -42,6 +43,8 @@
   official nightly it resolved.
 - Fixed `bundled-npm` installing the npm bundled with the Node.js version configured in the working
   directory, instead of the version that was just installed.
+- Fixed an empty nightly index, or an empty version in an index, panicking instead of returning an error.
+- Fixed a failed install of the bundled npm being ignored. It now logs a warning.
 
 #### ⚙️ Internal
 

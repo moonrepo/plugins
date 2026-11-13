@@ -1,7 +1,6 @@
 use super::{parse_name_and_version, parse_version_spec};
 use crate::config::CatalogsMap;
-use moon_pdk::{AnyResult, VirtualPath};
-use moon_pdk_api::{LockDependency, ParseLockOutput};
+use moon_pdk_api::{AnyResult, LockDependency, ParseLockOutput, VirtualPath};
 use nodejs_package_json::VersionProtocol;
 use rustc_hash::FxHashMap;
 use serde::Deserialize;
@@ -32,7 +31,7 @@ pub fn parse_pnpm_lock_yaml(path: &VirtualPath, output: &mut ParseLockOutput) ->
             .entry(name.to_string())
             .or_default()
             .push(LockDependency {
-                version: parse_version_spec(version)?,
+                version: parse_version_spec(name, version),
                 hash: reso.integrity.or(reso.commit),
                 meta: reso.tarball.or(reso.repo).or(reso.url),
                 ..Default::default()

@@ -46,7 +46,7 @@ impl CargoToml {
                     let workspace = root.entry("workspace").or_insert_with(new_table);
                     let package = workspace
                         .as_table_mut()
-                        .unwrap()
+                        .expect("workspace should be a table, as it was parsed as one")
                         .entry("package")
                         .or_insert_with(new_table);
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Panics now report their message, instead of an `unreachable` WASM trap error.
+
 ## 0.1.3
 
 #### 🚀 Updates

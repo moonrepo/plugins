@@ -44,6 +44,7 @@
   so `bundle install` no longer fails in the configs phase.
 - Project graph inference now supports `gems.rb`, `path "<dir>" do` blocks, `gem` calls that span
   multiple lines, and `gemspec path:`.
+- Panics now report their message, instead of an `unreachable` WASM trap error.
 
 #### 🐞 Fixes
 

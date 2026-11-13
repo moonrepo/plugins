@@ -1,6 +1,5 @@
 use super::parse_version_spec;
-use moon_pdk::{AnyResult, VirtualPath};
-use moon_pdk_api::{LockDependency, ParseLockOutput};
+use moon_pdk_api::{AnyResult, LockDependency, ParseLockOutput, VirtualPath};
 use package_lock_json_parser::{PackageLockJson, V1Dependency, parse};
 use starbase_utils::fs;
 use std::collections::HashMap;
@@ -15,12 +14,14 @@ fn parse_v1(lock: PackageLockJson, output: &mut ParseLockOutput) -> AnyResult<()
                 add_deps(nested_deps, output)?;
             }
 
+            let version = parse_version_spec(&name, dep.version);
+
             output
                 .dependencies
                 .entry(name)
                 .or_default()
                 .push(LockDependency {
-                    version: parse_version_spec(dep.version)?,
+                    version,
                     hash: dep.integrity,
                     ..Default::default()
                 });
@@ -54,7 +55,7 @@ fn parse_v2_up(lock: PackageLockJson, output: &mut ParseLockOutput) -> AnyResult
             .entry(name.to_string())
             .or_default()
             .push(LockDependency {
-                version: parse_version_spec(package.version)?,
+                version: parse_version_spec(name, package.version),
                 hash: package.integrity,
                 ..Default::default()
             });
@@ -67,10 +68,10 @@ pub fn parse_package_lock_json(path: &VirtualPath, output: &mut ParseLockOutput)
     let content = fs::read_file(path)?;
     let lock = parse(&content)?;
 
+    // ADR-0008.9: Parse newer lockfile versions with the newest format we support
     match lock.lockfile_version {
         1 => parse_v1(lock, output)?,
-        2 | 3 => parse_v2_up(lock, output)?,
-        _ => {}
+        _ => parse_v2_up(lock, output)?,
     };
 
     Ok(())

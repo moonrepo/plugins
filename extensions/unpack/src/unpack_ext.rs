@@ -75,21 +75,22 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
 
     fs::create_dir_all(&dest_dir)?;
 
-    if args.src.ends_with(".zip") {
+    let is_zip = args.src.ends_with(".zip");
+    let result = if is_zip {
         exec_streamed(
             "unzip",
             [
                 src_file
                     .to_real_path()?
-                    .expect("Invalid source")
+                    .expect("source should be mapped, as it exists")
                     .to_string(),
                 "-d".into(),
                 dest_dir
                     .to_real_path()?
-                    .expect("Invalid destination")
+                    .expect("destination should be mapped, as it was created")
                     .to_string(),
             ],
-        )?;
+        )?
     } else {
         exec_streamed(
             "tar",
@@ -97,15 +98,23 @@ pub fn execute_extension(Json(input): Json<ExecuteExtensionInput>) -> FnResult<(
                 "-xf".into(),
                 src_file
                     .to_real_path()?
-                    .expect("Invalid source")
+                    .expect("source should be mapped, as it exists")
                     .to_string(),
                 "-C".into(),
                 dest_dir
                     .to_real_path()?
-                    .expect("Invalid destination")
+                    .expect("destination should be mapped, as it was created")
                     .to_string(),
             ],
-        )?;
+        )?
+    };
+
+    if result.exit_code != 0 {
+        return Err(plugin_err!(
+            "Failed to unpack <path>{src_file}</path>, as <shell>{}</shell> returned a {} exit code.",
+            if is_zip { "unzip" } else { "tar" },
+            result.exit_code,
+        ));
     }
 
     host_log!(stdout, "Unpacked archive!");

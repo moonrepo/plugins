@@ -15,6 +15,7 @@
   repository or index can be configured with `[tools.moon.versions-source]`.
 - `moon upgrade` is no longer blocked by proto. moon v2.2.2+ detects that proto installed it, and
   upgrades with `proto install moon latest --pin local`.
+- Panics now report their message, instead of an `unreachable` WASM trap error.
 
 #### 🐞 Fixes
 

@@ -6,18 +6,13 @@ use crate::package_graph::{GoPackageGraph, is_version_segment, module_dir_candid
 use extism_pdk::*;
 use moon_config::BinEntry;
 use moon_pdk::{
-    HostLogInput, HostLogTarget, VirtualPathExt, command_exists, get_host_env_var,
-    get_host_environment, host_log, locate_root, parse_toolchain_config_schema,
+    VirtualPathExt, command_exists, get_host_env_var, get_host_environment, locate_root,
+    parse_toolchain_config_schema,
 };
 use moon_pdk_api::*;
 use starbase_utils::fs;
 use std::path::PathBuf;
 use toolchain_common::append_bin_dir;
-
-#[host_fn]
-extern "ExtismHost" {
-    fn host_log(input: Json<HostLogInput>);
-}
 
 #[plugin_fn]
 pub fn extend_project_graph(
@@ -245,16 +240,12 @@ pub fn parse_manifest(
 
     match input.path.file_name().and_then(|name| name.to_str()) {
         Some("go.mod") => {
-            // moon reads every `go.mod` below a root, which includes
-            // intentionally invalid ones in `testdata`
+            // ADR-0008.8: moon reads every `go.mod` below a root, which
+            // includes intentionally invalid ones in `testdata`
             let go_mod = match parse_go_mod(fs::read_file(&input.path)?) {
                 Ok(go_mod) => go_mod,
                 Err(error) => {
-                    host_log!(
-                        warn,
-                        "Failed to parse <file>{}</file>, skipping: {error}",
-                        input.path
-                    );
+                    debug!("Skipping {}, as it can't be parsed: {error}", input.path);
 
                     return Ok(Json(output));
                 }
@@ -263,10 +254,18 @@ pub fn parse_manifest(
             // Indirect requires are part of the build too (Go 1.17+),
             // so a bump to one must change task hashes
             for dep in go_mod.require {
-                output.dependencies.insert(
-                    dep.module.module_path,
-                    ManifestDependency::Version(UnresolvedVersionSpec::parse(dep.module.version)?),
-                );
+                // ADR-0008.5
+                match UnresolvedVersionSpec::parse(&dep.module.version) {
+                    Ok(version) => {
+                        output
+                            .dependencies
+                            .insert(dep.module.module_path, ManifestDependency::Version(version));
+                    }
+                    Err(error) => debug!(
+                        "Skipping the dependency {} {} in go.mod: {error}",
+                        dep.module.module_path, dep.module.version
+                    ),
+                };
             }
         }
         Some("go.work") => {

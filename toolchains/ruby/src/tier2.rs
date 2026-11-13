@@ -263,7 +263,15 @@ pub fn parse_lock(Json(input): Json<ParseLockInput>) -> FnResult<Json<ParseLockO
     for spec in lock.specs {
         let (version, platform) = split_platform(spec.version);
         let mut dep = LockDependency {
-            version: VersionSpec::parse(normalize_gem_version(version)).ok(),
+            // ADR-0008.5
+            version: VersionSpec::parse(normalize_gem_version(version))
+                .inspect_err(|error| {
+                    debug!(
+                        "Skipping the locked version {version} of {}: {error}",
+                        spec.name
+                    )
+                })
+                .ok(),
             ..Default::default()
         };
 

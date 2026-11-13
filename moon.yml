@@ -22,6 +22,18 @@ tasks:
       - build-all
     preset: utility
 
+  # Shared crates aren't moon projects, so they don't inherit the `test` task
+  test-crates:
+    command: cargo nextest run --no-default-features --no-tests=pass -p common -p '*_common'
+    inputs:
+      - Cargo.lock
+      - Cargo.toml
+      - rust-toolchain.toml
+      - crates/**/*
+    env:
+      CARGO_TERM_COLOR: always
+      NO_COLOR: "true"
+
 workspace:
   inheritedTasks:
     include: []

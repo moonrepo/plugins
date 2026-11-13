@@ -176,6 +176,15 @@ pub fn prune_docker(Json(input): Json<PruneDockerInput>) -> FnResult<Json<PruneD
         )
         .cwd(input.root.clone()),
     )?;
+
+    if metadata.exit_code != 0 {
+        return Err(anyhow!(
+            "Failed to run <shell>cargo metadata</shell>: {}",
+            metadata.stderr.trim()
+        )
+        .into());
+    }
+
     let metadata: CargoMetadata = json::from_str(&metadata.stdout)?;
 
     // Directories outside of the root are not in the Docker context

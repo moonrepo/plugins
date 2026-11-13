@@ -87,7 +87,10 @@ impl Migrator {
             }
         }
 
-        Ok(self.project_configs.get_mut(&project_config_path).unwrap())
+        Ok(self
+            .project_configs
+            .get_mut(&project_config_path)
+            .expect("config should have been inserted above"))
     }
 
     pub fn load_tasks_config(
@@ -110,7 +113,10 @@ impl Migrator {
             );
         }
 
-        Ok(self.tasks_configs.get_mut(&tasks_config_path).unwrap())
+        Ok(self
+            .tasks_configs
+            .get_mut(&tasks_config_path)
+            .expect("config should have been inserted above"))
     }
 
     pub fn load_tasks_platform_config(&mut self) -> AnyResult<&mut PartialInheritedTasksConfig> {
@@ -127,7 +133,10 @@ impl Migrator {
             }
         }
 
-        Ok(self.workspace_config.as_mut().unwrap())
+        Ok(self
+            .workspace_config
+            .as_mut()
+            .expect("workspace config should have been set above"))
     }
 
     pub fn save_configs(&self) -> AnyResult<()> {

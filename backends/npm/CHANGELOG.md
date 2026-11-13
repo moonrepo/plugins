@@ -9,6 +9,7 @@
 #### 🚀 Updates
 
 - Updated to support proto v0.64 release.
+- Panics now report their message, instead of an `unreachable` WASM trap error.
 
 #### 🐞 Fixes
 

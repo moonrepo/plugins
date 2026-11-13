@@ -20,10 +20,10 @@ crate-type = ["cdylib", "lib"]
 [dependencies]
 tool_common = { path = "../../crates/tool-common" }
 lang_javascript_common = { path = "../../crates/lang-javascript-common" }
-extism-pdk = { workspace = true }
+extism-pdk = { workspace = true, optional = true }
 nodejs_package_json = { workspace = true }
 npmrc-config-rs = "0.1.1"
-proto_pdk = { workspace = true }
+proto_pdk = { workspace = true, optional = true }
 rustc-hash = { workspace = true }
 regex = { workspace = true, features = ["unicode"] }
 schematic = { workspace = true }
@@ -39,4 +39,4 @@ tokio = { workspace = true }
 
 [features]
 default = ["wasm"]
-wasm = ["tool_common/wasm"]
+wasm = ["dep:extism-pdk", "dep:proto_pdk", "tool_common/wasm"]

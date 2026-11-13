@@ -16,6 +16,8 @@
 - Versions are now loaded with proto's `load_tool_versions` host function, so another Git
   repository or index can be configured with `[tools.zig.versions-source]`. The `master` build is
   only available from the default index.
+- Panics now report their message, instead of an `unreachable` WASM trap error.
+- A `master` version that can't be parsed is now skipped, instead of failing to load versions.
 
 #### 🐞 Fixes
 

@@ -16,6 +16,8 @@
 - A `uv.toml` without a `required-version` now stops detection in its directory, as uv ignores
   `[tool.uv]` in a `pyproject.toml` next to it.
 - Added Windows arm64 and x86, and Linux x86, arm, ppc64le, s390x, and riscv64 support.
+- Panics now report their message, instead of an `unreachable` WASM trap error.
+- Git tags that aren't versions are now skipped when loading versions, instead of failing.
 
 #### 🐞 Fixes
 

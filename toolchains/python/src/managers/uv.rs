@@ -35,7 +35,7 @@ pub fn parse_uv_lock(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyRes
 
     for package in lock.package {
         let mut dep = LockDependency {
-            version: parse_version_spec(package.version)?,
+            version: parse_version_spec(&package.name, package.version),
             ..Default::default()
         };
 

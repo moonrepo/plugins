@@ -21,7 +21,7 @@ pub fn from_java_version(version: &str) -> String {
     let mut out = String::new();
 
     // major
-    out.push_str(parts.next().expect("Expected a major version"));
+    out.push_str(parts.next().expect("split should always yield an item"));
 
     // minor
     out.push('.');
@@ -77,7 +77,9 @@ pub fn to_java_version(spec: &VersionSpec) -> String {
         VersionSpec::Canary => "canary".into(),
         VersionSpec::Alias(alias) => alias.to_string(),
         _ => {
-            let version = spec.as_version().unwrap();
+            let version = spec
+                .as_version()
+                .expect("only versions should be left after Canary and Alias");
             let decoded = decode_legacy_revision(version);
             let version = decoded.as_ref().unwrap_or(version);
 

@@ -19,9 +19,9 @@ crate-type = ["cdylib"]
 
 [dependencies]
 toolchain_common = { path = "../../crates/toolchain-common" }
-extism-pdk = { workspace = true }
+extism-pdk = { workspace = true, optional = true }
 moon_pdk_api = { workspace = true }
 
 [features]
 default = ["wasm"]
-wasm = ["toolchain_common/wasm"]
+wasm = ["dep:extism-pdk", "toolchain_common/wasm"]

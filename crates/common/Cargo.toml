@@ -6,6 +6,7 @@ license = "MIT"
 publish = false
 
 [dependencies]
+extism-pdk = { workspace = true, optional = true }
 indexmap = { workspace = true }
 proto_pdk = { workspace = true, features = ["tracing"], optional = true }
 proto_pdk_api = { workspace = true }
@@ -16,5 +17,5 @@ serde_json = { workspace = true, optional = true }
 serde_json = { workspace = true }
 
 [features]
-wasm = ["dep:proto_pdk"]
+wasm = ["dep:extism-pdk", "dep:proto_pdk"]
 tool-versions-fallback = ["wasm", "dep:serde_json"]

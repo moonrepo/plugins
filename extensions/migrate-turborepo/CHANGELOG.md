@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Panics now report their message, instead of an `unreachable` WASM trap error.
+
+#### 🐞 Fixes
+
+- Fixed values from newer Turborepo versions in `outputLogs`, `envMode` and `ui` failing the
+  migration. They're now ignored.
+
 ## 1.0.5
 
 #### 🚀 Updates

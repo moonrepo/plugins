@@ -1,5 +1,5 @@
 use extism_pdk::debug;
-use moon_pdk::{AnyResult, VirtualPath, fetch_bytes};
+use moon_pdk::{AnyResult, VirtualPath, anyhow, fetch_bytes};
 use starbase_utils::fs;
 
 pub fn download_from_url<U: AsRef<str>, P: AsRef<VirtualPath>>(
@@ -13,7 +13,17 @@ pub fn download_from_url<U: AsRef<str>, P: AsRef<VirtualPath>>(
     debug!("Downloading file from <url>{}</url>", url);
 
     // Extract the file name from the URL
-    let file_name = file_name.unwrap_or_else(|| &url[url.rfind('/').unwrap() + 1..]);
+    let file_name = match file_name {
+        Some(name) => name,
+        None => match url.rfind('/') {
+            Some(index) => &url[index + 1..],
+            None => {
+                return Err(anyhow!(
+                    "Unable to determine a file name from <url>{url}</url>."
+                ));
+            }
+        },
+    };
 
     // Fetch the bytes of the URL
     let bytes = fetch_bytes(url)?;

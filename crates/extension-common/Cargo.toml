@@ -7,13 +7,13 @@ publish = false
 
 [dependencies]
 common = { path = "../common" }
-extism-pdk = { workspace = true }
+extism-pdk = { workspace = true, optional = true }
 moon_common = { workspace = true }
 moon_config = { workspace = true }
-moon_pdk = { workspace = true }
+moon_pdk = { workspace = true, optional = true }
 rustc-hash = { workspace = true }
 serde = { workspace = true }
 starbase_utils = { workspace = true, features = ["yaml"] }
 
 [features]
-wasm = ["common/wasm"]
+wasm = ["dep:extism-pdk", "dep:moon_pdk", "common/wasm"]

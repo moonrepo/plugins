@@ -13,6 +13,7 @@
 - Updated to support proto v0.64 release.
 - Versions are now loaded with proto's `load_tool_versions` host function, so another Git
   repository or index can be configured with `[tools.zls.versions-source]`.
+- Panics now report their message, instead of an `unreachable` WASM trap error.
 
 #### 🐞 Fixes
 

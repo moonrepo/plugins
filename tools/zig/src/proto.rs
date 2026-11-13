@@ -80,10 +80,14 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
 
     // The body isn't returned for a source configured by the user
     let canary = match response.body {
+        // ADR-0008.5: Skip the canary when its version can't be parsed
         Some(body) => json::from_str::<ZigReleaseIndex>(&body)?
             .master()
-            .map(|release| UnresolvedVersionSpec::parse(&release.version))
-            .transpose()?,
+            .and_then(|release| {
+                UnresolvedVersionSpec::parse(&release.version)
+                    .inspect_err(|error| debug!("Skipping the canary {}: {error}", release.version))
+                    .ok()
+            }),
         None => None,
     };
 

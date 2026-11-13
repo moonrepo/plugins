@@ -9,6 +9,9 @@ pub enum TurboEnvMode {
     Loose,
     #[default]
     Strict,
+    // ADR-0008.4: Values from newer Turborepo versions
+    #[serde(other)]
+    Unknown,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -20,6 +23,9 @@ pub enum TurboOutputMode {
     NewOnly,
     ErrorsOnly,
     None,
+    // ADR-0008.4: Values from newer Turborepo versions
+    #[serde(other)]
+    Unknown,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -28,6 +34,9 @@ pub enum TurboUi {
     #[default]
     Stream,
     Tui,
+    // ADR-0008.4: Values from newer Turborepo versions
+    #[serde(other)]
+    Unknown,
 }
 
 // Future: interruptible, with
@@ -73,4 +82,17 @@ pub struct TurboJson {
 #[derive(Default, Deserialize)]
 pub struct PackageJson {
     pub name: Option<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use starbase_utils::json;
+
+    #[test]
+    fn parses_unknown_output_modes() {
+        let task: TurboTask = json::parse(r#"{ "outputLogs": "something-new" }"#).unwrap();
+
+        assert!(matches!(task.output_logs, Some(TurboOutputMode::Unknown)));
+    }
 }

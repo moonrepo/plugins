@@ -4,6 +4,7 @@ use crate::parsers;
 use moon_config::VersionSpec;
 use moon_pdk_api::AnyResult;
 use std::collections::BTreeMap;
+use toolchain_common::debug;
 
 #[derive(Debug, PartialEq)]
 pub struct GoSumDependency {
@@ -31,12 +32,25 @@ impl GoSum {
                 continue;
             }
 
+            // ADR-0008.5: Skip a version that can't be parsed, instead of failing the whole file
+            let version = match VersionSpec::parse(entry.version) {
+                Ok(version) => version,
+                Err(error) => {
+                    debug!(
+                        "Skipping the version {} of {} in go.sum: {error}",
+                        entry.version, entry.module
+                    );
+
+                    continue;
+                }
+            };
+
             sum.dependencies
                 .entry(entry.module.into())
                 .or_default()
                 .push(GoSumDependency {
                     checksum: entry.checksum.into(),
-                    version: VersionSpec::parse(entry.version)?,
+                    version,
                 });
         }
 
