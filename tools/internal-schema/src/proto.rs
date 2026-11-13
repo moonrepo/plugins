@@ -2,10 +2,9 @@ use crate::schema::{Schema, create_version, interpolate_tokens, v1::SchemaType};
 use extism_pdk::*;
 use proto_pdk::*;
 use serde_json::Value as JsonValue;
-use starbase_utils::fs;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
-use tool_common::{enable_tracing, ensure_stable_latest, extract_version_from_text};
+use tool_common::{enable_tracing, ensure_stable_latest};
 
 macro_rules! override_option {
     ($prev:ident, $next:ident, [ $($prop:ident),* ]) => {
@@ -101,7 +100,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
                     SchemaType::Language => PluginType::Language,
                     SchemaType::VersionManager => PluginType::VersionManager,
                 },
-                minimum_proto_version: Some(Version::new(0, 60, 0)),
+                minimum_proto_version: Some(Version::new(0, 64, 0)),
                 default_version: schema.metadata.default_version,
                 plugin_version: match schema.metadata.plugin_version {
                     Some(version) => Some(version),
@@ -115,10 +114,15 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
         }
 
         Schema::V2(schema) => RegisterToolOutput {
-            minimum_proto_version: schema
-                .metadata
-                .minimum_proto_version
-                .or_else(|| Some(Version::new(0, 60, 0))),
+            // The plugin itself requires v0.64, whatever the schema declares
+            minimum_proto_version: Some(
+                schema
+                    .metadata
+                    .minimum_proto_version
+                    .map_or(Version::new(0, 64, 0), |version| {
+                        version.max(Version::new(0, 64, 0))
+                    }),
+            ),
             plugin_version: schema
                 .metadata
                 .plugin_version
@@ -147,11 +151,11 @@ pub fn detect_version_files(
 pub fn parse_version_file(
     Json(input): Json<ParseVersionFileInput>,
 ) -> FnResult<Json<ParseVersionFileOutput>> {
-    let content = fs::read_file(&input.path)?;
     Ok(Json(ParseVersionFileOutput {
-        version: extract_version_from_text(&content)
+        version: extract_version_from_file(&input.path)?
             .map(UnresolvedVersionSpec::parse)
             .transpose()?,
+        ..Default::default()
     }))
 }
 
@@ -175,24 +179,18 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
     // URL endpoint
     else if let Some(endpoint) = resolve.index_url.as_deref() {
         let pattern = regex::Regex::new(resolve.get_version_pattern())?;
-        let version_key = resolve.get_index_version_key();
-        let response: Vec<JsonValue> = fetch_json(endpoint)?;
+        let load_index = |version_key: String| {
+            load_tool_versions(LoadToolVersionsInput::index(endpoint, Some(version_key)))
+                .map(|output| output.versions)
+        };
 
-        for row in response {
-            match row {
-                JsonValue::String(v) => {
-                    if let Some(cap) = pattern.captures(&v) {
-                        versions.insert(VersionSpec::parse(create_version(&cap)?)?);
-                    }
-                }
-                JsonValue::Object(o) => {
-                    if let Some(JsonValue::String(v)) = o.get(version_key)
-                        && let Some(cap) = pattern.captures(v)
-                    {
-                        versions.insert(VersionSpec::parse(create_version(&cap)?)?);
-                    }
-                }
-                _ => {}
+        // When the path doesn't match, the index may be a list of versions
+        let values = load_index(resolve.get_index_version_path())
+            .or_else(|error| load_index("*".into()).map_err(|_| error))?;
+
+        for value in values {
+            if let Some(cap) = pattern.captures(&value) {
+                versions.insert(VersionSpec::parse(create_version(&cap)?)?);
             }
         }
     }

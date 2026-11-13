@@ -44,21 +44,17 @@ impl<'de> Deserialize<'de> for ZlsReleaseIndex {
     }
 }
 
+/// Filter the index's keys to stable versions, as the index also
+/// contains pre-releases and other builds, like `nightly`.
+pub fn stable_versions(mut versions: Vec<String>) -> Vec<String> {
+    versions.retain(|version| {
+        Version::parse(version).is_ok_and(|version| version.prerelease.is_none())
+    });
+    versions.sort();
+    versions
+}
+
 impl ZlsReleaseIndex {
-    pub fn stable_versions(&self) -> Vec<String> {
-        let mut versions = self
-            .0
-            .keys()
-            .filter(|version| {
-                Version::parse(version).is_ok_and(|version| version.prerelease.is_none())
-            })
-            .cloned()
-            .collect::<Vec<_>>();
-
-        versions.sort();
-        versions
-    }
-
     pub fn find(&self, spec: &VersionSpec) -> AnyResult<&ZlsRelease> {
         if spec.is_latest() {
             return self.latest_stable().ok_or_else(|| {
@@ -119,7 +115,15 @@ mod tests {
 
     #[test]
     fn lists_only_stable_versions() {
-        assert_eq!(parse_index().stable_versions(), ["0.14.0", "0.16.0"]);
+        assert_eq!(
+            stable_versions(vec![
+                "0.16.0".into(),
+                "0.15.0-dev.1+abc".into(),
+                "nightly".into(),
+                "0.14.0".into(),
+            ]),
+            ["0.14.0", "0.16.0"]
+        );
     }
 
     #[test]

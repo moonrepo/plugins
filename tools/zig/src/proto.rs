@@ -25,7 +25,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
     Ok(Json(RegisterToolOutput {
         name: NAME.into(),
         type_of: PluginType::Language,
-        minimum_proto_version: Some(Version::new(0, 61, 0)),
+        minimum_proto_version: Some(Version::new(0, 64, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         unstable: Switch::Toggle(true),
         ..Default::default()
@@ -53,22 +53,41 @@ pub fn parse_version_file(
         .map(|source| source.to_zig_requirement())
         .transpose()?;
 
-    Ok(Json(ParseVersionFileOutput { version }))
+    Ok(Json(ParseVersionFileOutput {
+        version,
+        ..Default::default()
+    }))
 }
 
 #[plugin_fn]
 pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
     let config = get_tool_config::<ZigToolConfig>()?;
-    let index: ZigReleaseIndex = fetch_json(&config.index_url)?;
-    let canary = index
-        .master()
-        .map(|release| UnresolvedVersionSpec::parse(&release.version))
-        .transpose()?;
-    let mut output = LoadVersionsOutput::from(index.stable_versions())?;
+
+    // The index is keyed by version, and the canary by master
+    let response = load_tool_versions(LoadToolVersionsInput::Index {
+        url: config.index_url,
+        version_key: Some("*~".into()),
+        headers: Default::default(),
+        include_body: true,
+    })?;
+    let mut output = LoadVersionsOutput::from(
+        response
+            .versions
+            .into_iter()
+            .filter(|version| version != "master")
+            .collect(),
+    )?;
+
+    // The body isn't returned for a source configured by the user
+    let canary = match response.body {
+        Some(body) => json::from_str::<ZigReleaseIndex>(&body)?
+            .master()
+            .map(|release| UnresolvedVersionSpec::parse(&release.version))
+            .transpose()?,
+        None => None,
+    };
 
     if let Some(canary) = canary {
-        // proto only resolves an alias to a listed version
-        output.versions.push(canary.to_resolved_spec());
         output.canary = Some(canary.clone());
         output.aliases.insert("master".into(), canary);
     }

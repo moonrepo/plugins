@@ -42,18 +42,6 @@ impl<'de> Deserialize<'de> for ZigReleaseIndex {
 }
 
 impl ZigReleaseIndex {
-    pub fn stable_versions(&self) -> Vec<String> {
-        let mut versions = self
-            .0
-            .iter()
-            .filter(|(name, _)| name.as_str() != "master")
-            .map(|(_, release)| release.version.clone())
-            .collect::<Vec<_>>();
-
-        versions.sort();
-        versions
-    }
-
     pub fn master(&self) -> Option<&ZigRelease> {
         self.0.get("master")
     }
@@ -122,11 +110,6 @@ mod tests {
             }"#,
         )
         .unwrap()
-    }
-
-    #[test]
-    fn lists_only_stable_versions() {
-        assert_eq!(parse_index().stable_versions(), ["0.13.0", "0.14.0"]);
     }
 
     #[test]

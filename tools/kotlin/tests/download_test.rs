@@ -43,7 +43,7 @@ mod kotlin_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("kotlin-test", |config| {
-                    config.host(os, arch);
+                    config.host(HostPlatform::new(os, arch));
                 })
                 .await;
 

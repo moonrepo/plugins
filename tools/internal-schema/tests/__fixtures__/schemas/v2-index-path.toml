@@ -1,0 +1,16 @@
+format = "2"
+
+[metadata]
+name = "v2-test"
+type = "command-line"
+
+[install]
+download_url = "https://example.com/{download_name}"
+
+[platform.linux]
+download_name = "tool.tar.gz"
+
+# The index is keyed by version
+[resolve]
+index_url = "https://releases.zigtools.org/v1/zls/index.json"
+index_version_key = "*~"

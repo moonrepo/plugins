@@ -21,13 +21,10 @@ mod python_poetry_tool {
             })
             .await;
 
+        let error = output.error.unwrap_or_default();
+
         assert!(!output.installed);
-        assert!(
-            output
-                .error
-                .unwrap()
-                .contains("Version 0.0.1 does not exist")
-        );
+        assert!(error.contains("Version 0.0.1 does not exist"), "{error}");
     }
 
     #[cfg(unix)]
@@ -82,7 +79,7 @@ mod python_poetry_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("poetry-test", |config| {
-                config.host(HostOS::Linux, HostArch::Arm64);
+                config.host(HostPlatform::new(HostOS::Linux, HostArch::Arm64));
             })
             .await;
 
@@ -109,7 +106,7 @@ mod python_poetry_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("poetry-test", |config| {
-                config.host(HostOS::Windows, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::Windows, HostArch::X64));
             })
             .await;
 

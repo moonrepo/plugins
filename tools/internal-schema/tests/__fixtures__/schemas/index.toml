@@ -1,0 +1,19 @@
+bin = "moon-test"
+name = "moon-test"
+type = "cli"
+
+[platform.linux]
+download-file = "moon-{arch}-unknown-linux-{libc}"
+
+[platform.macos]
+download-file = "moon-{arch}-apple-darwin"
+
+[platform.windows]
+download-file = "moon-{arch}-pc-windows-msvc.exe"
+
+[install]
+download-url = "https://github.com/moonrepo/moon/releases/download/v{version}/{download_file}"
+unpack = false
+
+[resolve]
+manifest-url = "https://nodejs.org/download/release/index.json"

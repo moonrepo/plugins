@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 
-use proto_pdk_api::Version;
-use tool_common::extract_version_from_text;
+use proto_pdk_api::{Version, extract_version_from_text};
 
 // Ruby tags, ruby-build, and GitHub releases use `preview2` and `rc1`,
 // while the registry (and semver ordering) use `preview.2` and `rc.1`

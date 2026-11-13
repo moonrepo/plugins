@@ -197,7 +197,7 @@ mod v1_checksum {
                 "schema-test",
                 locate_fixture("schemas").join("v1-checksum.toml"),
                 |config| {
-                    config.host(HostOS::Linux, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::X64));
                 },
             )
             .await;
@@ -220,7 +220,7 @@ mod v1_checksum {
                 "schema-test",
                 locate_fixture("schemas").join("v1-checksum.toml"),
                 |config| {
-                    config.host(HostOS::MacOS, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::MacOS, HostArch::Arm64));
                 },
             )
             .await;

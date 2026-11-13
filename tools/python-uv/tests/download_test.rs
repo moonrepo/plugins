@@ -10,7 +10,7 @@ mod python_uv_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("uv-test", |config| {
-                config.host(HostOS::Linux, HostArch::Arm64);
+                config.host(HostPlatform::new(HostOS::Linux, HostArch::Arm64));
             })
             .await;
 
@@ -41,7 +41,7 @@ mod python_uv_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("uv-test", |config| {
-                config.host(HostOS::Linux, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::Linux, HostArch::X64));
             })
             .await;
 
@@ -72,7 +72,7 @@ mod python_uv_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("uv-test", |config| {
-                config.host(HostOS::MacOS, HostArch::Arm64);
+                config.host(HostPlatform::new(HostOS::MacOS, HostArch::Arm64));
             })
             .await;
 
@@ -102,7 +102,7 @@ mod python_uv_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("uv-test", |config| {
-                config.host(HostOS::MacOS, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::MacOS, HostArch::X64));
             })
             .await;
 
@@ -134,7 +134,7 @@ mod python_uv_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("uv-test", |config| {
-                config.host(HostOS::Linux, HostArch::LongArm64);
+                config.host(HostPlatform::new(HostOS::Linux, HostArch::LongArm64));
             })
             .await;
 
@@ -154,7 +154,7 @@ mod python_uv_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("uv-test", |config| {
-                config.host(HostOS::Windows, HostArch::Arm64);
+                config.host(HostPlatform::new(HostOS::Windows, HostArch::Arm64));
             })
             .await;
 
@@ -185,7 +185,7 @@ mod python_uv_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("uv-test", |config| {
-                config.host(HostOS::Windows, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::Windows, HostArch::X64));
             })
             .await;
 
@@ -293,7 +293,7 @@ mod python_uv_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("uv-test", |config| {
-                config.host(HostOS::Linux, HostArch::Arm64);
+                config.host(HostPlatform::new(HostOS::Linux, HostArch::Arm64));
             })
             .await;
 
@@ -320,7 +320,7 @@ mod python_uv_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("uv-test", |config| {
-                config.host(HostOS::Windows, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::Windows, HostArch::X64));
             })
             .await;
 

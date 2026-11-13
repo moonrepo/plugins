@@ -5,16 +5,10 @@ use rustc_hash::FxHashMap;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
-pub struct RegistryVersion {
-    pub version: String, // No v prefix
-}
-
-#[derive(Deserialize)]
 pub struct RegistryResponse {
     pub name: String,
     #[serde(rename = "dist-tags")]
     pub dist_tags: FxHashMap<String, String>,
-    pub versions: FxHashMap<String, RegistryVersion>,
 }
 
 pub fn parse_registry_response(res_text: String, is_yarn: bool) -> Result<RegistryResponse, Error> {

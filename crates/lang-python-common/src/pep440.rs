@@ -1,8 +1,8 @@
 use proto_pdk_api::{AnyResult, UnresolvedVersionSpec};
 
 /// Convert a PEP 440 version specifier, like `>=0.5, !=0.5.3`, into a proto requirement.
-/// Versions are zero-padded, as PEP 440 compares them (`==0.5` is `0.5.0`), and `!=`
-/// clauses are dropped, as proto has no equivalent. Poetry's `^` and `~` pass through.
+/// Versions are zero-padded, as PEP 440 compares them (`==0.5` and `!=0.5` are `0.5.0`).
+/// Poetry's `^` and `~` pass through.
 ///
 /// <https://peps.python.org/pep-0440/#version-specifiers>
 pub fn parse_pep440_spec(spec: &str) -> AnyResult<UnresolvedVersionSpec> {
@@ -25,7 +25,11 @@ pub fn parse_pep440_spec(spec: &str) -> AnyResult<UnresolvedVersionSpec> {
         );
 
         match op {
-            "!=" => {}
+            // A partial `!=` excludes every version with those parts, like a wildcard
+            "!=" if version.ends_with('*') => {
+                clauses.push(format!("!={}", version.trim_end_matches(".*")))
+            }
+            "!=" => clauses.push(format!("!={padded}")),
             "" | "==" | "===" if version.ends_with('*') => clauses.push(format!("={version}")),
             "" | "==" | "===" => clauses.push(format!("={padded}")),
             // `~=1.2` is `>=1.2, ==1.*`, and `~=1.2.3` is `>=1.2.3, ==1.2.*`
@@ -112,12 +116,15 @@ mod tests {
     }
 
     #[test]
-    fn drops_exclusions() {
+    fn supports_exclusions() {
         assert_eq!(
             parse_pep440_spec(">=0.5, !=0.5.3").unwrap(),
-            parse(">=0.5.0")
+            parse(">=0.5.0, !=0.5.3")
         );
-        assert_eq!(parse_pep440_spec("!=0.5.3").unwrap(), parse("*"));
+        assert_eq!(parse_pep440_spec("!=0.5.3").unwrap(), parse("!=0.5.3"));
+        assert_eq!(resolve("~=0.5.1, !=0.5.31"), "0.5.3");
+        assert_eq!(resolve("<0.5.3, !=0.5"), "0.4.30");
+        assert_eq!(resolve("<1.0, !=0.5.*"), "0.13.7");
     }
 
     #[test]

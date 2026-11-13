@@ -45,7 +45,7 @@ mod java_tool {
             let sandbox = create_empty_proto_sandbox();
             let plugin = sandbox
                 .create_plugin_with_config("java-test", |config| {
-                    config.host(HostOS::Linux, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::X64));
                 })
                 .await;
             let mut spec = ToolSpec::parse(requested).unwrap();
@@ -63,6 +63,37 @@ mod java_tool {
             );
             // Foojay java versions always carry build metadata
             assert!(resolved.contains('+'), "for {requested}: {resolved}");
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn resolves_revisions_and_their_legacy_encoding() {
+        // Versions with a revision were listed with it encoded into
+        // the pre-release, so existing pins resolve to the revision
+        for (requested, resolved) in [
+            ("temurin-17.0.4.1", "temurin-17.0.4.1+1"),
+            ("temurin-17.0.4.1+1", "temurin-17.0.4.1+1"),
+            ("temurin-17.0.4-v1", "temurin-17.0.4.1+1"),
+            ("temurin-17.0.4-v1+1", "temurin-17.0.4.1+1"),
+        ] {
+            let sandbox = create_empty_proto_sandbox();
+            let plugin = sandbox
+                .create_plugin_with_config("java-test", |config| {
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::X64));
+                })
+                .await;
+            let mut spec = ToolSpec::parse(requested).unwrap();
+
+            flow::resolve::Resolver::new(&plugin.tool)
+                .resolve_version(&mut spec, false)
+                .await
+                .unwrap();
+
+            assert_eq!(
+                spec.get_resolved_version().to_string(),
+                resolved,
+                "for {requested}"
+            );
         }
     }
 
@@ -187,7 +218,10 @@ mod java_tool {
         for (initial, candidate) in [
             ("temurin-21.0.11", "=temurin-21.0.11"),
             ("21.0.11", "=temurin-21.0.11"),
-            ("temurin-26.0.2-v1", "=temurin-26.0.2-v1"),
+            ("temurin-26.0.2.1", "=temurin-26.0.2.1"),
+            // Legacy encoding of the revision
+            ("temurin-26.0.2-v1", "=temurin-26.0.2.1"),
+            ("26.0.2-ea.v1", "=temurin-26.0.2.1-ea"),
         ] {
             let output = plugin
                 .resolve_version(ResolveVersionInput {
@@ -217,6 +251,24 @@ mod java_tool {
             .await;
 
         assert_eq!(output.candidate, None);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn converts_legacy_revisions_with_build() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("java-test").await;
+
+        let output = plugin
+            .resolve_version(ResolveVersionInput {
+                initial: UnresolvedVersionSpec::parse("temurin-26.0.2-v1+1").unwrap(),
+                ..Default::default()
+            })
+            .await;
+
+        assert_eq!(
+            output.candidate,
+            Some(UnresolvedVersionSpec::parse("temurin-26.0.2.1+1").unwrap())
+        );
     }
 
     #[tokio::test(flavor = "multi_thread")]
@@ -361,10 +413,10 @@ mod java_tool {
         // Newer identifiers have a 4th component and the vendor's build
         for (identifier, version) in [
             ("21.0.13.0+9-tem", "temurin-21.0.13"),
-            ("26.0.2.1+1-tem", "temurin-26.0.2-v1"),
+            ("26.0.2.1+1-tem", "temurin-26.0.2.1"),
             ("26.0.2.0+11.1-amzn", "corretto-26.0.2"),
-            ("25.0.4.1+329142-jbr", "jetbrains-25.0.4-v1"),
-            ("11.0.14.1-jbr", "jetbrains-11.0.14-v1"),
+            ("25.0.4.1+329142-jbr", "jetbrains-25.0.4.1"),
+            ("11.0.14.1-jbr", "jetbrains-11.0.14.1"),
         ] {
             let output = plugin
                 .parse_version_file(version_file(

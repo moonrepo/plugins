@@ -11,6 +11,7 @@ pub struct NodeDepmanPluginConfig {
 mod node_depman_tool {
     use super::*;
 
+    // Real paths in WASM only use `/`, even on Windows
     mod activate_environment {
         use super::*;
 
@@ -84,7 +85,7 @@ mod node_depman_tool {
                                 ".proto/tools/node/globals"
                             })
                             .to_string_lossy()
-                            .to_string()
+                            .replace('\\', "/")
                     )])
                 );
             }
@@ -153,7 +154,7 @@ mod node_depman_tool {
                                 .path()
                                 .join(".proto/tools/node/globals")
                                 .to_string_lossy()
-                                .to_string()
+                                .replace('\\', "/")
                         ),
                         (
                             "npm_config_global_bin_dir".into(),
@@ -161,7 +162,7 @@ mod node_depman_tool {
                                 .path()
                                 .join(".proto/tools/node/globals/bin")
                                 .to_string_lossy()
-                                .to_string()
+                                .replace('\\', "/")
                         )
                     ])
                 );
@@ -231,7 +232,7 @@ mod node_depman_tool {
                                 .path()
                                 .join(".proto/tools/node/globals")
                                 .to_string_lossy()
-                                .to_string()
+                                .replace('\\', "/")
                         ),
                         (
                             "pnpm_config_global_bin_dir".into(),
@@ -239,7 +240,7 @@ mod node_depman_tool {
                                 .path()
                                 .join(".proto/tools/node/globals/bin")
                                 .to_string_lossy()
-                                .to_string()
+                                .replace('\\', "/")
                         )
                     ])
                 );
@@ -276,7 +277,7 @@ mod node_depman_tool {
                                 .path()
                                 .join(".proto/tools/node/globals")
                                 .to_string_lossy()
-                                .to_string()
+                                .replace('\\', "/")
                         ),
                         (
                             "npm_config_global_bin_dir".into(),
@@ -284,7 +285,7 @@ mod node_depman_tool {
                                 .path()
                                 .join(".proto/tools/node/globals/bin")
                                 .to_string_lossy()
-                                .to_string()
+                                .replace('\\', "/")
                         )
                     ])
                 );
@@ -321,7 +322,7 @@ mod node_depman_tool {
                                 .path()
                                 .join(".proto/tools/node/globals")
                                 .to_string_lossy()
-                                .to_string()
+                                .replace('\\', "/")
                         ),
                         (
                             "pnpm_config_global_bin_dir".into(),
@@ -329,7 +330,7 @@ mod node_depman_tool {
                                 .path()
                                 .join(".proto/tools/node/globals/bin")
                                 .to_string_lossy()
-                                .to_string()
+                                .replace('\\', "/")
                         )
                     ])
                 );
@@ -398,7 +399,7 @@ mod node_depman_tool {
                             .path()
                             .join(".proto/tools/node/globals")
                             .to_string_lossy()
-                            .to_string()
+                            .replace('\\', "/")
                     )])
                 );
             }

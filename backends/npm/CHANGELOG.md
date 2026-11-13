@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+#### 💥 Breaking
+
+- Requires proto v0.64 or later.
+
+#### 🚀 Updates
+
+- Updated to support proto v0.64 release.
+
 #### 🐞 Fixes
 
 - Fixed the `latest` version resolving to a pre-release when the `latest` dist-tag points to one. It now falls back to the highest stable version.

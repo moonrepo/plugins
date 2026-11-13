@@ -10,7 +10,7 @@ use proto_pdk::*;
 use schematic::SchemaBuilder;
 use starbase_utils::fs;
 use std::collections::HashMap;
-use tool_common::{append_env_bin_dir, enable_tracing, extract_version_from_text};
+use tool_common::{append_env_bin_dir, enable_tracing, load_git_tags};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -26,7 +26,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
     Ok(Json(RegisterToolOutput {
         name: NAME.into(),
         type_of: PluginType::Language,
-        minimum_proto_version: Some(Version::new(0, 60, 0)),
+        minimum_proto_version: Some(Version::new(0, 64, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         self_upgrade_commands: vec!["upgrade".into()],
         ..Default::default()
@@ -92,7 +92,10 @@ pub fn parse_version_file(
         version = Some(UnresolvedVersionSpec::parse(constraint)?);
     }
 
-    Ok(Json(ParseVersionFileOutput { version }))
+    Ok(Json(ParseVersionFileOutput {
+        version,
+        ..Default::default()
+    }))
 }
 
 // Version files are detected before `package.json`, so must be updated when they exist
@@ -256,26 +259,15 @@ pub fn download_prebuilt(
         _ => unreachable!(),
     };
 
-    // x64 builds before v1.4 require AVX2, otherwise the baseline build is needed
-    let mut avx2_suffix = "";
-
-    if env.arch == HostArch::X64 {
-        let has_avx2 = match env.os {
-            HostOS::Linux if command_exists(env, "grep") => {
-                exec_captured("grep", ["avx2", "/proc/cpuinfo"])?.exit_code == 0
-            }
-            HostOS::MacOS if command_exists(env, "sysctl") => {
-                exec_captured("sysctl", ["machdep.cpu"])?
-                    .stdout
-                    .contains("AVX2")
-            }
-            _ => true,
-        };
-
-        if !has_avx2 {
-            avx2_suffix = "-baseline";
-        }
-    }
+    // x64 builds before v1.4 require AVX2 (x86-64 level 3), otherwise the baseline build
+    // is needed. Foreign platforms have no level, so use the default build.
+    let baseline = env.arch == HostArch::X64
+        && env
+            .details
+            .as_ref()
+            .and_then(|details| details.x64_level)
+            .is_some_and(|level| level < 3);
+    let baseline_suffix = if baseline { "-baseline" } else { "" };
 
     let mut libc_suffix = "";
 
@@ -293,10 +285,10 @@ pub fn download_prebuilt(
     }
 
     let prefix = match env.os {
-        HostOS::Linux => format!("bun-linux-{arch}{libc_suffix}{avx2_suffix}"),
-        HostOS::MacOS => format!("bun-darwin-{arch}{avx2_suffix}"),
-        HostOS::Windows => format!("bun-windows-{arch}"),
-        HostOS::FreeBSD => format!("bun-freebsd-{arch}"),
+        HostOS::Linux => format!("bun-linux-{arch}{libc_suffix}{baseline_suffix}"),
+        HostOS::MacOS => format!("bun-darwin-{arch}{baseline_suffix}"),
+        HostOS::Windows => format!("bun-windows-{arch}{baseline_suffix}"),
+        HostOS::FreeBSD => format!("bun-freebsd-{arch}{baseline_suffix}"),
         _ => unreachable!(),
     };
 
@@ -323,6 +315,7 @@ pub fn download_prebuilt(
                     .replace("{file}", "SHASUMS256.txt"),
             )
         },
+        variant: baseline.then(|| "baseline".into()),
         ..Default::default()
     }))
 }

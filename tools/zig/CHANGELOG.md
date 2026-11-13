@@ -4,10 +4,18 @@
 
 #### 💥 Breaking
 
+- Requires proto v0.64 or later.
 - `minimum_zig_version` in `build.zig.zon` now resolves within its minor version (`~0.14.0`) instead
   of to any newer version (`>=0.14.0`), as Zig changes APIs between minor versions. A 0.14 project
   was installing the latest Zig, which fails to build it. setup-zig, anyzig, and zvm install the
   exact version, while this also allows newer patches.
+
+#### 🚀 Updates
+
+- Updated to support proto v0.64 release.
+- Versions are now loaded with proto's `load_tool_versions` host function, so another Git
+  repository or index can be configured with `[tools.zig.versions-source]`. The `master` build is
+  only available from the default index.
 
 #### 🐞 Fixes
 

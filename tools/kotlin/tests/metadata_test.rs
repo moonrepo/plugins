@@ -16,7 +16,7 @@ mod kotlin_tool {
         assert_eq!(output.name, "Kotlin");
         assert!(matches!(output.type_of, PluginType::Language));
         assert!(output.lock_options.ignore_os_arch);
-        assert_eq!(output.minimum_proto_version, Some(Version::new(0, 60, 0)));
+        assert_eq!(output.minimum_proto_version, Some(Version::new(0, 64, 0)));
         assert_eq!(
             output.plugin_version.unwrap().to_string(),
             env!("CARGO_PKG_VERSION")

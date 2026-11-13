@@ -9,7 +9,7 @@ mod swift_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("swift-test", |config| {
-                config.host(HostOS::MacOS, HostArch::Arm64);
+                config.host(HostPlatform::new(HostOS::MacOS, HostArch::Arm64));
             })
             .await;
 
@@ -21,7 +21,7 @@ mod swift_tool {
 
         assert_eq!(metadata.name, "Swift");
         assert!(metadata.lock_options.metadata.is_empty());
-        assert_eq!(metadata.minimum_proto_version, Some(Version::new(0, 61, 0)));
+        assert_eq!(metadata.minimum_proto_version, Some(Version::new(0, 64, 0)));
         assert_eq!(
             metadata.plugin_version.unwrap().to_string(),
             env!("CARGO_PKG_VERSION")
@@ -33,7 +33,7 @@ mod swift_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("swift-test", |config| {
-                config.host(HostOS::Linux, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::Linux, HostArch::X64));
             })
             .await;
 
@@ -43,8 +43,45 @@ mod swift_tool {
             })
             .await;
 
-        // Detected from the machine running the tests, or the default
+        // No host details, so the default
         assert!(metadata.lock_options.metadata.contains_key("platform"));
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn registers_linux_platform_from_host_distro() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("swift-test", |config| {
+                config.host_with(|host| {
+                    host.os = HostOS::Linux;
+                    host.arch = HostArch::X64;
+                    host.libc = HostLibc::Gnu;
+                    host.details = Some(HostDetails {
+                        distro: Some(HostDistro {
+                            id: "rocky".into(),
+                            id_like: vec!["rhel".into(), "centos".into(), "fedora".into()],
+                            version_id: Some("10.0".into()),
+                        }),
+                        ..Default::default()
+                    });
+                });
+            })
+            .await;
+
+        let metadata = plugin
+            .register_tool(RegisterToolInput {
+                id: Id::raw("swift"),
+            })
+            .await;
+
+        assert_eq!(
+            metadata
+                .lock_options
+                .metadata
+                .get("platform")
+                .map(String::as_str),
+            Some("redhat-ubi-10")
+        );
     }
 
     #[tokio::test(flavor = "multi_thread")]
@@ -69,7 +106,7 @@ mod swift_tool {
             let plugin = sandbox
                 .create_plugin_with_config("swift-test", |config| {
                     config
-                        .host(HostOS::Linux, HostArch::X64)
+                        .host(HostPlatform::new(HostOS::Linux, HostArch::X64))
                         .tool_config(SwiftToolConfig {
                             linux_platform: Some(linux_platform.clone()),
                             ..Default::default()

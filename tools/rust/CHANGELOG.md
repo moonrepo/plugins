@@ -2,8 +2,15 @@
 
 ## Unreleased
 
+#### 💥 Breaking
+
+- Requires proto v0.64 or later.
+
 #### 🚀 Updates
 
+- Updated to support proto v0.64 release.
+- Versions are now loaded with proto's `load_tool_versions` host function, so another Git
+  repository or index can be configured with `[tools.rust.versions-source]`.
 - `$CARGO_INSTALL_ROOT` and `$CARGO_HOME` are now used as-is for the globals directories when they
   already are a `bin` directory, instead of appending another `bin`.
 - Added a warning when a toolchain file uses a partial version like `1.80`, which rustup installs as a
@@ -21,6 +28,8 @@
 
 #### ⚙️ Internal
 
+- `rustup-init` is now downloaded to a temporary directory for each install, which proto removes
+  afterwards, instead of reusing a copy in the tool's temporary directory.
 - Version files are now read from their path, as the `content` input is deprecated.
 
 ## 0.13.12
