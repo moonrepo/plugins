@@ -251,6 +251,41 @@ mod swift_tool {
         }
     }
 
+    async fn download_for_distro(
+        id: &str,
+        version_id: &str,
+        version: &str,
+    ) -> DownloadPrebuiltOutput {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox
+            .create_plugin_with_config("swift-test", |config| {
+                config.host_with(|host| {
+                    host.os = HostOS::Linux;
+                    host.arch = HostArch::X64;
+                    host.libc = HostLibc::Gnu;
+                    host.details = Some(HostDetails {
+                        distro: Some(HostDistro {
+                            id: id.into(),
+                            version_id: Some(version_id.into()),
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    });
+                });
+            })
+            .await;
+
+        plugin
+            .download_prebuilt(DownloadPrebuiltInput {
+                context: PluginContext {
+                    version: VersionSpec::parse(version).unwrap(),
+                    ..Default::default()
+                },
+                ..Default::default()
+            })
+            .await
+    }
+
     // The distribution detected by proto is used, and recorded as a variant
     #[tokio::test(flavor = "multi_thread")]
     async fn uses_platform_for_detected_distro() {
@@ -263,46 +298,74 @@ mod swift_tool {
                 "ubuntu22.04",
                 Some("ubuntu-22.04"),
             ),
+            (
+                "ubuntu",
+                "26.04",
+                "ubuntu2604",
+                "ubuntu26.04",
+                Some("ubuntu-26.04"),
+            ),
             ("debian", "12", "debian12", "debian12", Some("debian-12")),
             ("fedora", "41", "fedora41", "fedora41", Some("fedora-41")),
         ] {
-            let sandbox = create_empty_proto_sandbox();
-            let plugin = sandbox
-                .create_plugin_with_config("swift-test", |config| {
-                    config.host_with(|host| {
-                        host.os = HostOS::Linux;
-                        host.arch = HostArch::X64;
-                        host.libc = HostLibc::Gnu;
-                        host.details = Some(HostDetails {
-                            distro: Some(HostDistro {
-                                id: id.into(),
-                                version_id: Some(version_id.into()),
-                                ..Default::default()
-                            }),
-                            ..Default::default()
-                        });
-                    });
-                })
-                .await;
-
-            let output = plugin
-                .download_prebuilt(DownloadPrebuiltInput {
-                    context: PluginContext {
-                        version: VersionSpec::parse("6.1.2").unwrap(),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                })
-                .await;
+            let output = download_for_distro(id, version_id, "6.4.2").await;
 
             assert_eq!(
                 output.download_url,
                 format!(
-                    "https://download.swift.org/swift-6.1.2-release/{platform}/swift-6.1.2-RELEASE/swift-6.1.2-RELEASE-{archive_suffix}.tar.gz"
+                    "https://download.swift.org/swift-6.4.2-release/{platform}/swift-6.4.2-RELEASE/swift-6.4.2-RELEASE-{archive_suffix}.tar.gz"
                 )
             );
             assert_eq!(output.variant.as_deref(), variant);
         }
+    }
+
+    // Swift only builds a version for the distribution releases that were
+    // current at the time, so an older release's build is used instead
+    #[tokio::test(flavor = "multi_thread")]
+    async fn uses_older_release_when_version_has_no_build_for_detected_distro() {
+        for (id, version_id, version, platform, archive_suffix, variant) in [
+            (
+                "ubuntu",
+                "26.04",
+                "6.1.3",
+                "ubuntu2404",
+                "ubuntu24.04",
+                None,
+            ),
+            (
+                "debian",
+                "13",
+                "6.3.3",
+                "debian12",
+                "debian12",
+                Some("debian-12"),
+            ),
+            (
+                "fedora",
+                "41",
+                "6.1.2",
+                "fedora39",
+                "fedora39",
+                Some("fedora-39"),
+            ),
+        ] {
+            let output = download_for_distro(id, version_id, version).await;
+
+            assert_eq!(
+                output.download_url,
+                format!(
+                    "https://download.swift.org/swift-{version}-release/{platform}/swift-{version}-RELEASE/swift-{version}-RELEASE-{archive_suffix}.tar.gz"
+                )
+            );
+            assert_eq!(output.variant.as_deref(), variant);
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    #[should_panic(expected = "Swift 6.2.0 doesn't have an x64 build for ubuntu-20.04")]
+    async fn errors_when_no_release_of_detected_distro_has_a_build() {
+        download_for_distro("ubuntu", "20.04", "6.2.0").await;
     }
 
     #[tokio::test(flavor = "multi_thread")]

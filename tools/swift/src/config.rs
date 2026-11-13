@@ -1,5 +1,8 @@
-use proto_pdk_api::HostDistro;
+use proto_pdk_api::{HostArch, HostDistro, Version};
 use schematic::{ConfigEnum, derive_enum};
+
+/// A Swift release as `(major, minor, patch)`.
+type SwiftRelease = (u32, u32, u32);
 
 derive_enum!(
     #[derive(ConfigEnum, Default)]
@@ -93,6 +96,66 @@ impl LinuxPlatform {
             _ => return None,
         })
     }
+
+    /// The first Swift release with a build for this platform and architecture,
+    /// and the first release without one when the platform was dropped. Taken from
+    /// <https://www.swift.org/api/v1/install/releases.json>.
+    fn get_supported_releases(&self, arch: &HostArch) -> (SwiftRelease, Option<SwiftRelease>) {
+        let arm64 = matches!(arch, HostArch::Arm64);
+
+        match self {
+            Self::AmazonLinux2 => (if arm64 { (5, 6, 0) } else { (5, 2, 4) }, Some((6, 4, 0))),
+            Self::AmazonLinux2023 => ((6, 3, 1), None),
+            Self::Debian12 => ((5, 10, 1), None),
+            Self::Debian13 => ((6, 4, 0), None),
+            Self::Fedora39 => ((5, 10, 1), Some((6, 4, 0))),
+            Self::Fedora41 => ((6, 2, 4), None),
+            Self::RedhatUbi9 => ((5, 8, 1), None),
+            Self::RedhatUbi10 => ((6, 4, 0), None),
+            Self::Ubuntu2004 => (if arm64 { (5, 6, 0) } else { (5, 2, 4) }, Some((6, 2, 0))),
+            Self::Ubuntu2204 => ((5, 7, 0), None),
+            Self::Ubuntu2404 => ((5, 10, 1), None),
+            Self::Ubuntu2604 => ((6, 4, 0), None),
+        }
+    }
+
+    /// Whether Swift published a build of the version for this platform.
+    pub fn has_build_for(&self, version: &Version, arch: &HostArch) -> bool {
+        let release = (version.major, version.minor, version.patch);
+        let (first, dropped) = self.get_supported_releases(arch);
+
+        release >= first && dropped.is_none_or(|dropped| release < dropped)
+    }
+
+    /// Older releases of the same distribution, newest first. Their builds
+    /// also run on this release, as its system libraries are backwards compatible.
+    fn get_older_releases(&self) -> &'static [Self] {
+        match self {
+            Self::AmazonLinux2023 => &[Self::AmazonLinux2],
+            Self::Debian13 => &[Self::Debian12],
+            Self::Fedora41 => &[Self::Fedora39],
+            Self::RedhatUbi10 => &[Self::RedhatUbi9],
+            Self::Ubuntu2204 => &[Self::Ubuntu2004],
+            Self::Ubuntu2404 => &[Self::Ubuntu2204, Self::Ubuntu2004],
+            Self::Ubuntu2604 => &[Self::Ubuntu2404, Self::Ubuntu2204, Self::Ubuntu2004],
+            Self::AmazonLinux2
+            | Self::Debian12
+            | Self::Fedora39
+            | Self::RedhatUbi9
+            | Self::Ubuntu2004 => &[],
+        }
+    }
+
+    /// Select the build of a Swift version for this platform. When the version
+    /// doesn't have one, like Swift 6.1 for Ubuntu 26.04, the build for the
+    /// newest older release of the same distribution is used instead, as Swift
+    /// only builds each version for the distribution releases current at the time.
+    pub fn select_build_for(&self, version: &Version, arch: &HostArch) -> Option<Self> {
+        std::iter::once(self)
+            .chain(self.get_older_releases())
+            .find(|platform| platform.has_build_for(version, arch))
+            .cloned()
+    }
 }
 
 #[derive(Debug, schematic::Schematic, serde::Deserialize, serde::Serialize)]
@@ -161,6 +224,111 @@ mod tests {
                     .and_then(|distro| LinuxPlatform::from_distro(&distro)),
                 None,
                 "for {content:?}"
+            );
+        }
+    }
+
+    fn select(platform: LinuxPlatform, version: &str, arch: HostArch) -> Option<LinuxPlatform> {
+        platform.select_build_for(&Version::parse(version).unwrap(), &arch)
+    }
+
+    #[test]
+    fn selects_platform_when_version_has_a_build() {
+        for (platform, version) in [
+            (LinuxPlatform::Ubuntu2604, "6.4.0"),
+            (LinuxPlatform::Ubuntu2404, "5.10.1"),
+            (LinuxPlatform::Ubuntu2004, "6.1.3"),
+            (LinuxPlatform::Debian13, "6.4.2"),
+            (LinuxPlatform::Fedora41, "6.2.4"),
+            (LinuxPlatform::AmazonLinux2023, "6.3.1"),
+            (LinuxPlatform::RedhatUbi10, "6.4.0"),
+            // Versions newer than the data keep current platforms
+            (LinuxPlatform::Ubuntu2404, "7.0.0"),
+        ] {
+            assert_eq!(
+                select(platform.clone(), version, HostArch::X64),
+                Some(platform.clone()),
+                "for {platform} {version}"
+            );
+        }
+    }
+
+    #[test]
+    fn selects_older_release_when_version_has_no_build() {
+        for (platform, version, expected) in [
+            (
+                LinuxPlatform::Ubuntu2604,
+                "6.1.3",
+                LinuxPlatform::Ubuntu2404,
+            ),
+            (
+                LinuxPlatform::Ubuntu2604,
+                "6.3.3",
+                LinuxPlatform::Ubuntu2404,
+            ),
+            (
+                LinuxPlatform::Ubuntu2404,
+                "5.9.2",
+                LinuxPlatform::Ubuntu2204,
+            ),
+            (
+                LinuxPlatform::Ubuntu2404,
+                "5.6.3",
+                LinuxPlatform::Ubuntu2004,
+            ),
+            (LinuxPlatform::Debian13, "6.3.3", LinuxPlatform::Debian12),
+            (LinuxPlatform::Fedora41, "6.2.3", LinuxPlatform::Fedora39),
+            (
+                LinuxPlatform::AmazonLinux2023,
+                "6.3.0",
+                LinuxPlatform::AmazonLinux2,
+            ),
+            (
+                LinuxPlatform::RedhatUbi10,
+                "6.1.3",
+                LinuxPlatform::RedhatUbi9,
+            ),
+        ] {
+            assert_eq!(
+                select(platform.clone(), version, HostArch::X64),
+                Some(expected),
+                "for {platform} {version}"
+            );
+        }
+    }
+
+    #[test]
+    fn checks_arm64_separately() {
+        assert_eq!(
+            select(LinuxPlatform::Ubuntu2004, "5.5.0", HostArch::X64),
+            Some(LinuxPlatform::Ubuntu2004)
+        );
+        assert_eq!(
+            select(LinuxPlatform::Ubuntu2004, "5.5.0", HostArch::Arm64),
+            None
+        );
+        assert_eq!(
+            select(LinuxPlatform::Ubuntu2004, "5.6.0", HostArch::Arm64),
+            Some(LinuxPlatform::Ubuntu2004)
+        );
+    }
+
+    #[test]
+    fn doesnt_select_without_a_build_for_any_release() {
+        for (platform, version) in [
+            // Dropped releases
+            (LinuxPlatform::Ubuntu2004, "6.2.0"),
+            (LinuxPlatform::Fedora39, "6.4.0"),
+            (LinuxPlatform::AmazonLinux2, "6.4.2"),
+            // Before the oldest release had a build
+            (LinuxPlatform::Debian13, "5.9.2"),
+            (LinuxPlatform::RedhatUbi10, "5.7.3"),
+            (LinuxPlatform::Ubuntu2604, "5.1.0"),
+        ] {
+            assert_eq!(
+                select(platform.clone(), version, HostArch::X64),
+                None,
+                "for {platform} {version}"
             );
         }
     }
