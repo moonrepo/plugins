@@ -1,6 +1,6 @@
 # Swift plugin
 
-## Unreleased
+## 0.2.1
 
 #### 🐞 Fixes
 

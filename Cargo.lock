@@ -6855,7 +6855,7 @@ checksum = "b7401a30af6cb5818bb64852270bb722533397edcfc7344954a38f420819ece2"
 
 [[package]]
 name = "swift_tool"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "extism-pdk",
  "proto_pdk",
