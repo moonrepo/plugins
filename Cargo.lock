@@ -5820,7 +5820,7 @@ dependencies = [
 
 [[package]]
 name = "rust_tool"
-version = "0.13.12"
+version = "0.14.0"
 dependencies = [
  "extism-pdk",
  "lang_rust_common",
