@@ -5271,7 +5271,7 @@ dependencies = [
 
 [[package]]
 name = "python_uv_tool"
-version = "0.3.4"
+version = "0.4.0"
 dependencies = [
  "extism-pdk",
  "lang_python_common",
