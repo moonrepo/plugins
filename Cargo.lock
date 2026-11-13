@@ -5131,7 +5131,7 @@ dependencies = [
 
 [[package]]
 name = "proto_tool"
-version = "0.5.8"
+version = "0.6.0"
 dependencies = [
  "extism-pdk",
  "proto_pdk",
