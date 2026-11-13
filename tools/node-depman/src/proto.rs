@@ -12,7 +12,7 @@ use proto_pdk::*;
 use rustc_hash::FxHashMap;
 use schematic::SchemaBuilder;
 use starbase_utils::fs;
-use tool_common::{enable_tracing, ensure_stable_latest};
+use tool_common::{enable_tracing, ensure_stable_latest, load_git_tags, load_tool_versions};
 
 const BASH_SHIM_TEMPLATE: &str = include_str!("../templates/bash-shim.sh");
 const CMD_SHIM_TEMPLATE: &str = include_str!("../templates/cmd-shim.cmd");
@@ -41,7 +41,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
             ignore_os_arch: manager.is_npm(),
             ..Default::default()
         },
-        minimum_proto_version: Some(Version::new(0, 60, 0)),
+        minimum_proto_version: Some(Version::new(0, 64, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         requires: if manager.is_nub() {
             vec![]
@@ -122,7 +122,10 @@ pub fn parse_version_file(
         }
     }
 
-    Ok(Json(ParseVersionFileOutput { version }))
+    Ok(Json(ParseVersionFileOutput {
+        version,
+        ..Default::default()
+    }))
 }
 
 #[plugin_fn]
@@ -194,19 +197,24 @@ pub fn load_versions(Json(input): Json<LoadVersionsInput>) -> FnResult<Json<Load
     let headers = manager.get_http_headers(&registry_url, &input.context.working_dir)?;
 
     let mut fetch_versions = |url: String, is_yarn: bool| -> Result<(), Error> {
-        let res = parse_registry_response(
-            fetch(SendRequestInput {
-                url,
-                headers: headers.clone(),
-                ..Default::default()
-            })?
-            .text()?,
-            is_yarn,
-        )?;
+        // Versions are keyed by version
+        let response = load_tool_versions(LoadToolVersionsInput::Index {
+            url,
+            version_key: Some("versions.*~".into()),
+            headers: headers.clone(),
+            include_body: true,
+        })?;
 
-        for item in res.versions.values() {
-            output.versions.push(VersionSpec::parse(&item.version)?);
+        for version in response.versions {
+            output.versions.push(VersionSpec::parse(version)?);
         }
+
+        // The body isn't returned for a source configured by the user
+        let Some(body) = response.body else {
+            return Ok(());
+        };
+
+        let res = parse_registry_response(body, is_yarn)?;
 
         // Dist tags always includes latest
         for (alias, version) in res.dist_tags {

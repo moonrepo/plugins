@@ -1,5 +1,6 @@
-use common::extract_version_from_text;
-use proto_pdk_api::{AnyResult, DetectVersionOutput, UnresolvedVersionSpec, Version};
+use proto_pdk_api::{
+    AnyResult, DetectVersionOutput, UnresolvedVersionSpec, Version, extract_version_from_text,
+};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ZigVersionSource<'a> {

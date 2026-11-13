@@ -107,6 +107,7 @@ mod node_tool {
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse(">=16").unwrap()),
+                ..Default::default()
             }
         );
     }
@@ -126,6 +127,7 @@ mod node_tool {
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse(">=16").unwrap()),
+                ..Default::default()
             }
         );
     }
@@ -145,6 +147,7 @@ mod node_tool {
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("16.20.2").unwrap()),
+                ..Default::default()
             }
         );
     }
@@ -164,6 +167,7 @@ mod node_tool {
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("^20").unwrap()),
+                ..Default::default()
             }
         );
     }
@@ -183,6 +187,7 @@ mod node_tool {
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse(">=18").unwrap()),
+                ..Default::default()
             }
         );
     }
@@ -213,6 +218,7 @@ mod node_tool {
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("~20").unwrap()),
+                ..Default::default()
             }
         );
     }
@@ -228,6 +234,7 @@ mod node_tool {
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("^20.1").unwrap()),
+                ..Default::default()
             }
         );
     }
@@ -243,6 +250,7 @@ mod node_tool {
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("~20").unwrap()),
+                ..Default::default()
             }
         );
     }
@@ -262,6 +270,7 @@ mod node_tool {
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("^20.1").unwrap()),
+                ..Default::default()
             }
         );
     }
@@ -282,6 +291,7 @@ mod node_tool {
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::Alias("lts".into())),
+                    ..Default::default()
                 }
             );
         }

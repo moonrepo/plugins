@@ -28,7 +28,7 @@ mod zig_tool {
 
         assert_eq!(metadata.name, "Zig");
         assert_eq!(metadata.type_of, PluginType::Language);
-        assert_eq!(metadata.minimum_proto_version, Some(Version::new(0, 61, 0)));
+        assert_eq!(metadata.minimum_proto_version, Some(Version::new(0, 64, 0)));
         assert_eq!(metadata.unstable, Switch::Toggle(true));
         assert_eq!(
             metadata.plugin_version.unwrap().to_string(),

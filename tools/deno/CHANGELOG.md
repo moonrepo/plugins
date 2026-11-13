@@ -4,11 +4,15 @@
 
 #### 💥 Breaking
 
+- Requires proto v0.64 or later.
 - Installing on musl Linux (like Alpine) now errors, as Deno only publishes glibc builds. A glibc
   build was installed instead, which fails to run without a glibc compatibility layer.
 
 #### 🚀 Updates
 
+- Updated to support proto v0.64 release.
+- Versions are now loaded with proto's `load_tool_versions` host function, so another Git
+  repository or index can be configured with `[tools.deno.versions-source]`.
 - Added `engines.deno` in `package.json` as a fallback for version detection, which Deno v2.9+
   also checks.
 - Added checksum verification for `canary` downloads.

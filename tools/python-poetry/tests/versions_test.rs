@@ -59,6 +59,7 @@ mod python_poetry_tool {
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse("2.1.1").unwrap()),
+                ..Default::default()
             }
         );
     }
@@ -78,6 +79,7 @@ mod python_poetry_tool {
                 .await,
             ParseVersionFileOutput {
                 version: Some(UnresolvedVersionSpec::parse(">=2.0.0").unwrap()),
+                ..Default::default()
             }
         );
     }
@@ -95,7 +97,7 @@ mod python_poetry_tool {
                     "[tool.poetry]\nrequires-poetry = \"~=2\""
                 ))
                 .await,
-            ParseVersionFileOutput { version: None }
+            ParseVersionFileOutput::default()
         );
     }
 
@@ -111,7 +113,7 @@ mod python_poetry_tool {
             (">=2.0,<3.0", ">=2.0.0, <3.0.0"),
             ("==2.1.*", "=2.1.*"),
             ("==2.1", "=2.1.0"),
-            (">=2.0, !=2.1.0", ">=2.0.0"),
+            (">=2.0, !=2.1.0", ">=2.0.0, !=2.1.0"),
         ] {
             assert_eq!(
                 plugin
@@ -123,6 +125,7 @@ mod python_poetry_tool {
                     .await,
                 ParseVersionFileOutput {
                     version: Some(UnresolvedVersionSpec::parse(expected).unwrap()),
+                    ..Default::default()
                 },
                 "{constraint}"
             );

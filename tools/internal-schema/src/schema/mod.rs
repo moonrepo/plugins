@@ -9,11 +9,12 @@ use std::{collections::HashMap, path::PathBuf};
 pub mod v1;
 pub mod v2;
 
-pub const VERSION_REGEX: &str = r"^v?((?<major>[0-9]+)\.(?<minor>[0-9]+)\.(?<patch>[0-9]+)(?<pre>-[0-9a-zA-Z\.]+)?(?<build>\+[-0-9a-zA-Z\.]+)?)$";
+pub const VERSION_REGEX: &str = r"^v?((?<major>[0-9]+)\.(?<minor>[0-9]+)\.(?<patch>[0-9]+)(?:\.(?<revision>[0-9]+))?(?<pre>-[0-9a-zA-Z\.]+)?(?<build>\+[-0-9a-zA-Z\.]+)?)$";
 
 /// Create a version from the named groups of a version pattern, where the
-/// year/month/day groups are an alternative to major/minor/patch. Leading
-/// zeros are removed (`2024.01.05` becomes `2024.1.5`), as semver disallows them.
+/// year/month/day groups are an alternative to major/minor/patch, and an
+/// optional revision group is a 4th number. Leading zeros are removed
+/// (`2024.01.05` becomes `2024.1.5`), as semver disallows them.
 pub fn create_version(cap: &Captures) -> AnyResult<String> {
     // If no named, use the first group (legacy)
     if cap.name("major").or_else(|| cap.name("year")).is_none() {
@@ -39,6 +40,11 @@ pub fn create_version(cap: &Captures) -> AnyResult<String> {
         number("minor", "month"),
         number("patch", "day")
     );
+
+    if cap.name("revision").is_some() {
+        version.push('.');
+        version.push_str(number("revision", "revision"));
+    }
 
     if let Some(pre) = cap.name("pre").map(|c| c.as_str()) {
         if !pre.starts_with('-') {
@@ -262,6 +268,23 @@ mod tests {
         assert_eq!(
             create(VERSION_REGEX, "1.2.3-rc.1+build.5"),
             "1.2.3-rc.1+build.5"
+        );
+    }
+
+    #[test]
+    fn creates_from_revision() {
+        assert_eq!(create(VERSION_REGEX, "v1.2.3.4"), "1.2.3.4");
+        assert_eq!(create(VERSION_REGEX, "1.2.3.0"), "1.2.3.0");
+        assert_eq!(
+            create(VERSION_REGEX, "1.2.3.04-rc.1+build.5"),
+            "1.2.3.4-rc.1+build.5"
+        );
+        assert_eq!(
+            create(
+                r"^tool-(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)_(?<revision>\d+)$",
+                "tool-18.0.2_1"
+            ),
+            "18.0.2.1"
         );
     }
 

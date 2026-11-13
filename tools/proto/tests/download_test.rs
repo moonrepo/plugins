@@ -16,7 +16,7 @@ mod proto_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("proto-test", |config| {
-                config.host(os, arch);
+                config.host(HostPlatform::new(os, arch));
             })
             .await;
 
@@ -109,7 +109,7 @@ mod proto_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("proto-test", |config| {
-                config.host(HostOS::Windows, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::Windows, HostArch::X64));
             })
             .await;
 

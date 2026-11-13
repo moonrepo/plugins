@@ -5,7 +5,7 @@ use proto_pdk::*;
 use starbase_utils::fs;
 use std::collections::HashMap;
 use toml::Value;
-use tool_common::{enable_tracing, extract_version_from_text};
+use tool_common::{enable_tracing, load_git_tags};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -24,7 +24,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
             ignore_os_arch: true,
             ..Default::default()
         },
-        minimum_proto_version: Some(Version::new(0, 60, 0)),
+        minimum_proto_version: Some(Version::new(0, 64, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         requires: vec!["python".into()],
         self_upgrade_commands: vec!["self update".into()],
@@ -68,7 +68,10 @@ pub fn parse_version_file(
         };
     }
 
-    Ok(Json(ParseVersionFileOutput { version }))
+    Ok(Json(ParseVersionFileOutput {
+        version,
+        ..Default::default()
+    }))
 }
 
 #[plugin_fn]
@@ -88,9 +91,7 @@ pub fn native_install(
     Json(input): Json<NativeInstallInput>,
 ) -> FnResult<Json<NativeInstallOutput>> {
     let env = get_host_environment()?;
-    let script_path = input.context.temp_dir.join("get-poetry.py");
-
-    // Fetched for every install, as it's written to the tool's shared temp directory
+    let script_path = input.temp_dir.join("get-poetry.py");
     let mut script = fetch_text("https://install.python-poetry.org")?;
 
     // https://stackoverflow.com/a/77120044

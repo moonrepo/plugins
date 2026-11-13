@@ -1,5 +1,5 @@
 use crate::config::ZlsToolConfig;
-use crate::releases::ZlsReleaseIndex;
+use crate::releases::{ZlsReleaseIndex, stable_versions};
 use extism_pdk::*;
 use lang_zig_common::{
     create_download_prebuilt_output, detect_zig_version_files, parse_zig_version_file,
@@ -25,7 +25,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
     Ok(Json(RegisterToolOutput {
         name: NAME.into(),
         type_of: PluginType::CommandLine,
-        minimum_proto_version: Some(Version::new(0, 61, 0)),
+        minimum_proto_version: Some(Version::new(0, 64, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         unstable: Switch::Toggle(true),
         ..Default::default()
@@ -53,15 +53,25 @@ pub fn parse_version_file(
         .map(|source| source.to_zls_requirement())
         .transpose()?;
 
-    Ok(Json(ParseVersionFileOutput { version }))
+    Ok(Json(ParseVersionFileOutput {
+        version,
+        ..Default::default()
+    }))
 }
 
 #[plugin_fn]
 pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
     let config = get_tool_config::<ZlsToolConfig>()?;
-    let index: ZlsReleaseIndex = fetch_json(&config.index_url)?;
 
-    Ok(Json(LoadVersionsOutput::from(index.stable_versions())?))
+    // The index is keyed by version
+    let output = load_tool_versions(LoadToolVersionsInput::index(
+        config.index_url,
+        Some("*~".into()),
+    ))?;
+
+    Ok(Json(LoadVersionsOutput::from(stable_versions(
+        output.versions,
+    ))?))
 }
 
 #[plugin_fn]

@@ -1,3 +1,4 @@
+use proto_pdk_api::HostDistro;
 use schematic::{ConfigEnum, derive_enum};
 
 derive_enum!(
@@ -66,25 +67,12 @@ impl LinuxPlatform {
         }
     }
 
-    /// Detect the platform from the contents of `/etc/os-release`, like swiftly,
-    /// where RHEL derivatives (Rocky, Alma, etc) use the UBI builds.
-    pub fn from_os_release(content: &str) -> Option<Self> {
-        let (mut id, mut id_like, mut version) = ("", "", "");
+    /// Match a Linux distribution to its build, like swiftly, where RHEL derivatives
+    /// (Rocky, Alma, etc) use the UBI builds.
+    pub fn from_distro(distro: &HostDistro) -> Option<Self> {
+        let version = distro.version_id.as_deref().unwrap_or_default();
 
-        for line in content.lines() {
-            if let Some((key, value)) = line.split_once('=') {
-                let value = value.trim().trim_matches(['"', '\'']);
-
-                match key.trim() {
-                    "ID" => id = value,
-                    "ID_LIKE" => id_like = value,
-                    "VERSION_ID" => version = value,
-                    _ => {}
-                };
-            }
-        }
-
-        Some(match (id, version) {
+        Some(match (distro.id.as_str(), version) {
             ("ubuntu", "20.04") => Self::Ubuntu2004,
             ("ubuntu", "22.04") => Self::Ubuntu2204,
             ("ubuntu", "24.04") => Self::Ubuntu2404,
@@ -95,7 +83,7 @@ impl LinuxPlatform {
             ("fedora", "41") => Self::Fedora41,
             ("amzn", "2") => Self::AmazonLinux2,
             ("amzn", "2023") => Self::AmazonLinux2023,
-            _ if id == "rhel" || id_like.split_whitespace().any(|like| like == "rhel") => {
+            _ if distro.id == "rhel" || distro.id_like.iter().any(|like| like == "rhel") => {
                 match version.split('.').next() {
                     Some("9") => Self::RedhatUbi9,
                     Some("10") => Self::RedhatUbi10,
@@ -150,7 +138,8 @@ mod tests {
             ),
         ] {
             assert_eq!(
-                LinuxPlatform::from_os_release(content),
+                HostDistro::parse_os_release(content)
+                    .and_then(|distro| LinuxPlatform::from_distro(&distro)),
                 Some(expected),
                 "for {content:?}"
             );
@@ -168,7 +157,8 @@ mod tests {
             "ID=\"rocky\"\nID_LIKE=\"rhel centos fedora\"\nVERSION_ID=\"8.10\"",
         ] {
             assert_eq!(
-                LinuxPlatform::from_os_release(content),
+                HostDistro::parse_os_release(content)
+                    .and_then(|distro| LinuxPlatform::from_distro(&distro)),
                 None,
                 "for {content:?}"
             );

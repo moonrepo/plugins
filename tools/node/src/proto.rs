@@ -10,7 +10,7 @@ use proto_pdk::*;
 use schematic::SchemaBuilder;
 use starbase_utils::fs;
 use std::collections::HashMap;
-use tool_common::{enable_tracing, ensure_stable_latest, extract_version_from_text};
+use tool_common::{enable_tracing, load_tool_versions};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -28,7 +28,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
     Ok(Json(RegisterToolOutput {
         name: NAME.into(),
         type_of: PluginType::Language,
-        minimum_proto_version: Some(Version::new(0, 60, 0)),
+        minimum_proto_version: Some(Version::new(0, 64, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         ..Default::default()
     }))
@@ -108,7 +108,10 @@ pub fn parse_version_file(
         version = Some(UnresolvedVersionSpec::parse(constraint)?);
     }
 
-    Ok(Json(ParseVersionFileOutput { version }))
+    Ok(Json(ParseVersionFileOutput {
+        version,
+        ..Default::default()
+    }))
 }
 
 #[plugin_fn]
@@ -169,21 +172,25 @@ pub fn unpin_version(Json(input): Json<UnpinVersionInput>) -> FnResult<Json<Unpi
 
 #[plugin_fn]
 pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
-    let mut output = LoadVersionsOutput::default();
     let config = get_tool_config::<NodeToolConfig>()?;
-    let response: Vec<NodeDistVersion> =
-        fetch_json(config.index_url.replace("{channel}", "release"))?;
+    let response = load_tool_versions(LoadToolVersionsInput::Index {
+        url: config.index_url.replace("{channel}", "release"),
+        version_key: Some("*.version".into()),
+        headers: Default::default(),
+        include_body: true,
+    })?;
+    let mut output = LoadVersionsOutput::from(response.versions)?;
 
-    for (index, item) in response.iter().enumerate() {
-        let version = UnresolvedVersionSpec::parse(item.version.trim_start_matches('v'))?;
+    // The body isn't returned for a source configured by the user
+    let items: Vec<NodeDistVersion> = match response.body {
+        Some(body) => json::from_str(&body)?,
+        None => vec![],
+    };
 
-        // First item is always the latest
-        if index == 0 {
-            output.latest = Some(version.clone());
-        }
-
+    for item in items {
         if let NodeDistLTS::Name(alias) = &item.lts {
             let alias = alias.to_lowercase();
+            let version = UnresolvedVersionSpec::parse(item.version.trim_start_matches('v'))?;
 
             // The first encounter of an lts is the latest stable
             if !output.aliases.contains_key("stable") {
@@ -191,15 +198,9 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
             }
 
             // The first encounter of an lts is the latest version for that alias
-            if !output.aliases.contains_key(&alias) {
-                output.aliases.insert(alias.clone(), version.clone());
-            }
+            output.aliases.entry(alias).or_insert(version);
         }
-
-        output.versions.push(version.to_resolved_spec());
     }
-
-    ensure_stable_latest(&mut output);
 
     Ok(Json(output))
 }
@@ -357,6 +358,27 @@ pub fn download_prebuilt(
         arch = "x64".into();
     }
 
+    // ARMv7 builds don't run on ARMv6 (like the Raspberry Pi Zero and 1), which
+    // Node.js built until v11, and unofficial builds until v22. Foreign platforms
+    // have no details, so use the ARMv7 build.
+    let armv6 = env.arch == HostArch::Arm
+        && env
+            .details
+            .as_ref()
+            .and_then(|details| details.arm_version)
+            .is_some_and(|arm_version| arm_version < 7);
+
+    if armv6 && let Some(version) = version.as_version() {
+        if version.major >= 23 {
+            return Err(plugin_err!(
+                "No pre-built Node.js archive is available for ARMv6 from v23, use v22 or earlier."
+            ));
+        }
+
+        arch = "armv6l".into();
+        unofficial = version.major >= 12;
+    }
+
     if env.os.is_linux() && env.libc == HostLibc::Musl {
         if !matches!(env.arch, HostArch::X64 | HostArch::Arm64) {
             return Err(plugin_err!(
@@ -424,6 +446,7 @@ pub fn download_prebuilt(
                 .replace("{file}", "SHASUMS256.txt")
                 .replace("{channel}", channel),
         ),
+        variant: (arch == "armv6l").then(|| arch.clone()),
         ..Default::default()
     }))
 }

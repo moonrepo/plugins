@@ -4,7 +4,7 @@ use proto_pdk::*;
 use starbase_utils::fs;
 use std::collections::HashMap;
 use toml::Value;
-use tool_common::enable_tracing;
+use tool_common::{enable_tracing, load_git_tags};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -18,7 +18,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
     Ok(Json(RegisterToolOutput {
         name: "uv".into(),
         type_of: PluginType::CommandLine,
-        minimum_proto_version: Some(Version::new(0, 60, 0)),
+        minimum_proto_version: Some(Version::new(0, 64, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         self_upgrade_commands: vec!["self update".into()],
         ..Default::default()
@@ -55,7 +55,11 @@ pub fn parse_version_file(
         version = Some(parse_pep440_spec(constraint)?);
     }
 
-    Ok(Json(ParseVersionFileOutput { version }))
+    Ok(Json(ParseVersionFileOutput {
+        // uv ignores `[tool.uv]` in pyproject.toml when uv.toml exists
+        stop: version.is_none() && input.file == "uv.toml",
+        version,
+    }))
 }
 
 #[plugin_fn]

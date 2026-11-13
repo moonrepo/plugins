@@ -25,7 +25,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
     Ok(Json(RegisterToolOutput {
         name: NAME.into(),
         type_of: PluginType::Language,
-        minimum_proto_version: Some(Version::new(0, 61, 0)),
+        minimum_proto_version: Some(Version::new(0, 64, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         unstable: Switch::Toggle(true),
         ..Default::default()
@@ -53,24 +53,45 @@ pub fn parse_version_file(
         .map(|source| source.to_zig_requirement())
         .transpose()?;
 
-    Ok(Json(ParseVersionFileOutput { version }))
+    Ok(Json(ParseVersionFileOutput {
+        version,
+        ..Default::default()
+    }))
 }
 
 #[plugin_fn]
 pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVersionsOutput>> {
     let config = get_tool_config::<ZigToolConfig>()?;
-    let index: ZigReleaseIndex = fetch_json(&config.index_url)?;
-    // ADR-0008.5: Skip the canary when its version can't be parsed
-    let canary = index.master().and_then(|release| {
-        UnresolvedVersionSpec::parse(&release.version)
-            .inspect_err(|error| debug!("Skipping the canary {}: {error}", release.version))
-            .ok()
-    });
-    let mut output = LoadVersionsOutput::from(index.stable_versions())?;
+
+    // The index is keyed by version, and the canary by master
+    let response = load_tool_versions(LoadToolVersionsInput::Index {
+        url: config.index_url,
+        version_key: Some("*~".into()),
+        headers: Default::default(),
+        include_body: true,
+    })?;
+    let mut output = LoadVersionsOutput::from(
+        response
+            .versions
+            .into_iter()
+            .filter(|version| version != "master")
+            .collect(),
+    )?;
+
+    // The body isn't returned for a source configured by the user
+    let canary = match response.body {
+        // ADR-0008.5: Skip the canary when its version can't be parsed
+        Some(body) => json::from_str::<ZigReleaseIndex>(&body)?
+            .master()
+            .and_then(|release| {
+                UnresolvedVersionSpec::parse(&release.version)
+                    .inspect_err(|error| debug!("Skipping the canary {}: {error}", release.version))
+                    .ok()
+            }),
+        None => None,
+    };
 
     if let Some(canary) = canary {
-        // proto only resolves an alias to a listed version
-        output.versions.push(canary.to_resolved_spec());
         output.canary = Some(canary.clone());
         output.aliases.insert("master".into(), canary);
     }

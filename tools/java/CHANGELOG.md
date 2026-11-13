@@ -4,6 +4,7 @@
 
 #### 💥 Breaking
 
+- Requires proto v0.64 or later.
 - Removed the `debian`, `graalvm-ce20`, and `zulu-prime` distributions, which foojay no longer
   lists or returns packages for.
 - The default distribution is now `temurin` instead of `openjdk`, which applies to versions without a
@@ -12,6 +13,10 @@
 
 #### 🚀 Updates
 
+- Updated to support proto v0.64 release.
+- Versions with a 4th number, like `18.0.2.1`, now use proto's revision support, instead of
+  encoding it into the pre-release (`18.0.2-v1`), including those in `.sdkmanrc`. Existing pins
+  with the encoding still resolve, to the revision.
 - Panics now report their message, instead of an `unreachable` WASM trap error.
 
 #### 🐞 Fixes

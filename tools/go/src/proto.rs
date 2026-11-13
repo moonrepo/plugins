@@ -5,7 +5,7 @@ use proto_pdk::*;
 use schematic::SchemaBuilder;
 use starbase_utils::fs;
 use std::collections::HashMap;
-use tool_common::{append_env_bin_dir, enable_tracing};
+use tool_common::{append_env_bin_dir, enable_tracing, load_git_tags};
 
 static NAME: &str = "Go";
 
@@ -16,7 +16,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
     Ok(Json(RegisterToolOutput {
         name: NAME.into(),
         type_of: PluginType::Language,
-        minimum_proto_version: Some(Version::new(0, 60, 0)),
+        minimum_proto_version: Some(Version::new(0, 64, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         ..Default::default()
     }))
@@ -80,7 +80,10 @@ pub fn parse_version_file(
         None => None,
     };
 
-    Ok(Json(ParseVersionFileOutput { version }))
+    Ok(Json(ParseVersionFileOutput {
+        version,
+        ..Default::default()
+    }))
 }
 
 #[plugin_fn]

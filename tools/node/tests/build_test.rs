@@ -15,7 +15,7 @@ mod node_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("node-test", |config| {
-                config.host(os, HostArch::X64);
+                config.host(HostPlatform::new(os, HostArch::X64));
             })
             .await;
 

@@ -2,8 +2,15 @@
 
 ## Unreleased
 
+#### 💥 Breaking
+
+- Requires proto v0.64 or later.
+
 #### 🚀 Updates
 
+- Updated to support proto v0.64 release.
+- Versions with a 4th number, like `1.2.3.4`, are now listed, as proto supports a revision. They
+  were skipped.
 - Improved the error when a tool is not in the asdf shortname index, to point to the `shortname` and `repository` settings.
 - Panics now report their message, instead of an `unreachable` WASM trap error.
 

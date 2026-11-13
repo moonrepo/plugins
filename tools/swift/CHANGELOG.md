@@ -4,6 +4,7 @@
 
 #### 💥 Breaking
 
+- Requires proto v0.64 or later.
 - The `swift-tools-version` in `Package.swift` is now a minimum requirement (`>=5.9`) instead of a
   caret range (`^5.9`), as it declares the oldest toolchain that can build the package, and newer
   toolchains build older manifests. Pin a version in `.swift-version` to stay on a major version.
@@ -14,11 +15,20 @@
 
 #### 🚀 Updates
 
+- Updated to support proto v0.64 release.
+- Versions are now loaded with proto's `load_tool_versions` host function, so another Git
+  repository or index can be configured with `[tools.swift.versions-source]`.
+- The Linux distribution is now read from the host details that proto provides, instead of
+  running `cat /etc/os-release`. Locking another platform uses `ubuntu-24.04`, unless
+  `linux-platform` is configured.
 - Added `debian-13`, `redhat-ubi-10`, and `ubuntu-26.04` Linux platforms, available from Swift 6.4.
 - Panics now report their message, instead of an `unreachable` WASM trap error.
 
 #### 🐞 Fixes
 
+- Fixed a lockfile shared by machines with different Linux distributions failing checksum
+  verification, as each downloads a different toolchain. Distributions other than `ubuntu-24.04`
+  are now recorded as a variant in the lockfile (for example, `debian-12`).
 - Fixed comments in `.swift-version`, like `6.1.2 # stable`, failing to parse. Everything after
   `#` is now ignored.
 - Fixed downloads of 6.4.0 and later `.0` releases, which Swift.org names `swift-6.4.0-RELEASE`

@@ -4,11 +4,15 @@
 
 #### 💥 Breaking
 
+- Requires proto v0.64 or later.
 - The `canary` version now errors. moon stopped publishing canary builds in v2, and the old `canary`
   release on GitHub only has a moon v1 build from December 2025, which was installed instead.
 
 #### 🚀 Updates
 
+- Updated to support proto v0.64 release.
+- Versions are now loaded with proto's `load_tool_versions` host function, so another Git
+  repository or index can be configured with `[tools.moon.versions-source]`.
 - `moon upgrade` is no longer blocked by proto. moon v2.2.2+ detects that proto installed it, and
   upgrades with `proto install moon latest --pin local`.
 - Panics now report their message, instead of an `unreachable` WASM trap error.

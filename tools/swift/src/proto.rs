@@ -5,7 +5,7 @@ use proto_pdk::*;
 use schematic::SchemaBuilder;
 use starbase_utils::fs;
 use std::collections::HashMap;
-use tool_common::{enable_tracing, extract_version_from_text};
+use tool_common::enable_tracing;
 
 #[host_fn]
 extern "ExtismHost" {
@@ -16,18 +16,31 @@ extern "ExtismHost" {
 static NAME: &str = "Swift";
 
 // Swift.org builds each Linux toolchain against a specific distribution
-fn detect_linux_platform(config: &SwiftToolConfig) -> AnyResult<Option<LinuxPlatform>> {
+fn detect_linux_platform(
+    env: &HostEnvironment,
+    config: &SwiftToolConfig,
+) -> AnyResult<Option<LinuxPlatform>> {
     if config.linux_platform.is_some() {
         return Ok(config.linux_platform.clone());
     }
 
-    let output = exec_captured("cat", ["/etc/os-release"])?;
+    // The distribution only describes this machine, not the targeted platform
+    if env.foreign {
+        let platform = LinuxPlatform::default();
 
-    Ok(if output.exit_code == 0 {
-        LinuxPlatform::from_os_release(&output.stdout)
-    } else {
-        None
-    })
+        host_log!(
+            debug,
+            "Targeting another platform, so using {platform} instead of detecting the Linux distribution. Configure the <property>linux-platform</property> setting to choose another.",
+        );
+
+        return Ok(Some(platform));
+    }
+
+    Ok(env
+        .details
+        .as_ref()
+        .and_then(|details| details.distro.as_ref())
+        .and_then(LinuxPlatform::from_distro))
 }
 
 #[plugin_fn]
@@ -39,7 +52,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
 
     if env.os.is_linux() {
         let config: SwiftToolConfig = get_tool_config()?;
-        let platform = detect_linux_platform(&config)?.unwrap_or_default();
+        let platform = detect_linux_platform(env, &config)?.unwrap_or_default();
 
         lock_options
             .metadata
@@ -49,7 +62,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
     Ok(Json(RegisterToolOutput {
         name: NAME.into(),
         type_of: PluginType::Language,
-        minimum_proto_version: Some(Version::new(0, 61, 0)),
+        minimum_proto_version: Some(Version::new(0, 64, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         unstable: Switch::Toggle(true),
         lock_options,
@@ -103,7 +116,10 @@ pub fn parse_version_file(
         }
     }
 
-    Ok(Json(ParseVersionFileOutput { version }))
+    Ok(Json(ParseVersionFileOutput {
+        version,
+        ..Default::default()
+    }))
 }
 
 #[plugin_fn]
@@ -153,9 +169,11 @@ pub fn download_prebuilt(
     let release = format!("swift-{version}-release");
     let folder = format!("swift-{version}-RELEASE");
 
+    let mut variant = None;
+
     let (platform, archive_prefix, filename) = match env.os {
         HostOS::Linux => {
-            let linux_platform = match detect_linux_platform(&config)? {
+            let linux_platform = match detect_linux_platform(env, &config)? {
                 Some(platform) => platform,
                 None => {
                     let platform = LinuxPlatform::default();
@@ -170,6 +188,12 @@ pub fn download_prebuilt(
             };
             let download_platform = linux_platform.get_download_platform();
             let archive_suffix = linux_platform.get_archive_suffix();
+
+            // Each distribution is a different download, so is recorded
+            // separately in the lockfile, except for the default
+            if linux_platform != LinuxPlatform::default() {
+                variant = Some(linux_platform.to_string());
+            }
 
             let (platform, archive_suffix) = match env.arch {
                 HostArch::Arm64 => (
@@ -224,6 +248,7 @@ pub fn download_prebuilt(
         checksum_url,
         download_name: Some(filename),
         download_url,
+        variant,
         ..Default::default()
     }))
 }

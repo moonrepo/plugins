@@ -8,7 +8,7 @@ use regex::Regex;
 use schematic::SchemaBuilder;
 use starbase_utils::fs;
 use std::collections::{HashMap, HashSet};
-use tool_common::{append_env_bin_dir, enable_tracing, registry::*};
+use tool_common::{append_env_bin_dir, enable_tracing, load_git_tags, registry::*};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -26,7 +26,7 @@ pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<Register
     Ok(Json(RegisterToolOutput {
         name: NAME.into(),
         type_of: PluginType::Language,
-        minimum_proto_version: Some(Version::new(0, 60, 0)),
+        minimum_proto_version: Some(Version::new(0, 64, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         ..Default::default()
     }))

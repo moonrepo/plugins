@@ -10,7 +10,7 @@ mod go_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("go-test", |config| {
-                config.host(HostOS::Linux, HostArch::Arm64);
+                config.host(HostPlatform::new(HostOS::Linux, HostArch::Arm64));
             })
             .await;
 
@@ -41,7 +41,7 @@ mod go_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("go-test", |config| {
-                config.host(HostOS::Linux, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::Linux, HostArch::X64));
             })
             .await;
 
@@ -72,7 +72,7 @@ mod go_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("go-test", |config| {
-                config.host(HostOS::MacOS, HostArch::Arm64);
+                config.host(HostPlatform::new(HostOS::MacOS, HostArch::Arm64));
             })
             .await;
 
@@ -103,7 +103,7 @@ mod go_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("go-test", |config| {
-                config.host(HostOS::MacOS, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::MacOS, HostArch::X64));
             })
             .await;
 
@@ -134,7 +134,7 @@ mod go_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("go-test", |config| {
-                config.host(HostOS::Windows, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::Windows, HostArch::X64));
             })
             .await;
 
@@ -165,7 +165,7 @@ mod go_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("go-test", |config| {
-                config.host(HostOS::FreeBSD, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::FreeBSD, HostArch::X64));
             })
             .await;
 
@@ -196,7 +196,7 @@ mod go_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("go-test", |config| {
-                config.host(HostOS::Linux, HostArch::Arm64);
+                config.host(HostPlatform::new(HostOS::Linux, HostArch::Arm64));
             })
             .await;
 
@@ -223,7 +223,7 @@ mod go_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("go-test", |config| {
-                config.host(HostOS::Windows, HostArch::X64);
+                config.host(HostPlatform::new(HostOS::Windows, HostArch::X64));
             })
             .await;
 
@@ -249,7 +249,7 @@ mod go_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox
             .create_plugin_with_config("go-test", |config| {
-                config.host(os, arch);
+                config.host(HostPlatform::new(os, arch));
             })
             .await;
 
@@ -319,9 +319,10 @@ mod go_tool {
             })
             .await;
 
+        // Real paths in WASM only use `/`, even on Windows
         assert_eq!(
             output.env.get("GOROOT").unwrap(),
-            &tool_dir.to_string_lossy().to_string()
+            &tool_dir.to_string_lossy().replace('\\', "/")
         );
     }
 }

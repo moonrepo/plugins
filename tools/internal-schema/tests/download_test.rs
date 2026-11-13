@@ -21,7 +21,7 @@ mod schema_tool {
                 "schema-test",
                 locate_fixture("schemas").join("bins.toml"),
                 |config| {
-                    config.host(HostOS::Linux, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::Arm64));
                 },
             )
             .await;
@@ -51,7 +51,7 @@ mod schema_tool {
                 "schema-test",
                 locate_fixture("schemas").join("bins.toml"),
                 |config| {
-                    config.host(HostOS::Linux, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::X64));
                 },
             )
             .await;
@@ -81,7 +81,7 @@ mod schema_tool {
                 "schema-test",
                 locate_fixture("schemas").join("bins.toml"),
                 |config| {
-                    config.host(HostOS::MacOS, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::MacOS, HostArch::Arm64));
                 },
             )
             .await;
@@ -112,7 +112,7 @@ mod schema_tool {
                 "schema-test",
                 locate_fixture("schemas").join("bins.toml"),
                 |config| {
-                    config.host(HostOS::MacOS, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::MacOS, HostArch::X64));
                 },
             )
             .await;
@@ -143,7 +143,7 @@ mod schema_tool {
                 "schema-test",
                 locate_fixture("schemas").join("bins.toml"),
                 |config| {
-                    config.host(HostOS::Windows, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::Windows, HostArch::Arm64));
                 },
             )
             .await;
@@ -173,7 +173,7 @@ mod schema_tool {
                 "schema-test",
                 locate_fixture("schemas").join("bins.toml"),
                 |config| {
-                    config.host(HostOS::Windows, HostArch::X86);
+                    config.host(HostPlatform::new(HostOS::Windows, HostArch::X86));
                 },
             )
             .await;
@@ -203,7 +203,7 @@ mod schema_tool {
                 "schema-test",
                 locate_fixture("schemas").join("bins.toml"),
                 |config| {
-                    config.host(HostOS::Linux, HostArch::Arm64);
+                    config.host(HostPlatform::new(HostOS::Linux, HostArch::Arm64));
                 },
             )
             .await;
@@ -234,7 +234,7 @@ mod schema_tool {
                 "schema-test",
                 locate_fixture("schemas").join("bins.toml"),
                 |config| {
-                    config.host(HostOS::MacOS, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::MacOS, HostArch::X64));
                 },
             )
             .await;
@@ -265,7 +265,7 @@ mod schema_tool {
                 "schema-test",
                 locate_fixture("schemas").join("bins.toml"),
                 |config| {
-                    config.host(HostOS::Windows, HostArch::X64);
+                    config.host(HostPlatform::new(HostOS::Windows, HostArch::X64));
                 },
             )
             .await;
@@ -299,7 +299,7 @@ mod schema_tool {
                     "schema-test",
                     locate_fixture("schemas").join("primary.toml"),
                     |config| {
-                        config.host(HostOS::MacOS, HostArch::X64);
+                        config.host(HostPlatform::new(HostOS::MacOS, HostArch::X64));
                     },
                 )
                 .await;
@@ -332,7 +332,7 @@ mod schema_tool {
                     "schema-test",
                     locate_fixture("schemas").join("primary.toml"),
                     |config| {
-                        config.host(HostOS::Windows, HostArch::X64);
+                        config.host(HostPlatform::new(HostOS::Windows, HostArch::X64));
                     },
                 )
                 .await;
@@ -363,7 +363,7 @@ mod schema_tool {
                     "schema-test",
                     locate_fixture("schemas").join("primary-platform.toml"),
                     |config| {
-                        config.host(HostOS::Linux, HostArch::X64);
+                        config.host(HostPlatform::new(HostOS::Linux, HostArch::X64));
                     },
                 )
                 .await;
@@ -400,7 +400,7 @@ mod schema_tool {
                     "arch-override-test",
                     locate_fixture("schemas").join("arch-overrides.toml"),
                     |config| {
-                        config.host(HostOS::Linux, HostArch::Arm64);
+                        config.host(HostPlatform::new(HostOS::Linux, HostArch::Arm64));
                     },
                 )
                 .await;
@@ -430,7 +430,7 @@ mod schema_tool {
                     "arch-override-test",
                     locate_fixture("schemas").join("arch-overrides.toml"),
                     |config| {
-                        config.host(HostOS::MacOS, HostArch::Arm64);
+                        config.host(HostPlatform::new(HostOS::MacOS, HostArch::Arm64));
                     },
                 )
                 .await;
@@ -462,7 +462,7 @@ mod schema_tool {
                     "arch-override-test",
                     locate_fixture("schemas").join("arch-overrides.toml"),
                     |config| {
-                        config.host(HostOS::Linux, HostArch::X64);
+                        config.host(HostPlatform::new(HostOS::Linux, HostArch::X64));
                     },
                 )
                 .await;
@@ -492,7 +492,7 @@ mod schema_tool {
                     "libc-override-test",
                     locate_fixture("schemas").join("libc-overrides.toml"),
                     |config| {
-                        config.host(HostOS::Linux, HostArch::X64);
+                        config.host(HostPlatform::new(HostOS::Linux, HostArch::X64));
                     },
                 )
                 .await;
@@ -529,7 +529,7 @@ mod schema_tool {
                     "schema-test",
                     locate_fixture("schemas").join("secondary.toml"),
                     |config| {
-                        config.host(HostOS::MacOS, HostArch::X64);
+                        config.host(HostPlatform::new(HostOS::MacOS, HostArch::X64));
                     },
                 )
                 .await;
@@ -577,7 +577,7 @@ mod schema_tool {
                     "schema-test",
                     locate_fixture("schemas").join("secondary.toml"),
                     |config| {
-                        config.host(HostOS::Windows, HostArch::X64);
+                        config.host(HostPlatform::new(HostOS::Windows, HostArch::X64));
                     },
                 )
                 .await;

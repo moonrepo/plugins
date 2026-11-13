@@ -1,8 +1,7 @@
 #![allow(dead_code)]
 
-use proto_pdk_api::Version;
+use proto_pdk_api::{Version, extract_version_from_text};
 use regex::Regex;
-use tool_common::extract_version_from_text;
 
 // Python tags, python-build, and the pre-built archives use `3.15.0rc2`,
 // while the registry (and semver ordering) uses `3.15.0-rc.2`

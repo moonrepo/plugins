@@ -2,8 +2,15 @@
 
 ## Unreleased
 
+#### 💥 Breaking
+
+- Requires proto v0.64 or later.
+
 #### 🚀 Updates
 
+- Updated to support proto v0.64 release.
+- Versions are now loaded with proto's `load_tool_versions` host function, so another Git
+  repository or index can be configured with `[tools.poetry.versions-source]`.
 - Panics now report their message, instead of an `unreachable` WASM trap error.
 - Git tags that aren't versions are now skipped when loading versions, instead of failing.
 - A `requires-poetry` in `pyproject.toml` that can't be parsed is now logged at the debug level,
@@ -29,13 +36,15 @@
   now resolves to the latest 2.x.
 - Fixed `==X.Y` in `requires-poetry` resolving to the latest `X.Y` patch, instead of `X.Y.0`. Short
   versions are now zero-padded, as PEP 440 compares them.
-- Fixed `!=` in `requires-poetry` failing version detection. proto can't exclude versions, so it's
-  now ignored.
+- Fixed `!=` in `requires-poetry` failing version detection. It's now converted to a proto `!=`
+  requirement, for example, `>=2.0, !=2.1.0`.
 - Install failures now include the installer's output, instead of an empty error.
 - Fixed a failed `poetry config` in the post-install hook being ignored. It now logs a warning.
 
 #### ⚙️ Internal
 
+- The installer script is now downloaded to a temporary directory for each install, which proto
+  removes afterwards.
 - Version files are now read from their path, as the `content` input is deprecated.
 
 ## 0.1.9

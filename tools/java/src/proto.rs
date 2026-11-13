@@ -1,7 +1,7 @@
 use crate::config::{Distribution, JavaToolConfig, PackageType};
 use crate::foojay::{fetch_package_info, fetch_packages, find_package};
 use crate::java::JavaContext;
-use crate::version::from_java_version;
+use crate::version::{decode_legacy_revision, from_java_version};
 use extism_pdk::*;
 use proto_pdk::*;
 use schematic::SchemaBuilder;
@@ -9,7 +9,7 @@ use starbase_utils::fs;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::str::FromStr;
-use tool_common::{enable_tracing, extract_version_from_text};
+use tool_common::enable_tracing;
 
 #[host_fn]
 extern "ExtismHost" {
@@ -32,7 +32,7 @@ pub fn register_tool(Json(input): Json<RegisterToolInput>) -> FnResult<Json<Regi
             }),
             ..Default::default()
         },
-        minimum_proto_version: Some(Version::new(0, 60, 0)),
+        minimum_proto_version: Some(Version::new(0, 64, 0)),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         unstable: Switch::Toggle(true),
         ..Default::default()
@@ -112,7 +112,10 @@ pub fn parse_version_file(
         version = Some(spec);
     }
 
-    Ok(Json(ParseVersionFileOutput { version }))
+    Ok(Json(ParseVersionFileOutput {
+        version,
+        ..Default::default()
+    }))
 }
 
 #[plugin_fn]
@@ -187,6 +190,15 @@ pub fn resolve_version(
             output.candidate = Some(initial.clone());
         }
         None => {}
+    }
+
+    // Versions with a revision (18.0.2.1) were listed with it encoded
+    // into the pre-release (18.0.2-v1), so convert existing pins
+    if let UnresolvedVersionSpec::Version(version) = &initial
+        && let Some(version) = decode_legacy_revision(version)
+    {
+        initial = UnresolvedVersionSpec::Version(version);
+        output.candidate = Some(initial.clone());
     }
 
     // Java versions have build metadata (21.0.11+10), but are written
