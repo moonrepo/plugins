@@ -3959,7 +3959,7 @@ dependencies = [
 
 [[package]]
 name = "node_tool"
-version = "0.17.13"
+version = "0.18.0"
 dependencies = [
  "extism-pdk",
  "lang_javascript_common",
