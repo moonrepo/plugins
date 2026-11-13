@@ -1,8 +1,6 @@
-use proto_pdk_test_utils::*;
-
+#[cfg(not(windows))]
 mod python_uv_tool {
-    use super::*;
+    use proto_pdk_test_utils::*;
 
-    #[cfg(not(windows))]
     generate_shims_test!("uv-test", ["uv", "uvx"]);
 }
