@@ -1,6 +1,6 @@
 [package]
 name = "python_poetry_tool"
-version = "0.1.9"
+version = "0.2.0"
 edition = "2024"
 description = "Python Poetry WASM plugin for proto."
 authors = ["Miles Johnson"]
