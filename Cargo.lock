@@ -3869,7 +3869,7 @@ dependencies = [
 
 [[package]]
 name = "moon_tool"
-version = "0.4.3"
+version = "0.5.0"
 dependencies = [
  "extism-pdk",
  "proto_pdk",
