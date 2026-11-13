@@ -28,7 +28,6 @@ moon_pdk_api = { workspace = true }
 schematic = { workspace = true, features = ["config"] }
 serde = { workspace = true }
 starbase_utils = { workspace = true }
-tracing = { workspace = true }
 winnow = "1.0.4"
 
 [dev-dependencies]

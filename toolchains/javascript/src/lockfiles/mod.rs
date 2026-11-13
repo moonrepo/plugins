@@ -11,6 +11,7 @@ pub use pnpm::*;
 pub use yarn::*;
 
 use moon_pdk_api::VersionSpec;
+use toolchain_common::debug;
 
 // ADR-0008.5: Skip a version that can't be parsed, instead of failing the whole lockfile
 pub(super) fn parse_version_spec<T: AsRef<str>>(name: &str, version: T) -> Option<VersionSpec> {
@@ -23,7 +24,7 @@ pub(super) fn parse_version_spec<T: AsRef<str>>(name: &str, version: T) -> Optio
     match VersionSpec::parse(version) {
         Ok(spec) => Some(spec),
         Err(error) => {
-            tracing::debug!("Skipping the locked version {version} of {name}: {error}");
+            debug!("Skipping the locked version {version} of {name}: {error}");
 
             None
         }

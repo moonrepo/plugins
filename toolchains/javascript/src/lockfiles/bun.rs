@@ -8,6 +8,7 @@ use moon_pdk_api::{AnyResult, LockDependency, ParseLockOutput, VirtualPath};
 use serde::Deserialize;
 use starbase_utils::{fs, json, json::JsonValue};
 use std::collections::BTreeMap;
+use toolchain_common::debug;
 
 #[derive(Debug, Deserialize, Default)]
 #[serde(default, rename_all = "camelCase")]
@@ -96,9 +97,7 @@ pub fn parse_bun_lock(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyRe
     for (key, package) in lock.packages {
         let (name, version, integrity) = match &package {
             BunLockPackage::Unknown(_) => {
-                tracing::debug!(
-                    "Skipping the package {key} in bun.lock, as its entry has an unknown shape"
-                );
+                debug!("Skipping the package {key} in bun.lock, as its entry has an unknown shape");
 
                 continue;
             }

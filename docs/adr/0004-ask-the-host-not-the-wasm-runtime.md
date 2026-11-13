@@ -34,9 +34,11 @@ so everywhere, and a root `clippy.toml` was added to keep it that way.
 3. Commands MUST be run through the host, with `exec`, `exec_captured`, `exec_streamed` or
    `exec_command!`, not `std::process`.
 4. Messages for users MUST be logged with `host_log!`. Debug output SHOULD use extism-pdk's log
-   macros (`trace!`, `debug!`, `info!`, `warn!` and `error!`) or `tracing` events, which
-   `enable_tracing()` forwards to the same log. Plugin code MUST NOT use `println!`, `eprintln!`,
-   `print!`, `eprint!` or `dbg!`.
+   macros (`trace!`, `debug!`, `info!`, `warn!` and `error!`), not `tracing`'s, as
+   `enable_tracing()` drops `tracing` events from plugin modules. Code outside the `wasm` feature,
+   like parsers, can't import extism-pdk, so it SHOULD use `crates/common`'s `debug!`, which calls
+   extism-pdk's and does nothing without the feature. Plugin code MUST NOT use `println!`,
+   `eprintln!`, `print!`, `eprint!` or `dbg!`.
 5. Plugin code MUST NOT use `std::thread` or `std::net`. HTTP requests go through the host, with
    the `fetch_*` functions or `send_request!`.
 6. The APIs these rules forbid SHOULD be listed in the root `clippy.toml`, under
@@ -59,5 +61,6 @@ so everywhere, and a root `clippy.toml` was added to keep it that way.
 - The `lint` task runs clippy with `-D warnings`, so a listed API fails the task.
 - `enable_tracing()` only forwards `tracing` events whose target contains `moon`,
   `nodejs_package_json`, `proto`, `starbase` or `typescript_tsconfig_json`. Events from most plugin
-  modules, like `go_toolchain::tier2`, are dropped, so extism-pdk's macros are the dependable choice
-  for a plugin's own debug output.
+  modules, like `go_toolchain::tier2`, are dropped, which is why rule 4 prefers extism-pdk's macros.
+- `crates/common`'s `debug!` drops messages in native unit tests, as extism-pdk's macros call the
+  host.

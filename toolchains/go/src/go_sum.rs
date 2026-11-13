@@ -4,6 +4,7 @@ use crate::parsers;
 use moon_config::VersionSpec;
 use moon_pdk_api::AnyResult;
 use std::collections::BTreeMap;
+use toolchain_common::debug;
 
 #[derive(Debug, PartialEq)]
 pub struct GoSumDependency {
@@ -35,10 +36,9 @@ impl GoSum {
             let version = match VersionSpec::parse(entry.version) {
                 Ok(version) => version,
                 Err(error) => {
-                    tracing::debug!(
+                    debug!(
                         "Skipping the version {} of {} in go.sum: {error}",
-                        entry.version,
-                        entry.module
+                        entry.version, entry.module
                     );
 
                     continue;

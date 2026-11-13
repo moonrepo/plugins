@@ -5,6 +5,24 @@ mod versions;
 pub use paths::*;
 pub use versions::*;
 
+/// Log a debug message with extism-pdk, from code outside the `wasm` feature,
+/// like parsers. Without the feature, the message is dropped (ADR-0004.4).
+#[macro_export]
+macro_rules! debug {
+    ($($arg:tt)+) => {
+        $crate::log_debug(format_args!($($arg)+))
+    };
+}
+
+#[doc(hidden)]
+pub fn log_debug(message: std::fmt::Arguments) {
+    #[cfg(feature = "wasm")]
+    extism_pdk::debug!("{message}");
+
+    #[cfg(not(feature = "wasm"))]
+    let _ = message;
+}
+
 #[cfg(feature = "wasm")]
 pub fn enable_tracing() {
     use proto_pdk::{
