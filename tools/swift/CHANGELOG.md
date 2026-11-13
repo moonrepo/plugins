@@ -1,5 +1,15 @@
 # Swift plugin
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed installing a version that Swift didn't build for the detected Linux distribution, like
+  Swift 6.1 on Ubuntu 26.04, failing to download. The build for the newest older release of the
+  same distribution is used instead (Ubuntu 24.04 in that example), with a warning. When no release
+  of the distribution has a build, like Swift 6.2 on Ubuntu 20.04, an error explains why, instead
+  of a failed download. A configured `linux-platform` is still used as-is.
+
 ## 0.2.0
 
 #### 💥 Breaking

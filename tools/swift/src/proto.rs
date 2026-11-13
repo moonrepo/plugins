@@ -43,6 +43,54 @@ fn detect_linux_platform(
         .and_then(LinuxPlatform::from_distro))
 }
 
+// Swift.org only builds each version for the distribution releases that are
+// current at the time, so an older or newer release may not have a build
+fn select_linux_platform(
+    env: &HostEnvironment,
+    config: &SwiftToolConfig,
+    version: &VersionSpec,
+) -> FnResult<LinuxPlatform> {
+    // A configured platform is used as-is
+    if let Some(platform) = &config.linux_platform {
+        return Ok(platform.clone());
+    }
+
+    let platform = match detect_linux_platform(env, config)? {
+        Some(platform) => platform,
+        None => {
+            let platform = LinuxPlatform::default();
+
+            host_log!(
+                warn,
+                "Unable to detect a Linux distribution that Swift supports, using {platform}. Configure the <property>linux-platform</property> setting to choose another.",
+            );
+
+            platform
+        }
+    };
+
+    let Some(version) = version.as_version() else {
+        return Ok(platform);
+    };
+
+    match platform.select_build_for(version, &env.arch) {
+        Some(build) => {
+            if build != platform {
+                host_log!(
+                    warn,
+                    "Swift {version} doesn't have a build for {platform}, so using the {build} build. Configure the <property>linux-platform</property> setting to choose another.",
+                );
+            }
+
+            Ok(build)
+        }
+        None => Err(plugin_err!(
+            "Swift {version} doesn't have an {} build for {platform}, or an older release of it. Configure the <property>linux-platform</property> setting to choose another.",
+            env.arch,
+        )),
+    }
+}
+
 #[plugin_fn]
 pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {
     enable_tracing();
@@ -173,19 +221,7 @@ pub fn download_prebuilt(
 
     let (platform, archive_prefix, filename) = match env.os {
         HostOS::Linux => {
-            let linux_platform = match detect_linux_platform(env, &config)? {
-                Some(platform) => platform,
-                None => {
-                    let platform = LinuxPlatform::default();
-
-                    host_log!(
-                        warn,
-                        "Unable to detect a Linux distribution that Swift supports, using {platform}. Configure the <property>linux-platform</property> setting to choose another.",
-                    );
-
-                    platform
-                }
-            };
+            let linux_platform = select_linux_platform(env, &config, &input.context.version)?;
             let download_platform = linux_platform.get_download_platform();
             let archive_suffix = linux_platform.get_archive_suffix();
 
