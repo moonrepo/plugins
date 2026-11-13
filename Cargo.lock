@@ -4762,6 +4762,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f6b464fbc74e149a392436b17d523f769e057cb6877f6a5c4618bc6f11800548"
 
 [[package]]
+name = "pkl_tool"
+version = "0.0.1"
+dependencies = [
+ "extism-pdk",
+ "proto_pdk",
+ "proto_pdk_test_utils 0.52.0",
+ "serde",
+ "starbase_sandbox",
+ "tokio",
+ "tool_common",
+]
+
+[[package]]
 name = "polyval"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"

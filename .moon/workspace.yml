@@ -21,6 +21,7 @@ projects:
   moon-tool: tools/moon
   node-tool: tools/node
   node-depman-tool: tools/node-depman
+  pkl-tool: tools/pkl
   proto-tool: tools/proto
   python-tool: tools/python
   python-poetry-tool: tools/python-poetry
