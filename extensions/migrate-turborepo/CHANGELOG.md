@@ -19,8 +19,8 @@
 - Fixed `globalDependencies` being migrated as project relative inputs, instead of workspace relative.
 - Fixed `$TURBO_DEFAULT$` inputs being dropped, instead of mapping to `**/*`.
 - Fixed wildcard and negated `globalEnv` variables not being migrated as env globs.
-- Fixed values from newer Turborepo versions in `outputLogs`, `envMode` and `ui` failing the
-  migration. They're now ignored.
+- Fixed values from newer Turborepo versions in `inputs`, `outputLogs`, `envMode` and `ui` failing
+  the migration. They're now ignored.
 
 ## 1.0.5
 

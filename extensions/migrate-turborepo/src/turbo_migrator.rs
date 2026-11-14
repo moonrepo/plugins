@@ -1,5 +1,6 @@
 use crate::turbo_json::*;
 use extension_common::migrator::*;
+use extism_pdk::debug;
 use moon_common::Id;
 use moon_config::{
     FilePath, Input, Output, PartialProjectWorkspaceConfig,
@@ -331,18 +332,27 @@ impl TurboMigrator {
                 }
                 // moon hashes inputs right before running, so `jit` is the same as `startup`,
                 // and a dependency's outputs are already covered by its hash
-                TurboTaskInput::Structured(input) => {
-                    if input.mode == TurboInputMode::DependencyOutputs {
-                        continue;
-                    }
+                TurboTaskInput::Structured(input) => match input.mode {
+                    TurboInputMode::Startup | TurboInputMode::Jit => {
+                        if input.with_defaults == Some(true) {
+                            inputs.push(parse_input(TURBO_DEFAULT)?);
+                        }
 
-                    if input.with_defaults == Some(true) {
-                        inputs.push(parse_input(TURBO_DEFAULT)?);
+                        for glob in input.globs.iter().flatten() {
+                            inputs.push(parse_input(glob)?);
+                        }
                     }
-
-                    for glob in input.globs.iter().flatten() {
-                        inputs.push(parse_input(glob)?);
+                    TurboInputMode::DependencyOutputs => {}
+                    TurboInputMode::Unknown => {
+                        debug!(
+                            "Skipping an input of the {package_script} task, as its mode is unknown"
+                        );
                     }
+                },
+                TurboTaskInput::Unknown(value) => {
+                    debug!(
+                        "Skipping the input {value} of the {package_script} task, as it's an unknown kind"
+                    );
                 }
             }
         }

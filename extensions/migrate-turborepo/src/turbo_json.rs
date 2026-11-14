@@ -2,6 +2,7 @@
 
 use rustc_hash::FxHashMap;
 use serde::Deserialize;
+use starbase_utils::json::JsonValue;
 
 #[derive(Debug, Default, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -46,6 +47,9 @@ pub enum TurboInputMode {
     Startup,
     Jit,
     DependencyOutputs,
+    // ADR-0008.4: Modes from newer Turborepo versions, which are skipped
+    #[serde(other)]
+    Unknown,
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
@@ -62,6 +66,8 @@ pub struct TurboStructuredInput {
 pub enum TurboTaskInput {
     Glob(String),
     Structured(TurboStructuredInput),
+    // ADR-0008.4: Shapes from newer Turborepo versions, which are skipped
+    Unknown(JsonValue),
 }
 
 #[derive(Debug, Default, Deserialize, PartialEq)]
@@ -136,5 +142,26 @@ mod tests {
         let task: TurboTask = json::parse(r#"{ "outputLogs": "something-new" }"#).unwrap();
 
         assert!(matches!(task.output_logs, Some(TurboOutputMode::Unknown)));
+    }
+
+    #[test]
+    fn parses_unknown_input_modes() {
+        let input: TurboTaskInput =
+            json::parse(r#"{ "mode": "something-new", "globs": ["src/**"] }"#).unwrap();
+
+        assert!(matches!(
+            input,
+            TurboTaskInput::Structured(TurboStructuredInput {
+                mode: TurboInputMode::Unknown,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn parses_unknown_inputs() {
+        let input: TurboTaskInput = json::parse(r#"{ "globs": ["src/**"] }"#).unwrap();
+
+        assert!(matches!(input, TurboTaskInput::Unknown(..)));
     }
 }
