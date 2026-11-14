@@ -1019,7 +1019,7 @@ mod go_toolchain_tier2 {
                     },
                     LocateDependenciesRootOutput::default(),
                     LocateDependenciesRootOutput {
-                        members: None,
+                        members: Some(vec!["**/*".into()]),
                         root: Some(VirtualPath::new("/workspace/package-with-sum")),
                     },
                 ]
