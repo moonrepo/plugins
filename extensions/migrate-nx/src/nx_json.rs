@@ -150,7 +150,7 @@ pub struct NxTargetDefaultsEntry {
 #[serde(untagged)]
 pub enum NxTargetDefaults {
     List(Vec<NxTargetDefaultsEntry>),
-    Object(NxTargetOptions),
+    Object(Box<NxTargetOptions>),
 }
 
 impl NxTargetDefaults {
@@ -166,7 +166,7 @@ impl NxTargetDefaults {
                     next.inherit(&prev);
                     next
                 }),
-            Self::Object(target) => Some(target),
+            Self::Object(target) => Some(*target),
         }
     }
 }
