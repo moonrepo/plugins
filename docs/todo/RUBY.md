@@ -79,8 +79,8 @@ and a commented file. `tier1_test.rs` covers a JRuby pin being skipped by init.
 **Problem:** every command the plugin emits runs `bundler` (`tier2.rs:48`, `:64`, `:79`). proto
 creates shims only for the executables in `locate_executables` (`bundle`, `bundle-3`, `bundle-3.4`;
 there's no `bundler` shim), and macOS ships `/usr/bin/bundler` for the system Ruby. When moon runs a
-plugin command without the toolchain's bin directory on PATH (see #118 under "Outside this repo"),
-`bundler` resolves to the system Ruby's Bundler instead of proto's.
+plugin command without the toolchain's bin directory on PATH (plugins#118, fixed in moon v2.5.0;
+see `MOON_COMPACT.md`), `bundler` resolves to the system Ruby's Bundler instead of proto's.
 
 **Change:** use `bundle` everywhere. It's the documented command name, and proto shims it.
 
@@ -443,16 +443,8 @@ active before deciding to unset these variables.
 
 ## Outside this repo
 
-- [ ] moon (#118, still live): `AugmentedCommand::get_toolchain_ids` returns no toolchains for
-      plugin commands with no project, so workspace-scoped setup and install commands get no
-      toolchain PATH or version env. #13's `PROTO_RUBY_VERSION` is a plugin-side mitigation.
-- [ ] moon `crates/toolchain-plugin/src/toolchain_plugin.rs:375`: `detect_task_usage` compares the
-      whole command, so `bin/rails` and `./bin/rspec` are never detected as Ruby tasks. Match the
-      file name when the command is a relative path. The proto-binary branch is also broken (see
-      `RUST.md`).
-- [ ] moon `website/docs/__partials__/setup-toolchain/ruby/tier3.mdx` says tier 3 requires building
-      Ruby from source, which hasn't been true since `ruby_tool` 0.2.9. The `create-task/ruby`
-      partials should use `bundle exec` or binstubs (#12).
+moon changes are tracked in [`MOON_COMPACT.md`](MOON_COMPACT.md).
+
 - [ ] registry.moonrepo.app: store GitHub's sha256 digest for each jdx/ruby artifact (#17).
 - [ ] proto: with no version pinned, the `bundle` shim (a secondary executable) runs the system
       `ruby` with the shim's arguments, instead of the system `bundle` or an error, as found while

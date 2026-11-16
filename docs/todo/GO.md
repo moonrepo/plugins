@@ -506,13 +506,7 @@ doesn't change the hash. Add the ones that are set on the host.
 
 ## Outside this repo
 
-- [ ] moon: graph cache inputs are exact paths, so a new source file can't invalidate the graph
-      (#17). Let plugins return input globs, such as `apps/a/**/*.go`.
-- [ ] moon `website/docs/__partials__/create-task/go/inputs.mdx`: `src/**/*` isn't a Go convention.
-      Use `**/*.go`, and mention `/go.mod` and `/go.sum` for single-module repos until #15 lands.
-- [ ] moon `website/docs/config/toolchain.mdx`: the Go section only says to run `moon toolchain info
-      go`. Document `GOTOOLCHAIN` (#13), `go tool`, and that `bins` installs into `GOBIN`.
-- [ ] moon `detect_task_usage`: the proto-binary branch never matches (see `RUST.md`).
+moon changes are tracked in [`MOON_COMPACT.md`](MOON_COMPACT.md).
 
 ## Release
 
