@@ -6,8 +6,9 @@ use moon_pdk::parse_toolchain_config_schema;
 use moon_pdk_api::*;
 use python_tool::to_python_version;
 use schematic::SchemaBuilder;
-use starbase_utils::fs;
 use starbase_utils::json::JsonValue;
+use starbase_utils::{fs, glob};
+use std::path::PathBuf;
 use toolchain_common::enable_tracing;
 
 #[plugin_fn]
@@ -153,13 +154,85 @@ pub fn define_docker_metadata(
 
     Ok(Json(DefineDockerMetadataOutput {
         default_image: Some(format!("python:{tag}")),
-        // The sources phase copies every file, and a venv from the host would
-        // be laid over the one `docker setup` created in the image
         scaffold_globs: vec![
+            // setuptools' build config, which `docker setup` needs to install the project
+            "setup.py".into(),
+            "setup.cfg".into(),
+            // The sources phase copies every file, and a venv from the host would
+            // be laid over the one `docker setup` created in the image
             format!("!{}/**/*", config.venv_name),
             format!("!**/{}/**/*", config.venv_name),
         ],
     }))
+}
+
+#[plugin_fn]
+pub fn scaffold_docker(
+    Json(input): Json<ScaffoldDockerInput>,
+) -> FnResult<Json<ScaffoldDockerOutput>> {
+    let mut output = ScaffoldDockerOutput::default();
+
+    // `docker setup` installs local packages from the configs skeleton, which only
+    // has manifests and lockfiles, and build backends fail without the package's
+    // modules, or the files that its manifest points to. So stub them, and the
+    // sources phase lays the real files over the stubs (D5).
+    if input.phase != ScaffoldDockerPhase::Configs || input.project.is_none() {
+        return Ok(Json(output));
+    }
+
+    let config = parse_toolchain_config_schema::<PythonToolchainConfig>(input.toolchain_config)?;
+
+    for path in get_stub_paths(&input.input_dir, &config.venv_name)? {
+        let file = input.output_dir.join(path);
+
+        // Keep a file that was copied, like from `configsPhaseGlobs`
+        if !file.exists() {
+            fs::write_file(&file, "")?;
+            output.copied_files.push(file);
+        }
+    }
+
+    Ok(Json(output))
+}
+
+/// The packages' `__init__.py` files, and the files that `pyproject.toml`
+/// points to, relative to the project root.
+fn get_stub_paths(input_dir: &VirtualPath, venv_name: &str) -> AnyResult<Vec<PathBuf>> {
+    let venv_globs = [
+        format!("!{venv_name}/**/*"),
+        format!("!**/{venv_name}/**/*"),
+    ];
+    let walk = |globs: Vec<String>| -> AnyResult<Vec<PathBuf>> {
+        Ok(
+            glob::walk_files(input_dir, globs.iter().chain(&venv_globs))?
+                .into_iter()
+                .filter_map(|file| file.strip_prefix(input_dir).ok().map(PathBuf::from))
+                .collect(),
+        )
+    };
+
+    let mut paths = walk(vec!["**/__init__.py".into()])?;
+    let (files, license_globs) =
+        PyProjectToml::load(input_dir.join("pyproject.toml"))?.get_build_files();
+
+    for file in files {
+        if input_dir.join(&file).is_file() {
+            paths.push(PathBuf::from(file));
+        }
+    }
+
+    if !license_globs.is_empty() {
+        // ADR-0008.6
+        match walk(license_globs) {
+            Ok(files) => paths.extend(files),
+            Err(error) => debug!("Skipping the license files of {input_dir}: {error}"),
+        };
+    }
+
+    paths.sort();
+    paths.dedup();
+
+    Ok(paths)
 }
 
 #[plugin_fn]

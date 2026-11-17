@@ -1,13 +1,13 @@
 use crate::config::*;
 use crate::managers::*;
 use crate::pyproject_toml::{PyProjectToml, normalize_distribution_name, normalize_path};
-use crate::venv::{is_venv_version_compatible, parse_pyvenv_cfg_version};
+use crate::venv::{is_venv_version_compatible, parse_pyvenv_cfg_version, to_uv_python_request};
 use extism_pdk::*;
 use moon_config::{DependencyScope, UnresolvedVersionSpec, Version};
 use moon_pdk::VirtualPathExt;
 use moon_pdk::{
-    load_project_toolchain_config, load_toolchain_config, locate_root, locate_root_many,
-    locate_root_many_with_check, parse_toolchain_config_schema,
+    get_host_env_var, get_host_environment, load_project_toolchain_config, load_toolchain_config,
+    locate_root, locate_root_many, locate_root_many_with_check, parse_toolchain_config_schema,
 };
 use moon_pdk_api::*;
 use pep508_rs::{Requirement, VersionOrUrl};
@@ -318,6 +318,16 @@ pub fn extend_command(
 
     activate_venv(&config, &input.current_dir, &mut output)?;
 
+    // uv picks its Python from `.python-version` and `requires-python` before PATH,
+    // so point its commands and tasks at the configured version (D2)
+    if matches!(
+        config.package_manager,
+        Some(PythonPackageManager::Uv | PythonPackageManager::UvPip)
+    ) && let Some(request) = config.version.as_ref().and_then(to_uv_python_request)
+    {
+        output.env.insert("UV_PYTHON".into(), request);
+    }
+
     Ok(Json(output))
 }
 
@@ -452,6 +462,14 @@ pub fn install_dependencies(
                 cmd.args.push("--no-default-groups".into());
             }
 
+            // Fail on a stale lockfile in CI, instead of silently re-locking it (D3)
+            if get_host_environment()?.ci
+                && input.root.join("uv.lock").exists()
+                && !has_uv_lock_mode(&package_manager_config.install_args)?
+            {
+                cmd.args.push("--locked".into());
+            }
+
             cmd
         }
     };
@@ -520,6 +538,23 @@ fn append_pip_install_sources(
     }
 
     Ok(true)
+}
+
+/// Whether uv already checks or skips the lockfile, as it rejects `--locked`
+/// twice, or with `--frozen`, including from `UV_LOCKED` and `UV_FROZEN`.
+fn has_uv_lock_mode(args: &[String]) -> AnyResult<bool> {
+    if has_arg(args, "--locked") || has_arg(args, "--frozen") {
+        return Ok(true);
+    }
+
+    // ADR-0004
+    for name in ["UV_LOCKED", "UV_FROZEN"] {
+        if get_host_env_var(name)?.is_some_and(|value| !value.is_empty()) {
+            return Ok(true);
+        }
+    }
+
+    Ok(false)
 }
 
 /// Poetry 1.x has no `sync` command. Without a version, assume Poetry 2.

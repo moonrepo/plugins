@@ -703,6 +703,63 @@ b = { workspace = true }
             assert!(!output.env.contains_key("UV_PROJECT_ENVIRONMENT"));
         }
 
+        async fn get_uv_python(
+            sandbox: &MoonWasmSandbox,
+            toolchain_config: serde_json::Value,
+        ) -> Option<String> {
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let output = plugin
+                .extend_command(ExtendCommandInput {
+                    command: "uv".into(),
+                    toolchain_config,
+                    current_dir: plugin.plugin.to_virtual_path(sandbox.path()),
+                    ..Default::default()
+                })
+                .await;
+
+            output.env.get("UV_PYTHON").cloned()
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn sets_uv_python_for_versions_without_a_range() {
+            let sandbox = create_empty_moon_sandbox();
+
+            for package_manager in ["uv", "uv-pip"] {
+                for (version, expected) in [
+                    ("3.14.6", "3.14.6"),
+                    ("3.14.6+20260101", "3.14.6"),
+                    ("3.15.0-rc.2", "3.15.0rc2"),
+                    ("3.14", "3.14"),
+                ] {
+                    assert_eq!(
+                        get_uv_python(
+                            &sandbox,
+                            json!({ "packageManager": package_manager, "version": version })
+                        )
+                        .await
+                        .as_deref(),
+                        Some(expected)
+                    );
+                }
+            }
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn doesnt_set_uv_python_for_ranges_aliases_or_other_managers() {
+            let sandbox = create_empty_moon_sandbox();
+
+            for toolchain_config in [
+                json!({ "packageManager": "uv", "version": "^3.12" }),
+                json!({ "packageManager": "uv", "version": "stable" }),
+                json!({ "packageManager": "uv" }),
+                json!({ "packageManager": "pip", "version": "3.14.6" }),
+                json!({ "packageManager": "poetry", "version": "3.14.6" }),
+            ] {
+                assert_eq!(get_uv_python(&sandbox, toolchain_config).await, None);
+            }
+        }
+
         #[tokio::test(flavor = "multi_thread")]
         async fn doesnt_set_env_without_a_venv() {
             let sandbox = create_empty_moon_sandbox();
@@ -1201,6 +1258,93 @@ members = ["packages/*"]
                     "--no-progress"
                 ]))
             );
+        }
+
+        async fn get_uv_sync_args(
+            sandbox: &mut MoonWasmSandbox,
+            ci: bool,
+            sync_args: &[&str],
+        ) -> Vec<String> {
+            let sync_args = strings(sync_args);
+
+            sandbox
+                .host_funcs
+                .mock_load_toolchain_config(move |_, _| json!({ "syncArgs": sync_args.clone() }));
+
+            let plugin = sandbox
+                .create_toolchain_with_config("python", |config| {
+                    config.host_environment(HostEnvironment {
+                        ci,
+                        ..Default::default()
+                    });
+                })
+                .await;
+
+            let output = plugin
+                .install_dependencies(InstallDependenciesInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    toolchain_config: json!({ "packageManager": "uv" }),
+                    ..Default::default()
+                })
+                .await;
+
+            output.install_command.unwrap().command.args
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn uv_checks_the_lockfile_in_ci() {
+            let mut sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("uv.lock", "version = 1\n");
+
+            assert_eq!(
+                get_uv_sync_args(&mut sandbox, true, &[]).await,
+                strings(&["sync", "--locked", "--no-progress"])
+            );
+            assert_eq!(
+                get_uv_sync_args(&mut sandbox, false, &[]).await,
+                strings(&["sync", "--no-progress"])
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn uv_doesnt_check_a_missing_lockfile_in_ci() {
+            let mut sandbox = create_empty_moon_sandbox();
+
+            assert_eq!(
+                get_uv_sync_args(&mut sandbox, true, &[]).await,
+                strings(&["sync", "--no-progress"])
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn uv_keeps_the_lock_mode_the_user_passed_in_ci() {
+            let mut sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("uv.lock", "version = 1\n");
+
+            for arg in ["--frozen", "--locked"] {
+                assert_eq!(
+                    get_uv_sync_args(&mut sandbox, true, &[arg]).await,
+                    strings(&["sync", arg, "--no-progress"])
+                );
+            }
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn uv_keeps_the_lock_mode_from_env_vars_in_ci() {
+            let mut sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("uv.lock", "version = 1\n");
+
+            for name in ["UV_FROZEN", "UV_LOCKED"] {
+                // Each test runs in its own process with nextest
+                unsafe { std::env::set_var(name, "1") };
+
+                assert_eq!(
+                    get_uv_sync_args(&mut sandbox, true, &[]).await,
+                    strings(&["sync", "--no-progress"])
+                );
+
+                unsafe { std::env::remove_var(name) };
+            }
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -2329,6 +2473,112 @@ files = []
             assert_eq!(output.dependencies.keys().collect::<Vec<_>>(), ["six"]);
         }
 
+        fn versions(deps: &BTreeMap<String, ManifestDependency>) -> Vec<(&str, String)> {
+            deps.iter()
+                .map(|(name, dep)| (name.as_str(), dep.get_version().unwrap().to_string()))
+                .collect()
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn reports_every_table_by_scope() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "pyproject.toml",
+                r#"
+[build-system]
+requires = ["hatchling>=1.26"]
+
+[project]
+name = "a"
+dependencies = ["six", "idna~=3.10", "certifi==2025.1.31", "Typing_Extensions>=4.12"]
+
+[project.optional-dependencies]
+http = ["requests>=2.32.0", "six>=1.0"]
+
+[dependency-groups]
+dev = ["pytest>=8", { include-group = "lint" }]
+lint = ["ruff"]
+
+[tool.uv]
+dev-dependencies = ["mypy"]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+Flask_Cors = "^6.0"
+local = { path = "../local", develop = true }
+multi = [{ version = "1", python = "<3.9" }, { version = "2", python = ">=3.9" }]
+
+[tool.poetry.group.test.dependencies]
+coverage = { version = "~7.6", extras = ["toml"] }
+
+[tool.poetry.dev-dependencies]
+black = "*"
+"#,
+            );
+
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let output = plugin
+                .parse_manifest(ParseManifestInput {
+                    path: VirtualPath::new(sandbox.path().join("pyproject.toml")),
+                    ..Default::default()
+                })
+                .await;
+
+            // Unversioned, `~=` and multiple constraints match any locked version,
+            // and a dependency keeps the version from its first table
+            assert_eq!(
+                versions(&output.dependencies),
+                [
+                    ("certifi", "2025.1.31".into()),
+                    ("flask-cors", "^6.0".into()),
+                    ("idna", "*".into()),
+                    ("local", "*".into()),
+                    ("multi", "*".into()),
+                    ("requests", ">=2.32.0".into()),
+                    ("six", "*".into()),
+                    ("typing-extensions", ">=4.12".into()),
+                ]
+            );
+            assert_eq!(
+                versions(&output.dev_dependencies),
+                [
+                    ("black", "*".into()),
+                    ("coverage", "~7.6".into()),
+                    ("mypy", "*".into()),
+                    ("pytest", ">=8".into()),
+                    ("ruff", "*".into()),
+                ]
+            );
+            assert_eq!(
+                versions(&output.build_dependencies),
+                [("hatchling", ">=1.26".into())]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn reports_poetry_1_projects() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "pyproject.toml",
+                "[tool.poetry]\nname = \"a\"\n\n[tool.poetry.dependencies]\npython = \"^3.8\"\nrequests = \"^2.31\"\n",
+            );
+
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let output = plugin
+                .parse_manifest(ParseManifestInput {
+                    path: VirtualPath::new(sandbox.path().join("pyproject.toml")),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                versions(&output.dependencies),
+                [("requests", "^2.31".into())]
+            );
+        }
+
         #[tokio::test(flavor = "multi_thread")]
         async fn parses_pyproject_toml() {
             let sandbox = create_moon_sandbox("manifests");
@@ -2366,6 +2616,21 @@ files = []
                             ..Default::default()
                         })
                     ),
+                    // From optional dependencies
+                    (
+                        "mysqlclient".into(),
+                        ManifestDependency::Config(ManifestDependencyConfig {
+                            version: Some(UnresolvedVersionSpec::parse(">=1.3, <2.0").unwrap()),
+                            ..Default::default()
+                        })
+                    ),
+                    (
+                        "psycopg2".into(),
+                        ManifestDependency::Config(ManifestDependencyConfig {
+                            version: Some(UnresolvedVersionSpec::parse(">=2.9, <3.0").unwrap()),
+                            ..Default::default()
+                        })
+                    ),
                     (
                         "requests".into(),
                         ManifestDependency::Config(ManifestDependencyConfig {
@@ -2374,6 +2639,16 @@ files = []
                         })
                     ),
                 ])
+            );
+            assert_eq!(
+                output.build_dependencies,
+                BTreeMap::from_iter([(
+                    "uv-build".into(),
+                    ManifestDependency::Config(ManifestDependencyConfig {
+                        version: Some(UnresolvedVersionSpec::parse(">=0.9.18, <0.10.0").unwrap()),
+                        ..Default::default()
+                    })
+                )])
             );
         }
 
@@ -2394,11 +2669,17 @@ files = []
                 BTreeMap::from_iter([
                     (
                         "pytest".into(),
-                        ManifestDependency::Config(ManifestDependencyConfig::default())
+                        ManifestDependency::Config(ManifestDependencyConfig {
+                            version: Some(UnresolvedVersionSpec::parse("*").unwrap()),
+                            ..Default::default()
+                        })
                     ),
                     (
                         "pytest-cov".into(),
-                        ManifestDependency::Config(ManifestDependencyConfig::default())
+                        ManifestDependency::Config(ManifestDependencyConfig {
+                            version: Some(UnresolvedVersionSpec::parse("*").unwrap()),
+                            ..Default::default()
+                        })
                     ),
                     (
                         "docopt".into(),
@@ -2424,6 +2705,7 @@ files = []
                                 "https://github.com/urllib3/urllib3/archive/refs/tags/1.26.8.zip"
                                     .into()
                             ),
+                            version: Some(UnresolvedVersionSpec::parse("*").unwrap()),
                             ..Default::default()
                         })
                     ),

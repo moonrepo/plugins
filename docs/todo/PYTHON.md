@@ -526,8 +526,8 @@ tags for a prerelease, a `stable` alias and an exact version.
 
 ### #15 Make `version` pick uv's interpreter (D2)
 
-- [ ] Set `UV_PYTHON` for uv commands and tasks
-- [ ] Changelog
+- [x] Set `UV_PYTHON` for uv commands and tasks
+- [x] Changelog
 
 **Problem:** moon sets `PROTO_PYTHON_VERSION` and puts proto's Python on PATH, but uv picks its
 interpreter from `.python-version` and `requires-python` first. With the plugin's
@@ -562,8 +562,8 @@ fight over the venv.
 
 ### #16 Frozen uv installs in CI (D3)
 
-- [ ] Add `--locked` in CI
-- [ ] Tests
+- [x] Add `--locked` in CI
+- [x] Tests
 
 **Problem:** a plain `uv sync` silently re-locks when `uv.lock` is stale (confirmed: exit 0,
 "Resolved 3 packages", lockfile rewritten). Poetry already fails on a stale lock ("pyproject.toml
@@ -582,9 +582,9 @@ uv rejects `--locked` twice, `--frozen` with `--locked`, and `UV_LOCKED=1` with 
 
 ### #17 Every declared dependency in task hashes (D4)
 
-- [ ] Report every group and table, by scope
-- [ ] `*` fallback for unusable specifiers
-- [ ] Tests
+- [x] Report every group and table, by scope
+- [x] `*` fallback for unusable specifiers
+- [x] Tests
 
 **Problem:** moon's task hasher skips manifest dependencies that have no version requirement (moon
 `crates/task-hasher/src/task_hashing.rs:433-436`). `parse_manifest`
@@ -624,8 +624,8 @@ needs normalizing, and the skipped `python` key.
 
 ### #18 `docker setup` without sources (D5)
 
-- [ ] Stub files in the configs phase
-- [ ] Tests
+- [x] Stub files in the configs phase
+- [x] Tests
 
 **Problem:** `docker setup` installs from the configs skeleton, which only has the manifests and
 lockfiles. Building a local package for its editable install then fails. Confirmed with workspace
@@ -673,7 +673,7 @@ level.
 
 ### #19 `unstable_pip.version` (D6)
 
-- [ ] Fix the setting's description and deprecate it
+- [x] Fix the setting's description and deprecate it
 
 **Problem:** `PipToolchainConfig.version` says "Configured version to download and install"
 (`toolchains/python-pip/src/config.rs:17-18`). pip has no tier 3, and the venv uses the pip that

@@ -156,6 +156,59 @@ impl PyProjectToml {
         }
     }
 
+    /// `[build-system].requires`.
+    pub fn get_build_requirements(&self) -> Vec<Requirement> {
+        let reqs = self
+            .build_system
+            .as_ref()
+            .and_then(|build| build.get("requires"))
+            .and_then(|requires| requires.as_array())
+            .into_iter()
+            .flatten()
+            .filter_map(|req| req.as_str().map(|req| req.to_owned()))
+            .collect::<Vec<_>>();
+
+        self.parse_requirements(&reqs)
+    }
+
+    /// The files that build backends read from `[project]`: `readme` (a path, or
+    /// `{ file = … }`) and `license = { file = … }`, as paths, and `license-files`,
+    /// as globs. A `license` string is an SPDX expression, not a file.
+    pub fn get_build_files(&self) -> (Vec<String>, Vec<String>) {
+        let Some(project) = &self.project else {
+            return (vec![], vec![]);
+        };
+
+        let readme = project.readme.as_ref().and_then(|readme| {
+            readme
+                .as_str()
+                .or_else(|| readme.get("file").and_then(TomlValue::as_str))
+        });
+
+        let license = project
+            .license
+            .as_ref()
+            .and_then(|license| license.get("file"))
+            .and_then(TomlValue::as_str);
+
+        let paths = readme
+            .into_iter()
+            .chain(license)
+            .map(|path| path.to_owned())
+            .collect();
+
+        let globs = project
+            .license_files
+            .as_ref()
+            .and_then(TomlValue::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(|glob| glob.as_str().map(|glob| glob.to_owned()))
+            .collect();
+
+        (paths, globs)
+    }
+
     /// Whether the project is built by a backend, and so installed itself,
     /// as uv decides it for `uv sync`.
     pub fn has_build_system(&self) -> bool {
@@ -187,7 +240,7 @@ impl PyProjectToml {
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct PyProjectTomlInner {
-    // Only its presence matters
+    // Its presence, and `requires`, read leniently
     pub build_system: Option<TomlValue>,
     pub dependency_groups: BTreeMap<String, Vec<DependencyGroupEntry>>,
     pub project: Option<Project>,
@@ -200,8 +253,12 @@ pub struct PyProjectTomlInner {
 pub struct Project {
     pub dependencies: Vec<String>,
     pub dynamic: Vec<String>,
+    // Read leniently, as they have several shapes
+    pub license: Option<TomlValue>,
+    pub license_files: Option<TomlValue>,
     pub name: Option<String>,
     pub optional_dependencies: BTreeMap<String, Vec<String>>,
+    pub readme: Option<TomlValue>,
     pub version: Option<String>,
 }
 
@@ -261,12 +318,22 @@ impl PoetryDependency {
             Self::Version(_) | Self::Unknown(_) => vec![],
         }
     }
+
+    /// The version constraint, like `^2.31`. Multiple constraints have none.
+    pub fn get_version(&self) -> Option<&str> {
+        match self {
+            Self::Version(version) => Some(version),
+            Self::Table(options) => options.version.as_deref(),
+            Self::Multiple(_) | Self::Unknown(_) => None,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct PoetryDependencyOptions {
     pub path: Option<String>,
+    pub version: Option<String>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
@@ -477,6 +544,85 @@ dynamic = ["dependencies"]
         assert!(manifest.has_build_system());
         assert!(manifest.has_dynamic_dependencies());
         assert!(!parse("[project]\nname = \"a\"\n").has_build_system());
+    }
+
+    #[test]
+    fn reads_build_requirements_leniently() {
+        let names = |content: &str| {
+            parse(content)
+                .get_build_requirements()
+                .into_iter()
+                .map(|req| req.name.to_string())
+                .collect::<Vec<_>>()
+        };
+
+        assert_eq!(
+            names("[build-system]\nrequires = [\"hatchling>=1.26\", 1, \"!!\", \"hatch-vcs\"]\n"),
+            ["hatchling", "hatch-vcs"]
+        );
+        assert!(names("[build-system]\nrequires = \"hatchling\"\n").is_empty());
+        assert!(names("[project]\nname = \"a\"\n").is_empty());
+    }
+
+    #[test]
+    fn reads_build_files() {
+        let manifest = parse(
+            r#"
+[project]
+name = "a"
+readme = "README.md"
+license = { file = "LICENSE.txt" }
+license-files = ["LICEN[CS]E*", 1, "licenses/*.md"]
+"#,
+        );
+
+        assert_eq!(
+            manifest.get_build_files(),
+            (
+                vec!["README.md".into(), "LICENSE.txt".into()],
+                vec!["LICEN[CS]E*".into(), "licenses/*.md".into()]
+            )
+        );
+
+        let manifest = parse(
+            r#"
+[project]
+name = "a"
+readme = { file = "docs/README.rst", content-type = "text/x-rst" }
+license = "MIT"
+"#,
+        );
+
+        assert_eq!(
+            manifest.get_build_files(),
+            (vec!["docs/README.rst".into()], vec![])
+        );
+
+        let manifest = parse(
+            "[project]\nname = \"a\"\nreadme = { text = \"Hi\" }\nlicense = { text = \"MIT\" }\n",
+        );
+
+        assert_eq!(manifest.get_build_files(), (vec![], vec![]));
+    }
+
+    #[test]
+    fn reads_poetry_versions() {
+        let manifest = parse(
+            r#"
+[tool.poetry.dependencies]
+a = "^2.31"
+b = { version = "~1.4", extras = ["x"] }
+c = { path = "../c" }
+d = [{ version = "1", python = "<3.9" }, { version = "2", python = ">=3.9" }]
+"#,
+        );
+
+        let deps = &manifest.get_tool_poetry().unwrap().dependencies;
+
+        assert_eq!(deps["a"].get_version(), Some("^2.31"));
+        assert_eq!(deps["b"].get_version(), Some("~1.4"));
+        assert_eq!(deps["c"].get_version(), None);
+        assert_eq!(deps["d"].get_version(), None);
     }
 
     #[test]

@@ -17,6 +17,13 @@
 - Production installs from `docker prune` now remove what they exclude: uv uses
   `--no-default-groups` instead of `--no-dev`, so every default group is dropped, and Poetry runs
   `poetry sync --only main` (`poetry install --sync --only main` for Poetry 1.x).
+- uv commands and tasks now get `UV_PYTHON` when `version` is a version, or a partial version
+  like `3.14`, with `uv` and `uv-pip`. uv used to pick a `.python-version` or `requires-python`
+  over moon's Python, so it failed to find it, downloaded its own, or recreated the venv on every
+  `uv run`. Requirements with a range, like `^3.12` or `>=3.11`, still leave the choice to uv.
+- `uv sync` now passes `--locked` in CI when `uv.lock` exists, so a stale lockfile fails the
+  install, instead of being silently re-locked. It's skipped when `syncArgs` has `--locked` or
+  `--frozen`, or `UV_LOCKED` or `UV_FROZEN` is set.
 
 #### 🚀 Updates
 
@@ -32,6 +39,13 @@
   development dependencies, uv sources inherited from the workspace root, uv `path` sources, and
   Poetry `path` dependencies. Poetry 1.x projects, with only `[tool.poetry]`, now get an alias.
 - `moon docker scaffold` no longer copies venvs into the sources skeleton.
+- `moon docker scaffold` now stubs each project's `__init__.py` files, and the readme and license
+  files that its `pyproject.toml` points to, in the configs skeleton, and copies `setup.py` and
+  `setup.cfg`. `docker setup` failed to build local packages without them.
+- Task hashes now include every declared dependency, by scope: optional dependencies,
+  `[dependency-groups]`, `tool.uv.dev-dependencies`, `[build-system].requires` and the Poetry
+  tables. A requirement without a version, or with one that can't be parsed like `~=1.4.2`, now
+  uses its locked version, where before it was skipped. Every Python task hash changes once.
 - Package manager detection now checks for `[tool.uv]` and `[tool.poetry]` in `pyproject.toml`, and
   no longer picks pip for a `Pipfile`, which pip can't install.
 - Panics now report their message, instead of an `unreachable` WASM trap error.

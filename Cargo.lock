@@ -5244,6 +5244,7 @@ dependencies = [
  "moon_pdk_test_utils",
  "pep440_rs",
  "pep508_rs",
+ "proto_pdk_api 0.36.1",
  "python_tool",
  "schematic",
  "serde",

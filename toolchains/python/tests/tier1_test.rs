@@ -1,6 +1,6 @@
 use moon_config::DockerPruneConfig;
 use moon_pdk_api::*;
-use moon_pdk_test_utils::create_empty_moon_sandbox;
+use moon_pdk_test_utils::{MoonWasmSandbox, create_empty_moon_sandbox};
 use serde_json::json;
 
 mod python_toolchain_tier1 {
@@ -204,6 +204,22 @@ mod python_toolchain_tier1 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn copies_setuptools_configs() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let output = plugin
+                .define_docker_metadata(DefineDockerMetadataInput {
+                    toolchain_config: json!({}),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.scaffold_globs.contains(&"setup.py".to_string()));
+            assert!(output.scaffold_globs.contains(&"setup.cfg".to_string()));
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn handles_image_version() {
             let sandbox = create_empty_moon_sandbox();
             let plugin = sandbox.create_toolchain("python").await;
@@ -227,6 +243,222 @@ mod python_toolchain_tier1 {
                 .await;
 
             assert_eq!(output.default_image.unwrap(), "python:3.10");
+        }
+    }
+
+    mod scaffold_docker {
+        use super::*;
+
+        async fn scaffold(
+            sandbox: &MoonWasmSandbox,
+            phase: ScaffoldDockerPhase,
+            project: Option<ProjectFragment>,
+            toolchain_config: serde_json::Value,
+        ) -> Vec<VirtualPath> {
+            let plugin = sandbox.create_toolchain("python").await;
+
+            let output = plugin
+                .scaffold_docker(ScaffoldDockerInput {
+                    input_dir: VirtualPath::new(sandbox.path().join("in")),
+                    output_dir: VirtualPath::new(sandbox.path().join("out")),
+                    phase,
+                    project,
+                    toolchain_config,
+                    ..Default::default()
+                })
+                .await;
+
+            for file in &output.copied_files {
+                let path = sandbox
+                    .path()
+                    .join(file.strip_prefix("/workspace").unwrap());
+
+                assert!(path.exists());
+                assert_eq!(std::fs::read_to_string(path).unwrap(), "");
+            }
+
+            output.copied_files
+        }
+
+        async fn scaffold_configs(sandbox: &MoonWasmSandbox) -> Vec<VirtualPath> {
+            scaffold(
+                sandbox,
+                ScaffoldDockerPhase::Configs,
+                Some(ProjectFragment::default()),
+                json!({}),
+            )
+            .await
+        }
+
+        fn stubs(paths: &[&str]) -> Vec<VirtualPath> {
+            paths
+                .iter()
+                .map(|path| VirtualPath::new(format!("/workspace/out/{path}")))
+                .collect()
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn stubs_a_uv_lib() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "in/pyproject.toml",
+                r#"
+[project]
+name = "b"
+version = "0.1.0"
+readme = "README.md"
+
+[build-system]
+requires = ["uv_build>=0.13.8,<0.14.0"]
+build-backend = "uv_build"
+"#,
+            );
+            sandbox.create_file("in/README.md", "# b");
+            sandbox.create_file("in/src/b/__init__.py", "def hello(): ...");
+            sandbox.create_file("in/src/b/py.typed", "");
+            sandbox.create_file("in/src/b/core.py", "");
+
+            assert_eq!(
+                scaffold_configs(&sandbox).await,
+                stubs(&["README.md", "src/b/__init__.py"])
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn stubs_hatchling_readme_and_license_files() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "in/pyproject.toml",
+                r#"
+[project]
+name = "proj"
+version = "0.1.0"
+readme = { file = "docs/README.rst", content-type = "text/x-rst" }
+license = "MIT"
+license-files = ["LICEN[CS]E*", "licenses/*.txt"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+"#,
+            );
+            sandbox.create_file("in/docs/README.rst", "proj");
+            sandbox.create_file("in/LICENSE", "MIT");
+            sandbox.create_file("in/licenses/vendored.txt", "BSD");
+            sandbox.create_file("in/proj/__init__.py", "");
+
+            assert_eq!(
+                scaffold_configs(&sandbox).await,
+                stubs(&[
+                    "LICENSE",
+                    "docs/README.rst",
+                    "licenses/vendored.txt",
+                    "proj/__init__.py"
+                ])
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn stubs_a_poetry_src_layout() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "in/pyproject.toml",
+                r#"
+[project]
+name = "proj"
+version = "0.1.0"
+readme = "README.md"
+license = { file = "LICENSE" }
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+"#,
+            );
+            sandbox.create_file("in/README.md", "");
+            sandbox.create_file("in/LICENSE", "MIT");
+            sandbox.create_file("in/src/proj/__init__.py", "");
+            sandbox.create_file("in/src/proj/sub/__init__.py", "");
+            sandbox.create_file("in/tests/__init__.py", "");
+
+            assert_eq!(
+                scaffold_configs(&sandbox).await,
+                stubs(&[
+                    "LICENSE",
+                    "README.md",
+                    "src/proj/__init__.py",
+                    "src/proj/sub/__init__.py",
+                    "tests/__init__.py"
+                ])
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn skips_venvs_and_missing_files() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "in/pyproject.toml",
+                "[project]\nname = \"a\"\nreadme = \"README.md\"\nlicense-files = [\"LICENSE\"]\n",
+            );
+            sandbox.create_file("in/a/__init__.py", "");
+            sandbox.create_file("in/.venv/lib/python3.14/site-packages/six/__init__.py", "");
+            sandbox.create_file("in/sub/.venv/lib/x/__init__.py", "");
+
+            assert_eq!(scaffold_configs(&sandbox).await, stubs(&["a/__init__.py"]));
+
+            std::fs::remove_dir_all(sandbox.path().join("out")).unwrap();
+            sandbox.create_file("in/env/lib/x/__init__.py", "");
+
+            assert_eq!(
+                scaffold(
+                    &sandbox,
+                    ScaffoldDockerPhase::Configs,
+                    Some(ProjectFragment::default()),
+                    json!({ "venvName": "env" }),
+                )
+                .await,
+                stubs(&[
+                    ".venv/lib/python3.14/site-packages/six/__init__.py",
+                    "a/__init__.py",
+                    "sub/.venv/lib/x/__init__.py"
+                ])
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn keeps_copied_files() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("in/a/__init__.py", "x = 1");
+            sandbox.create_file("out/a/__init__.py", "x = 1");
+
+            assert!(scaffold_configs(&sandbox).await.is_empty());
+            assert_eq!(
+                std::fs::read_to_string(sandbox.path().join("out/a/__init__.py")).unwrap(),
+                "x = 1"
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn does_nothing_in_the_sources_phase_or_workspace() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("in/pyproject.toml", "[project]\nname = \"a\"\n");
+            sandbox.create_file("in/a/__init__.py", "");
+
+            assert!(
+                scaffold(
+                    &sandbox,
+                    ScaffoldDockerPhase::Sources,
+                    Some(ProjectFragment::default()),
+                    json!({}),
+                )
+                .await
+                .is_empty()
+            );
+            assert!(
+                scaffold(&sandbox, ScaffoldDockerPhase::Configs, None, json!({}))
+                    .await
+                    .is_empty()
+            );
         }
     }
 

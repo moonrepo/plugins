@@ -15,7 +15,8 @@ config_struct!(
         /// These arguments are inherited by the Python toolchain.
         pub venv_args: Vec<String>,
 
-        /// Configured version to download and install.
+        /// Unused. The venv uses the pip that ships with Python.
+        #[deprecated]
         pub version: Option<UnresolvedVersionSpec>,
     }
 );

@@ -2,6 +2,27 @@
 
 use moon_config::{UnresolvedVersionSpec, Version};
 use moon_pdk_api::MatchesVersion;
+use proto_pdk_api::Op;
+use python_tool::to_python_version;
+
+/// The Python request for `UV_PYTHON`, which uv reads as a version or a
+/// partial version. Only a spec without a range maps to one, like `3.14.6`,
+/// `3.14` or `3.14.*`, so `^3.12`, `>=3.11`, ranges and aliases return `None`.
+pub fn to_uv_python_request(spec: &UnresolvedVersionSpec) -> Option<String> {
+    match spec {
+        // Without build metadata, and pre-releases like `3.15.0rc2`
+        UnresolvedVersionSpec::Version(version) => Some(to_python_version(version)),
+        // `~3.14.2` is a range of patches, but `~3.14` and `3.14` aren't
+        UnresolvedVersionSpec::Requirement(req)
+            if req.major.is_some()
+                && (req.op == Op::Exact
+                    || (matches!(req.op, Op::Tilde | Op::Wildcard) && req.patch.is_none())) =>
+        {
+            Some(spec.to_partial_string())
+        }
+        _ => None,
+    }
+}
 
 /// The Python version that a venv was created with, from its `pyvenv.cfg`.
 /// The stdlib writes it as `version`, and uv as `version_info`.
@@ -88,5 +109,32 @@ mod tests {
         assert!(!is_venv_version_compatible(&venv, &spec("3.13")));
         assert!(is_venv_version_compatible(&venv, &spec("^3.12")));
         assert!(is_venv_version_compatible(&venv, &spec("latest")));
+    }
+
+    #[test]
+    fn converts_specs_without_a_range_to_uv_requests() {
+        let request = |value: &str| to_uv_python_request(&spec(value));
+
+        assert_eq!(request("3.14.6"), Some("3.14.6".into()));
+        assert_eq!(request("3.14.6+20260101"), Some("3.14.6".into()));
+        assert_eq!(request("3.15.0-rc.2"), Some("3.15.0rc2".into()));
+        assert_eq!(request("3.14"), Some("3.14".into()));
+        assert_eq!(request("~3.14"), Some("3.14".into()));
+        assert_eq!(request("3.14.*"), Some("3.14".into()));
+        assert_eq!(request("=3.14.6"), Some("3.14.6".into()));
+        assert_eq!(request("3"), Some("3".into()));
+    }
+
+    #[test]
+    fn skips_specs_with_a_range() {
+        let request = |value: &str| to_uv_python_request(&spec(value));
+
+        assert_eq!(request("^3.12"), None);
+        assert_eq!(request(">=3.11"), None);
+        assert_eq!(request("~3.14.2"), None);
+        assert_eq!(request(">=3.11 <3.14"), None);
+        assert_eq!(request("*"), None);
+        assert_eq!(request("latest"), None);
+        assert_eq!(request("stable"), None);
     }
 }
