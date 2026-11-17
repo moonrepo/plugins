@@ -37,12 +37,24 @@ skipped. It's only used by `setup_environment.rs:94` and `install_dependencies.r
   since last run". The venv is never recreated, and tasks fail.
 - `requirements.txt` changed from A to B and back to A: the third install is skipped, so B's
   packages stay. This affects every toolchain, like switching back to a git branch.
+- With `PYTHON.md` #3, this can now leave a project with no venv. moon calls the plugin's
+  `setup_environment` before checking the fingerprint (`setup_environment.rs:89-114`), and the
+  plugin deletes a venv whose Python doesn't match `version` inside that call
+  (`toolchains/python/src/tier2.rs:714-715`). When the returned create command's fingerprint ran
+  before, moon skips it. So `version` going from A to B and back to A, or a venv recreated outside
+  moon with another Python (like a plain `uv run` that follows `.python-version`), ends with the
+  venv deleted and not recreated, and the install is skipped too. Before #3, the stale venv stayed.
+  **Live** (moon 2.6.4, uv): after a venv was recreated outside moon, setup deleted it and didn't
+  recreate it, and only the task's own `uv run` did.
 
 **Change:** compare the fingerprint to the last one persisted for that action, not to every hash
 ever seen. Plugins that return the same commands every run (plugins#137) are still skipped. The
-tests in `crates/actions/tests/utils_test.rs` may expect the current behavior.
+tests in `crates/actions/tests/utils_test.rs` may expect the current behavior. This also fixes the
+#3 case: a matching venv returns no commands, so after it, a create command never matches the last
+run.
 
-**Source:** `PYTHON.md` #3.
+**Source:** `PYTHON.md` #3. Ship it with proto 0.64 (see Releases), as `python_toolchain` can't be
+released safely with #3 before it.
 
 ### Let plugins report whether dependencies are installed
 
@@ -175,6 +187,10 @@ it's for v3.
   - There's no Python guide, and the toolchain docs say nothing about venvs, `venvName` or Docker.
   - Once #1 lands, `__partials__/setup-toolchain/python/tier2.mdx` should say that `uv-pip` needs
     both `unstable_uv` and `unstable_pip`.
+  - Document what the toolchain now does for you (`PYTHON.md` #15, #16, #18, #21): `version` sets
+    `UV_PYTHON`, which wins over `.python-version`; `uv sync` runs with `--locked` in CI; the
+    configs skeleton gets stub `__init__.py`, readme and license files; and pip installs the `dev`
+    group.
 
 ## Done
 

@@ -773,6 +773,10 @@ tools lower their minimum. The test sandbox doesn't check the minimum, so the te
 was checked live with a local build whose `python_tool` and `python_uv_tool` minimums were lowered
 to 0.62.
 
+The same moon release should also fix "Setup and install skips match any past run"
+(`MOON_COMPACT.md`). Without it, #3 can delete a stale venv and moon then skips recreating it, for
+example when `version` goes from A to B and back to A.
+
 - `python_toolchain`: ship Phase 1 as 0.4.0 (the toolchain is unstable and pre-1.0), with changelog
   callouts for what changes installs: `uv-pip` needs `unstable_pip` too (#1), `--all-packages` (#2),
   venv recreation (#3), pyproject-only installs (#4), a one-time reinstall from the lockfile order
