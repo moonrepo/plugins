@@ -342,15 +342,7 @@ its source. `fetch_bytes` is used instead of the `download_file` host function, 
 
 ## Outside this repo (moon)
 
-- [ ] `crates/toolchain-plugin/src/toolchain_plugin.rs:396`: `detect_task_usage` splits `exe`
-      instead of `command`, so the proto-binary match (`node-20`) can never fire.
-- [ ] `website/docs/guides/rust/handbook.mdx`: revise the claim that every task is executed "using
-      the exact version" once #3 lands.
-- [ ] `crates/pdk-api/src/macros.rs`: D1 option B.
-- [ ] `crates/task-hasher/src/task_hashing.rs` (`apply_toolchain_dependencies_by_scope`): an
-      inherited dependency is looked up in the workspace manifest under its own scope, but
-      `[workspace.dependencies]` is reported as production, so `workspace = true` dev and build
-      dependencies never resolve. Fall back to the production scope for inherited lookups.
+moon changes are tracked in [`MOON_COMPACT.md`](MOON_COMPACT.md).
 
 ## Release
 

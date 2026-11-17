@@ -128,8 +128,7 @@ In `tier2_test.rs`, `mod parse_manifest`:
 - Not done in moon: when an inherited version can't be resolved, also hash a digest of the root
   `Cargo.toml`. It would close both gaps in case 1 without this change, but any edit to the root
   manifest would invalidate those tasks. This change makes it unnecessary.
-- [ ] When #2799 is carried to `develop-3.0`, add an end-to-end hashing test there. The `tc-tier2`
-      test plugin on 3.0 parses manifests and lockfiles; `master`'s doesn't.
+- [ ] Porting moonrepo/moon#2799 to `develop-3.0` is tracked in [`MOON_COMPACT.md`](MOON_COMPACT.md).
 
 ## Release
 

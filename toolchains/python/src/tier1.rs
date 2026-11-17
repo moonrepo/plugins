@@ -1,11 +1,14 @@
 use crate::config::{PythonPackageManager, PythonToolchainConfig};
+use crate::pyproject_toml::PyProjectToml;
 use extism_pdk::*;
-use moon_config::LanguageType;
-use moon_pdk::{parse_toolchain_config, parse_toolchain_config_schema};
+use moon_config::{LanguageType, UnresolvedVersionSpec};
+use moon_pdk::parse_toolchain_config_schema;
 use moon_pdk_api::*;
+use python_tool::to_python_version;
 use schematic::SchemaBuilder;
-use starbase_utils::fs;
 use starbase_utils::json::JsonValue;
+use starbase_utils::{fs, glob};
+use std::path::PathBuf;
 use toolchain_common::enable_tracing;
 
 #[plugin_fn]
@@ -27,6 +30,8 @@ pub fn register_toolchain(
             "poetry.*".into(),
             "uv.*".into(),
             ".python-version".into(),
+            // Read by proto
+            ".python-versions".into(),
             ".venv".into(),
         ],
         manifest_file_names: vec![
@@ -40,15 +45,15 @@ pub fn register_toolchain(
             "uv.toml".into(),
         ],
         lock_file_names: vec![
-            "pylock.toml".into(),
-            "constraints.txt".into(),
-            "requirements.txt".into(),
-            // pip
-            "Pipfile.lock".into(),
-            // poetry
-            "poetry.lock".into(),
             // uv
             "uv.lock".into(),
+            // poetry
+            "poetry.lock".into(),
+            // pip
+            "pylock.toml".into(),
+            "requirements.txt".into(),
+            "Pipfile.lock".into(),
+            "constraints.txt".into(),
         ],
         // For task detection
         exe_names: vec![
@@ -59,10 +64,12 @@ pub fn register_toolchain(
             "python-3".into(),
             // pip
             "pip".into(),
+            "pip3".into(),
             // poetry
             "poetry".into(),
             // uv
             "uv".into(),
+            "uvx".into(),
         ],
         ..Default::default()
     }))
@@ -73,7 +80,7 @@ pub fn initialize_toolchain(
     Json(input): Json<InitializeToolchainInput>,
 ) -> FnResult<Json<InitializeToolchainOutput>> {
     let mut output = InitializeToolchainOutput {
-        config_url: Some("https://moonrepo.dev/docs/guides/python".into()),
+        config_url: Some("https://moonrepo.dev/docs/config/toolchain#python".into()),
         docs_url: Some("https://moonrepo.dev/docs/config/toolchain#python".into()),
         ..Default::default()
     };
@@ -107,10 +114,18 @@ fn detect_package_manager(root: &VirtualPath) -> AnyResult<Option<PythonPackageM
         return Ok(Some(PythonPackageManager::Uv));
     } else if root.join("poetry.toml").exists() || root.join("poetry.lock").exists() {
         return Ok(Some(PythonPackageManager::Poetry));
-    } else if root.join("Pipfile").exists()
-        || root.join("Pipfile.lock").exists()
-        || root.join("requirements.txt").exists()
-    {
+    }
+
+    let manifest = PyProjectToml::load(root.join("pyproject.toml"))?;
+
+    if manifest.get_tool_uv().is_some() {
+        return Ok(Some(PythonPackageManager::Uv));
+    } else if manifest.get_tool_poetry().is_some() {
+        return Ok(Some(PythonPackageManager::Poetry));
+    }
+
+    // Pipfiles are pipenv's, which pip can't install
+    if root.join("requirements.txt").exists() {
         return Ok(Some(PythonPackageManager::Pip));
     }
 
@@ -128,19 +143,100 @@ pub fn define_toolchain_config() -> FnResult<Json<DefineToolchainConfigOutput>> 
 pub fn define_docker_metadata(
     Json(input): Json<DefineDockerMetadataInput>,
 ) -> FnResult<Json<DefineDockerMetadataOutput>> {
-    let config = parse_toolchain_config::<PythonToolchainConfig>(input.toolchain_config)?;
+    // With the schema, so `venvName` gets its default
+    let config = parse_toolchain_config_schema::<PythonToolchainConfig>(input.toolchain_config)?;
+
+    let tag = match &config.version {
+        // Docker Hub uses CPython's form for pre-releases, like `3.15.0rc2`
+        Some(UnresolvedVersionSpec::Version(version)) => to_python_version(version),
+        Some(
+            version @ (UnresolvedVersionSpec::Requirement(_) | UnresolvedVersionSpec::Range(_)),
+        ) => version.to_partial_string(),
+        // Aliases like `stable` aren't tags
+        _ => "latest".into(),
+    };
 
     Ok(Json(DefineDockerMetadataOutput {
-        default_image: Some(format!(
-            "python:{}",
-            config
-                .version
-                .as_ref()
-                .map(|version| version.to_partial_string())
-                .unwrap_or_else(|| "latest".into())
-        )),
-        scaffold_globs: vec![],
+        default_image: Some(format!("python:{tag}")),
+        scaffold_globs: vec![
+            // setuptools' build config, which `docker setup` needs to install the project
+            "setup.py".into(),
+            "setup.cfg".into(),
+            // The sources phase copies every file, and a venv from the host would
+            // be laid over the one `docker setup` created in the image
+            format!("!{}/**/*", config.venv_name),
+            format!("!**/{}/**/*", config.venv_name),
+        ],
     }))
+}
+
+#[plugin_fn]
+pub fn scaffold_docker(
+    Json(input): Json<ScaffoldDockerInput>,
+) -> FnResult<Json<ScaffoldDockerOutput>> {
+    let mut output = ScaffoldDockerOutput::default();
+
+    // `docker setup` installs local packages from the configs skeleton, which only
+    // has manifests and lockfiles, and build backends fail without the package's
+    // modules, or the files that its manifest points to. So stub them, and the
+    // sources phase lays the real files over the stubs (D5).
+    if input.phase != ScaffoldDockerPhase::Configs || input.project.is_none() {
+        return Ok(Json(output));
+    }
+
+    let config = parse_toolchain_config_schema::<PythonToolchainConfig>(input.toolchain_config)?;
+
+    for path in get_stub_paths(&input.input_dir, &config.venv_name)? {
+        let file = input.output_dir.join(path);
+
+        // Keep a file that was copied, like from `configsPhaseGlobs`
+        if !file.exists() {
+            fs::write_file(&file, "")?;
+            output.copied_files.push(file);
+        }
+    }
+
+    Ok(Json(output))
+}
+
+/// The packages' `__init__.py` files, and the files that `pyproject.toml`
+/// points to, relative to the project root.
+fn get_stub_paths(input_dir: &VirtualPath, venv_name: &str) -> AnyResult<Vec<PathBuf>> {
+    let venv_globs = [
+        format!("!{venv_name}/**/*"),
+        format!("!**/{venv_name}/**/*"),
+    ];
+    let walk = |globs: Vec<String>| -> AnyResult<Vec<PathBuf>> {
+        Ok(
+            glob::walk_files(input_dir, globs.iter().chain(&venv_globs))?
+                .into_iter()
+                .filter_map(|file| file.strip_prefix(input_dir).ok().map(PathBuf::from))
+                .collect(),
+        )
+    };
+
+    let mut paths = walk(vec!["**/__init__.py".into()])?;
+    let (files, license_globs) =
+        PyProjectToml::load(input_dir.join("pyproject.toml"))?.get_build_files();
+
+    for file in files {
+        if input_dir.join(&file).is_file() {
+            paths.push(PathBuf::from(file));
+        }
+    }
+
+    if !license_globs.is_empty() {
+        // ADR-0008.6
+        match walk(license_globs) {
+            Ok(files) => paths.extend(files),
+            Err(error) => debug!("Skipping the license files of {input_dir}: {error}"),
+        };
+    }
+
+    paths.sort();
+    paths.dedup();
+
+    Ok(paths)
 }
 
 #[plugin_fn]

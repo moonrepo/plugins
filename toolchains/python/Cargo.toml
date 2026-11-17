@@ -26,10 +26,10 @@ moon_pdk = { workspace = true, features = ["schematic"], optional = true }
 moon_pdk_api = { workspace = true }
 pep440_rs = "0.7.3"
 pep508_rs = "0.9.2"
-pyproject-toml = "0.13.7"
+proto_pdk_api = { workspace = true }
 schematic = { workspace = true }
 serde = { workspace = true }
-starbase_utils = { workspace = true, features = ["json", "toml"] }
+starbase_utils = { workspace = true, features = ["glob", "json", "toml"] }
 
 [dev-dependencies]
 moon_common = { workspace = true }

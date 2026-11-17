@@ -14,7 +14,7 @@ pub fn register_toolchain(
         name: "pip".into(),
         plugin_version: env!("CARGO_PKG_VERSION").into(),
         config_file_globs: vec!["pip.conf".into(), "pip.ini".into()],
-        exe_names: vec!["pip".into()],
+        exe_names: vec!["pip".into(), "pip3".into()],
         manifest_file_names: vec!["pyproject.toml".into(), "requirements.in".into()],
         lock_file_names: vec![
             "pylock.toml".into(),

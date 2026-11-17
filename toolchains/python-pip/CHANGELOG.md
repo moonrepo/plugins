@@ -4,6 +4,11 @@
 
 #### 🚀 Updates
 
+- `installArgs` now documents that it also applies to `uv pip install`, when the Python toolchain's
+  `packageManager` is `uv-pip`.
+- Task commands that run `pip3` are now detected.
+- Deprecated the `version` setting, which never did anything, as the venv uses the pip that ships
+  with Python.
 - Panics now report their message, instead of an `unreachable` WASM trap error.
 
 ## 0.1.5
