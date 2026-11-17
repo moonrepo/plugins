@@ -1,7 +1,10 @@
 use crate::config::*;
 use crate::managers::*;
 use crate::pyproject_toml::{PyProjectToml, normalize_distribution_name, normalize_path};
-use crate::venv::{is_venv_version_compatible, parse_pyvenv_cfg_version, to_uv_python_request};
+use crate::venv::{
+    is_venv_version_compatible, parse_pip_dist_info_version, parse_pyvenv_cfg_version,
+    pip_supports_dependency_groups, to_uv_python_request,
+};
 use extism_pdk::*;
 use moon_config::{DependencyScope, UnresolvedVersionSpec, Version};
 use moon_pdk::VirtualPathExt;
@@ -420,7 +423,13 @@ pub fn install_dependencies(
                 ExecCommandInput::new("uv", ["pip", "install"])
             };
 
-            if !append_pip_install_sources(&input.root, package_manager, &mut cmd.args)? {
+            if !append_pip_install_sources(
+                &input.root,
+                package_manager,
+                input.production,
+                &input.root.join(&config.venv_name),
+                &mut cmd.args,
+            )? {
                 return Ok(Json(output));
             }
 
@@ -490,14 +499,23 @@ pub fn install_dependencies(
     Ok(Json(output))
 }
 
-/// Append what pip and `uv pip` install from: a requirements file, or else the
-/// project in `pyproject.toml`. Returns false when there's nothing to install.
+/// Append what pip and `uv pip` install from: a lockfile or requirements file,
+/// or else the project in `pyproject.toml`. Returns false when there's nothing
+/// to install.
 fn append_pip_install_sources(
     root: &VirtualPath,
     package_manager: PythonPackageManager,
+    production: bool,
+    venv_dir: &VirtualPath,
     args: &mut Vec<String>,
 ) -> AnyResult<bool> {
-    if root.join("requirements.txt").exists() {
+    let is_uv = package_manager == PythonPackageManager::UvPip;
+
+    // pip only reads `pylock.toml` experimentally, and fails on a local project in it
+    if is_uv && root.join("pylock.toml").exists() {
+        args.push("-r".into());
+        args.push("pylock.toml".into());
+    } else if root.join("requirements.txt").exists() {
         args.push("-r".into());
         args.push("requirements.txt".into());
     } else if root.join("requirements.in").exists() {
@@ -510,6 +528,11 @@ fn append_pip_install_sources(
             return Ok(false);
         }
 
+        // Like uv, which installs `dev` by default
+        let with_dev_group = !production
+            && manifest.has_dependency_group("dev")
+            && (is_uv || venv_pip_supports_groups(venv_dir)?);
+
         // Like uv, only install the project itself when it's built by a backend,
         // as setuptools' discovery fails for flat layouts without one
         if manifest.has_build_system() || manifest.has_dynamic_dependencies() {
@@ -518,17 +541,22 @@ fn append_pip_install_sources(
         } else {
             let deps = manifest.get_dependencies();
 
-            if deps.is_empty() {
+            if deps.is_empty() && !with_dev_group {
                 return Ok(false);
             }
 
             // pip can't install only the dependencies of a project
-            if package_manager == PythonPackageManager::UvPip {
+            if is_uv {
                 args.push("-r".into());
                 args.push("pyproject.toml".into());
             } else {
                 args.extend(deps.into_iter().map(|req| req.to_string()));
             }
+        }
+
+        if with_dev_group {
+            args.push("--group".into());
+            args.push("dev".into());
         }
     }
 
@@ -538,6 +566,39 @@ fn append_pip_install_sources(
     }
 
     Ok(true)
+}
+
+/// Whether the venv's pip supports `--group`, from the `pip-<version>.dist-info`
+/// in its `site-packages`. A venv gets the pip that ships with its Python, which
+/// can predate pip 25.1, and `setup_environment` creates it before the install.
+fn venv_pip_supports_groups(venv_dir: &VirtualPath) -> AnyResult<bool> {
+    // `Lib/site-packages` on Windows, and `lib/python3.X/site-packages` elsewhere
+    let mut site_packages_dirs = vec![venv_dir.join("Lib").join("site-packages").to_path_buf()];
+
+    for entry in fs::read_dir(venv_dir.join("lib"))? {
+        if entry.file_name().to_string_lossy().starts_with("python") {
+            site_packages_dirs.push(entry.path().join("site-packages"));
+        }
+    }
+
+    for dir in site_packages_dirs {
+        for entry in fs::read_dir(&dir)? {
+            if let Some(version) = parse_pip_dist_info_version(&entry.file_name().to_string_lossy())
+            {
+                if pip_supports_dependency_groups(&version) {
+                    return Ok(true);
+                }
+
+                debug!("Skipping the dev group, as pip {version} predates --group (pip 25.1)");
+
+                return Ok(false);
+            }
+        }
+    }
+
+    debug!("Skipping the dev group, as {venv_dir} has no pip");
+
+    Ok(false)
 }
 
 /// Whether uv already checks or skips the lockfile, as it rejects `--locked`

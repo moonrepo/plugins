@@ -14,7 +14,7 @@ pub fn register_toolchain(
         name: "uv".into(),
         plugin_version: env!("CARGO_PKG_VERSION").into(),
         config_file_globs: vec!["uv.toml".into()],
-        exe_names: vec!["uv".into()],
+        exe_names: vec!["uv".into(), "uvx".into()],
         manifest_file_names: vec!["pyproject.toml".into()],
         lock_file_names: vec!["uv.lock".into()],
         ..Default::default()

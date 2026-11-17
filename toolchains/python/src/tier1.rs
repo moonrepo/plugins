@@ -30,6 +30,8 @@ pub fn register_toolchain(
             "poetry.*".into(),
             "uv.*".into(),
             ".python-version".into(),
+            // Read by proto
+            ".python-versions".into(),
             ".venv".into(),
         ],
         manifest_file_names: vec![
@@ -62,10 +64,12 @@ pub fn register_toolchain(
             "python-3".into(),
             // pip
             "pip".into(),
+            "pip3".into(),
             // poetry
             "poetry".into(),
             // uv
             "uv".into(),
+            "uvx".into(),
         ],
         ..Default::default()
     }))

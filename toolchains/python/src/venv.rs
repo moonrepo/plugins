@@ -4,6 +4,19 @@ use moon_config::{UnresolvedVersionSpec, Version};
 use moon_pdk_api::MatchesVersion;
 use proto_pdk_api::Op;
 use python_tool::to_python_version;
+use std::str::FromStr;
+
+/// The version of pip from the name of its `pip-<version>.dist-info` directory.
+pub fn parse_pip_dist_info_version(name: &str) -> Option<pep440_rs::Version> {
+    let version = name.strip_prefix("pip-")?.strip_suffix(".dist-info")?;
+
+    pep440_rs::Version::from_str(version).ok()
+}
+
+/// Whether pip supports `--group` (PEP 735), which pip 25.1 added.
+pub fn pip_supports_dependency_groups(version: &pep440_rs::Version) -> bool {
+    version.release() >= [25, 1].as_slice()
+}
 
 /// The Python request for `UV_PYTHON`, which uv reads as a version or a
 /// partial version. Only a spec without a range maps to one, like `3.14.6`,
@@ -109,6 +122,31 @@ mod tests {
         assert!(!is_venv_version_compatible(&venv, &spec("3.13")));
         assert!(is_venv_version_compatible(&venv, &spec("^3.12")));
         assert!(is_venv_version_compatible(&venv, &spec("latest")));
+    }
+
+    #[test]
+    fn parses_pip_dist_info_versions() {
+        let pip = |name: &str| parse_pip_dist_info_version(name).map(|v| v.to_string());
+
+        assert_eq!(pip("pip-25.1.dist-info"), Some("25.1".into()));
+        assert_eq!(pip("pip-24.0.dist-info"), Some("24.0".into()));
+        assert_eq!(pip("pip-26.1.2.dist-info"), Some("26.1.2".into()));
+        assert_eq!(pip("pip-tools-7.4.1.dist-info"), None);
+        assert_eq!(pip("pip"), None);
+        assert_eq!(pip("six-1.17.0.dist-info"), None);
+    }
+
+    #[test]
+    fn checks_pip_dependency_group_support() {
+        let supports = |value: &str| {
+            pip_supports_dependency_groups(&pep440_rs::Version::from_str(value).unwrap())
+        };
+
+        assert!(supports("25.1"));
+        assert!(supports("25.1.1"));
+        assert!(supports("26.0"));
+        assert!(!supports("25.0.1"));
+        assert!(!supports("24.3.1"));
     }
 
     #[test]

@@ -48,6 +48,11 @@
   uses its locked version, where before it was skipped. Every Python task hash changes once.
 - Package manager detection now checks for `[tool.uv]` and `[tool.poetry]` in `pyproject.toml`, and
   no longer picks pip for a `Pipfile`, which pip can't install.
+- `uv-pip` now installs from `pylock.toml` when it exists, ahead of `requirements.txt`. pip still
+  ignores it, as its support is experimental.
+- pip and `uv pip` now install the `dev` dependency group outside production, when there's no
+  requirements file, as uv does. pip needs 25.1 or later in the venv, so older pips skip the group.
+- Task commands `pip3` and `uvx` are now detected, and so is the `.python-versions` file.
 - Panics now report their message, instead of an `unreachable` WASM trap error.
 - Lockfile parse errors now name the lockfile.
 

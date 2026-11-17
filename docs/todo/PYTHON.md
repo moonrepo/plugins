@@ -692,8 +692,8 @@ which would only apply to new venvs.
 
 ### #20 Install from `pylock.toml` with `uv pip`
 
-- [ ] Prefer `pylock.toml` for `uv-pip`
-- [ ] Tests
+- [x] Prefer `pylock.toml` for `uv-pip`
+- [x] Tests
 
 `pylock.toml` is a registered lockfile, but no install reads it. `uv pip install -r pylock.toml`
 handles it, including the local project entry that `pip lock` writes (confirmed). pip 26.1.2 only
@@ -710,9 +710,9 @@ with `pylock.toml` (ignored).
 
 ### #21 Dependency groups for pip installs
 
-- [ ] Add `--group dev` outside production
-- [ ] Read pip's version from the venv
-- [ ] Tests
+- [x] Add `--group dev` outside production
+- [x] Read pip's version from the venv
+- [x] Tests
 
 pip supports `pip install --group dev` (PEP 735, confirmed with pip 26.1.2), from pip 25.1. A venv
 gets the pip that shipped with its Python, so older Pythons can have an older one.
@@ -734,9 +734,9 @@ directories), production, and a requirements file (no flag).
 
 ### #22 Detection names
 
-- [ ] `exe_names` (`tier1.rs:54-64`): add `pip3` and `uvx`. Add `uvx` to the uv toolchain too, as
+- [x] `exe_names` (`tier1.rs:54-64`): add `pip3` and `uvx`. Add `uvx` to the uv toolchain too, as
       bun lists `bunx`, and `pip3` to the pip toolchain.
-- [ ] `config_file_globs` (`tier1.rs:26-31`): add `.python-versions`, which proto reads
+- [x] `config_file_globs` (`tier1.rs:26-31`): add `.python-versions`, which proto reads
       (`tools/python/src/proto.rs:45-46`).
 
 This only matters for projects with several toolchains, or none detected: a task whose command

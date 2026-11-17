@@ -1588,6 +1588,289 @@ members = ["packages/*"]
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn uvpip_installs_from_pylock_toml() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "pyproject.toml",
+                "[build-system]\nrequires = [\"hatchling\"]\n\n[project]\nname = \"a\"\n\n[dependency-groups]\ndev = [\"pytest\"]\n",
+            );
+            sandbox.create_file("pylock.toml", "lock-version = \"1.0\"\n");
+            sandbox.create_file("constraints.txt", "");
+
+            let expected = Some(strings(&[
+                "uv",
+                "pip",
+                "install",
+                "-r",
+                "pylock.toml",
+                "-c",
+                "constraints.txt",
+                "--no-progress",
+            ]));
+
+            assert_eq!(
+                get_install_args(
+                    &sandbox,
+                    json!({ "packageManager": "uv-pip" }),
+                    false,
+                    vec![]
+                )
+                .await,
+                expected
+            );
+
+            // The lock wins over an exported requirements file
+            sandbox.create_file("requirements.txt", "six\n");
+
+            assert_eq!(
+                get_install_args(
+                    &sandbox,
+                    json!({ "packageManager": "uv-pip" }),
+                    false,
+                    vec![]
+                )
+                .await,
+                expected
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn pip_ignores_pylock_toml() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "pyproject.toml",
+                "[build-system]\nrequires = [\"hatchling\"]\n\n[project]\nname = \"a\"\n",
+            );
+            sandbox.create_file("pylock.toml", "lock-version = \"1.0\"\n");
+
+            assert_eq!(
+                get_install_args(&sandbox, json!({ "packageManager": "pip" }), false, vec![]).await,
+                Some(strings(&["python", "-m", "pip", "install", "-e", "."]))
+            );
+
+            sandbox.create_file("requirements.txt", "six\n");
+
+            assert_eq!(
+                get_install_args(&sandbox, json!({ "packageManager": "pip" }), false, vec![]).await,
+                Some(strings(&[
+                    "python",
+                    "-m",
+                    "pip",
+                    "install",
+                    "-r",
+                    "requirements.txt"
+                ]))
+            );
+        }
+
+        const DEV_GROUP_MANIFEST: &str = "[build-system]\nrequires = [\"hatchling\"]\n\n[project]\nname = \"a\"\n\n[dependency-groups]\nDev = [\"pytest\"]\n";
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn uvpip_installs_the_dev_group() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("pyproject.toml", DEV_GROUP_MANIFEST);
+
+            assert_eq!(
+                get_install_args(
+                    &sandbox,
+                    json!({ "packageManager": "uv-pip" }),
+                    false,
+                    vec![]
+                )
+                .await,
+                Some(strings(&[
+                    "uv",
+                    "pip",
+                    "install",
+                    "-e",
+                    ".",
+                    "--group",
+                    "dev",
+                    "--no-progress"
+                ]))
+            );
+
+            // Not in production
+            assert_eq!(
+                get_install_args(
+                    &sandbox,
+                    json!({ "packageManager": "uv-pip" }),
+                    true,
+                    vec![]
+                )
+                .await,
+                Some(strings(&[
+                    "uv",
+                    "pip",
+                    "install",
+                    "-e",
+                    ".",
+                    "--no-progress"
+                ]))
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn uvpip_installs_only_the_dev_group_without_dependencies() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "pyproject.toml",
+                "[project]\nname = \"a\"\n\n[dependency-groups]\ndev = [\"pytest\"]\n",
+            );
+
+            assert_eq!(
+                get_install_args(
+                    &sandbox,
+                    json!({ "packageManager": "uv-pip" }),
+                    false,
+                    vec![]
+                )
+                .await,
+                Some(strings(&[
+                    "uv",
+                    "pip",
+                    "install",
+                    "-r",
+                    "pyproject.toml",
+                    "--group",
+                    "dev",
+                    "--no-progress"
+                ]))
+            );
+
+            // Nothing is left to install in production
+            assert_eq!(
+                get_install_args(
+                    &sandbox,
+                    json!({ "packageManager": "uv-pip" }),
+                    true,
+                    vec![]
+                )
+                .await,
+                None
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn uvpip_skips_other_groups_and_requirements_files() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "pyproject.toml",
+                "[build-system]\nrequires = [\"hatchling\"]\n\n[project]\nname = \"a\"\n\n[dependency-groups]\ntest = [\"pytest\"]\n",
+            );
+
+            assert_eq!(
+                get_install_args(
+                    &sandbox,
+                    json!({ "packageManager": "uv-pip" }),
+                    false,
+                    vec![]
+                )
+                .await,
+                Some(strings(&[
+                    "uv",
+                    "pip",
+                    "install",
+                    "-e",
+                    ".",
+                    "--no-progress"
+                ]))
+            );
+
+            sandbox.create_file("pyproject.toml", DEV_GROUP_MANIFEST);
+            sandbox.create_file("requirements.txt", "six\n");
+
+            assert_eq!(
+                get_install_args(
+                    &sandbox,
+                    json!({ "packageManager": "uv-pip" }),
+                    false,
+                    vec![]
+                )
+                .await,
+                Some(strings(&[
+                    "uv",
+                    "pip",
+                    "install",
+                    "-r",
+                    "requirements.txt",
+                    "--no-progress"
+                ]))
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn pip_installs_the_dev_group_with_pip_25_1() {
+            for site_packages in [
+                ".venv/lib/python3.14/site-packages",
+                // Windows
+                ".venv/Lib/site-packages",
+            ] {
+                let sandbox = create_empty_moon_sandbox();
+                sandbox.create_file("pyproject.toml", DEV_GROUP_MANIFEST);
+                sandbox.create_file(format!("{site_packages}/pip-25.1.dist-info/METADATA"), "");
+                sandbox.create_file(
+                    format!("{site_packages}/pip_tools-7.4.1.dist-info/METADATA"),
+                    "",
+                );
+
+                assert_eq!(
+                    get_install_args(&sandbox, json!({ "packageManager": "pip" }), false, vec![])
+                        .await,
+                    Some(strings(&[
+                        "python", "-m", "pip", "install", "-e", ".", "--group", "dev"
+                    ]))
+                );
+                assert_eq!(
+                    get_install_args(&sandbox, json!({ "packageManager": "pip" }), true, vec![])
+                        .await,
+                    Some(strings(&["python", "-m", "pip", "install", "-e", "."]))
+                );
+            }
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn pip_skips_the_dev_group_with_an_older_or_missing_pip() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("pyproject.toml", DEV_GROUP_MANIFEST);
+
+            // No venv yet
+            assert_eq!(
+                get_install_args(&sandbox, json!({ "packageManager": "pip" }), false, vec![]).await,
+                Some(strings(&["python", "-m", "pip", "install", "-e", "."]))
+            );
+
+            sandbox.create_file(
+                ".venv/lib/python3.12/site-packages/pip-24.0.dist-info/METADATA",
+                "",
+            );
+
+            assert_eq!(
+                get_install_args(&sandbox, json!({ "packageManager": "pip" }), false, vec![]).await,
+                Some(strings(&["python", "-m", "pip", "install", "-e", "."]))
+            );
+
+            // A custom venv name
+            sandbox.create_file(
+                "venv/lib/python3.14/site-packages/pip-26.1.2.dist-info/METADATA",
+                "",
+            );
+
+            assert_eq!(
+                get_install_args(
+                    &sandbox,
+                    json!({ "packageManager": "pip", "venvName": "venv" }),
+                    false,
+                    vec![]
+                )
+                .await,
+                Some(strings(&[
+                    "python", "-m", "pip", "install", "-e", ".", "--group", "dev"
+                ]))
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn does_nothing_if_no_pm() {
             let sandbox = create_empty_moon_sandbox();
             let plugin = sandbox.create_toolchain("python").await;

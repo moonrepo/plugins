@@ -27,6 +27,23 @@ mod python_toolchain_tier1 {
                 ]
             );
         }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn detects_more_commands_and_version_files() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("python").await;
+
+            for name in ["pip3", "uvx"] {
+                assert!(plugin.metadata.exe_names.contains(&name.to_string()));
+            }
+
+            assert!(
+                plugin
+                    .metadata
+                    .config_file_globs
+                    .contains(&".python-versions".to_string())
+            );
+        }
     }
 
     mod initialize_toolchain {

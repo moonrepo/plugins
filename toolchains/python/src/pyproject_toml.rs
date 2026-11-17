@@ -148,6 +148,13 @@ impl PyProjectToml {
             .collect()
     }
 
+    /// Whether `[dependency-groups]` defines a group, compared by normalized name.
+    pub fn has_dependency_group(&self, name: &str) -> bool {
+        self.dependency_groups
+            .keys()
+            .any(|key| normalize_distribution_name(key) == name)
+    }
+
     /// `[tool.uv].dev-dependencies`, the legacy form of the `dev` group.
     pub fn get_uv_dev_dependencies(&self) -> Vec<Requirement> {
         match self.get_tool_uv() {
