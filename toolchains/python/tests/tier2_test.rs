@@ -644,6 +644,17 @@ b = { workspace = true }
     mod extend_command {
         use super::*;
 
+        // On Windows, real paths from WASM have mixed separators, like `C:\tmp/.venv`,
+        // until plugins build against proto v0.64's `warpgate_pdk`, which uses `/`
+        // (draft ADR "Virtual paths inside WASM, real paths only in strings")
+        fn env_path(output: &ExtendCommandOutput, name: &str) -> Option<String> {
+            output.env.get(name).map(|path| path.replace('\\', "/"))
+        }
+
+        fn real_path(path: std::path::PathBuf) -> Option<String> {
+            Some(path.to_string_lossy().replace('\\', "/"))
+        }
+
         #[tokio::test(flavor = "multi_thread")]
         async fn sets_virtual_env() {
             let sandbox = create_empty_moon_sandbox();
@@ -662,8 +673,8 @@ b = { workspace = true }
                     .await;
 
                 assert_eq!(
-                    output.env.get("VIRTUAL_ENV"),
-                    Some(&sandbox.path().join(".venv").to_string_lossy().to_string())
+                    env_path(&output, "VIRTUAL_ENV"),
+                    real_path(sandbox.path().join(".venv"))
                 );
                 // `.venv` is already uv's default
                 assert!(!output.env.contains_key("UV_PROJECT_ENVIRONMENT"));
@@ -676,7 +687,7 @@ b = { workspace = true }
             sandbox.create_file("venv/file", "");
 
             let plugin = sandbox.create_toolchain("python").await;
-            let venv = sandbox.path().join("venv").to_string_lossy().to_string();
+            let venv = real_path(sandbox.path().join("venv"));
 
             let output = plugin
                 .extend_command(ExtendCommandInput {
@@ -687,8 +698,8 @@ b = { workspace = true }
                 })
                 .await;
 
-            assert_eq!(output.env.get("VIRTUAL_ENV"), Some(&venv));
-            assert_eq!(output.env.get("UV_PROJECT_ENVIRONMENT"), Some(&venv));
+            assert_eq!(env_path(&output, "VIRTUAL_ENV"), venv);
+            assert_eq!(env_path(&output, "UV_PROJECT_ENVIRONMENT"), venv);
 
             let output = plugin
                 .extend_command(ExtendCommandInput {
@@ -699,7 +710,7 @@ b = { workspace = true }
                 })
                 .await;
 
-            assert_eq!(output.env.get("VIRTUAL_ENV"), Some(&venv));
+            assert_eq!(env_path(&output, "VIRTUAL_ENV"), venv);
             assert!(!output.env.contains_key("UV_PROJECT_ENVIRONMENT"));
         }
 
