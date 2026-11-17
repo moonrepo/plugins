@@ -53,6 +53,10 @@ proto_pdk_test_utils = { version = "0.52.0" }
 nodejs_package_json = { version = "0.4.11", features = ["protocols"] }
 typescript_tsconfig_json = { version = "0.5.7", features = ["serialize"] }
 
+# TEMP: lenient `package.json` parsing, until nodejs_package_json 0.5 is published
+[patch.crates-io]
+nodejs_package_json = { path = "../../rust-js-ecosystem/crates/package-json" }
+
 [profile.release]
 codegen-units = 1
 debug = false

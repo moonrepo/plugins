@@ -13,9 +13,10 @@ mod javascript_toolchain_tier2 {
         async fn does_nothing_if_not_enabled() {
             let mut sandbox = create_moon_sandbox("files");
 
-            sandbox
-                .host_funcs
-                .mock_load_toolchain_config(|_, _| json!({ "version": "1.2.3" }));
+            sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                assert_eq!(id, "npm");
+                json!({ "version": "1.2.3" })
+            });
 
             let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -73,9 +74,10 @@ mod javascript_toolchain_tier2 {
         async fn does_nothing_if_no_pm_version() {
             let mut sandbox = create_moon_sandbox("files");
 
-            sandbox
-                .host_funcs
-                .mock_load_toolchain_config(|_, _| json!({}));
+            sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                assert_eq!(id, "npm");
+                json!({})
+            });
 
             let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -103,9 +105,10 @@ mod javascript_toolchain_tier2 {
         async fn does_nothing_if_pm_version_not_semantic() {
             let mut sandbox = create_moon_sandbox("files");
 
-            sandbox
-                .host_funcs
-                .mock_load_toolchain_config(|_, _| json!({ "version": "1" }));
+            sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                assert_eq!(id, "npm");
+                json!({ "version": "1" })
+            });
 
             let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -133,9 +136,10 @@ mod javascript_toolchain_tier2 {
         async fn does_nothing_if_bun() {
             let mut sandbox = create_moon_sandbox("files");
 
-            sandbox
-                .host_funcs
-                .mock_load_toolchain_config(|_, _| json!({ "version": "1.2.3" }));
+            sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                assert_eq!(id, "bun");
+                json!({ "version": "1.2.3" })
+            });
 
             let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -163,9 +167,10 @@ mod javascript_toolchain_tier2 {
         async fn does_nothing_if_deno() {
             let mut sandbox = create_moon_sandbox("files");
 
-            sandbox
-                .host_funcs
-                .mock_load_toolchain_config(|_, _| json!({ "version": "1.2.3" }));
+            sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                assert_eq!(id, "deno");
+                json!({ "version": "1.2.3" })
+            });
 
             let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -193,9 +198,10 @@ mod javascript_toolchain_tier2 {
         async fn sets_field_for_nub() {
             let mut sandbox = create_moon_sandbox("files");
 
-            sandbox
-                .host_funcs
-                .mock_load_toolchain_config(|_, _| json!({ "version": "1.2.3" }));
+            sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                assert_eq!(id, "nub");
+                json!({ "version": "1.2.3" })
+            });
 
             let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -225,9 +231,10 @@ mod javascript_toolchain_tier2 {
         async fn sets_field() {
             let mut sandbox = create_moon_sandbox("files");
 
-            sandbox
-                .host_funcs
-                .mock_load_toolchain_config(|_, _| json!({ "version": "1.2.3" }));
+            sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                assert_eq!(id, "npm");
+                json!({ "version": "1.2.3" })
+            });
 
             let plugin = sandbox.create_toolchain("javascript").await;
 

@@ -33,14 +33,23 @@ impl PackageJson {
             );
         }
 
+        // Dependencies are marked dirty one at a time (`dependencies:<name>`), so
+        // that entries we didn't change keep their original text. Re-formatting
+        // them could change a range, like `>=1 <2` to `>=1, <2`, which npm rejects.
+        let (field, dep_name) = match field.split_once(':') {
+            Some((field, name)) => (field, Some(name)),
+            None => (field, None),
+        };
+
         let mut save_deps =
             |field_name: &str, maybe_deps: Option<&BTreeMap<String, VersionProtocol>>| {
-                if let Some(deps) = maybe_deps {
+                if let Some(deps) = maybe_deps
+                    && let Some(name) = dep_name
+                    && let Some(version) = deps.get(name)
+                {
                     let current = root.entry(field_name).or_insert_with(|| json!({}));
 
-                    for (name, version) in deps {
-                        current[name] = JsonValue::String(version.to_string());
-                    }
+                    current[name] = JsonValue::String(version.to_string());
                 }
             };
 
@@ -79,7 +88,7 @@ impl PackageJson {
         let name = name.as_ref();
 
         if internal_add_dependency(name, range, if_missing, &mut self.data.dependencies) {
-            self.dirty.push("dependencies".into());
+            self.dirty.push(format!("dependencies:{name}"));
 
             #[cfg(feature = "wasm")]
             {
@@ -105,7 +114,7 @@ impl PackageJson {
         let name = name.as_ref();
 
         if internal_add_dependency(name, range, if_missing, &mut self.data.dev_dependencies) {
-            self.dirty.push("devDependencies".into());
+            self.dirty.push(format!("devDependencies:{name}"));
 
             #[cfg(feature = "wasm")]
             {
@@ -131,7 +140,7 @@ impl PackageJson {
         let name = name.as_ref();
 
         if internal_add_dependency(name, range, if_missing, &mut self.data.peer_dependencies) {
-            self.dirty.push("peerDependencies".into());
+            self.dirty.push(format!("peerDependencies:{name}"));
 
             #[cfg(feature = "wasm")]
             {
@@ -236,13 +245,11 @@ fn internal_add_dependency(
         return false;
     }
 
-    // Only add if the dependency doesnt already exist
-    if if_missing
-        && dependencies
-            .as_ref()
-            .is_some_and(|map| map.contains_key(name))
-    {
-        return false;
+    if let Some(current) = dependencies.as_ref().and_then(|map| map.get(name)) {
+        // Only add if the dependency doesnt already exist
+        if if_missing || *current == range {
+            return false;
+        }
     }
 
     dependencies

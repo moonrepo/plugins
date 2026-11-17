@@ -265,11 +265,12 @@ workspace with each spec for `a`'s dependency on `b`:
       (`task_hashing.rs:457-461`), so that package's upgrades never change a task hash. Check every
       integrity with `is_integrity_hash`, as `Dependency3` does. Not reproduced, as it needs such a
       registry.
-- [ ] `tools/bun/src/proto.rs:63`: `parse_version_file` parses the whole `package.json` as
+- [x] `tools/bun/src/proto.rs:63`: `parse_version_file` parses the whole `package.json` as
       `PackageJson`, so an invalid `version` or dependency specifier silently drops the
       `devEngines.runtime`, `engines.bun` and `packageManager` pins. Switch to the version-fields
       struct that `NODE.md` #1 adds to `lang-javascript-common` (handed over by `NODE.md`, which
       reproduced it for `node_tool`).
+      Done in the JavaScript pass: `nodejs_package_json` now skips fields it can't parse.
 - [ ] Remove the unused `exec_command` host function (`tools/bun/src/proto.rs:15-18`), left over since
       0.17.0 took the baseline build from proto's CPU level.
 

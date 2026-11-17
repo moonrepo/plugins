@@ -171,6 +171,7 @@ mod javascript_toolchain_tier2 {
                             "npm".into(),
                             "run".into(),
                             "release".into(),
+                            "--".into(),
                         ])),
                         toolchains: Some(OneOrMany::Many(vec![
                             Id::raw("javascript"),
@@ -193,6 +194,7 @@ mod javascript_toolchain_tier2 {
                                 "npm".into(),
                                 "run".into(),
                                 "build".into(),
+                                "--".into(),
                             ])),
                             outputs: Some(vec![Output::parse("build").unwrap()]),
                             toolchains: Some(OneOrMany::Many(vec![
@@ -213,6 +215,7 @@ mod javascript_toolchain_tier2 {
                                 "npm".into(),
                                 "run".into(),
                                 "build:vite".into(),
+                                "--".into(),
                             ])),
                             outputs: Some(vec![Output::parse("out").unwrap()]),
                             toolchains: Some(OneOrMany::Many(vec![
@@ -231,6 +234,7 @@ mod javascript_toolchain_tier2 {
                                 "npm".into(),
                                 "run".into(),
                                 "info".into(),
+                                "--".into(),
                             ])),
                             toolchains: Some(OneOrMany::Many(vec![
                                 Id::raw("javascript"),
@@ -260,6 +264,7 @@ mod javascript_toolchain_tier2 {
                                 "npm".into(),
                                 "run".into(),
                                 "astro:serve".into(),
+                                "--".into(),
                             ])),
                             preset: Some(TaskPreset::Server),
                             toolchains: Some(OneOrMany::Many(vec![
@@ -278,6 +283,7 @@ mod javascript_toolchain_tier2 {
                                 "npm".into(),
                                 "run".into(),
                                 "dev".into(),
+                                "--".into(),
                             ])),
                             preset: None,
                             toolchains: Some(OneOrMany::Many(vec![
@@ -304,6 +310,7 @@ mod javascript_toolchain_tier2 {
                                 "npm".into(),
                                 "run".into(),
                                 "start:vite".into(),
+                                "--".into(),
                             ])),
                             preset: Some(TaskPreset::Server),
                             toolchains: Some(OneOrMany::Many(vec![
@@ -379,6 +386,255 @@ mod javascript_toolchain_tier2 {
                     )
                 ])
             );
+        }
+
+        async fn extend_graph(
+            sandbox: &MoonWasmSandbox,
+            ids: &[&str],
+            config: serde_json::Value,
+        ) -> ExtendProjectGraphOutput {
+            let plugin = sandbox.create_toolchain("javascript").await;
+            let mut input = ExtendProjectGraphInput::default();
+
+            for id in ids {
+                input.project_sources.insert(Id::raw(*id), (*id).into());
+            }
+
+            input.toolchain_config = config;
+
+            plugin.extend_project_graph(input).await
+        }
+
+        fn get_dep_ids(output: &ExtendProjectGraphOutput, id: &str) -> Vec<String> {
+            output.extended_projects[id]
+                .dependencies
+                .iter()
+                .map(|dep| dep.id.to_string())
+                .collect()
+        }
+
+        fn get_task_ids(output: &ExtendProjectGraphOutput, id: &str) -> Vec<String> {
+            output.extended_projects[id]
+                .tasks
+                .keys()
+                .map(|id| id.to_string())
+                .collect()
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn loads_manifests_with_fields_it_doesnt_read() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "a/package.json",
+                json!({
+                    "name": "a",
+                    "version": "1.0",
+                    "bundleDependencies": true,
+                    "engines": ["node >= 0.10"],
+                    "dependencies": { "b": "workspace:^1", "c": "workspace:^not-a-range" }
+                })
+                .to_string(),
+            );
+            sandbox.create_file("b/package.json", r#"{ "name": "b", "version": "1.2.0" }"#);
+
+            let output = extend_graph(&sandbox, &["a", "b"], json!({})).await;
+
+            assert_eq!(output.extended_projects["a"].alias.as_deref(), Some("a"));
+            assert_eq!(get_dep_ids(&output, "a"), ["b"]);
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn keeps_projects_with_the_same_name() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "ex1/package.json",
+                r#"{ "name": "example", "dependencies": { "b": "*" } }"#,
+            );
+            sandbox.create_file(
+                "ex2/package.json",
+                r#"{ "name": "example", "dependencies": { "b": "*" } }"#,
+            );
+            sandbox.create_file("b/package.json", r#"{ "name": "b" }"#);
+
+            let output = extend_graph(&sandbox, &["b", "ex1", "ex2"], json!({})).await;
+
+            assert_eq!(get_dep_ids(&output, "ex1"), ["b"]);
+            assert_eq!(get_dep_ids(&output, "ex2"), ["b"]);
+            assert_eq!(output.input_files.len(), 3);
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn links_ranges_that_the_version_satisfies() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "a/package.json",
+                r#"{ "name": "a", "dependencies": { "b": "^1.0.0", "c": "^2.0.0", "d": "1.0.0" } }"#,
+            );
+            sandbox.create_file("b/package.json", r#"{ "name": "b", "version": "1.2.0" }"#);
+            sandbox.create_file("c/package.json", r#"{ "name": "c", "version": "1.0.0" }"#);
+            sandbox.create_file("d/package.json", r#"{ "name": "d", "version": "1.0.0" }"#);
+
+            for pm in ["bun", "npm", "yarn"] {
+                let output = extend_graph(
+                    &sandbox,
+                    &["a", "b", "c", "d"],
+                    json!({ "packageManager": pm }),
+                )
+                .await;
+
+                assert_eq!(get_dep_ids(&output, "a"), ["b", "d"], "{pm}");
+            }
+
+            let output = extend_graph(
+                &sandbox,
+                &["a", "b", "c", "d"],
+                json!({ "packageManager": "pnpm" }),
+            )
+            .await;
+
+            assert!(get_dep_ids(&output, "a").is_empty());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn skips_scripts_that_cant_be_tasks() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "a/package.json",
+                json!({
+                    "name": "a",
+                    "scripts": {
+                        "//": "Run build before test",
+                        "build": "tsc --outDir dist",
+                        "clean": "echo 'unbalanced",
+                        "build:js": "babel src",
+                        "build-js": "esbuild src"
+                    }
+                })
+                .to_string(),
+            );
+
+            let output = extend_graph(
+                &sandbox,
+                &["a"],
+                json!({ "inferTasksFromScripts": true, "packageManager": "pnpm" }),
+            )
+            .await;
+
+            assert_eq!(get_task_ids(&output, "a"), ["build", "build-js", "clean"]);
+
+            // The first script wins when IDs collide
+            assert_eq!(
+                output.extended_projects["a"].tasks[&Id::raw("build-js")].command,
+                Some(PartialTaskArgs::List(vec![
+                    "pnpm".into(),
+                    "run".into(),
+                    "build-js".into(),
+                ]))
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn detects_watch_options_as_arguments() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "a/package.json",
+                json!({
+                    "name": "a",
+                    "scripts": {
+                        "lint": "eslint . --max-warnings 0",
+                        "format": "prettier --write .",
+                        "web": "node build-web.js",
+                        "test-ci": "jest --watchAll=false",
+                        "build-ui": "npm run build -w ui",
+                        "helpers": "node --helpers",
+                        "types": "tsc -w",
+                        "bundle": "npm run build && vite build --watch",
+                        "test": "jest --watchAll",
+                        "info": "node --version"
+                    }
+                })
+                .to_string(),
+            );
+
+            let output = extend_graph(
+                &sandbox,
+                &["a"],
+                json!({ "inferTasksFromScripts": true, "packageManager": "npm" }),
+            )
+            .await;
+            let tasks = &output.extended_projects["a"].tasks;
+
+            for id in ["lint", "format", "web", "test-ci", "build-ui", "helpers"] {
+                assert_eq!(tasks[&Id::raw(id)].options, None, "{id}");
+            }
+
+            for id in ["types", "bundle", "test", "info"] {
+                assert_eq!(
+                    tasks[&Id::raw(id)].options.as_ref().unwrap().run_in_ci,
+                    Some(TaskOptionRunInCI::Enabled(false)),
+                    "{id}"
+                );
+            }
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn only_skips_hooks_of_existing_scripts() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "a/package.json",
+                json!({
+                    "name": "a",
+                    "scripts": {
+                        "build": "tsc",
+                        "prebuild": "rimraf dist",
+                        "postinstall": "patch-package",
+                        "prepare": "husky",
+                        "prettier": "prettier --check .",
+                        "preview": "vite preview",
+                        "postcss": "postcss src -d dist"
+                    }
+                })
+                .to_string(),
+            );
+
+            let output = extend_graph(
+                &sandbox,
+                &["a"],
+                json!({ "inferTasksFromScripts": true, "packageManager": "npm" }),
+            )
+            .await;
+
+            assert_eq!(
+                get_task_ids(&output, "a"),
+                ["build", "postcss", "prettier", "preview"]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn skips_scripts_that_run_moon() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "package.json",
+                json!({
+                    "name": "root",
+                    "scripts": {
+                        "check": "moon run :check",
+                        "ci": "CI=1 moonx ci",
+                        "beam": "moonbeam build"
+                    }
+                })
+                .to_string(),
+            );
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+            let mut input = ExtendProjectGraphInput::default();
+            input.project_sources.insert(Id::raw("root"), ".".into());
+            input.toolchain_config =
+                json!({ "inferTasksFromScripts": true, "packageManager": "npm" });
+
+            let output = plugin.extend_project_graph(input).await;
+
+            assert_eq!(get_task_ids(&output, "root"), ["beam"]);
         }
     }
 
@@ -555,9 +811,10 @@ mod javascript_toolchain_tier2 {
             sandbox.create_file("package/package.json", "{}");
             sandbox.create_file("package/nested/app/package.json", "{}");
 
-            sandbox
-                .host_funcs
-                .mock_load_toolchain_config(|_, _| json!({ "version": "2.9.0" }));
+            sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                assert_eq!(id, "deno");
+                json!({ "version": "2.9.0" })
+            });
 
             let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -1066,9 +1323,10 @@ mod javascript_toolchain_tier2 {
             async fn focused_commands_v140() {
                 let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "version": "1.4.0" }));
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "bun");
+                    json!({ "version": "1.4.0" })
+                });
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -1108,9 +1366,10 @@ mod javascript_toolchain_tier2 {
             async fn switches_to_ci_in_ci() {
                 let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "version": "1.4.0" }));
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "bun");
+                    json!({ "version": "1.4.0" })
+                });
 
                 let plugin = sandbox
                     .create_toolchain_with_config("javascript", |cfg| {
@@ -1165,9 +1424,10 @@ mod javascript_toolchain_tier2 {
             async fn skips_ci_on_older_versions_and_production() {
                 let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "version": "1.2.19" }));
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "bun");
+                    json!({ "version": "1.2.19" })
+                });
 
                 let plugin = sandbox
                     .create_toolchain_with_config("javascript", |cfg| {
@@ -1201,9 +1461,10 @@ mod javascript_toolchain_tier2 {
                 // `--production` implies `--frozen-lockfile`
                 let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "version": "1.4.0" }));
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "bun");
+                    json!({ "version": "1.4.0" })
+                });
 
                 let plugin = sandbox
                     .create_toolchain_with_config("javascript", |cfg| {
@@ -1240,9 +1501,10 @@ mod javascript_toolchain_tier2 {
             async fn inherits_args_from_bun_toolchain() {
                 let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "installArgs": ["-a", "b", "--c"]}));
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "bun");
+                    json!({ "installArgs": ["-a", "b", "--c"]})
+                });
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -1301,9 +1563,10 @@ mod javascript_toolchain_tier2 {
             async fn focused_commands() {
                 let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "version": "2.8.0" }));
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "deno");
+                    json!({ "version": "2.8.0" })
+                });
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -1335,9 +1598,10 @@ mod javascript_toolchain_tier2 {
             async fn skips_prod_flag_on_older_versions() {
                 let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "version": "2.7.0" }));
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "deno");
+                    json!({ "version": "2.7.0" })
+                });
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -1365,9 +1629,10 @@ mod javascript_toolchain_tier2 {
             async fn switches_to_ci_in_ci() {
                 let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "version": "2.8.0" }));
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "deno");
+                    json!({ "version": "2.8.0" })
+                });
 
                 let plugin = sandbox
                     .create_toolchain_with_config("javascript", |cfg| {
@@ -1422,9 +1687,10 @@ mod javascript_toolchain_tier2 {
             async fn skips_ci_on_older_versions() {
                 let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "version": "2.7.0" }));
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "deno");
+                    json!({ "version": "2.7.0" })
+                });
 
                 let plugin = sandbox
                     .create_toolchain_with_config("javascript", |cfg| {
@@ -1460,9 +1726,10 @@ mod javascript_toolchain_tier2 {
             async fn inherits_args_from_deno_toolchain() {
                 let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "installArgs": ["-a", "b", "--c"]}));
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "deno");
+                    json!({ "installArgs": ["-a", "b", "--c"]})
+                });
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -1571,9 +1838,10 @@ mod javascript_toolchain_tier2 {
             async fn inherits_args_from_npm_toolchain() {
                 let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "installArgs": ["-a", "b", "--c"]}));
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "npm");
+                    json!({ "installArgs": ["-a", "b", "--c"]})
+                });
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -1735,9 +2003,10 @@ mod javascript_toolchain_tier2 {
             async fn inherits_args_from_nub_toolchain() {
                 let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "installArgs": ["-a", "b", "--c"]}));
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "nub");
+                    json!({ "installArgs": ["-a", "b", "--c"]})
+                });
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -1937,9 +2206,10 @@ mod javascript_toolchain_tier2 {
             async fn inherits_args_from_pnpm_toolchain() {
                 let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "installArgs": ["-a", "b", "--c"]}));
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "pnpm");
+                    json!({ "installArgs": ["-a", "b", "--c"]})
+                });
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -1967,9 +2237,10 @@ mod javascript_toolchain_tier2 {
             async fn legacy_dedupe_for_older_versions() {
                 let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "version": "6" }));
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "pnpm");
+                    json!({ "version": "6" })
+                });
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -2006,9 +2277,10 @@ mod javascript_toolchain_tier2 {
             async fn modern_dedupe_for_newer_versions() {
                 let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "version": "8" }));
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "pnpm");
+                    json!({ "version": "8" })
+                });
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -2092,9 +2364,10 @@ mod javascript_toolchain_tier2 {
             async fn focused_commands_for_berry() {
                 let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "version": "2" }));
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "yarn");
+                    json!({ "version": "2" })
+                });
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -2127,9 +2400,10 @@ mod javascript_toolchain_tier2 {
             async fn inherits_args_from_bun_toolchain() {
                 let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "installArgs": ["-a", "b", "--c"]}));
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "yarn");
+                    json!({ "installArgs": ["-a", "b", "--c"]})
+                });
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -2157,9 +2431,10 @@ mod javascript_toolchain_tier2 {
             async fn legacy_dedupe_for_older_versions() {
                 let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "version": "1" }));
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "pnpm");
+                    json!({ "version": "1" })
+                });
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -2196,9 +2471,10 @@ mod javascript_toolchain_tier2 {
             async fn modern_dedupe_for_newer_versions() {
                 let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "version": "2" }));
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "yarn");
+                    json!({ "version": "2" })
+                });
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -2492,6 +2768,48 @@ mod javascript_toolchain_tier2 {
                 ])
             );
         }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn hashes_aliases_tags_and_workspace_ranges() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "package.json",
+                json!({
+                    "dependencies": {
+                        "sw": "npm:string-width@^4.2.0",
+                        "path": "jsr:@std/path@^1.0.0",
+                        "bare": "npm:left-pad",
+                        "tag": "latest",
+                        "ws": "workspace:^1"
+                    }
+                })
+                .to_string(),
+            );
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .parse_manifest(ParseManifestInput {
+                    path: VirtualPath::new(sandbox.path().join("package.json")),
+                    ..Default::default()
+                })
+                .await;
+
+            let version = |value: &str| {
+                ManifestDependency::Version(UnresolvedVersionSpec::parse(value).unwrap())
+            };
+
+            assert_eq!(
+                output.dependencies,
+                BTreeMap::from_iter([
+                    ("bare".into(), version("*")),
+                    ("path".into(), version("^1.0.0")),
+                    ("sw".into(), version("^4.2.0")),
+                    ("tag".into(), version("*")),
+                    ("ws".into(), version("^1")),
+                ])
+            );
+        }
     }
 
     mod parse_lock {
@@ -2603,6 +2921,45 @@ mod javascript_toolchain_tier2 {
             ]);
             map.extend(expected_base_dependencies());
             map
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn skips_other_package_managers_lockfiles() {
+            let mut sandbox = create_lockfile_sandbox("bun");
+            let lockfiles = create_moon_sandbox("lockfiles");
+
+            fs::copy_file(
+                lockfiles.path().join("npm/package-lock.json"),
+                sandbox.path().join("package-lock.json"),
+            )
+            .unwrap();
+
+            sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                assert_eq!(id, "javascript");
+                json!({ "packageManager": "bun" })
+            });
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let npm = plugin
+                .parse_lock(ParseLockInput {
+                    path: VirtualPath::new(sandbox.path().join("package-lock.json")),
+                    root: VirtualPath::new(sandbox.path()),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(npm.dependencies.is_empty());
+
+            let bun = plugin
+                .parse_lock(ParseLockInput {
+                    path: VirtualPath::new(sandbox.path().join("bun.lock")),
+                    root: VirtualPath::new(sandbox.path()),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(!bun.dependencies.is_empty());
         }
 
         #[tokio::test(flavor = "multi_thread")]

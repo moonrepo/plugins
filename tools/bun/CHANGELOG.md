@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed a `package.json` with a field that can't be parsed, like `"version": "1.0"` or an unusual
+  dependency range, losing its `engines.bun`, `devEngines.runtime` or `packageManager` pin. Those
+  fields are now skipped.
+- Fixed a cycle in `volta.extends` overflowing the stack.
+- Fixed a `packageManager` URL, which Corepack accepts, being cut off at its first `@`.
+
 ## 0.17.0
 
 #### 💥 Breaking

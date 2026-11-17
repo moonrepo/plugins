@@ -1,7 +1,6 @@
 use crate::config::GoToolchainConfig;
 use crate::go_mod::{Replacement, parse_go_mod};
 use crate::go_work::GoWork;
-use crate::package_graph::resolve_source_path;
 use extism_pdk::*;
 use moon_config::LanguageType;
 use moon_pdk::parse_toolchain_config;
@@ -9,6 +8,7 @@ use moon_pdk_api::*;
 use schematic::SchemaBuilder;
 use starbase_utils::fs;
 use toolchain_common::enable_tracing;
+use toolchain_common::resolve_source_path;
 
 #[plugin_fn]
 pub fn register_toolchain(

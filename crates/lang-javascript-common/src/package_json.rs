@@ -63,7 +63,8 @@ pub fn extract_engine_version(package_json: &PackageJson, key: &str) -> Option<S
 
 pub fn extract_package_manager_version(package_json: &PackageJson, key: &str) -> Option<String> {
     if let Some(pm) = &package_json.package_manager {
-        let mut parts = pm.split('@');
+        // Only split once, as Corepack also accepts a URL, like `yarn@https://…/@yarnpkg/…`
+        let mut parts = pm.splitn(2, '@');
         let name = parts.next().unwrap_or_default();
 
         if name == key {
@@ -90,6 +91,22 @@ pub fn extract_volta_version(
     package_path: &VirtualPath,
     key: &str,
 ) -> AnyResult<Option<String>> {
+    extract_volta_version_with_depth(package_json, package_path, key, 0)
+}
+
+// `extends` can form a cycle, which would overflow the stack
+const VOLTA_MAX_EXTENDS: usize = 10;
+
+fn extract_volta_version_with_depth(
+    package_json: &PackageJson,
+    package_path: &VirtualPath,
+    key: &str,
+    depth: usize,
+) -> AnyResult<Option<String>> {
+    if depth > VOLTA_MAX_EXTENDS {
+        return Ok(None);
+    }
+
     if let Some(volta) = package_json.other_fields.get("volta") {
         if let Some(json::JsonValue::String(inner)) = volta.get(key) {
             return Ok(Some(inner.into()));
@@ -105,7 +122,12 @@ pub fn extract_volta_version(
                 let content = fs::read_file(&extends_path)?;
 
                 if let Ok(other_package_json) = json::parse::<PackageJson>(&content) {
-                    return extract_volta_version(&other_package_json, &extends_path, key);
+                    return extract_volta_version_with_depth(
+                        &other_package_json,
+                        &extends_path,
+                        key,
+                        depth + 1,
+                    );
                 }
             }
         }

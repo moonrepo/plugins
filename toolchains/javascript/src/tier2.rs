@@ -10,7 +10,7 @@ use moon_pdk::{
     locate_root_many, locate_root_many_with_check, parse_toolchain_config_schema,
 };
 use moon_pdk_api::*;
-use nodejs_package_json::{VersionProtocol, WorkspaceProtocol};
+use nodejs_package_json::{Version as PackageVersion, VersionProtocol, WorkspaceProtocol};
 use rustc_hash::FxHashMap;
 use starbase_utils::yaml;
 use std::collections::BTreeMap;
@@ -25,7 +25,8 @@ pub fn extend_project_graph(
     let mut output = ExtendProjectGraphOutput::default();
 
     // First pass, gather all packages and their manifests
-    let mut packages = BTreeMap::default();
+    let mut packages = vec![];
+    let mut packages_by_name = FxHashMap::default();
 
     for (id, source) in input.project_sources {
         let project_root = input.context.get_project_root_from_source(&source);
@@ -46,19 +47,31 @@ pub fn extend_project_graph(
             manifest.catalogs = None;
             manifest.other_fields.clear();
 
-            // We need to track all packages, even those without a name
-            packages.insert(
-                manifest
-                    .name
-                    .clone()
-                    .unwrap_or_else(|| format!("@moon-js-toolchain/{id}")),
-                (id, project_root, manifest),
-            );
+            // Projects can share a package name, like examples or fixtures,
+            // so the first one is the dependency target, but all are kept
+            if let Some(name) = &manifest.name {
+                packages_by_name
+                    .entry(name.to_owned())
+                    .or_insert(packages.len());
+            }
+
+            packages.push((id, project_root, manifest));
         }
     }
 
+    // npm, Yarn and Bun link a workspace package when its version satisfies
+    // a range, while pnpm only does with `link-workspace-packages`
+    let links_ranges = matches!(
+        config.package_manager,
+        Some(
+            JavaScriptPackageManager::Bun
+                | JavaScriptPackageManager::Npm
+                | JavaScriptPackageManager::Yarn
+        )
+    );
+
     // Second pass, extract packages and their relationships
-    for (id, project_root, manifest) in packages.values() {
+    for (id, project_root, manifest) in &packages {
         let mut project_output = ExtendProjectOutput::default();
 
         let mut extract_implicit_deps =
@@ -70,8 +83,15 @@ pub fn extend_project_graph(
                 };
 
                 for (dep_name, dep_version) in deps {
-                    let Some((dep_id, dep_root, _)) = packages.get(dep_name) else {
+                    let Some((dep_id, dep_root, dep_manifest)) = packages_by_name
+                        .get(dep_name)
+                        .and_then(|index| packages.get(*index))
+                    else {
                         continue;
+                    };
+
+                    let satisfies = |matches: &dyn Fn(&PackageVersion) -> bool| {
+                        links_ranges && dep_manifest.version.as_ref().is_some_and(matches)
                     };
 
                     // Only inherit if the dependency is in the local workspace
@@ -81,9 +101,12 @@ pub fn extend_project_graph(
                         | VersionProtocol::Portal(rel_path) => {
                             paths_are_equal(dep_root, project_root.join(rel_path))
                         }
-                        VersionProtocol::Requirement(req) if req.comparators.is_empty() => {
-                            packages.contains_key(dep_name)
+                        VersionProtocol::Requirement(req) if req.comparators.is_empty() => true,
+                        VersionProtocol::Requirement(req) => satisfies(&|ver| req.matches(ver)),
+                        VersionProtocol::Range(reqs) => {
+                            satisfies(&|ver| reqs.iter().any(|req| req.matches(ver)))
                         }
+                        VersionProtocol::Version(version) => satisfies(&|ver| ver == version),
                         VersionProtocol::Workspace(_) => true,
                         _ => false,
                     };
@@ -243,7 +266,7 @@ fn load_catalogs(root: &VirtualPath) -> AnyResult<CatalogsMap> {
     Ok(FxHashMap::default())
 }
 
-fn extract_workspace_members_and_catalogs(
+pub(crate) fn extract_workspace_members_and_catalogs(
     package_manager: JavaScriptPackageManager,
     root: &VirtualPath,
 ) -> AnyResult<Option<Vec<String>>> {
@@ -305,13 +328,18 @@ fn extract_workspace_members_and_catalogs(
         }
     }
 
-    // Cache the result!
-    if let Some(catalogs) = &catalogs {
-        var::set(catalogs_cache_key, json::to_string(catalogs)?)?;
+    // Cache the result! The cache only saves work, so a full var store
+    // (1 MiB in Extism) shouldn't fail the call
+    if let Some(catalogs) = &catalogs
+        && let Err(error) = var::set(catalogs_cache_key, json::to_string(catalogs)?)
+    {
+        debug!("Failed to cache the workspace catalogs: {error}");
     }
 
-    if let Some(members) = &members {
-        var::set(members_cache_key, json::to_string(members)?)?;
+    if let Some(members) = &members
+        && let Err(error) = var::set(members_cache_key, json::to_string(members)?)
+    {
+        debug!("Failed to cache the workspace members: {error}");
     }
 
     Ok(members)
@@ -674,8 +702,29 @@ pub fn install_dependencies(
 #[plugin_fn]
 pub fn parse_lock(Json(input): Json<ParseLockInput>) -> FnResult<Json<ParseLockOutput>> {
     let mut output = ParseLockOutput::default();
+    let file_name = input
+        .path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or_default();
 
-    let result = match input.path.file_name().and_then(|name| name.to_str()) {
+    // moon parses every lockfile that exists and merges them, so a leftover
+    // from another package manager would override the real one
+    let config: LockConfig = load_toolchain_config("javascript")?;
+
+    if let Some(package_manager) = config.package_manager {
+        let own_names = package_manager.get_lock_file_names();
+
+        if !own_names.contains(&file_name)
+            && own_names.iter().any(|name| input.root.join(name).exists())
+        {
+            debug!("Skipping {file_name}, as {package_manager} has its own lockfile");
+
+            return Ok(Json(output));
+        }
+    }
+
+    let result = match Some(file_name) {
         Some("bun.lock") => parse_bun_lock(&input.path, &mut output),
         Some("bun.lockb") => parse_bun_lockb(&input.path, &mut output),
         Some("deno.lock") => parse_deno_lock(&input.path, &mut output),
@@ -690,7 +739,12 @@ pub fn parse_lock(Json(input): Json<ParseLockInput>) -> FnResult<Json<ParseLockO
 
     // ADR-0008.8
     if let Err(error) = result {
-        return Err(anyhow!("Failed to parse <file>{}</file>: {error}", input.path).into());
+        let path = match input.path.to_real_path() {
+            Ok(Some(path)) => path.to_path_buf().display().to_string(),
+            _ => input.path.to_string(),
+        };
+
+        return Err(anyhow!("Failed to parse <file>{path}</file>: {error}").into());
     }
 
     Ok(Json(output))
@@ -716,8 +770,22 @@ fn create_manifest_dependency(
     catalogs: &CatalogsMap,
 ) -> Option<ManifestDependency> {
     let dep = match version {
-        VersionProtocol::Alias(_)
-        | VersionProtocol::Exec(_)
+        // `npm:string-width@^4.2.0`, hashed by its range under the alias name
+        VersionProtocol::Alias(alias) => {
+            let package = alias
+                .split_once(':')
+                .map(|(_, package)| package)
+                .unwrap_or(alias);
+
+            return parse_manifest_version(
+                name,
+                match package.rfind('@') {
+                    Some(index) if index > 0 => &package[index + 1..],
+                    _ => "*",
+                },
+            );
+        }
+        VersionProtocol::Exec(_)
         | VersionProtocol::Patch(_)
         | VersionProtocol::Unknown(_)
         | VersionProtocol::CustomProtocol(_, _) => {
@@ -762,8 +830,10 @@ fn create_manifest_dependency(
         VersionProtocol::Requirement(version_req) => {
             return parse_manifest_version(name, version_req.to_string());
         }
-        VersionProtocol::Tag(tag) => {
-            return parse_manifest_version(name, tag);
+        // A dist tag like `latest` can't match a locked version, so use `*`,
+        // which matches the first locked entry
+        VersionProtocol::Tag(_) => {
+            return parse_manifest_version(name, "*");
         }
         VersionProtocol::Url(url) => ManifestDependency::url(url.to_owned()),
         VersionProtocol::Version(version) => {
@@ -771,6 +841,9 @@ fn create_manifest_dependency(
         }
         VersionProtocol::Workspace(ws) => match ws {
             WorkspaceProtocol::File(path) => ManifestDependency::path(path.to_owned()),
+            WorkspaceProtocol::Requirement { req, .. } => {
+                return parse_manifest_version(name, req.to_string());
+            }
             WorkspaceProtocol::Version(version) => {
                 return parse_manifest_version(name, version.to_string());
             }

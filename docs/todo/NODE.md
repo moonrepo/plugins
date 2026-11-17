@@ -121,6 +121,11 @@ repo" rather than here.
 
 ### #1 Read only the version fields from `package.json`
 
+**Mostly done (2026-11-17, JavaScript pass):** `nodejs_package_json` now skips any field it can't
+parse and keeps an unparsable dependency as `Unknown`, so an invalid `version` or specifier no
+longer drops the pin, for every tool, without a separate struct (`JAVASCRIPT.md` #1). Left: the
+`debug!` for a `package.json` that isn't JSON, and the `versions_test.rs` cases.
+
 - [ ] Parse the version fields without typing the rest of the file
 - [ ] Log a `package.json` that isn't JSON
 - [ ] Tests

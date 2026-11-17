@@ -6,8 +6,59 @@
 
 - Panics now report their message, instead of an `unreachable` WASM trap error.
 - Lockfile parse errors now name the lockfile.
+- Workspace dependencies declared with a version range, like `"b": "^1.0.0"`, are now project
+  dependencies for npm, Yarn and Bun when the workspace package's version satisfies the range, as
+  those package managers link them. These new edges can expose dependency cycles.
+- `workspace:` ranges like `workspace:^1` and `workspace:>=1.0.0` are now supported.
+- `syncProjectWorkspaceDependencies` now replaces a synced `version`, `version-caret`,
+  `version-tilde` or peer range once the workspace package's version no longer satisfies it.
+- `syncProjectWorkspaceDependencies` now syncs packages without a `version` for the formats that
+  don't need one, and syncs their peers as `*`.
+- `rootPackageDependenciesOnly` now allows local workspace dependencies in projects, like the ones
+  that `syncProjectWorkspaceDependencies` writes.
+- `docker scaffold` now copies the `package.json` of workspace members that aren't moon projects,
+  and of local `file:`, `link:` and `portal:` dependencies (or the tarball), into the configs
+  skeleton.
+- `docker prune` now also deletes the `node_modules` of the focused projects and their dependencies,
+  as moon v1 did, when `deleteVendorDirectories` is enabled.
+- Inferred npm tasks now end with `--`, so passthrough arguments reach the script instead of npm.
+  This changes their task hashes once.
+- `npm:` and `jsr:` alias dependencies are now hashed by their range, and dist tags like `latest`
+  by the first locked version.
+- Package manager detection now also reads `devEngines.packageManager`.
+- Version-gated behavior now treats a `latest` or `stable` version as the newest release, and a
+  prerelease, like `6.0.0-rc.1`, like its release.
 
 #### 🐞 Fixes
+
+- Fixed `package.json` fields that npm accepts but the toolchain couldn't parse failing every moon
+  command, like `"version": "1.0"`, `"bundleDependencies": true` or an `engines` array. Those
+  fields are now skipped.
+- Fixed `sync_project` rewriting every dependency in a field it changed, which could turn a range
+  like `>=1.0.0 <2.0.0` into `>=1.0.0, <2.0.0`, which npm rejects. Only the synced entries are now
+  written.
+- Fixed `sync_project` failing every task in a JavaScript project without a `package.json`.
+- Fixed synced peer ranges for 0.x packages being `^0.0.0`. They're now `^<version>`.
+- Fixed `rootPackageDependenciesOnly` failing on empty dependency fields.
+- Fixed inferred tasks failing the project graph for a script that can't be a task ID, like a
+  `"//"` comment, or that a shell couldn't split. They're now skipped, or split on whitespace.
+- Fixed inferred tasks being disabled in CI when the script contained `-w` anywhere, like in
+  `--max-warnings`, `--write` or `build-web.js`. Watch, help and version options are now matched
+  as whole arguments, and `-w` is ignored for package managers, where it selects a workspace.
+- Fixed scripts named like lifecycle hooks, such as `prettier`, `preview` and `postcss`, not being
+  inferred. Only `pre<name>` and `post<name>` scripts with a `<name>` script are skipped, and
+  `deno.json` tasks, which have no hooks, are no longer filtered by prefix.
+- Fixed root scripts that run `moon` being inferred, which made moon run itself recursively.
+- Fixed scripts whose names clean to the same task ID, like `build:js` and `build-js`, replacing
+  each other. The first one is kept.
+- Fixed projects that share a package name, like examples, being left out of the project graph
+  except for one. The first one is still the target for dependencies.
+- Fixed a leftover lockfile from another package manager overriding the configured one's in task
+  hashes. It's now ignored when the configured package manager's own lockfile exists.
+- Fixed a full plugin cache failing `locate_dependencies_root`.
+- Fixed `initialize_toolchain` failing on an unknown `packageManager`, and linking to a page that
+  doesn't exist.
+- Fixed lockfile parse errors showing a virtual path instead of the real one.
 
 - Fixed an empty workspace entry in `bun.lock` panicking while parsing the lockfile.
 - Fixed a failed `bun bun.lockb` being parsed as an empty lockfile. It now returns an error.

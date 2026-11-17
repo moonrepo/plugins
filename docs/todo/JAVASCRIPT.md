@@ -8,7 +8,7 @@ limited to what isn't specific to one runtime or package manager: registration a
 project graph, inferred tasks, `package.json` syncing, the generic dependency-root walk, manifest
 hashing, the `parse_lock` dispatch, and the generic Docker flow. Each package manager's installs,
 lockfile parser and workspace config, and the Node runtime, are in `NPM.md`, `PNPM.md`, `YARN.md`,
-`BUN.md`, `DENO.md`, `NUB.md` and `NODE.md`. Item numbers (#1–#21) match the audit findings.
+`BUN.md`, `DENO.md`, `NUB.md` and `NODE.md`. Item numbers (#1–#21) match the audit findings, and #22 was found while implementing them.
 
 ## Testing
 
@@ -85,24 +85,34 @@ tasks (#5) and `runInCI: false` on the lint task (#3) reproduced the same way.
   `apps/a/node_modules` itself (live; #13 covers pnpm and Bun).
 - Saving `package.json` keeps its key order.
 
-## Decisions needed
+## Decisions
 
-| Decision                                                                    | Recommendation                                                     |
-| --------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| D1 (#15): link a range that a workspace package's version satisfies?        | Yes, for npm, Yarn and Bun, which install it from the workspace    |
-| D2 (#16): hash the root `package.json`'s dependencies for every project?    | Yes, as moon v1 did                                                |
-| D3 (#17): what may `rootPackageDependenciesOnly` allow in projects?         | Local workspace dependencies, so the sync's own output passes      |
-| D4 (#18): update synced entries whose range no longer matches?              | Yes, for the `version*` formats and peers only                     |
-| D5 (#19): install projects that the root's `workspaces` don't cover?        | Yes: their own root if they have a `package.json`, else `**/*`     |
+| Decision                                                                    | Outcome                                                               |
+| --------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| D1 (#15): link a range that a workspace package's version satisfies?        | **Decided:** yes, for npm, Yarn and Bun                               |
+| D2 (#16): hash the root `package.json`'s dependencies for every project?    | **Decided:** no, moon v3's inheritable dependencies will cover it     |
+| D3 (#17): what may `rootPackageDependenciesOnly` allow in projects?         | **Decided:** local workspace dependencies                             |
+| D4 (#18): update synced entries whose range no longer matches?              | **Decided:** yes, for the `version*` formats and peers                |
+| D5 (#19): install projects that the root's `workspaces` don't cover?        | **Decided:** no, not in this pass                                     |
+
+#1 is fixed upstream in `nodejs_package_json` instead of with local types (decided 2026-11-17), so
+the same fix covers `PNPM.md` #2 and `NODE.md` #1.
 
 ## Phase 1: clear-cut fixes
 
 ### #1 `package.json` fields the toolchain never reads fail the project graph
 
-- [ ] Parse `package.json` into our own types
-- [ ] Skip values that can't be parsed
-- [ ] Tests
-- [ ] Changelog
+**Done (2026-11-17):** fixed upstream instead of with local types. `nodejs_package_json` now
+skips any field it can't parse (`lenient`), deserializes a dependency it can't parse as
+`VersionProtocol::Unknown`, and accepts `workspace:` ranges (`WorkspaceProtocol::Requirement`), so
+this also fixes `PNPM.md` #2 and `NODE.md` #1. Until 0.5.0 is published, the root `Cargo.toml`
+patches it to `../../rust-js-ecosystem/crates/package-json`. Tests are in the upstream crate and
+`tier2_test.rs` (`loads_manifests_with_fields_it_doesnt_read`).
+
+- [x] Parse `package.json` into our own types
+- [x] Skip values that can't be parsed
+- [x] Tests
+- [x] Changelog
 
 **Problem:** `PackageJson` (`package_json.rs:20`) wraps `nodejs_package_json` 0.4.11's struct, with
 the `protocols` feature that the workspace enables for every crate (`Cargo.toml:53`). Several fields
@@ -141,9 +151,9 @@ its name and other dependencies, and `extend_project_graph` succeeds with it in 
 
 ### #2 One unusual script fails the project graph
 
-- [ ] Skip scripts whose task ID can't be created
-- [ ] Infer the task without outputs when the script can't be split
-- [ ] Tests
+- [x] Skip scripts whose task ID can't be created
+- [x] Infer the task without outputs when the script can't be split
+- [x] Tests
 
 **Problem:** with `inferTasksFromScripts`, `infer_from_package_scripts` returns the first error from
 any script (`infer_tasks.rs:64-69`), which fails `extend_project_graph` for the whole workspace:
@@ -165,9 +175,9 @@ the task without output detection. Skip an output that doesn't parse.
 
 ### #3 Lint tasks with `--max-warnings` never run in CI
 
-- [ ] Match watch, help and version flags as whole arguments
-- [ ] Tests
-- [ ] Changelog
+- [x] Match watch, help and version flags as whole arguments
+- [x] Tests
+- [x] Changelog
 
 **Problem:** `has_watch_option` is `script.contains("--watch") || script.contains("-w")`
 (`infer_tasks.rs:192-194`), and a match sets `runInCI: false` (`:156-159`). `-w` matches
@@ -191,9 +201,9 @@ and `jest --watchAll` are.
 
 ### #4 Inferred npm tasks drop passthrough flags, and npm 12 fails on them
 
-- [ ] End npm commands with `--`
-- [ ] Update tests
-- [ ] Changelog
+- [x] End npm commands with `--`
+- [x] Update tests
+- [x] Changelog
 
 **Problem:** inferred tasks run `<package manager> run <name>` (`infer_tasks.rs:97-106`), and moon
 appends passthrough args after it. npm treats flags after the script name as its own config unless
@@ -212,8 +222,8 @@ trailing `--` with nothing after it (confirmed).
 
 ### #5 `prettier`, `preview` and `postcss` scripts aren't inferred
 
-- [ ] Only skip hooks of scripts that exist
-- [ ] Tests
+- [x] Only skip hooks of scripts that exist
+- [x] Tests
 
 **Problem:** `is_valid` (`infer_tasks.rs:196-206`) drops every name starting with `pre` or `post`.
 npm only runs `pre<name>` and `post<name>` as hooks when `<name>` is a script too. `preview` is
@@ -230,8 +240,8 @@ and `prepare` aren't.
 
 ### #6 Root scripts that run moon recurse
 
-- [ ] Don't infer scripts that run moon
-- [ ] Tests
+- [x] Don't infer scripts that run moon
+- [x] Tests
 
 **Problem:** repos that move to moon often keep root scripts like `"check": "moon run :check"` or
 `"ci": "moon ci"`. With the root as a project, that becomes `root:check` running `npm run check`,
@@ -245,8 +255,8 @@ until it was killed.
 
 ### #7 Synced peer ranges exclude 0.x packages
 
-- [ ] Use the minor version for 0.x peers
-- [ ] Tests
+- [x] Use the minor version for 0.x peers
+- [x] Tests
 
 **Problem:** `sync_project_workspace_dependencies` writes peers as `^<major>.0.0`
 (`tier1.rs:303-309`), whatever `dependencyVersionFormat` is. For a 0.x package that's `^0.0.0`,
@@ -260,8 +270,8 @@ the registry. With `^0.3.0` it installed.
 
 ### #8 Syncing fails every task in a JavaScript project without a `package.json`
 
-- [ ] Skip projects without a `package.json`
-- [ ] Test
+- [x] Skip projects without a `package.json`
+- [x] Test
 
 **Problem:** `sync_project` loads the project's `package.json` (`tier1.rs:202-207`), which gives an
 empty model when the file is missing, and `save` then reads the file from disk (`json_config!`). A
@@ -277,8 +287,8 @@ project gets the toolchain without one when its `language` is `javascript`, or i
 
 ### #9 Packages without a `version` are never synced
 
-- [ ] Only require `version` for the version formats
-- [ ] Tests
+- [x] Only require `version` for the version formats
+- [x] Tests
 
 **Problem:** the sync skips a dependency without `version` (`tier1.rs:274-277`). Private workspace
 packages often have none, and moon's Node handbook says local-only packages don't have a version to
@@ -293,8 +303,8 @@ Write peers on versionless packages as `*`.
 
 ### #10 Duplicate package names drop a project from the graph
 
-- [ ] Key projects by ID
-- [ ] Tests
+- [x] Key projects by ID
+- [x] Tests
 
 **Problem:** `extend_project_graph` collects manifests in a map keyed by package name
 (`tier2.rs:50-56`), and iterates that map (`:61`). A later project with the same name replaces the
@@ -311,8 +321,8 @@ the first project wins. Return each project's own alias, since moon skips aliase
 
 ### #11 A leftover lockfile overrides the real one in task hashes
 
-- [ ] Ignore other package managers' lockfiles when the configured one's exists
-- [ ] Tests
+- [x] Ignore other package managers' lockfiles when the configured one's exists
+- [x] Tests
 
 **Problem:** moon parses every lockfile in `lock_file_names` that exists at the root, and merges
 them with later files winning per package (moon `task_hashing.rs:269-283`, `:340-343`). The list
@@ -340,9 +350,12 @@ under Deno (used).
 
 ### #12 `docker setup` misses workspace members that aren't moon projects
 
-- [ ] Implement `scaffold_docker` for the configs phase
-- [ ] Copy members' manifests and `file:`/`link:` targets
-- [ ] Tests
+**Done:** also copies a `file:` tarball, and skips the project's or root's own manifest, which moon
+copies.
+
+- [x] Implement `scaffold_docker` for the configs phase
+- [x] Copy members' manifests and `file:`/`link:` targets
+- [x] Tests
 
 **Problem:** the configs skeleton only gets manifests from project roots and the workspace root
 (moon `toolchain_plugin.rs:313-318`). Package managers install every workspace member, and every
@@ -361,8 +374,8 @@ directory dependency inside the workspace. Patch files are `PNPM.md` #1, which a
 
 ### #13 `docker prune` leaves projects' `node_modules`
 
-- [ ] Delete `node_modules` in every pruned project
-- [ ] Test
+- [x] Delete `node_modules` in every pruned project
+- [x] Test
 
 **Problem:** `prune_docker` only deletes the root's `node_modules` (`tier1.rs:323-335`). moon v1
 also deleted each project's, as "some package managers do not delete stale node modules" (v1.41.8
@@ -378,41 +391,57 @@ as v1 did, and report them in `changed_files`.
 
 ### #14 Small fixes
 
-- [ ] `initialize_toolchain`'s `config_url` (`tier1.rs:106`) is
+**Done**, except `toolchains/node-depman/src/tier1.rs:65`'s `config_url`, which is `NPM.md` #5.
+
+- [x] `initialize_toolchain`'s `config_url` (`tier1.rs:106`) is
       `https://moonrepo.dev/docs/guides/javascript`, which redirects to a 404 (confirmed with
       curl). Use `…/guides/javascript/node-handbook`, which exists.
       `toolchains/node-depman/src/tier1.rs:65` has the same URL (`NPM.md` #5, `PNPM.md` #7).
-- [ ] `detect_package_manager` (`tier1.rs:158-162`) only reads `packageManager`. Fall back to the
+- [x] `detect_package_manager` (`tier1.rs:158-162`) only reads `packageManager`. Fall back to the
       first `devEngines.packageManager` entry's name, which `pnpm init` writes since pnpm 11 and
       where nub records itself (`PNPM.md`, `NUB.md`). Skip a name it doesn't know instead of
       failing `moon init` with `from_str`'s error (`:161`).
-- [ ] Inferred task IDs collide: `build:js` and `build-js` both become `build-js`
+- [x] Inferred task IDs collide: `build:js` and `build-js` both become `build-js`
       (`infer_tasks.rs:66-67`), and one replaces the other. **Live:** `build-js` ran
       `npm run build:js`. Keep the first, with a `debug!`.
-- [ ] `version_satisfies` (`config.rs:153-175`) returns `false` for aliases, so `version: latest`
+- [x] `version_satisfies` (`config.rs:153-175`) returns `false` for aliases, so `version: latest`
       turns off every version-gated flag, like `bun ci` (`DENO.md`). Return `true` for `latest` and
       `stable`, as for `canary`. An unset version stays `false`, as nothing says which one runs.
       It's also `false` for every prerelease, as `>=2.0.0` doesn't match `6.0.0-rc.23` under
       semver, so prereleases take the old-version paths (`YARN.md`). `YARN.md` #3 replaces the Yarn
       uses with a major-version helper; check the Bun and Deno gates against a prerelease too.
-- [ ] `host_log!` markup `<id>{}</file>` (`tier1.rs:313`).
-- [ ] `parse_lock`'s error (`tier2.rs:693`) names the virtual path, like
+- [x] `host_log!` markup `<id>{}</file>` (`tier1.rs:313`).
+- [x] `parse_lock`'s error (`tier2.rs:693`) names the virtual path, like
       `Failed to parse /workspace/bun.lockb` (`BUN.md`). Use the real path.
-- [ ] `lang-javascript-common`: `extract_volta_version` (`package_json.rs:88-115`) follows `extends`
+- [x] `lang-javascript-common`: `extract_volta_version` (`package_json.rs:88-115`) follows `extends`
       with no limit, so a cycle overflows the stack, which is a trap that the panic hook can't
       report. Stop after a few levels. `extract_package_manager_version` (`:64-86`) splits on every
       `@`, so Corepack's URL form (`yarn@https://registry.npmjs.org/@yarnpkg/cli-dist/…`) gives
       `https://registry.npmjs.org/`; split once.
-- [ ] Make the `load_toolchain_config` mocks in `tier2_test.rs` and `tier2_env_test.rs` assert the
+- [x] Make the `load_toolchain_config` mocks in `tier2_test.rs` and `tier2_env_test.rs` assert the
       requested ID (`NPM.md`, `DENO.md`, `NUB.md`).
+
+### #22 Syncing rewrites the other dependencies in a field
+
+- [x] Write only the entries the sync adds or changes
+- [x] Tests
+
+Found while implementing #18. `PackageJson::save_field` wrote every entry of a dirty dependency
+field back through `VersionProtocol`'s `Display` (`package_json.rs:36-45`), so adding one workspace
+dependency re-formatted the rest. `nodejs_package_json` normalizes ranges into Cargo's syntax:
+`>=1.0.0 <2.0.0` becomes `>=1.0.0, <2.0.0`, and `18.x` becomes `~18`. npm's own `semver` rejects the
+comma form (`validRange` returns `null`), so the next install fails.
+
+**Change:** dependencies are marked dirty one at a time (`dependencies:<name>`), and `save_field`
+only writes those entries. Test: `keeps_the_text_of_entries_it_doesnt_change`.
 
 ## Phase 2: after decisions
 
 ### #15 Ranges to workspace packages aren't edges (D1)
 
-- [ ] Link ranges that the workspace package's version satisfies, for npm, Yarn and Bun
-- [ ] Tests
-- [ ] Changelog
+- [x] Link ranges that the workspace package's version satisfies, for npm, Yarn and Bun
+- [x] Tests
+- [x] Changelog
 
 **Problem:** `extend_project_graph` only treats `workspace:`, `file:`, `link:` and `portal:` to the
 package's directory, and `*`, as local (`tier2.rs:78-89`). npm, Yarn (whose
@@ -444,6 +473,8 @@ and pnpm (no edge).
 
 ### #16 The root `package.json`'s dependencies aren't hashed (D2)
 
+**Not planned (D2):** moon v3's inheritable dependencies will cover it.
+
 - [ ] Add the root's dependencies to each project's manifest output
 - [ ] Tests
 - [ ] Changelog
@@ -471,8 +502,8 @@ doesn't change, as the root is already in it.
 
 ### #17 `rootPackageDependenciesOnly` rejects what the sync writes (D3)
 
-- [ ] Allow local workspace dependencies
-- [ ] Tests
+- [x] Allow local workspace dependencies
+- [x] Tests
 
 **Problem:** the check fails when a project's `package.json` has any dependency field, even empty
 (`tier1.rs:209-220`), and the sync below it, on by default, adds workspace dependencies to that same
@@ -492,8 +523,8 @@ to link workspace packages, though.
 
 ### #18 Synced version ranges are never updated (D4)
 
-- [ ] Replace stale ranges for the version formats
-- [ ] Tests
+- [x] Replace stale ranges for the version formats
+- [x] Tests
 
 **Problem:** the sync only adds missing entries (`if_missing: true`, `tier1.rs:298-308`), so with
 `version`, `version-caret` and `version-tilde` the written range goes stale on the next bump.
@@ -508,6 +539,8 @@ ranges and paths stay.
 **Tests:** a stale range is replaced, a matching one and a `workspace:` entry aren't.
 
 ### #19 Projects that the root's `workspaces` don't cover get no install (D5)
+
+**Not planned (D5).**
 
 - [ ] Projects with their own `package.json` become their own root
 - [ ] Roots without `workspaces` report `**/*` members
@@ -544,9 +577,9 @@ under a root without `workspaces` is a member.
 
 ### #20 `npm:` aliases and dist tags aren't hashed
 
-- [ ] Report an alias's range
-- [ ] Report tags as `*`
-- [ ] Tests
+- [x] Report an alias's range
+- [x] Report tags as `*`
+- [x] Tests
 
 **Problem:** `create_manifest_dependency` returns nothing for `npm:` and `jsr:` aliases
 (`tier2.rs:719-725`), so they reach neither task hashes nor the install fingerprint. **Live** (from
@@ -563,7 +596,9 @@ otherwise. For tags, report `*`, so moon records the first locked entry.
 
 ### #21 Cache writes shouldn't fail the call
 
-- [ ] Log and continue on `var::set` errors
+**Done:** only the log-and-continue half. moon's PDK is still on `warpgate_api` 0.19.
+
+- [x] Log and continue on `var::set` errors
 
 `extract_workspace_members_and_catalogs` returns `var::set` errors (`tier2.rs:309-315`), so
 `locate_dependencies_root` fails when the store is full. moon 2.6 keeps Extism's 1 MiB var limit, so
@@ -594,6 +629,9 @@ website docs.
 
 ## Release
 
+- **Before merging:** publish `nodejs_package_json` 0.5.0 (the new `WorkspaceProtocol::Requirement`
+  variant is breaking), bump the workspace dependency to it, and remove the `[patch.crates-io]`
+  entry from the root `Cargo.toml`.
 - `javascript_toolchain` embeds no proto tool, so it isn't blocked by moon's proto 0.64 release (a
   `master` build loads in moon 2.6.4). Phase 1 changes which tasks are inferred and how (#3–#6),
   what the sync writes (#7, #9), task hashes (#4, #11) and Docker output (#12, #13), so ship it as

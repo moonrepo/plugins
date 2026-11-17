@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed a `package.json` with a field that can't be parsed, like `"version": "1.0"` or an unusual
+  dependency range, losing its `devEngines.runtime` pin. Those fields are now skipped.
+
 ## 0.16.0
 
 #### 💥 Breaking

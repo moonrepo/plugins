@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed a `package.json` with a field that can't be parsed, like `"version": "1.0"` or an unusual
+  dependency range, losing its `engines.node`, `devEngines.runtime` or `volta.node` pin. Those
+  fields are now skipped.
+- Fixed a cycle in `volta.extends` overflowing the stack.
+
 ## 0.18.0
 
 #### 💥 Breaking

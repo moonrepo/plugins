@@ -38,6 +38,18 @@ impl JavaScriptPackageManager {
     pub fn is_standalone(&self) -> bool {
         matches!(self, Self::Bun | Self::Deno | Self::Nub)
     }
+
+    /// The lockfiles that this package manager writes.
+    pub fn get_lock_file_names(&self) -> &'static [&'static str] {
+        match self {
+            Self::Bun => &["bun.lock", "bun.lockb"],
+            Self::Deno => &["deno.lock"],
+            Self::Npm => &["package-lock.json", "npm-shrinkwrap.json"],
+            Self::Nub => &["nub.lock"],
+            Self::Pnpm => &["pnpm-lock.yaml"],
+            Self::Yarn => &["yarn.lock"],
+        }
+    }
 }
 
 derive_enum!(
@@ -149,6 +161,14 @@ config_struct!(
     }
 );
 
+// The JavaScript toolchain's own config, for functions that don't receive it.
+config_struct!(
+    #[derive(Default)]
+    pub struct LockConfig {
+        pub package_manager: Option<JavaScriptPackageManager>,
+    }
+);
+
 impl SharedPackageManagerConfig {
     pub fn version_satisfies(&self, req: &str) -> bool {
         let Some(spec) = &self.version else {
@@ -157,22 +177,61 @@ impl SharedPackageManagerConfig {
 
         let req = Requirement::parse(req).unwrap();
 
-        match spec {
-            UnresolvedVersionSpec::Canary => true,
-            UnresolvedVersionSpec::Requirement(value) => {
-                let mut version = Version::new(
-                    value.major.unwrap_or(0),
-                    value.minor.unwrap_or(0),
-                    value.patch.unwrap_or(0),
-                );
-                version.prerelease = value.prerelease.clone();
+        let mut version = match spec {
+            UnresolvedVersionSpec::Canary => return true,
+            // These resolve to the newest release
+            UnresolvedVersionSpec::Alias(alias) => return alias == "latest" || alias == "stable",
+            UnresolvedVersionSpec::Requirement(value) => Version::new(
+                value.major.unwrap_or(0),
+                value.minor.unwrap_or(0),
+                value.patch.unwrap_or(0),
+            ),
+            UnresolvedVersionSpec::Version(version) => version.clone(),
+            _ => return false,
+        };
 
-                req.matches(&version)
-            }
-            UnresolvedVersionSpec::Version(version) => req.matches(version),
-            _ => false,
-        }
+        // A prerelease, like `6.0.0-rc.23`, has the features of its release,
+        // but semver ranges like `>=2.0.0` don't match it
+        version.prerelease = None;
+        version.build = None;
+
+        req.matches(&version)
     }
 }
 
 pub type CatalogsMap = FxHashMap<String, FxHashMap<String, VersionProtocol>>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn config(version: &str) -> SharedPackageManagerConfig {
+        SharedPackageManagerConfig {
+            version: Some(UnresolvedVersionSpec::parse(version).unwrap()),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn satisfies_versions_and_requirements() {
+        assert!(config("1.4.0").version_satisfies(">=1.4.0"));
+        assert!(!config("1.3.9").version_satisfies(">=1.4.0"));
+        assert!(config("2").version_satisfies(">=2.0.0"));
+        assert!(!config("1").version_satisfies(">=2.0.0"));
+    }
+
+    #[test]
+    fn satisfies_prereleases_like_their_release() {
+        assert!(config("6.0.0-rc.23").version_satisfies(">=2.0.0"));
+        assert!(config("1.4.0-canary.1").version_satisfies(">=1.4.0"));
+        assert!(!config("1.3.0-rc.1").version_satisfies(">=1.4.0"));
+    }
+
+    #[test]
+    fn satisfies_latest_aliases() {
+        assert!(config("latest").version_satisfies(">=1.4.0"));
+        assert!(config("stable").version_satisfies(">=1.4.0"));
+        assert!(config("canary").version_satisfies(">=1.4.0"));
+        assert!(!SharedPackageManagerConfig::default().version_satisfies(">=1.4.0"));
+    }
+}

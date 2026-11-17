@@ -334,10 +334,11 @@ lifecycle scripts with `--allow-scripts` (confirmed with 2.9.8).
       `deno.lock` (`:166`), so a new Deno repo gets the prompt. Detect `deno.json` and `deno.jsonc`
       last, after every lockfile, so a Node repo with a stray `deno.json` keeps its lockfile's
       manager.
-- [ ] `tools/deno/src/proto.rs:58`: `parse_version_file` parses the whole `package.json` as
+- [x] `tools/deno/src/proto.rs:58`: `parse_version_file` parses the whole `package.json` as
       `PackageJson`, so an invalid `version` or dependency specifier silently drops the
       `devEngines.runtime` pin. Switch to the version-fields struct that `NODE.md` #1 adds to
       `lang-javascript-common` (handed over by `NODE.md`, which reproduced it for `node_tool`).
+      Done in the JavaScript pass: `nodejs_package_json` now skips fields it can't parse.
 - [ ] `toolchains/deno/tests/tier2_test.rs:118`, `:145` and `:200` call `create_toolchain("rust")`.
       The sandbox still loads the Deno WASM, but the ID is misleading. Use `deno`.
 

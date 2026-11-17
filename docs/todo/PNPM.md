@@ -137,9 +137,13 @@ an npm 12 and a Bun `patchedDependencies` entry copies each patch in the configs
 
 ### #2 `workspace:` ranges fail the whole project graph
 
-- [ ] Accept any range after `workspace:` in `nodejs_package_json`
-- [ ] Bump the crate and map the new variant
-- [ ] Tests
+**Done (2026-11-17, JavaScript pass):** upstream as `WorkspaceProtocol::Requirement { alias, req }`,
+with `VersionProtocol` deserializing anything else to `Unknown`. Until `nodejs_package_json` 0.5.0 is
+published, the root `Cargo.toml` patches it locally (`JAVASCRIPT.md` "Release").
+
+- [x] Accept any range after `workspace:` in `nodejs_package_json`
+- [x] Bump the crate and map the new variant
+- [x] Tests
 
 **Problem:** pnpm accepts any semver range after `workspace:`, like `workspace:^1`, `workspace:~1.2`
 or `workspace:>=1.0.0`. `nodejs_package_json` 0.4.11's `WorkspaceProtocol::from_str` only accepts

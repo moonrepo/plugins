@@ -214,11 +214,12 @@ directories come up.
 - [ ] `toolchains/node-depman/src/tier1.rs:65` (shared): `initialize_toolchain`'s `config_url` is
       `https://moonrepo.dev/docs/guides/javascript`, which returns 404. Use
       `https://moonrepo.dev/docs/guides/javascript/node-handbook`, which exists.
-- [ ] `tools/node-depman/src/proto.rs:78` (shared): `parse_version_file` parses the whole
+- [x] `tools/node-depman/src/proto.rs:78` (shared): `parse_version_file` parses the whole
       `package.json` as `PackageJson`, so an invalid `version` or dependency specifier silently drops
       the `packageManager` and `devEngines.packageManager` pins. Switch to the version-fields struct
       that `NODE.md` #1 adds to `lang-javascript-common` (handed over by `NODE.md`; reproduced there
       for `node_tool`, not for this tool).
+      Done in the JavaScript pass: `nodejs_package_json` now skips fields it can't parse.
 - [ ] `toolchains/node-depman/src/config.rs:10`: `installArgs` says "`npm install` commands". Say
       it also applies to `npm ci` and, after #3, `npm dedupe`.
 
