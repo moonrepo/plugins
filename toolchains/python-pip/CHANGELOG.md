@@ -4,6 +4,8 @@
 
 #### 🚀 Updates
 
+- `installArgs` now documents that it also applies to `uv pip install`, when the Python toolchain's
+  `packageManager` is `uv-pip`.
 - Panics now report their message, instead of an `unreachable` WASM trap error.
 
 ## 0.1.5

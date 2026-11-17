@@ -5175,20 +5175,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pyproject-toml"
-version = "0.13.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6d755483ad14b49e76713b52285235461a5b4f73f17612353e11a5de36a5fd2"
-dependencies = [
- "indexmap",
- "pep440_rs",
- "pep508_rs",
- "serde",
- "thiserror 2.0.21",
- "toml 0.9.12+spec-1.1.0",
-]
-
-[[package]]
 name = "python_pip_toolchain"
 version = "0.1.5"
 dependencies = [
@@ -5258,7 +5244,6 @@ dependencies = [
  "moon_pdk_test_utils",
  "pep440_rs",
  "pep508_rs",
- "pyproject-toml",
  "python_tool",
  "schematic",
  "serde",

@@ -1,8 +1,10 @@
 use crate::config::{PythonPackageManager, PythonToolchainConfig};
+use crate::pyproject_toml::PyProjectToml;
 use extism_pdk::*;
-use moon_config::LanguageType;
-use moon_pdk::{parse_toolchain_config, parse_toolchain_config_schema};
+use moon_config::{LanguageType, UnresolvedVersionSpec};
+use moon_pdk::parse_toolchain_config_schema;
 use moon_pdk_api::*;
+use python_tool::to_python_version;
 use schematic::SchemaBuilder;
 use starbase_utils::fs;
 use starbase_utils::json::JsonValue;
@@ -40,15 +42,15 @@ pub fn register_toolchain(
             "uv.toml".into(),
         ],
         lock_file_names: vec![
-            "pylock.toml".into(),
-            "constraints.txt".into(),
-            "requirements.txt".into(),
-            // pip
-            "Pipfile.lock".into(),
-            // poetry
-            "poetry.lock".into(),
             // uv
             "uv.lock".into(),
+            // poetry
+            "poetry.lock".into(),
+            // pip
+            "pylock.toml".into(),
+            "requirements.txt".into(),
+            "Pipfile.lock".into(),
+            "constraints.txt".into(),
         ],
         // For task detection
         exe_names: vec![
@@ -73,7 +75,7 @@ pub fn initialize_toolchain(
     Json(input): Json<InitializeToolchainInput>,
 ) -> FnResult<Json<InitializeToolchainOutput>> {
     let mut output = InitializeToolchainOutput {
-        config_url: Some("https://moonrepo.dev/docs/guides/python".into()),
+        config_url: Some("https://moonrepo.dev/docs/config/toolchain#python".into()),
         docs_url: Some("https://moonrepo.dev/docs/config/toolchain#python".into()),
         ..Default::default()
     };
@@ -107,10 +109,18 @@ fn detect_package_manager(root: &VirtualPath) -> AnyResult<Option<PythonPackageM
         return Ok(Some(PythonPackageManager::Uv));
     } else if root.join("poetry.toml").exists() || root.join("poetry.lock").exists() {
         return Ok(Some(PythonPackageManager::Poetry));
-    } else if root.join("Pipfile").exists()
-        || root.join("Pipfile.lock").exists()
-        || root.join("requirements.txt").exists()
-    {
+    }
+
+    let manifest = PyProjectToml::load(root.join("pyproject.toml"))?;
+
+    if manifest.get_tool_uv().is_some() {
+        return Ok(Some(PythonPackageManager::Uv));
+    } else if manifest.get_tool_poetry().is_some() {
+        return Ok(Some(PythonPackageManager::Poetry));
+    }
+
+    // Pipfiles are pipenv's, which pip can't install
+    if root.join("requirements.txt").exists() {
         return Ok(Some(PythonPackageManager::Pip));
     }
 
@@ -128,18 +138,27 @@ pub fn define_toolchain_config() -> FnResult<Json<DefineToolchainConfigOutput>> 
 pub fn define_docker_metadata(
     Json(input): Json<DefineDockerMetadataInput>,
 ) -> FnResult<Json<DefineDockerMetadataOutput>> {
-    let config = parse_toolchain_config::<PythonToolchainConfig>(input.toolchain_config)?;
+    // With the schema, so `venvName` gets its default
+    let config = parse_toolchain_config_schema::<PythonToolchainConfig>(input.toolchain_config)?;
+
+    let tag = match &config.version {
+        // Docker Hub uses CPython's form for pre-releases, like `3.15.0rc2`
+        Some(UnresolvedVersionSpec::Version(version)) => to_python_version(version),
+        Some(
+            version @ (UnresolvedVersionSpec::Requirement(_) | UnresolvedVersionSpec::Range(_)),
+        ) => version.to_partial_string(),
+        // Aliases like `stable` aren't tags
+        _ => "latest".into(),
+    };
 
     Ok(Json(DefineDockerMetadataOutput {
-        default_image: Some(format!(
-            "python:{}",
-            config
-                .version
-                .as_ref()
-                .map(|version| version.to_partial_string())
-                .unwrap_or_else(|| "latest".into())
-        )),
-        scaffold_globs: vec![],
+        default_image: Some(format!("python:{tag}")),
+        // The sources phase copies every file, and a venv from the host would
+        // be laid over the one `docker setup` created in the image
+        scaffold_globs: vec![
+            format!("!{}/**/*", config.venv_name),
+            format!("!**/{}/**/*", config.venv_name),
+        ],
     }))
 }
 

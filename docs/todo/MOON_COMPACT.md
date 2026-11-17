@@ -6,6 +6,21 @@ one list of them. The plugin plans link here instead of keeping their own.
 Paths and line numbers are at moon v2.6.5. Each item names the plan and item it came from. Changes
 outside moon, like proto and the registry, stay in their plans.
 
+## Releases
+
+### Ship proto 0.64
+
+- [ ] Update `proto_core` to 0.64 in a moon 2.x release
+
+**Problem:** the tools on plugins' `master` set `minimum_proto_version` to 0.64 (plugins#227), and
+toolchains embed them as tier 3. moon 2.6.5 still embeds proto_core 0.62.1, so it refuses to load
+any toolchain built from `master`, with or without `version`. **Live** (moon 2.6.4): "Unable to use
+the Python plugin with identifier python, as it requires a minimum proto version of 0.64.0-alpha.0,
+but found 0.62.2 instead". No toolchain has been released since, so users aren't affected yet, but
+none can be. moon_pdk_test_utils doesn't check the minimum, so the plugins' tests pass.
+
+**Source:** found while checking `PYTHON.md` Phase 1 live.
+
 ## Action pipeline
 
 ### Setup and install skips match any past run

@@ -66,9 +66,9 @@ All decisions are made.
 
 ### #1 `uv-pip` can't be used at all
 
-- [ ] Require `unstable_uv` and `unstable_pip` for `uv-pip`
-- [ ] Document that `unstable_pip.installArgs` also applies to `uv pip install`
-- [ ] Tests that assert the requested toolchain ID
+- [x] Require `unstable_uv` and `unstable_pip` for `uv-pip`
+- [x] Document that `unstable_pip.installArgs` also applies to `uv pip install`
+- [x] Tests that assert the requested toolchain ID
 
 **Problem:** `define_requirements` builds the ID with `format!("unstable_{package_manager}")`
 (`toolchains/python/src/tier2.rs:24`). `PythonPackageManager::UvPip` displays as `uv-pip`, so the
@@ -93,8 +93,8 @@ and venv setup whose `load_toolchain_config` mocks assert `pip` and `uv`.
 
 ### #2 `uv sync` at a workspace root skips the other members
 
-- [ ] Pass `--all-packages` when the root is a uv workspace
-- [ ] Tests
+- [x] Pass `--all-packages` when the root is a uv workspace
+- [x] Tests
 
 **Problem:** members collapse into one install at the workspace root, and the plugin runs a plain
 `uv sync` there (`tier2.rs:259-274`). In uv 0.13.8, a plain `uv sync` at a root that has its own
@@ -120,9 +120,9 @@ flag), the existing focused-projects case (no flag), and `syncArgs` with `--pack
 
 ### #3 Recreate the venv when its Python doesn't match `version`
 
-- [ ] Read `pyvenv.cfg`
-- [ ] Delete a stale venv before emitting the create command
-- [ ] Tests
+- [x] Read `pyvenv.cfg`
+- [x] Delete a stale venv before emitting the create command
+- [x] Tests
 
 **Problem:** `setup_environment` returns early whenever the venv exists (`tier2.rs:396-400`), so a
 `version` bump never reaches it. **Live:** after bumping `unstable_python.version` from 3.14.6 to
@@ -165,9 +165,9 @@ mismatch (venv removed and command emitted), a requirement, and an unset `versio
 
 ### #4 pip and `uv pip` with only a pyproject.toml
 
-- [ ] Install the project or its dependencies when there's no requirements file
-- [ ] Emit no install when there's nothing to install
-- [ ] Tests
+- [x] Install the project or its dependencies when there's no requirements file
+- [x] Emit no install when there's nothing to install
+- [x] Tests
 
 **Problem:** with no `requirements.txt` or `requirements.in`, the plugin runs
 `python -m pip install` or `uv pip install` with no requirements (`tier2.rs:287-300`). **Live:** a
@@ -200,8 +200,8 @@ requirements file plus a pyproject (unchanged).
 
 ### #5 Put the real lockfile first in `lock_file_names`
 
-- [ ] Reorder the Python toolchain's list
-- [ ] Test
+- [x] Reorder the Python toolchain's list
+- [x] Test
 
 **Problem:** moon's install fingerprint only hashes the first lockfile in `lock_file_names` that
 exists (moon `crates/actions/src/actions/install_dependencies.rs:282-297`). The order is
@@ -232,9 +232,9 @@ fix is in `MOON_COMPACT.md`.
 
 ### #6 Point every package manager at the configured venv
 
-- [ ] Set `VIRTUAL_ENV` from `extend_command`
-- [ ] Set `UV_PROJECT_ENVIRONMENT` for uv with a custom `venvName`
-- [ ] Tests
+- [x] Set `VIRTUAL_ENV` from `extend_command`
+- [x] Set `UV_PROJECT_ENVIRONMENT` for uv with a custom `venvName`
+- [x] Tests
 
 **Problem:** only pip honors a `venvName` other than `.venv`, since it runs the venv's `python` from
 PATH. Confirmed with the tools:
@@ -266,8 +266,8 @@ uv (with and without `UV_PROJECT_ENVIRONMENT`), pip and Poetry, and with no venv
 
 ### #7 Keep uv's fallback args when other args are configured
 
-- [ ] Always append the fallback args
-- [ ] Tests
+- [x] Always append the fallback args
+- [x] Tests
 
 **Problem:** `get_uv_fallback_args` (`tier2.rs:409-419`) is only used when `syncArgs` or `venvArgs`
 is empty (`tier2.rs:302-308`, `:383-392`). Configuring any arg, like `syncArgs: ['--all-extras']`,
@@ -295,8 +295,8 @@ flags), and a `uv-pip` install.
 
 ### #8 Keep venvs out of `docker scaffold`
 
-- [ ] Add exclusions to `scaffold_globs`
-- [ ] Test
+- [x] Add exclusions to `scaffold_globs`
+- [x] Test
 
 **Problem:** the toolchain has no `vendor_dir_name` (see "Not planned"), so nothing excludes the
 venv, and the sources phase copies each project's `**/*` (moon
@@ -320,9 +320,9 @@ the default and a custom name.
 
 ### #9 Production installs should drop what they exclude
 
-- [ ] uv: `--no-default-groups` instead of `--no-dev`
-- [ ] Poetry: `poetry sync --only main`
-- [ ] Tests
+- [x] uv: `--no-default-groups` instead of `--no-dev`
+- [x] Poetry: `poetry sync --only main`
+- [x] Tests
 
 **Problem:** `docker prune` runs `install_dependencies` with `production: true` to strip development
 packages (moon `crates/app/src/commands/docker/prune.rs:160-200`). Confirmed with the tools:
@@ -351,9 +351,9 @@ venv is at the root, so that deletes nothing, and the exact sync above is what p
 
 ### #10 Parse requirements files the way pip does
 
-- [ ] Join continuation lines and strip comments and options
-- [ ] Record `--hash` values
-- [ ] Unit tests outside the `wasm` feature (ADR-0006)
+- [x] Join continuation lines and strip comments and options
+- [x] Record `--hash` values
+- [x] Unit tests outside the `wasm` feature (ADR-0006)
 
 **Problem:** both parsers (`toolchains/python/src/managers/pip.rs:58-106`) give each raw line to
 `pep508_rs`, which rejects anything after the requirement. Confirmed with pep508_rs 0.9.2:
@@ -388,10 +388,10 @@ lines, an `#egg=` URL, and an invalid line (skipped).
 
 ### #11 Missing uv workspace edges
 
-- [ ] Dependency groups and `tool.uv.dev-dependencies`
-- [ ] Sources inherited from the workspace root
-- [ ] Path sources
-- [ ] Fixture and tests
+- [x] Dependency groups and `tool.uv.dev-dependencies`
+- [x] Sources inherited from the workspace root
+- [x] Path sources
+- [x] Fixture and tests
 
 **Problem:** `extend_project_graph` (`tier2.rs:37-137`) only links `[project].dependencies` and
 `optional-dependencies`, using the dependent's own `[tool.uv.sources]`:
@@ -428,9 +428,9 @@ source in the member and one inherited from the root, and an `include-group` ent
 
 ### #12 Poetry projects in the project graph
 
-- [ ] Read names from `[tool.poetry]`
-- [ ] Link path dependencies
-- [ ] Tests
+- [x] Read names from `[tool.poetry]`
+- [x] Link path dependencies
+- [x] Tests
 
 **Problem:** the graph only reads `[project]`. Projects in the Poetry 1.x style, with
 `[tool.poetry]` and no `[project]`, get no alias and no edges. Poetry 2.5.1 still installs them, and
@@ -461,9 +461,9 @@ tables, and a path to a wheel (no edge).
 
 ### #13 Parse pyproject.toml leniently
 
-- [ ] Own types for the fields the plugin reads
-- [ ] Skip requirements that can't be parsed
-- [ ] Tests
+- [x] Own types for the fields the plugin reads
+- [x] Skip requirements that can't be parsed
+- [x] Tests
 
 **Problem:** the plugin deserializes `pyproject_toml::Project`, whose dependency lists are typed
 `Vec<Requirement>`. So does `ToolUv.dev_dependencies` (`pyproject_toml.rs:144`). One requirement
@@ -501,19 +501,19 @@ manifest without `name`.
 
 All agreed:
 
-- [ ] `initialize_toolchain`'s `config_url` (`tier1.rs:76`) is
+- [x] `initialize_toolchain`'s `config_url` (`tier1.rs:76`) is
       `https://moonrepo.dev/docs/guides/python`, which doesn't exist in moon v2.6.5's
       `website/docs/guides`. Point it at `config/toolchain#python`, like `docs_url` and Go's, until
       a Python guide exists (`MOON_COMPACT.md`).
-- [ ] `detect_package_manager` (`tier1.rs:105-120`) picks pip for `Pipfile` and `Pipfile.lock`,
+- [x] `detect_package_manager` (`tier1.rs:105-120`) picks pip for `Pipfile` and `Pipfile.lock`,
       which pip can't install. Drop those checks, so Pipfile repos get the prompt. Also detect
       `[tool.uv]` and `[tool.poetry]` in the root `pyproject.toml` (#13's struct), checked in the
       order uv files, Poetry files, `[tool.uv]`, `[tool.poetry]`, then `requirements.txt`.
-- [ ] `define_docker_metadata` (`tier1.rs:134-141`) emits `python:3.15.0-rc.2` for a prerelease.
+- [x] `define_docker_metadata` (`tier1.rs:134-141`) emits `python:3.15.0-rc.2` for a prerelease.
       Docker Hub tags use CPython's form, `3.15.0rc2`. Use `python_tool`'s `to_python_version` for
       exact versions, exported with `pub use version::to_python_version;` (no tool release, since
       its behavior doesn't change). Map aliases other than `latest`, like `stable`, to `latest`.
-- [ ] Remove the unused `PythonVenvLocation` enum and its commented-out setting (`config.rs:17-25`,
+- [x] Remove the unused `PythonVenvLocation` enum and its commented-out setting (`config.rs:17-25`,
       `:36-38`).
 
 Not doing: adding only the host OS's `Scripts` or `bin` (`tier2.rs:147-148`). A PATH entry that
@@ -763,6 +763,15 @@ matches no toolchain inherits its project's (moon
 moon changes are tracked in [`MOON_COMPACT.md`](MOON_COMPACT.md).
 
 ## Release
+
+**Blocked:** every tool on `master` sets `minimum_proto_version` to 0.64 (#227), and the toolchains
+embed them as tier 3. moon 2.6.4 and 2.6.5 embed proto_core 0.62, and refuse to load the plugin:
+"Unable to use the Python plugin with identifier python, as it requires a minimum proto version of
+0.64.0-alpha.0, but found 0.62.2 instead". This fails with or without `version`, so no toolchain
+can be released from `master` until moon ships proto 0.64 (`MOON_COMPACT.md`), unless the embedded
+tools lower their minimum. The test sandbox doesn't check the minimum, so the tests pass. Phase 1
+was checked live with a local build whose `python_tool` and `python_uv_tool` minimums were lowered
+to 0.62.
 
 - `python_toolchain`: ship Phase 1 as 0.4.0 (the toolchain is unstable and pre-1.0), with changelog
   callouts for what changes installs: `uv-pip` needs `unstable_pip` too (#1), `--all-packages` (#2),
