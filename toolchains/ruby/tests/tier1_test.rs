@@ -131,6 +131,17 @@ mod ruby_toolchain_tier1 {
                 .await;
 
             assert_eq!(output.default_image.unwrap(), "ruby:3.3");
+
+            for (version, image) in [(">=3.3", "ruby:latest"), ("<=3.3", "ruby:3.3")] {
+                let output = plugin
+                    .define_docker_metadata(DefineDockerMetadataInput {
+                        toolchain_config: json!({ "version": version }),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert_eq!(output.default_image.unwrap(), image, "{version}");
+            }
         }
 
         #[tokio::test(flavor = "multi_thread")]

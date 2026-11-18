@@ -25,13 +25,29 @@ mod deno_toolchain_tier1 {
             let output = plugin
                 .define_docker_metadata(DefineDockerMetadataInput {
                     toolchain_config: json!({
-                        "version": "1.2"
+                        "version": "2.9.8"
                     }),
                     ..Default::default()
                 })
                 .await;
 
-            assert_eq!(output.default_image.unwrap(), "denoland/deno:1.2");
+            assert_eq!(output.default_image.unwrap(), "denoland/deno:2.9.8");
+
+            // Deno only tags full versions
+            for (version, image) in [
+                ("2.9", "denoland/deno:latest"),
+                ("~2.9.0", "denoland/deno:latest"),
+                ("canary", "denoland/deno:latest"),
+            ] {
+                let output = plugin
+                    .define_docker_metadata(DefineDockerMetadataInput {
+                        toolchain_config: json!({ "version": version }),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert_eq!(output.default_image.unwrap(), image, "{version}");
+            }
         }
     }
 }

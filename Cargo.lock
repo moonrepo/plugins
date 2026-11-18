@@ -7270,6 +7270,7 @@ name = "toolchain_common"
 version = "0.0.0"
 dependencies = [
  "common",
+ "moon_pdk_api",
 ]
 
 [[package]]

@@ -6,6 +6,13 @@
 
 - Panics now report their message, instead of an `unreachable` WASM trap error.
 
+#### 🐞 Fixes
+
+- Fixed the default Docker image for a version bound being the oldest allowed version, like
+  `node:20` for `>=20`, or one outside the range, like `node:22` for `<22`. It's now `node:latest`.
+- Fixed the default Docker image not existing for the `stable`, `lts-<codename>` and
+  `lts/<codename>` aliases. They now use `node:lts` and `node:<codename>`.
+
 ## 1.0.5
 
 #### 🚀 Updates

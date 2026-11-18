@@ -8,6 +8,9 @@
 
 #### 🐞 Fixes
 
+- Fixed the default Docker image not existing for a partial version, like `2.9` or `~2.9.0`, an
+  alias, `canary`, or a version bound, as Deno only publishes full versions, like `2.9.8`. It's now
+  `denoland/deno:latest`.
 - Fixed the globals directory not being on `PATH` for tasks when `DENO_INSTALL_ROOT` ends with
   `bin`, which Deno v2.2.11+ uses as-is instead of its `bin` subdirectory. The same applies to
   `DENO_HOME`.

@@ -6,7 +6,7 @@ use moon_pdk_api::*;
 use ruby_tool::parse_ruby_version_file;
 use schematic::SchemaBuilder;
 use starbase_utils::fs;
-use toolchain_common::enable_tracing;
+use toolchain_common::{enable_tracing, get_docker_image_tag};
 
 #[plugin_fn]
 pub fn register_toolchain(
@@ -95,11 +95,7 @@ pub fn define_docker_metadata(
     Ok(Json(DefineDockerMetadataOutput {
         default_image: Some(format!(
             "ruby:{}",
-            config
-                .version
-                .as_ref()
-                .map(|version| version.to_partial_string())
-                .unwrap_or_else(|| "latest".into())
+            get_docker_image_tag(config.version.as_ref(), |_| None)
         )),
         // Manifests, lockfiles, and config files are included automatically.
         // Gemspecs from `bundle gem` require their version file, so it's

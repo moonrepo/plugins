@@ -7,8 +7,7 @@ use moon_pdk::parse_toolchain_config;
 use moon_pdk_api::*;
 use schematic::SchemaBuilder;
 use starbase_utils::fs;
-use toolchain_common::enable_tracing;
-use toolchain_common::resolve_source_path;
+use toolchain_common::{enable_tracing, get_docker_image_tag, resolve_source_path};
 
 #[plugin_fn]
 pub fn register_toolchain(
@@ -67,22 +66,12 @@ pub fn define_docker_metadata(
     let config = parse_toolchain_config::<GoToolchainConfig>(input.toolchain_config)?;
 
     Ok(Json(DefineDockerMetadataOutput {
-        default_image: Some(get_docker_image(config.version.as_ref())),
+        default_image: Some(format!(
+            "golang:{}",
+            get_docker_image_tag(config.version.as_ref(), |_| None)
+        )),
         ..Default::default()
     }))
-}
-
-// Image tags are plain versions (`1.24`, `1.24.3`), so requirements
-// like `~1.24` must drop their operator
-fn get_docker_image(version: Option<&UnresolvedVersionSpec>) -> String {
-    match version {
-        Some(version)
-            if !version.is_canary() && !matches!(version, UnresolvedVersionSpec::Alias(_)) =>
-        {
-            format!("golang:{}", version.to_partial_string())
-        }
-        _ => "golang:latest".into(),
-    }
 }
 
 #[plugin_fn]

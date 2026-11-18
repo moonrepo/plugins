@@ -8,7 +8,7 @@ use moon_pdk_api::*;
 use schematic::SchemaBuilder;
 use starbase_utils::fs;
 use std::path::{Path, PathBuf};
-use toolchain_common::enable_tracing;
+use toolchain_common::{enable_tracing, get_docker_image_tag};
 
 #[plugin_fn]
 pub fn register_toolchain(
@@ -87,10 +87,7 @@ fn get_docker_image(version: Option<&UnresolvedVersionSpec>) -> String {
         {
             "rustlang/rust:nightly".into()
         }
-        Some(version) if !version.is_alias("stable") && !version.is_alias("beta") => {
-            format!("rust:{}", version.to_partial_string())
-        }
-        _ => "rust:latest".into(),
+        _ => format!("rust:{}", get_docker_image_tag(version, |_| None)),
     }
 }
 

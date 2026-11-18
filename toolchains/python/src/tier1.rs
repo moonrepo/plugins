@@ -9,7 +9,7 @@ use schematic::SchemaBuilder;
 use starbase_utils::json::JsonValue;
 use starbase_utils::{fs, glob};
 use std::path::PathBuf;
-use toolchain_common::enable_tracing;
+use toolchain_common::{enable_tracing, get_docker_image_tag};
 
 #[plugin_fn]
 pub fn register_toolchain(
@@ -149,11 +149,8 @@ pub fn define_docker_metadata(
     let tag = match &config.version {
         // Docker Hub uses CPython's form for pre-releases, like `3.15.0rc2`
         Some(UnresolvedVersionSpec::Version(version)) => to_python_version(version),
-        Some(
-            version @ (UnresolvedVersionSpec::Requirement(_) | UnresolvedVersionSpec::Range(_)),
-        ) => version.to_partial_string(),
         // Aliases like `stable` aren't tags
-        _ => "latest".into(),
+        version => get_docker_image_tag(version.as_ref(), |_| None),
     };
 
     Ok(Json(DefineDockerMetadataOutput {

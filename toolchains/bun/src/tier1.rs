@@ -3,7 +3,7 @@ use extism_pdk::*;
 use moon_pdk::parse_toolchain_config;
 use moon_pdk_api::*;
 use schematic::SchemaBuilder;
-use toolchain_common::enable_tracing;
+use toolchain_common::{enable_tracing, get_docker_image_tag};
 
 #[plugin_fn]
 pub fn register_toolchain(
@@ -47,13 +47,9 @@ pub fn define_docker_metadata(
 ) -> FnResult<Json<DefineDockerMetadataOutput>> {
     let config = parse_toolchain_config::<BunToolchainConfig>(input.toolchain_config)?;
 
-    let tag = match &config.version {
-        // A bound would pick the oldest image, like `1.2.0` for `>=1.2.0`,
-        // or one that doesn't exist, like `2` for `<2`
-        Some(version) if version.to_string().starts_with(['<', '>']) => "latest".into(),
-        Some(version) => version.to_partial_string(),
-        None => "latest".into(),
-    };
+    let tag = get_docker_image_tag(config.version.as_ref(), |alias| {
+        (alias == "canary").then(|| alias.into())
+    });
 
     Ok(Json(DefineDockerMetadataOutput {
         default_image: Some(format!("oven/bun:{tag}")),

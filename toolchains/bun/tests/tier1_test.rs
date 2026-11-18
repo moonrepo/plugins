@@ -33,7 +33,13 @@ mod bun_toolchain_tier1 {
 
             assert_eq!(output.default_image.unwrap(), "oven/bun:1.2");
 
-            for version in [">=1.2.0", ">1.2", "<2", "<=1.4"] {
+            for (version, image) in [
+                (">=1.2.0", "oven/bun:latest"),
+                (">1.2", "oven/bun:latest"),
+                ("<2", "oven/bun:latest"),
+                ("<=1.4", "oven/bun:1.4"),
+                ("canary", "oven/bun:canary"),
+            ] {
                 let output = plugin
                     .define_docker_metadata(DefineDockerMetadataInput {
                         toolchain_config: json!({ "version": version }),
@@ -41,11 +47,7 @@ mod bun_toolchain_tier1 {
                     })
                     .await;
 
-                assert_eq!(
-                    output.default_image.unwrap(),
-                    "oven/bun:latest",
-                    "{version}"
-                );
+                assert_eq!(output.default_image.unwrap(), image, "{version}");
             }
         }
     }
