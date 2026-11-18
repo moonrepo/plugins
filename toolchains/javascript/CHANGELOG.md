@@ -37,6 +37,17 @@
   can't install `link:` paths. Synced specs change once.
 - `docker scaffold` now copies `patches/`, where `bun patch`, `npm patch`, `pnpm patch` and
   patch-package write patches, into the configs skeleton.
+- Deno installs in CI now run `deno install --frozen` whenever `deno.lock` exists, so a stale
+  lockfile now fails CI installs when `deno.version` is unset or an alias. Before, Deno 2.8 or later
+  ran `deno ci`, which rejected `installArgs` like `--allow-scripts`. Production installs in CI now
+  also pass `--prod` on 2.8 or later.
+- With Deno, projects with only a `deno.json` or `deno.jsonc` are now in the project graph, aliased
+  by its `name`, with edges from `jsr:` and `npm:` imports that name another project. Their tasks
+  are inferred too, and so are `package.json` scripts, as `deno task <name>`, unless `deno.json`
+  has a task with the same name.
+- Deno workspaces now use the members of both `deno.json` and the root `package.json`, and
+  `package.json`'s catalogs when both define them, as Deno does.
+- Package manager detection now picks Deno from a `deno.json` or `deno.jsonc`, after every lockfile.
 - Version-gated behavior now treats a `latest` or `stable` version as the newest release, and a
   prerelease, like `6.0.0-rc.1`, like its release.
 
@@ -84,6 +95,13 @@
   They're now parsed like version 3.
 - Fixed `bun dedupe` failing every run after an install on Bun 1.4.0 with `bun.lockb`. It now
   requires Bun 1.4.1.
+- Fixed inferred `deno.json` tasks with `dependencies` running them twice, once as moon tasks and
+  again in `deno task`. They now run `deno task --eval "<command>"`, and tasks with only
+  `dependencies` are `noop`.
+- Fixed `deno.json` tasks named like npm lifecycle scripts, like `install`, not being inferred.
+- Fixed `deno.lock` npm packages being keyed as `npm:<name>`, so task hashes recorded the
+  `package.json` requirement instead of the locked version. Deno task hashes change once.
+- Fixed `deno.lock` packages with a `_` in their name, like `string_decoder`, being dropped.
 
 #### ⚙️ Internal
 

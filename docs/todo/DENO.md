@@ -84,10 +84,13 @@ Test mocks: the Deno install tests in `toolchains/javascript/tests/tier2_test.rs
 
 ## Decisions needed
 
-| Decision                                                                  | Recommendation                                                                     |
-| ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| D1 (#10, #12): where should Deno's setup and `deno.json` parsing run?     | The JavaScript toolchain, which already owns Deno's root and lockfile              |
-| D2 (#13): should projects with only a `deno.json` join the project graph? | Yes: alias from `name`, inferred tasks, and edges from `imports` naming a project  |
+| Decision                                                                  | Outcome                                                                       |
+| ------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| D1 (#10, #12): where should Deno's setup and `deno.json` parsing run?     | **Decided:** wait for moon, which schedules or hashes them without a root     |
+| D2 (#13): should projects with only a `deno.json` join the project graph? | **Decided:** yes: alias from `name`, inferred tasks, and edges from `imports` |
+
+Decided and implemented on 2026-11-18, on the `js-audit` branch with `JAVASCRIPT.md` and `BUN.md`.
+The pass covered everything but #10, #12 (D1) and #14, plus #3's `activate_environment`.
 
 D1 applies to every toolchain whose tier 2 lives in another toolchain. Node hit it in plugins#96,
 which was closed by deprecating `syncVersionManagerConfig` rather than moving it, so there's no
@@ -97,9 +100,9 @@ precedent either way, and whichever way it's decided may be worth an ADR.
 
 ### #1 CI installs: `deno ci` rejects `installArgs`, and unversioned configs never freeze
 
-- [ ] Use `deno install --frozen` in CI when `deno.lock` exists, for every version
-- [ ] Keep the 2.8.0 gate for `--prod` only
-- [ ] Tests
+- [x] Use `deno install --frozen` in CI when `deno.lock` exists, for every version
+- [x] Keep the 2.8.0 gate for `--prod` only
+- [x] Tests: `freezes_the_lockfile_in_ci` and `freezes_production_installs_in_ci`
 
 **Problem:** the Deno arm of `install_dependencies` (`toolchains/javascript/src/tier2.rs:463-489`)
 runs `deno ci` in CI when a `deno.lock` exists and `deno.version` satisfies `>=2.8.0` (`:469`):
@@ -140,8 +143,9 @@ two code paths for the same result.
 
 ### #2 `executeArgs` break every `deno <subcommand>` task
 
-- [ ] Insert the args after the subcommand
-- [ ] Tests
+- [x] Insert the args after the subcommand
+- [x] Tests: `inserts_exec_args_after_runtime_subcommands`. A first arg with `.`, `/` or `:` counts
+      as a script, and any other name as a subcommand that rejects runtime flags.
 
 **Problem:** `extend_task_command` prepends `executeArgs` to the task's args
 (`toolchains/deno/src/tier2.rs:63-65`), so `deno run -A main.ts` becomes
@@ -160,9 +164,11 @@ which failed with "unexpected argument '--allow-env' found". Deno 2.0.6 fails th
 
 ### #3 Deno's bin directory isn't on `PATH` without `version`
 
-- [ ] Always return the directory `deno install --global` writes to
-- [ ] Tests
-- [ ] Changelog
+- [x] Always return the directory `deno install --global` writes to
+- [x] Tests
+- [x] Changelog
+- [x] Add `BUN.md` #1's `activate_environment` to `tools/deno` (decided without a live repro, as a
+      `master` `deno_toolchain` can't load in moon 2.6.4)
 
 **Problem:** `gather_shared_paths` returns no paths when `globals_dir` resolves
 (`toolchains/deno/src/tier2.rs:20-26`). moon always passes one (moon
@@ -202,10 +208,11 @@ scripts.
 
 ### #4 Inferred Deno tasks run their dependencies twice, and lose tasks named like npm hooks
 
-- [ ] Use `deno task --eval` for tasks with `dependencies`
-- [ ] Skip the npm lifecycle filters for `deno.json` tasks
-- [ ] Infer dependency-only tasks as `noop`
-- [ ] Tests
+- [x] Use `deno task --eval` for tasks with `dependencies`
+- [x] Skip the npm lifecycle filters for `deno.json` tasks (the `pre`/`post` ones in the JavaScript
+      pass)
+- [x] Infer dependency-only tasks as `noop`
+- [x] Tests
 
 **Problem:** `infer_from_deno_tasks` (`toolchains/javascript/src/infer_tasks.rs:30-58`) turns each
 task into `deno task <name>` (`:91-95`), with its `dependencies` as moon `deps`. Deno runs a task's
@@ -233,10 +240,10 @@ a dependency-only task.
 
 ### #5 `deno.lock` entries don't match `package.json` names, and names with `_` are dropped
 
-- [ ] Key npm entries by package name
-- [ ] Strip the peer suffix after splitting the name
-- [ ] Unit tests (ADR-0006)
-- [ ] Changelog
+- [x] Key npm entries by package name
+- [x] Strip the peer suffix after splitting the name
+- [x] Unit tests (ADR-0006)
+- [x] Changelog
 
 **Problem:** `parse_deno_lock` keys npm packages as `npm:<name>`
 (`toolchains/javascript/src/lockfiles/deno.rs:36`). moon looks locked versions up by the manifest's
@@ -266,9 +273,9 @@ the `ts-node` peer key. Update `parses_deno` for the new keys.
 
 ### #6 Members from a root `package.json` are ignored when `deno.json` has a `workspace`
 
-- [ ] Merge both member lists
-- [ ] Take catalogs from `package.json` when both define them
-- [ ] Tests
+- [x] Merge both member lists
+- [x] Take catalogs from `package.json` when both define them
+- [x] Tests
 
 **Problem:** for Deno, `extract_workspace_members_and_catalogs` takes members from `deno.json`
 (`toolchains/javascript/src/tier2.rs:265-270`), and only reads `package.json` when there are none
@@ -287,8 +294,11 @@ wins entirely (Deno's workspace docs). The plugin prefers `deno.json`'s.
 
 ### #7 Docker default image for partial versions and aliases
 
-- [ ] Only use full versions
-- [ ] Tests
+- [x] Only use full versions
+- [x] Tests
+
+**Done** by the shared `get_docker_image_tag` (`docs/adr/draft-default-docker-image-tags.md`).
+Unlike the change below, `^2.9.0` is `latest`, not `2.9.0`, as only a full version gets a tag.
 
 **Problem:** `define_docker_metadata` formats `denoland/deno:{to_partial_string()}`
 (`toolchains/deno/src/tier1.rs:49-57`). Docker Hub only publishes full versions: `2.9.8`, `2.9.0`
@@ -303,8 +313,8 @@ and `latest` otherwise, including aliases.
 
 ### #8 Docker scaffold copies project sources into the configs skeleton
 
-- [ ] Drop `ts` from the scaffold glob
-- [ ] Test
+- [x] Drop `ts` from the scaffold glob
+- [x] Test
 
 **Problem:** `scaffold_globs` is `*.{js,cjs,mjs,ts}` (`toolchains/deno/src/tier1.rs:58-61`), for
 "postinstall scripts". moon applies it in every project root. `main.ts` and `mod.ts` at a project
@@ -322,15 +332,15 @@ lifecycle scripts with `--allow-scripts` (confirmed with 2.9.8).
 
 ### #9 Small fixes
 
-- [ ] `parse_deno_lock` (`toolchains/javascript/src/lockfiles/deno.rs:12-47`): a v3 lockfile (Deno
+- [x] `parse_deno_lock` (`toolchains/javascript/src/lockfiles/deno.rs:12-47`): a v3 lockfile (Deno
       1.x) nests its sections under `packages`, so `LockfileContent::from_json` returns no
       packages, and nothing is logged (confirmed with deno_lockfile 0.51.0). ADR-0008.9 requires a
       `debug!` when the `version` isn't 4 or 5. Deno 2 rewrites v3 files on its next install.
-- [ ] `DENO_HOME` isn't a Deno variable: Deno's environment variable docs don't list it, and live,
+- [x] `DENO_HOME` isn't a Deno variable: Deno's environment variable docs don't list it, and live,
       `DENO_HOME=<dir> deno install -g` wrote to `$HOME/.deno/bin`. Remove it from
       `tools/deno/src/proto.rs:330` (a `globals_lookup_dirs` entry that proto picks first when it
       has files) and from `toolchains/deno/src/tier2.rs:33` (with #3).
-- [ ] `detect_package_manager` (`toolchains/javascript/src/tier1.rs:155-179`) only detects Deno from
+- [x] `detect_package_manager` (`toolchains/javascript/src/tier1.rs:155-179`) only detects Deno from
       `deno.lock` (`:166`), so a new Deno repo gets the prompt. Detect `deno.json` and `deno.jsonc`
       last, after every lockfile, so a Node repo with a stray `deno.json` keeps its lockfile's
       manager.
@@ -339,12 +349,15 @@ lifecycle scripts with `--allow-scripts` (confirmed with 2.9.8).
       `devEngines.runtime` pin. Switch to the version-fields struct that `NODE.md` #1 adds to
       `lang-javascript-common` (handed over by `NODE.md`, which reproduced it for `node_tool`).
       Done in the JavaScript pass: `nodejs_package_json` now skips fields it can't parse.
-- [ ] `toolchains/deno/tests/tier2_test.rs:118`, `:145` and `:200` call `create_toolchain("rust")`.
+- [x] `toolchains/deno/tests/tier2_test.rs:118`, `:145` and `:200` call `create_toolchain("rust")`.
       The sandbox still loads the Deno WASM, but the ID is misleading. Use `deno`.
 
 ## Phase 2: after decisions
 
 ### #10 `deno.bins` are never installed (D1)
+
+**Waiting for moon (D1):** "Schedule `SetupEnvironment` for toolchains without a dependencies root"
+in `MOON_COMPACT.md`. The Deno toolchain keeps its `setup_environment`.
 
 - [ ] Run the bin installs from the JavaScript toolchain's `setup_environment`
 - [ ] Remove the Deno toolchain's `setup_environment`
@@ -385,8 +398,8 @@ toolchain, with a mock that asserts the `deno` ID. Update `does_nothing_if_deno`
 
 ### #11 Make bin installs idempotent (with #10)
 
-- [ ] Always pass `--force`
-- [ ] Tests
+- [x] Always pass `--force`, done ahead of #10, so the installs don't fail once moon runs them
+- [x] Tests
 
 **Problem:** `deno install --global` refuses to overwrite: running the same install twice fails with
 "Existing installation found. Aborting (Use -f to overwrite)." (confirmed with 2.9.8). `--force` is
@@ -400,6 +413,11 @@ which the Go audit accepted (Go D5).
 **Tests:** expect `--force` in every bin command.
 
 ### #12 `deno.json` imports never reach task hashes (D1)
+
+**Waiting for moon (D1):** "Hash the manifests of toolchains without a dependencies root" in
+`MOON_COMPACT.md`. The Deno toolchain's `parse_manifest` still keys imports by alias, cuts subpath
+versions and skips `catalog:`, so fix those when moon calls it. `get_import_package_name`
+(`lockfiles/deno.rs`, added for #13) already finds the package name.
 
 - [ ] Parse `deno.json` and `deno.jsonc` in the JavaScript toolchain
 - [ ] Key imports like the lockfile (#5)
@@ -451,10 +469,10 @@ member that inherits the root's imports. Live: a lockfile bump changes the task 
 
 ### #13 Projects with only a `deno.json` aren't in the project graph (D2)
 
-- [ ] Collect `deno.json` projects
-- [ ] Alias and edges from `deno.json`
-- [ ] Infer `deno.json` tasks and `package.json` scripts
-- [ ] Tests
+- [x] Collect `deno.json` projects
+- [x] Alias and edges from `deno.json`
+- [x] Infer `deno.json` tasks and `package.json` scripts
+- [x] Tests: `includes_deno_json_projects`
 
 **Problem:** `extend_project_graph`'s first pass only collects projects with a `package.json`
 (`toolchains/javascript/src/tier2.rs:30-58`), and the second pass, which infers Deno tasks
@@ -504,7 +522,7 @@ package manager. It needs moon's "Let plugins report whether dependencies are in
 
 ### #15 Detection names
 
-- [ ] `exe_names` (`toolchains/deno/src/tier1.rs:17`, and the JavaScript toolchain's
+- [x] `exe_names` (`toolchains/deno/src/tier1.rs:17`, and the JavaScript toolchain's
       `tier1.rs:73-96`): add `dx`, which `deno x --install-alias` creates, as Bun lists `bunx`.
 
 ## Not planned

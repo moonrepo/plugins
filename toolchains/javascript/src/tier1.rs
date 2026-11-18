@@ -77,6 +77,7 @@ pub fn register_toolchain(
             "bunx".into(),
             // deno
             "deno".into(),
+            "dx".into(),
             // node
             "node".into(),
             "nodejs".into(),
@@ -189,6 +190,10 @@ fn detect_package_manager(root: &VirtualPath) -> AnyResult<Option<JavaScriptPack
         return Ok(Some(JavaScriptPackageManager::Pnpm));
     } else if root.join("yarn.lock").exists() {
         return Ok(Some(JavaScriptPackageManager::Yarn));
+    }
+    // Last, so a stray `deno.json` doesn't override another manager's lockfile
+    else if root.join("deno.json").exists() || root.join("deno.jsonc").exists() {
+        return Ok(Some(JavaScriptPackageManager::Deno));
     }
 
     Ok(None)

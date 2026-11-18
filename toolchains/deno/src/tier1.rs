@@ -14,7 +14,8 @@ pub fn register_toolchain(
     Ok(Json(RegisterToolchainOutput {
         name: "Deno".into(),
         plugin_version: env!("CARGO_PKG_VERSION").into(),
-        exe_names: vec!["deno".into()],
+        // `deno x --install-alias` creates `dx`
+        exe_names: vec!["deno".into(), "dx".into()],
         manifest_file_names: vec!["deno.json".into(), "deno.jsonc".into()],
         lock_file_names: vec!["deno.lock".into()],
         vendor_dir_name: Some("node_modules".into()),
@@ -58,7 +59,7 @@ pub fn define_docker_metadata(
         default_image: Some(format!("denoland/deno:{tag}")),
         scaffold_globs: vec![
             // postinstall scripts, etc
-            "*.{js,cjs,mjs,ts}".into(),
+            "*.{js,cjs,mjs}".into(),
         ],
     }))
 }

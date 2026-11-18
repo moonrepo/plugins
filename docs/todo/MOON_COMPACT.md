@@ -171,12 +171,27 @@ JavaScript toolchain never run their `setup_environment`:
 - `yarn.plugins` have never run (`YARN.md` #10, **live**).
 - Node's `syncVersionManagerConfig` never wrote a file (plugins#96), and was deprecated for it.
 
-**Change:** schedule it once at the workspace root for such toolchains. `DENO.md` D1 recommends
-moving Deno's setup into the JavaScript toolchain instead, and `YARN.md` D2 deprecating
-`yarn.plugins`, so this is only needed if those go the other way, or for future toolchains in this
-shape.
+**Change:** schedule it once at the workspace root for such toolchains. `DENO.md` D1 was decided
+for this (2026-11-18), instead of moving Deno's setup into the JavaScript toolchain, so Deno needs
+it. `YARN.md` D2 recommends deprecating `yarn.plugins` instead.
 
 **Source:** `DENO.md` #10 (Alternative B) and `YARN.md` #10.
+
+### Hash the manifests of toolchains without a dependencies root
+
+- [ ] Parse a toolchain's manifests for task hashes when another toolchain owns the root
+
+**Problem:** the task hasher starts each toolchain's dependency versions from its own
+`locate_dependencies_root`, and skips a toolchain without one
+(`crates/task-hasher/src/task_hashing.rs:255-266`). The Deno toolchain's `parse_manifest` is never
+called, as the JavaScript toolchain owns Deno's root, so `deno.json` imports never reach task
+hashes (`DENO.md` #12, **live**).
+
+**Change:** for a toolchain with `parse_manifest` but no `locate_dependencies_root`, parse its
+manifests from the root of a toolchain it's used with, like `javascript` for `deno`. `DENO.md` D1
+chose this over parsing `deno.json` in the JavaScript toolchain.
+
+**Source:** `DENO.md` #12.
 
 ### Tell `install_dependencies` when it runs in Docker
 

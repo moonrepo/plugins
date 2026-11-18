@@ -364,13 +364,33 @@ mod javascript_toolchain_tier2 {
                         }
                     ),
                     (
-                        Id::raw("start"),
+                        Id::raw("release"),
                         PartialTaskConfig {
-                            description: Some("Inherited from `start` deno.json task.".into()),
+                            description: Some(
+                                "Inherited from `release` package.json script.".into()
+                            ),
                             command: Some(PartialTaskArgs::List(vec![
                                 "deno".into(),
                                 "task".into(),
-                                "start".into(),
+                                "release".into(),
+                            ])),
+                            toolchains: Some(OneOrMany::Many(vec![
+                                Id::raw("javascript"),
+                                Id::raw("deno"),
+                            ])),
+                            ..Default::default()
+                        }
+                    ),
+                    (
+                        Id::raw("start"),
+                        PartialTaskConfig {
+                            description: Some("Inherited from `start` deno.json task.".into()),
+                            // moon runs `build`, which `deno task start` would run again
+                            command: Some(PartialTaskArgs::List(vec![
+                                "deno".into(),
+                                "task".into(),
+                                "--eval".into(),
+                                "deno run -RN server.ts".into(),
                             ])),
                             deps: Some(vec![PartialTaskDependency::Target(
                                 Target::parse("~:build").unwrap()
@@ -386,6 +406,126 @@ mod javascript_toolchain_tier2 {
                     )
                 ])
             );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn includes_deno_json_projects() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "app/deno.json",
+                json!({
+                    "name": "@x/app",
+                    "imports": {
+                        "@x/lib": "jsr:@x/lib@^1.0.0",
+                        "@std/path": "jsr:@std/path@^1.0.0",
+                        "self": "jsr:@x/app"
+                    },
+                    "tasks": { "start": "deno run main.ts" }
+                })
+                .to_string(),
+            );
+            sandbox.create_file(
+                "lib/deno.jsonc",
+                "// Comments are allowed\n{ \"name\": \"@x/lib\", \"exports\": \"./mod.ts\" }",
+            );
+            sandbox.create_file(
+                "web/package.json",
+                r#"{ "name": "web", "scripts": { "build": "vite build", "start": "vite" } }"#,
+            );
+            sandbox.create_file(
+                "web/deno.json",
+                r#"{ "tasks": { "start": "deno run dev.ts" } }"#,
+            );
+
+            let output = extend_graph(
+                &sandbox,
+                &["app", "lib", "web"],
+                json!({ "inferTasksFromScripts": true, "packageManager": "deno" }),
+            )
+            .await;
+
+            assert_eq!(
+                output.extended_projects["app"].alias.as_deref(),
+                Some("@x/app")
+            );
+            assert_eq!(
+                output.extended_projects["lib"].alias.as_deref(),
+                Some("@x/lib")
+            );
+            assert_eq!(
+                output.extended_projects["web"].alias.as_deref(),
+                Some("web")
+            );
+            assert_eq!(get_dep_ids(&output, "app"), ["lib"]);
+            assert_eq!(get_task_ids(&output, "app"), ["start"]);
+
+            // `deno.json` tasks win over `package.json` scripts with the same name
+            let web = &output.extended_projects["web"].tasks;
+
+            assert_eq!(get_task_ids(&output, "web"), ["build", "start"]);
+            assert_eq!(
+                web["build"].description.as_deref(),
+                Some("Inherited from `build` package.json script.")
+            );
+            assert_eq!(
+                web["start"].description.as_deref(),
+                Some("Inherited from `start` deno.json task.")
+            );
+
+            // Other package managers only use `package.json`
+            let output = extend_graph(
+                &sandbox,
+                &["app", "lib", "web"],
+                json!({ "packageManager": "npm" }),
+            )
+            .await;
+
+            assert_eq!(
+                output
+                    .extended_projects
+                    .keys()
+                    .map(|id| id.as_str())
+                    .collect::<Vec<_>>(),
+                ["web"]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn infers_deno_tasks_named_like_hooks_and_without_commands() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "a/deno.json",
+                json!({
+                    "tasks": {
+                        "build": "deno run build.ts",
+                        "prebuild": "deno run clean.ts",
+                        "preview": "deno run preview.ts",
+                        "install": "deno run setup.ts",
+                        "all": { "dependencies": ["build", "preview"] }
+                    }
+                })
+                .to_string(),
+            );
+            sandbox.create_file("a/package.json", r#"{ "name": "a" }"#);
+
+            let output = extend_graph(
+                &sandbox,
+                &["a"],
+                json!({ "inferTasksFromScripts": true, "packageManager": "deno" }),
+            )
+            .await;
+
+            let tasks = &output.extended_projects["a"].tasks;
+
+            assert_eq!(
+                tasks.keys().map(|id| id.as_str()).collect::<Vec<_>>(),
+                ["all", "build", "install", "prebuild", "preview"]
+            );
+            assert_eq!(
+                tasks["all"].command,
+                Some(PartialTaskArgs::String("noop".into()))
+            );
+            assert_eq!(tasks["all"].deps.as_ref().map(|deps| deps.len()), Some(2));
         }
 
         async fn extend_graph(
@@ -1029,6 +1169,29 @@ mod javascript_toolchain_tier2 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn merges_deno_and_package_json_members() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("deno.json", r#"{ "workspace": ["./a", "c"] }"#);
+            sandbox.create_file("package.json", r#"{ "workspaces": ["b", "c"] }"#);
+            sandbox.create_file("b/package.json", "{}");
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .locate_dependencies_root(LocateDependenciesRootInput {
+                    starting_dir: VirtualPath::new(sandbox.path().join("b")),
+                    toolchain_config: json!({
+                        "packageManager": "deno"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.members.unwrap(), ["./a", "c", "b"]);
+            assert_eq!(output.root.unwrap(), VirtualPath::new("/workspace"));
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn finds_workspace_with_deno_jsonc() {
             let sandbox = create_moon_sandbox("locate");
             sandbox.create_file(
@@ -1625,100 +1788,104 @@ mod javascript_toolchain_tier2 {
             }
 
             #[tokio::test(flavor = "multi_thread")]
-            async fn switches_to_ci_in_ci() {
-                let mut sandbox = create_empty_moon_sandbox();
+            async fn freezes_the_lockfile_in_ci() {
+                for version in [None, Some("2.7.0"), Some("2.8.0"), Some("latest")] {
+                    let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
-                    assert_eq!(id, "deno");
-                    json!({ "version": "2.8.0" })
-                });
+                    sandbox.host_funcs.mock_load_toolchain_config(move |id, _| {
+                        assert_eq!(id, "deno");
+                        json!({ "version": version, "installArgs": ["--allow-scripts"] })
+                    });
 
-                let plugin = sandbox
-                    .create_toolchain_with_config("javascript", |cfg| {
-                        cfg.host_environment(HostEnvironment {
-                            ci: true,
-                            ..Default::default()
-                        });
-                    })
-                    .await;
+                    let plugin = sandbox
+                        .create_toolchain_with_config("javascript", |cfg| {
+                            cfg.host_environment(HostEnvironment {
+                                ci: true,
+                                ..Default::default()
+                            });
+                        })
+                        .await;
 
-                // No lockfile — stays as `deno install`
-                let output = plugin
-                    .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::new(sandbox.path()),
-                        toolchain_config: json!({
-                            "packageManager": "deno",
-                        }),
-                        ..Default::default()
-                    })
-                    .await;
+                    // Nothing to freeze without a lockfile
+                    for has_lockfile in [false, true] {
+                        if has_lockfile {
+                            sandbox.create_file("deno.lock", "{}");
+                        }
 
-                assert_eq!(
-                    output.install_command.unwrap(),
-                    ExecCommand::new(
-                        ExecCommandInput::new("deno", ["install"])
-                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
-                );
+                        let output = plugin
+                            .install_dependencies(InstallDependenciesInput {
+                                root: VirtualPath::new(sandbox.path()),
+                                toolchain_config: json!({
+                                    "packageManager": "deno",
+                                }),
+                                ..Default::default()
+                            })
+                            .await;
 
-                sandbox.create_file("deno.lock", "{}");
+                        let mut args = vec!["install"];
 
-                let output = plugin
-                    .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::new(sandbox.path()),
-                        toolchain_config: json!({
-                            "packageManager": "deno",
-                        }),
-                        ..Default::default()
-                    })
-                    .await;
+                        if has_lockfile {
+                            args.push("--frozen");
+                        }
 
-                assert_eq!(
-                    output.install_command.unwrap(),
-                    ExecCommand::new(
-                        ExecCommandInput::new("deno", ["ci"])
-                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
-                );
+                        args.push("--allow-scripts");
+
+                        assert_eq!(
+                            output.install_command.unwrap(),
+                            ExecCommand::new(
+                                ExecCommandInput::new("deno", args)
+                                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                            ),
+                            "{version:?}"
+                        );
+                    }
+                }
             }
 
             #[tokio::test(flavor = "multi_thread")]
-            async fn skips_ci_on_older_versions() {
-                let mut sandbox = create_empty_moon_sandbox();
+            async fn freezes_production_installs_in_ci() {
+                for (version, expected) in [
+                    ("2.8.0", vec!["install", "--frozen", "--prod"]),
+                    ("2.7.0", vec!["install", "--frozen"]),
+                ] {
+                    let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
-                    assert_eq!(id, "deno");
-                    json!({ "version": "2.7.0" })
-                });
+                    sandbox.host_funcs.mock_load_toolchain_config(move |id, _| {
+                        assert_eq!(id, "deno");
+                        json!({ "version": version })
+                    });
 
-                let plugin = sandbox
-                    .create_toolchain_with_config("javascript", |cfg| {
-                        cfg.host_environment(HostEnvironment {
-                            ci: true,
+                    let plugin = sandbox
+                        .create_toolchain_with_config("javascript", |cfg| {
+                            cfg.host_environment(HostEnvironment {
+                                ci: true,
+                                ..Default::default()
+                            });
+                        })
+                        .await;
+
+                    sandbox.create_file("deno.lock", "{}");
+
+                    let output = plugin
+                        .install_dependencies(InstallDependenciesInput {
+                            root: VirtualPath::new(sandbox.path()),
+                            toolchain_config: json!({
+                                "packageManager": "deno",
+                            }),
+                            production: true,
                             ..Default::default()
-                        });
-                    })
-                    .await;
+                        })
+                        .await;
 
-                sandbox.create_file("deno.lock", "{}");
-
-                let output = plugin
-                    .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::new(sandbox.path()),
-                        toolchain_config: json!({
-                            "packageManager": "deno",
-                        }),
-                        ..Default::default()
-                    })
-                    .await;
-
-                assert_eq!(
-                    output.install_command.unwrap(),
-                    ExecCommand::new(
-                        ExecCommandInput::new("deno", ["install"])
-                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
-                );
+                    assert_eq!(
+                        output.install_command.unwrap(),
+                        ExecCommand::new(
+                            ExecCommandInput::new("deno", expected)
+                                .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                        ),
+                        "{version}"
+                    );
+                }
             }
 
             #[tokio::test(flavor = "multi_thread")]
@@ -2769,6 +2936,49 @@ mod javascript_toolchain_tier2 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn prefers_package_json_catalogs_for_deno() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "deno.json",
+                r#"{ "workspace": ["a"], "catalog": { "ms": "^1.0.0" } }"#,
+            );
+            sandbox.create_file("package.json", r#"{ "catalog": { "ms": "^2.0.0" } }"#);
+            sandbox.create_file(
+                "a/package.json",
+                r#"{ "dependencies": { "ms": "catalog:" } }"#,
+            );
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            // This must be ran to extract the catalogs
+            plugin
+                .locate_dependencies_root(LocateDependenciesRootInput {
+                    starting_dir: VirtualPath::new(sandbox.path().join("a")),
+                    toolchain_config: json!({
+                        "packageManager": "deno"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            let output = plugin
+                .parse_manifest(ParseManifestInput {
+                    path: VirtualPath::new(sandbox.path().join("a/package.json")),
+                    root: VirtualPath::new(sandbox.path()),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.dependencies,
+                BTreeMap::from_iter([(
+                    "ms".into(),
+                    ManifestDependency::Version(UnresolvedVersionSpec::parse("^2.0.0").unwrap())
+                )])
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn hashes_aliases_tags_paths_and_workspace_ranges() {
             let sandbox = create_empty_moon_sandbox();
             sandbox.create_file(
@@ -3076,7 +3286,7 @@ mod javascript_toolchain_tier2 {
                         }]
                     ),
                     (
-                        "npm:@babel/core".into(),
+                        "@babel/core".into(),
                         vec![LockDependency {
                             hash: Some(
                                 "sha512-yDBHV9kQNcr2/sUr9jghVyz9C3Y5G2zUM2H2lo+9mKv4sFgbA8s8Z9t8D1jiTkGoO/NoIfKMyKWr4s6CN23ZwQ=="
@@ -3087,7 +3297,7 @@ mod javascript_toolchain_tier2 {
                         }]
                     ),
                     (
-                        "npm:@babel/preset-react".into(),
+                        "@babel/preset-react".into(),
                         vec![LockDependency {
                             hash: Some(
                                 "sha512-oJHWh2gLhU9dW9HHr42q0cI0/iHHXTLGe39qvpAZZzagHy0MzYLCnCVV0symeRvzmjHyVU7mw2K06E6u/JwbhA=="

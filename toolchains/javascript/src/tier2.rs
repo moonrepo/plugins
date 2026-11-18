@@ -18,6 +18,15 @@ use starbase_utils::yaml;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
+struct GraphPackage {
+    id: Id,
+    root: VirtualPath,
+    name: Option<String>,
+    // Deno projects may only have a `deno.json`
+    manifest: Option<PackageJson>,
+    deno: Option<(VirtualPath, DenoJson)>,
+}
+
 #[plugin_fn]
 pub fn extend_project_graph(
     Json(input): Json<ExtendProjectGraphInput>,
@@ -29,12 +38,13 @@ pub fn extend_project_graph(
     // First pass, gather all packages and their manifests
     let mut packages = vec![];
     let mut packages_by_name = FxHashMap::default();
+    let is_deno = config.package_manager == Some(JavaScriptPackageManager::Deno);
 
     for (id, source) in input.project_sources {
         let project_root = input.context.get_project_root_from_source(&source);
         let package_path = project_root.join("package.json");
 
-        if package_path.exists() {
+        let manifest = if package_path.exists() {
             let mut manifest = PackageJson::load(package_path)?;
 
             // Remove fields we don't need to avoid eating a ton of memory
@@ -49,16 +59,42 @@ pub fn extend_project_graph(
             manifest.catalogs = None;
             manifest.other_fields.clear();
 
-            // Projects can share a package name, like examples or fixtures,
-            // so the first one is the dependency target, but all are kept
-            if let Some(name) = &manifest.name {
-                packages_by_name
-                    .entry(name.to_owned())
-                    .or_insert(packages.len());
-            }
+            Some(manifest)
+        } else {
+            None
+        };
 
-            packages.push((id, project_root, manifest));
+        // Deno workspaces usually only have a `deno.json`
+        let deno = if is_deno {
+            DenoJson::find(&project_root)?
+        } else {
+            None
+        };
+
+        if manifest.is_none() && deno.is_none() {
+            continue;
         }
+
+        let name = deno
+            .as_ref()
+            .and_then(|(_, deno)| deno.name.clone())
+            .or_else(|| manifest.as_ref().and_then(|manifest| manifest.name.clone()));
+
+        // Projects can share a package name, like examples or fixtures,
+        // so the first one is the dependency target, but all are kept
+        if let Some(name) = &name {
+            packages_by_name
+                .entry(name.to_owned())
+                .or_insert(packages.len());
+        }
+
+        packages.push(GraphPackage {
+            id,
+            root: project_root,
+            name,
+            manifest,
+            deno,
+        });
     }
 
     // npm, Yarn and Bun link a workspace package when its version satisfies
@@ -72,9 +108,19 @@ pub fn extend_project_graph(
         )
     );
 
+    let get_package = |name: &str| {
+        packages_by_name
+            .get(name)
+            .and_then(|index| packages.get(*index))
+    };
+
     // Second pass, extract packages and their relationships
-    for (id, project_root, manifest) in &packages {
-        let mut project_output = ExtendProjectOutput::default();
+    for package in &packages {
+        let project_root = &package.root;
+        let mut project_output = ExtendProjectOutput {
+            alias: package.name.clone(),
+            ..Default::default()
+        };
 
         let mut extract_implicit_deps =
             |package_deps: &Option<BTreeMap<String, VersionProtocol>>,
@@ -85,15 +131,17 @@ pub fn extend_project_graph(
                 };
 
                 for (dep_name, dep_version) in deps {
-                    let Some((dep_id, dep_root, dep_manifest)) = packages_by_name
-                        .get(dep_name)
-                        .and_then(|index| packages.get(*index))
-                    else {
+                    let Some(dep) = get_package(dep_name) else {
                         continue;
                     };
 
                     let satisfies = |matches: &dyn Fn(&PackageVersion) -> bool| {
-                        links_ranges && dep_manifest.version.as_ref().is_some_and(matches)
+                        links_ranges
+                            && dep
+                                .manifest
+                                .as_ref()
+                                .and_then(|manifest| manifest.version.as_ref())
+                                .is_some_and(matches)
                     };
 
                     // Only inherit if the dependency is in the local workspace
@@ -102,7 +150,7 @@ pub fn extend_project_graph(
                         | VersionProtocol::Link(rel_path)
                         | VersionProtocol::Path(rel_path)
                         | VersionProtocol::Portal(rel_path) => {
-                            paths_are_equal(dep_root, project_root.join(rel_path))
+                            paths_are_equal(&dep.root, project_root.join(rel_path))
                         }
                         // *
                         VersionProtocol::Requirement(req)
@@ -119,7 +167,7 @@ pub fn extend_project_graph(
 
                     if is_local {
                         project_output.dependencies.push(ProjectDependency {
-                            id: dep_id.to_owned(),
+                            id: dep.id.to_owned(),
                             scope,
                             via: Some(format!("package {dep_name}")),
                         });
@@ -129,25 +177,71 @@ pub fn extend_project_graph(
                 Ok(())
             };
 
-        if let Some(name) = &manifest.name {
-            project_output.alias = Some(name.to_owned());
+        if let Some(manifest) = &package.manifest {
+            extract_implicit_deps(&manifest.dependencies, DependencyScope::Production)?;
+            extract_implicit_deps(&manifest.dev_dependencies, DependencyScope::Development)?;
+            extract_implicit_deps(&manifest.peer_dependencies, DependencyScope::Peer)?;
+            extract_implicit_deps(&manifest.optional_dependencies, DependencyScope::Build)?;
+
+            output.input_files.push(manifest.path.clone());
         }
 
-        extract_implicit_deps(&manifest.dependencies, DependencyScope::Production)?;
-        extract_implicit_deps(&manifest.dev_dependencies, DependencyScope::Development)?;
-        extract_implicit_deps(&manifest.peer_dependencies, DependencyScope::Peer)?;
-        extract_implicit_deps(&manifest.optional_dependencies, DependencyScope::Build)?;
+        // Deno resolves a `jsr:` or `npm:` import of a workspace member, with
+        // any version, to the member. Imports only in source files aren't
+        // linked, as finding them needs `deno info` for every project
+        if let Some((path, deno)) = &package.deno {
+            for (alias, specifier) in &deno.imports {
+                if let Some(dep_name) = get_import_package_name(specifier)
+                    && let Some(dep) = get_package(&dep_name)
+                    && dep.id != package.id
+                    && !project_output
+                        .dependencies
+                        .iter()
+                        .any(|existing| existing.id == dep.id)
+                {
+                    project_output.dependencies.push(ProjectDependency {
+                        id: dep.id.to_owned(),
+                        scope: DependencyScope::Production,
+                        via: Some(format!("import {alias}")),
+                    });
+                }
+            }
+
+            output.input_files.push(path.clone());
+        }
 
         if config.infer_tasks_from_scripts
             && let Some(package_manager) = config.package_manager
         {
-            if package_manager == JavaScriptPackageManager::Deno {
-                let deno_manifest = DenoJson::load_from(project_root)?;
+            let scripts = package
+                .manifest
+                .as_ref()
+                .and_then(|manifest| manifest.scripts.as_ref());
 
-                project_output.tasks.extend(
-                    TasksInferrer::new(&config).infer_from_deno_tasks(&deno_manifest.tasks)?,
-                );
-            } else if let Some(scripts) = &manifest.scripts {
+            if package_manager == JavaScriptPackageManager::Deno {
+                let deno_tasks = package.deno.as_ref().map(|(_, deno)| &deno.tasks);
+
+                // `deno task` also runs `package.json` scripts, unless
+                // `deno.json` has a task with the same name
+                if let Some(scripts) = scripts {
+                    project_output.tasks.extend(
+                        TasksInferrer::new(&config).infer_from_package_scripts(
+                            scripts
+                                .iter()
+                                .filter(|(name, _)| {
+                                    !deno_tasks.is_some_and(|tasks| tasks.contains_key(*name))
+                                })
+                                .collect(),
+                        )?,
+                    );
+                }
+
+                if let Some(tasks) = deno_tasks {
+                    project_output
+                        .tasks
+                        .extend(TasksInferrer::new(&config).infer_from_deno_tasks(tasks)?);
+                }
+            } else if let Some(scripts) = scripts {
                 project_output.tasks.extend(
                     TasksInferrer::new(&config)
                         .infer_from_package_scripts(BTreeMap::from_iter(scripts))?,
@@ -157,9 +251,7 @@ pub fn extend_project_graph(
 
         output
             .extended_projects
-            .insert(id.to_owned(), project_output);
-
-        output.input_files.push(manifest.path.clone());
+            .insert(package.id.to_owned(), project_output);
     }
 
     Ok(Json(output))
@@ -291,11 +383,28 @@ pub(crate) fn extract_workspace_members_and_catalogs(
 
     // Package manager specific files
     match package_manager {
+        // Deno uses the members of both files, while `package.json`'s
+        // catalogs replace `deno.json`'s when both define them
         JavaScriptPackageManager::Deno => {
             let deno = DenoJson::load_from(root)?;
+            let package_json = PackageJson::load(root.join("package.json"))?;
 
-            catalogs = deno.extract_catalogs();
-            members = deno.workspace.map(|ws| ws.get_members().to_vec());
+            catalogs = package_json
+                .extract_catalogs()
+                .or_else(|| deno.extract_catalogs());
+
+            let mut list = deno
+                .workspace
+                .map(|ws| ws.get_members().to_vec())
+                .unwrap_or_default();
+
+            for member in package_json.extract_members().unwrap_or_default() {
+                if !list.contains(&member) {
+                    list.push(member);
+                }
+            }
+
+            members = (!list.is_empty()).then_some(list);
         }
         // Nub reads `pnpm-workspace.yaml` when operating on a pnpm
         // workspace, otherwise `package.json` (handled below)
@@ -322,7 +431,9 @@ pub(crate) fn extract_workspace_members_and_catalogs(
     };
 
     // Otherwise `package.json` itself
-    if catalogs.is_none() || members.is_none() {
+    if package_manager != JavaScriptPackageManager::Deno
+        && (catalogs.is_none() || members.is_none())
+    {
         let package_json = PackageJson::load(root.join("package.json"))?;
 
         if catalogs.is_none() {
@@ -491,30 +602,21 @@ pub fn install_dependencies(
             cmd
         }
         JavaScriptPackageManager::Deno => {
-            let is_v280 = package_manager_config.version_satisfies(">=2.8.0");
+            let mut cmd = ExecCommandInput::new("deno", ["install"]);
 
-            // `deno ci` was introduced in v2.8: errors if `deno.lock`
-            // is missing, removes `node_modules`, runs install --frozen.
-            // https://deno.com/blog/v2.8
-            let use_ci = env.ci && input.root.join("deno.lock").exists() && is_v280;
-
-            let mut cmd = if use_ci {
-                ExecCommandInput::new("deno", ["ci"])
-            } else {
-                ExecCommandInput::new("deno", ["install"])
-            };
+            // Deno doesn't freeze the lockfile in CI. `deno ci` (v2.8+) only adds
+            // removing `node_modules`, and rejects other args, like `--allow-scripts`
+            if env.ci && input.root.join("deno.lock").exists() {
+                cmd.args.push("--frozen".into());
+            }
 
             // `--prod` was introduced in v2.8 to skip dev dependencies
             // and type packages for production deployments.
-            if input.production && !use_ci && is_v280 {
+            if input.production && package_manager_config.version_satisfies(">=2.8.0") {
                 cmd.args.push("--prod".into());
             }
 
-            // for package_name in input.packages {
-            //     cmd.args.push("--filter".into());
-            //     cmd.args.push(package_name);
-            // }
-
+            // Deno has no filter for focused installs, like `--filter`
             cmd
         }
         JavaScriptPackageManager::Npm => {

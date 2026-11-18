@@ -9,6 +9,22 @@ mod deno_toolchain_tier1 {
         use super::*;
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn doesnt_scaffold_sources() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("deno").await;
+
+            let output = plugin
+                .define_docker_metadata(DefineDockerMetadataInput {
+                    toolchain_config: json!({}),
+                    ..Default::default()
+                })
+                .await;
+
+            // `main.ts` and `mod.ts` are Deno's sources, which installs don't need
+            assert_eq!(output.scaffold_globs, ["*.{js,cjs,mjs}"]);
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn handles_image_version() {
             let sandbox = create_empty_moon_sandbox();
             let plugin = sandbox.create_toolchain("deno").await;

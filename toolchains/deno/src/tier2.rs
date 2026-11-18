@@ -10,46 +10,77 @@ use moon_pdk::{
 };
 use moon_pdk_api::*;
 use std::path::PathBuf;
-use toolchain_common::append_bin_dir;
+use toolchain_common::{append_bin_dir, debug};
 
+// `deno install --global` writes to `$DENO_INSTALL_ROOT/bin`, otherwise `~/.deno/bin`.
+// moon only adds globals directories when `version` is set, and proto's globals
+// directory falls back to `~/.deno/bin` even when `DENO_INSTALL_ROOT` is set
 fn gather_shared_paths(
     env: &HostEnvironment,
     globals_dir: Option<&VirtualPath>,
     paths: &mut Vec<PathBuf>,
 ) -> AnyResult<()> {
-    if let Some(globals_dir) = globals_dir
-        && globals_dir.to_real_path()?.is_some()
-    {
-        // Avoid the host env overhead if we already
-        // have a valid globals directory!
+    if let Some(dir) = var::get::<String>("bin_dir")? {
+        paths.push(PathBuf::from(dir));
+
         return Ok(());
     }
 
-    if let Some(dir) = var::get::<String>("bin_dir")? {
-        paths.push(PathBuf::from(dir));
+    let dir = if let Some(value) = get_host_env_var("DENO_INSTALL_ROOT")? {
+        Some(append_bin_dir(value))
+    } else if let Some(dir) = globals_dir
+        .map(|dir| dir.to_real_path())
+        .transpose()?
+        .flatten()
+    {
+        Some(dir.to_path_buf())
     } else {
-        let maybe_dir = if let Some(value) = get_host_env_var("DENO_INSTALL_ROOT")? {
-            Some(append_bin_dir(value))
-        } else if let Some(value) = get_host_env_var("DENO_HOME")? {
-            Some(append_bin_dir(value))
-        } else {
-            env.home_dir
-                .join(".deno")
-                .join("bin")
-                .to_real_path()?
-                .map(|path| path.to_path_buf())
-        };
+        env.home_dir
+            .join(".deno")
+            .join("bin")
+            .to_real_path()?
+            .map(|path| path.to_path_buf())
+    };
 
-        if let Some(dir) = maybe_dir {
-            if let Some(dir_str) = dir.to_str() {
-                var::set("bin_dir", dir_str)?;
-            }
-
-            paths.push(dir);
+    if let Some(dir) = dir {
+        if let Some(dir_str) = dir.to_str()
+            && let Err(error) = var::set("bin_dir", dir_str)
+        {
+            debug!("Failed to cache the Deno bin directory: {error}");
         }
+
+        paths.push(dir);
     }
 
     Ok(())
+}
+
+// Subcommands that take runtime flags, like `--allow-env`, after them.
+// Others, like `task` or `fmt`, reject them
+const RUNTIME_SUBCOMMANDS: [&str; 8] = [
+    "bench", "compile", "eval", "repl", "run", "serve", "test", "x",
+];
+
+fn extend_args(args: &[String], execute_args: Vec<String>) -> Option<Extend<Vec<String>>> {
+    // Skip global flags, like `-q`
+    let Some(index) = args.iter().position(|arg| !arg.starts_with('-')) else {
+        return Some(Extend::Prepend(execute_args));
+    };
+    let first = args[index].as_str();
+
+    if RUNTIME_SUBCOMMANDS.contains(&first) {
+        let mut args = args.to_vec();
+        args.splice(index + 1..index + 1, execute_args);
+
+        return Some(Extend::Replace(args));
+    }
+
+    // A script, like `deno main.ts`, takes them before it
+    if first.contains(['.', '/', ':']) {
+        return Some(Extend::Prepend(execute_args));
+    }
+
+    None
 }
 
 #[plugin_fn]
@@ -61,7 +92,7 @@ pub fn extend_task_command(
     let env = get_host_environment()?;
 
     if input.command == "deno" && !config.execute_args.is_empty() {
-        output.args = Some(Extend::Prepend(config.execute_args));
+        output.args = extend_args(&input.args, config.execute_args);
     }
 
     gather_shared_paths(env, input.globals_dir.as_ref(), &mut output.paths)?;
@@ -151,7 +182,15 @@ pub fn setup_environment(
         let env = get_host_environment()?;
 
         for bin in &config.bins {
-            let mut args = vec!["install", "--global", "--allow-net", "--allow-read"];
+            // Deno refuses to overwrite an existing install, and moon
+            // re-runs every command when the list changes
+            let mut args = vec![
+                "install",
+                "--global",
+                "--force",
+                "--allow-net",
+                "--allow-read",
+            ];
 
             let name = match bin {
                 BinEntry::String(bin) => {
@@ -166,10 +205,6 @@ pub fn setup_environment(
                     if let Some(name) = &cfg.name {
                         args.push("--name");
                         args.push(name);
-                    }
-
-                    if cfg.force {
-                        args.push("--force");
                     }
 
                     // Must be before the module, otherwise they're script args

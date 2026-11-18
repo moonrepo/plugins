@@ -38,8 +38,9 @@ impl<'a> TasksInferrer<'a> {
             let deps = deno_task.get_dependencies();
             let args = split_script(name, command);
 
-            // Deno has no pre and post hooks
-            if !self.is_valid(name, command, &args, None) {
+            // Deno has no lifecycle scripts or pre and post hooks, so only skip
+            // tasks without a command or dependencies, like npm's `is_valid`
+            if (command.is_empty() && deps.is_empty()) || runs_moon(&args) {
                 continue;
             }
 
@@ -47,7 +48,20 @@ impl<'a> TasksInferrer<'a> {
                 continue;
             };
 
-            let mut task = self.create_task(name, &args)?;
+            let mut task = self.create_task(name, &args, "deno.json task")?;
+
+            // `deno task <name>` runs the dependencies itself, which moon runs as
+            // tasks, so only run the command, through Deno's task shell (v2.1+)
+            if command.is_empty() {
+                task.command = Some(PartialTaskArgs::String("noop".into()));
+            } else if !deps.is_empty() {
+                task.command = Some(PartialTaskArgs::List(vec![
+                    "deno".into(),
+                    "task".into(),
+                    "--eval".into(),
+                    command.into(),
+                ]));
+            }
 
             for dep_name in deps {
                 if let Some(dep_id) = self.create_task_id(dep_name) {
@@ -80,7 +94,7 @@ impl<'a> TasksInferrer<'a> {
                 continue;
             };
 
-            let task = self.create_task(name, &args)?;
+            let task = self.create_task(name, &args, "package.json script")?;
 
             self.insert_task(id, name, task);
         }
@@ -115,7 +129,12 @@ impl<'a> TasksInferrer<'a> {
         };
     }
 
-    fn create_task(&self, name: &str, script_args: &[String]) -> AnyResult<PartialTaskConfig> {
+    fn create_task(
+        &self,
+        name: &str,
+        script_args: &[String],
+        source: &str,
+    ) -> AnyResult<PartialTaskConfig> {
         let package_manager = self.config.package_manager.unwrap_or_default();
 
         let mut config = PartialTaskConfig::default();
@@ -124,7 +143,7 @@ impl<'a> TasksInferrer<'a> {
 
         match package_manager {
             JavaScriptPackageManager::Deno => {
-                config.description = Some(format!("Inherited from `{name}` deno.json task."));
+                config.description = Some(format!("Inherited from `{name}` {source}."));
 
                 // command + args
                 config.command = Some(PartialTaskArgs::List(vec![
@@ -134,7 +153,7 @@ impl<'a> TasksInferrer<'a> {
                 ]));
             }
             _ => {
-                config.description = Some(format!("Inherited from `{name}` package.json script."));
+                config.description = Some(format!("Inherited from `{name}` {source}."));
 
                 // command + args
                 let mut command = vec![

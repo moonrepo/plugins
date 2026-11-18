@@ -217,6 +217,33 @@ mod javascript_toolchain_tier1 {
                 &JsonValue::String("yarn".into())
             );
         }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn detects_deno_json_after_lockfiles() {
+            for (files, expected) in [
+                (vec!["deno.json"], "deno"),
+                (vec!["deno.jsonc"], "deno"),
+                (vec!["deno.json", "package-lock.json"], "npm"),
+            ] {
+                let sandbox = create_empty_moon_sandbox();
+
+                for file in &files {
+                    sandbox.create_file(file, "{}");
+                }
+
+                let plugin = sandbox.create_toolchain("javascript").await;
+
+                let output = plugin
+                    .initialize_toolchain(InitializeToolchainInput::default())
+                    .await;
+
+                assert_eq!(
+                    output.default_settings.get("packageManager").unwrap(),
+                    &JsonValue::String(expected.into()),
+                    "{files:?}"
+                );
+            }
+        }
     }
 
     mod detect_package_manager {
