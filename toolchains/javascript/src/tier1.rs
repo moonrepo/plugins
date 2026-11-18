@@ -1,5 +1,5 @@
 use crate::config::*;
-use crate::package_json::PackageJson;
+use crate::package_json::{PackageJson, get_install_script_args};
 use crate::tier2::extract_workspace_members_and_catalogs;
 use extism_pdk::*;
 use moon_common::path::{is_root_level_source, to_relative_virtual_string};
@@ -521,6 +521,18 @@ pub fn scaffold_docker(
 
         let package =
             PackageJson::load(input.context.workspace_root.join(dir).join("package.json"))?;
+
+        // Files that install scripts run, like `node scripts/setup.js`.
+        // Arguments that aren't files, like bin names, aren't copied.
+        if let Some(scripts) = &package.scripts {
+            for arg in get_install_script_args(scripts) {
+                if let Some(target) = resolve_source_path(dir, arg)
+                    && !target.split('/').any(|part| part == "node_modules")
+                {
+                    copy_paths.push(target);
+                }
+            }
+        }
 
         // Local directory and tarball dependencies, like `file:../lib`
         for deps in [

@@ -108,11 +108,11 @@ testing that.
 
 ## Decisions needed
 
-| Decision                                                                 | Recommendation                                                                 |
-| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
-| D1 (#5): copy the files that install lifecycle scripts run into Docker?  | Yes, from `scaffold_docker`, for the scripts npm runs on install              |
-| D2 (#6): keep reading `engines.node`, which in a member beats the root?  | Yes, as fnm and `n` do; document that `node.version` or `.prototools` avoids it |
-| D3 (#8): default image when `version` is unset?                          | `node:lts` instead of `node:latest`                                           |
+| Decision                                                                | Outcome                                                                                |
+| ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| D1 (#5): copy the files that install lifecycle scripts run into Docker? | **Decided:** yes, from the JavaScript toolchain's `scaffold_docker`, for every manager |
+| D2 (#6): keep reading `engines.node`, which in a member beats the root? | **Decided:** yes, as fnm and `n` do; moon's handbook documents the pin                 |
+| D3 (#8): default image when `version` is unset?                         | **Decided:** `node:lts` instead of `node:latest`                                       |
 
 The bundled npm on PATH and hashing the resolved version need moon, so they're under "Outside this
 repo" rather than here.
@@ -121,14 +121,15 @@ repo" rather than here.
 
 ### #1 Read only the version fields from `package.json`
 
-**Mostly done (2026-11-17, JavaScript pass):** `nodejs_package_json` now skips any field it can't
-parse and keeps an unparsable dependency as `Unknown`, so an invalid `version` or specifier no
-longer drops the pin, for every tool, without a separate struct (`JAVASCRIPT.md` #1). Left: the
-`debug!` for a `package.json` that isn't JSON, and the `versions_test.rs` cases.
+**Done:** `nodejs_package_json` now skips any field it can't parse and keeps an unparsable
+dependency as `Unknown`, so an invalid `version` or specifier no longer drops the pin, for every
+tool, without a separate struct (`JAVASCRIPT.md` #1, 2026-11-17). The `debug!` and tests followed
+on 2026-11-18.
 
-- [ ] Parse the version fields without typing the rest of the file
-- [ ] Log a `package.json` that isn't JSON
-- [ ] Tests
+- [x] Parse the version fields without typing the rest of the file (`nodejs_package_json` 0.5)
+- [x] Log a `package.json` that isn't JSON
+- [x] Tests: `parses_engines_when_other_fields_are_invalid`, `skips_package_json_that_isnt_json`,
+      and `extracts_node_versions_when_other_fields_are_invalid` in `lang-javascript-common`
 
 **Problem:** `parse_version_file` deserializes the whole file as `nodejs_package_json::PackageJson`,
 and skips the file when that fails (`tools/node/src/proto.rs:64`). `extract_volta_version` does the
@@ -168,8 +169,12 @@ dependency specifier and an invalid entry under another engine, each still yield
 
 ### #2 Docker image tags for aliases, canary and prereleases
 
-- [ ] Map aliases to Docker Hub tags
-- [ ] Tests
+- [x] Map aliases to Docker Hub tags
+- [x] Tests
+
+**Done** by the shared `get_docker_image_tag` (`docs/adr/draft-default-docker-image-tags.md`), with
+`get_alias_tag` in `tier1.rs` for the aliases. `canary` and pre-releases are `latest`. Codenames
+aren't lowercased, as proto doesn't resolve mixed-case aliases like `lts/Iron` either.
 
 **Problem:** `define_docker_metadata` formats `node:{version}` with `to_partial_string()`
 (`toolchains/node/src/tier1.rs:61-68`), which returns aliases as they are and canary as `canary`.
@@ -205,9 +210,9 @@ requirements stay wrong; they're rare for an image.
 
 ### #3 Stop prompting for `syncVersionManagerConfig`
 
-- [ ] Remove the prompt
-- [ ] Describe the setting as unused
-- [ ] Test
+- [x] Remove the prompt
+- [x] Describe the setting as unused
+- [x] Test: `doesnt_prompt_for_unused_settings`
 
 **Problem:** the setting was deprecated in 1.0.4 and does nothing since #181 removed node's
 `setup_environment`. But `initialize_toolchain` still prompts for it, with `nodenv` as the default
@@ -228,9 +233,9 @@ describes it as "syncs the version to the chosen config", with a "(deprecated)" 
 
 ### #4 Write profiles to moon's cache, per task
 
-- [ ] Move `--cpu-prof-dir` and `--heap-prof-dir` to the task's state directory
-- [ ] Update the setting's description
-- [ ] Tests
+**Not planned (2026-11-18):** the maintainer decided that profiles stay in the project's `.moon`
+directory. A project's `.moon/cache` wouldn't be ignored either: the `.moon/cache` entry that
+`moon init` writes is anchored to the workspace root (confirmed with `git check-ignore`).
 
 **Problem:** `profileExecution` passes `--cpu-prof-dir <project>/.moon` (or `--heap-prof-dir`) with
 the fixed name `snapshot.cpuprofile` (`toolchains/node/src/tier2.rs:19-41`). **Live**, running a
@@ -262,8 +267,9 @@ mixed separators on Windows may also be stale once the plugins build against pro
 
 ### #5 Docker scaffold: copy the files that install scripts run (D1)
 
-- [ ] Add `scaffold_docker` for the configs phase
-- [ ] Tests
+- [x] Add to the JavaScript toolchain's `scaffold_docker`, for the configs phase (D1), so every
+      package manager gets it (`BUN.md` asked for this)
+- [x] Tests: `copies_files_that_install_scripts_run` and the `get_install_script_args` unit test
 
 **Problem:** the only scaffold glob is `*.{js,cjs,mjs}` ("postinstall scripts, etc",
 `toolchains/node/src/tier1.rs:69-72`), which moon applies from the workspace root and each project
@@ -294,7 +300,7 @@ a bin name (nothing copied), the sources phase (nothing copied), and a root `pac
 
 ### #6 A member's `engines.node` beats the root `.nvmrc` (D2)
 
-- [ ] Document it, or drop `engines.node`
+- [x] Keep `engines.node` (D2). The handbook note is in `MOON_COMPACT.md`.
 
 **Problem:** proto detects a version per directory, nearest first, and the tool reads `engines.node`
 as the last fallback in each `package.json` (`tools/node/src/proto.rs:63-100`). Published packages
@@ -317,7 +323,7 @@ as proto calls the plugin one directory at a time.
 
 ### #7 Detection names
 
-- [ ] `config_file_globs` (`toolchains/node/src/tier1.rs:17`): add `.nvmrc` and `.node-version`.
+- [x] `config_file_globs` (`toolchains/node/src/tier1.rs:17`): add `.nvmrc` and `.node-version`.
 
 moon uses config globs for project detection and copies them into the configs skeleton (moon
 `toolchain_plugin.rs:313`, `:339-375`). Live: `moon docker scaffold` copied neither, so in an image
@@ -325,8 +331,8 @@ without `node.version`, proto's shims have no pin. Python #22 added `.python-ver
 
 ### #8 Default image when `version` is unset (D3)
 
-- [ ] Use `node:lts`
-- [ ] Update `handles_image_version`
+- [x] Use `node:lts` (an exception in the Docker tags ADR draft)
+- [x] Update `handles_image_version`
 
 `define_docker_metadata` falls back to `node:latest` (`tier1.rs:67`), which follows Node's Current
 release, and that isn't an LTS for the first months of each major. The images moon generates are for
@@ -334,8 +340,8 @@ production builds, and the tool's own `stable` alias already means the latest LT
 
 ### #9 pnpm's `devEngines.runtime` Node replaces `node.version` in tasks
 
-- [ ] Document it in the Node.js handbook
-- [ ] Consider a warning
+- [ ] Document it in the Node.js handbook (in `MOON_COMPACT.md`)
+- [ ] Consider a warning (left out of the 2026-11-18 pass)
 
 Handed over by `PNPM.md`, which found it **live** with pnpm 10.33.4 and 11.28.12: pnpm installs a
 `devEngines.runtime` Node as a dependency, into `node_modules/.bin/node`. The JavaScript toolchain
@@ -347,7 +353,8 @@ and `node.version` is set would make it visible, at the cost of a file check per
 
 ### #10 Parse nodejs.org's index leniently
 
-- [ ] Make `files` and `lts` optional, with a catch-all for `lts`
+- [x] Make `files` and `lts` optional, with a catch-all for `lts`, and skip entries that still
+      fail (`NodeDistVersion::parse_index`)
 
 Handed over by `JAVASCRIPT.md`, from source: `NodeDistVersion`
 (`crates/lang-javascript-common/src/node_dist.rs:3-16`) requires `files` and `lts`, and the
@@ -404,10 +411,10 @@ the released 1.0.5 with `node_tool` 0.17.13, which lacks 0.18.0's fixes. **Live:
 of `lts/*` or `20 # LTS`, `moon toolchain add node` fails with "Failed to parse a version
 requirement … expected semver_req".
 
-- `node_toolchain`: ship #2–#4 as 1.1.0, with changelog callouts for the generated Dockerfile's
-  `FROM`, `moon toolchain add` no longer writing `syncVersionManagerConfig`, and the profile
-  location. It also picks up `node_tool` 0.18.0, which requires proto 0.64. #5, #7 and #8 can follow
-  in 1.1.x.
+- `node_toolchain`: ship #2, #3, #7 and #8 as 1.1.0, with changelog callouts for the generated
+  Dockerfile's `FROM` and `moon toolchain add` no longer writing `syncVersionManagerConfig`. It
+  also picks up `node_tool` 0.18.0, which requires proto 0.64. #4 isn't planned, and #5 is in
+  `javascript_toolchain`.
 - `node_tool`: #1 and #10 are a patch (0.18.1). They change `lang-javascript-common`, so the Bun,
   Deno and node-depman tools that adopt them need their own releases. The toolchain re-exports
   `node_tool`, so tool fixes also need a toolchain release.

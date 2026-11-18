@@ -459,14 +459,17 @@ not exist" when proto wasn't on PATH. `BUN.md` #3 sets `PROTO_BUN_VERSION` as a 
       toolchain's `initialize_toolchain` links to, is a 404; an index page would fix the link for
       all of them. The Node handbook says synced versions update when they change, which they
       don't.
-- [ ] Node (`NODE.md` #3, #4, #6): the `node` section of `config/toolchain.mdx` only says to run
-      `moon toolchain info node`.
+- [ ] Node (`NODE.md` #3, #4, #6, #9): the `node` section of `config/toolchain.mdx` only says to
+      run `moon toolchain info node`.
   - Document `executeArgs` and `profileExecution`: they apply to `node` task commands only, and
-    say where profiles go after #4. Say `syncVersionManagerConfig` is unused.
+    profiles go to the project's `.moon` directory, as `snapshot.cpuprofile` or
+    `snapshot.heapprofile`. Say `syncVersionManagerConfig` is unused.
   - It says the toolchain requires `javascript`. Say instead that installs and
     `node_modules/.bin` on PATH come from `javascript`.
   - `guides/javascript/node-handbook.mdx`: note that a member's `engines.node` beats the root's
     `.nvmrc` unless `node.version` or `.prototools` pins it.
+  - The same handbook: with pnpm, `node.version` should match `devEngines.runtime`, or be unset, as
+    pnpm's Node in `node_modules/.bin` comes first on PATH.
 - [ ] npm (`NPM.md` #3, #5): `config/toolchain#npm` should say that `installArgs` also apply to
       `npm ci` and `npm dedupe`, and note npm 12's `allowScripts`, `allow-git` and strict flag
       parsing.

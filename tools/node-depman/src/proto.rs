@@ -275,8 +275,9 @@ pub fn resolve_version(
         PackageManager::Npm if input.initial.is_alias("bundled") => {
             debug!("Received the bundled alias, attempting to find a version");
 
-            let response: Vec<NodeDistVersion> =
-                fetch_json("https://nodejs.org/download/release/index.json")?;
+            let response = NodeDistVersion::parse_index(fetch_json(
+                "https://nodejs.org/download/release/index.json",
+            )?);
             let mut found_version = false;
 
             // Infer from proto's environment variable

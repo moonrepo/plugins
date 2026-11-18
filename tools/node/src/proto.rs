@@ -61,7 +61,12 @@ pub fn parse_version_file(
     let mut version = None;
 
     if input.file == "package.json" {
-        if let Ok(package_json) = json::from_str::<PackageJson>(&content) {
+        let package_json = json::from_str::<PackageJson>(&content)
+            // ADR-0008.8
+            .inspect_err(|error| debug!("Skipping {}, as it isn't valid JSON: {error}", input.path))
+            .ok();
+
+        if let Some(package_json) = package_json {
             let mut candidates = vec![];
 
             if let Some(constraint) = extract_dev_engine_runtime_version(&package_json, "node") {
@@ -182,8 +187,8 @@ pub fn load_versions(Json(_): Json<LoadVersionsInput>) -> FnResult<Json<LoadVers
     let mut output = LoadVersionsOutput::from(response.versions)?;
 
     // The body isn't returned for a source configured by the user
-    let items: Vec<NodeDistVersion> = match response.body {
-        Some(body) => json::from_str(&body)?,
+    let items = match response.body {
+        Some(body) => NodeDistVersion::parse_index(json::from_str(&body)?),
         None => vec![],
     };
 
@@ -393,8 +398,9 @@ pub fn download_prebuilt(
 
     // When canary, extract the latest version from the index
     if version.is_canary() {
-        let response: Vec<NodeDistVersion> =
-            fetch_json(config.index_url.replace("{channel}", "nightly"))?;
+        let response = NodeDistVersion::parse_index(fetch_json(
+            config.index_url.replace("{channel}", "nightly"),
+        )?);
         let file_to_match = match env.os {
             HostOS::Linux => format!("linux-{arch}"),
             HostOS::MacOS => format!("osx-{arch}-tar"),

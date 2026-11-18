@@ -9,6 +9,8 @@
   now skipped.
 - Fixed a cycle in `volta.extends` overflowing the stack.
 - Fixed a `packageManager` URL, which Corepack accepts, being cut off at its first `@`.
+- Fixed an entry in nodejs.org's index that can't be parsed failing the npm `bundled` alias. It's
+  now skipped.
 
 ## 0.21.0
 

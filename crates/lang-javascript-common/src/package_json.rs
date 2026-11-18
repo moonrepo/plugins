@@ -288,6 +288,36 @@ mod tests {
     use super::*;
 
     #[test]
+    fn extracts_node_versions_when_other_fields_are_invalid() {
+        let package_json: PackageJson = json::parse(
+            r#"{
+                "version": "1.0",
+                "bundleDependencies": true,
+                "dependencies": { "foo": "^v1.2.3", "bar": ">=1.0.0-" },
+                "engines": { "npm": "not a version", "node": ">=22" },
+                "devEngines": { "runtime": { "name": "node", "version": "^24" } },
+                "volta": { "node": "22.22.3" }
+            }"#,
+        )
+        .unwrap();
+
+        assert_eq!(
+            extract_engine_version(&package_json, "node").as_deref(),
+            Some(">=22")
+        );
+        assert_eq!(
+            extract_dev_engine_runtime_version(&package_json, "node").as_deref(),
+            Some("^24")
+        );
+        assert_eq!(
+            extract_volta_version(&package_json, &VirtualPath::new("/package.json"), "node")
+                .unwrap()
+                .as_deref(),
+            Some("22.22.3")
+        );
+    }
+
+    #[test]
     fn errors_for_dev_engine_aliases() {
         for version in ["lts", "latest", "canary"] {
             assert!(

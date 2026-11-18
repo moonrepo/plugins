@@ -358,8 +358,8 @@ the oldest version allowed. `<2` would give `oven/bun:2`, which doesn't exist.
 - **Lifecycle scripts in members:** a member's `postinstall: bun scripts/setup.js` fails
   `docker setup` (**live:** `Module not found "scripts/setup.js"`), since only `*.{js,cjs,mjs}` at
   each project root is scaffolded. The Node toolchain has the same glob, and `configsPhaseGlobs`
-  covers it. `NODE.md` #5 (D1) proposes copying the files that lifecycle scripts run; if that's
-  accepted, put it in the JavaScript toolchain so Bun repos get it too.
+  covers it. **Done** by `NODE.md` #5 (D1), which copies the files that install scripts run from
+  the JavaScript toolchain, so Bun repos get it too.
 - **Globals on PATH without `version`:** moon only adds globals directories when `version` is set
   (Go #5). Bun's installer and setup-bun put `~/.bun/bin` on PATH themselves, and proto's shim adds
   it when it runs `bun`.

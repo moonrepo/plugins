@@ -8,6 +8,8 @@
   dependency range, losing its `engines.node`, `devEngines.runtime` or `volta.node` pin. Those
   fields are now skipped.
 - Fixed a cycle in `volta.extends` overflowing the stack.
+- Fixed an entry in nodejs.org's index that can't be parsed failing version loading and canary
+  installs. It's now skipped.
 
 ## 0.18.0
 

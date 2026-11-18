@@ -37,6 +37,10 @@
   can't install `link:` paths. Synced specs change once.
 - `docker scaffold` now copies `patches/`, where `bun patch`, `npm patch`, `pnpm patch` and
   patch-package write patches, into the configs skeleton.
+- `docker scaffold` now copies the files that install scripts run, like `scripts/setup.js` in
+  `"postinstall": "node scripts/setup.js"`, into the configs skeleton, for the `preinstall`,
+  `install`, `postinstall`, `preprepare`, `prepare` and `postprepare` scripts of the workspace root
+  and each member. Before, `docker setup` failed when the script wasn't at a project root.
 - Deno installs in CI now run `deno install --frozen` whenever `deno.lock` exists, so a stale
   lockfile now fails CI installs when `deno.version` is unset or an alias. Before, Deno 2.8 or later
   ran `deno ci`, which rejected `installArgs` like `--allow-scripts`. Production installs in CI now

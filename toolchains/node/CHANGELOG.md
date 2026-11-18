@@ -5,13 +5,21 @@
 #### 🚀 Updates
 
 - Panics now report their message, instead of an `unreachable` WASM trap error.
+- The default Docker image when `version` isn't set is now `node:lts` instead of `node:latest`,
+  which follows Node.js's Current release.
+- `.nvmrc` and `.node-version` are now config files, so `docker scaffold` copies them into the
+  configs skeleton.
+- `moon toolchain add node` no longer prompts for `syncVersionManagerConfig`, which does nothing.
 
 #### 🐞 Fixes
 
 - Fixed the default Docker image for a version bound being the oldest allowed version, like
   `node:20` for `>=20`, or one outside the range, like `node:22` for `<22`. It's now `node:latest`.
 - Fixed the default Docker image not existing for the `stable`, `lts-<codename>` and
-  `lts/<codename>` aliases. They now use `node:lts` and `node:<codename>`.
+  `lts/<codename>` aliases. They now use `node:lts` and `node:<codename>`. `canary` and
+  pre-releases, which have no images, now use `node:latest`.
+- Fixed an entry in nodejs.org's index that can't be parsed failing version loading. It's now
+  skipped.
 
 ## 1.0.5
 

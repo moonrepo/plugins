@@ -40,6 +40,9 @@ while Go and Python dropped every alias. Checked against Docker Hub on 2026-11-1
 
 - **Deno** only uses the helper for full versions, as `denoland/deno` has no partial tags. Anything
   else is `latest`.
+- **Node.js** uses `lts` when no version is configured, as `latest` follows the Current release,
+  which isn't an LTS for its first months. Pre-releases are `latest`, as `node` has no images for
+  them.
 - **Python** formats full versions itself, as Docker Hub uses CPython's form for pre-releases, like
   `3.15.0rc2`.
 - **Rust** uses the `rustlang/rust:nightly` image for `canary`, `nightly` and dated nightlies.

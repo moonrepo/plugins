@@ -6,7 +6,9 @@ use extism_pdk::*;
 #[cfg(feature = "wasm")]
 use moon_pdk::{HostLogInput, host_log};
 use moon_pdk_api::{AnyResult, json_config};
-use nodejs_package_json::{PackageJson as BasePackageJson, VersionProtocol, WorkspacesField};
+use nodejs_package_json::{
+    PackageJson as BasePackageJson, ScriptsMap, VersionProtocol, WorkspacesField,
+};
 use rustc_hash::FxHashMap;
 use starbase_utils::json::{JsonValue, serde_json::json};
 use std::collections::BTreeMap;
@@ -28,7 +30,7 @@ impl PackageJson {
         #[cfg(feature = "wasm")]
         {
             host_log!(
-                "Setting <property>{field}</file> in <path>{}</path>",
+                "Setting <property>{field}</property> in <path>{}</path>",
                 self.path,
             );
         }
@@ -257,4 +259,61 @@ fn internal_add_dependency(
         .insert(name.to_owned(), range.to_owned());
 
     true
+}
+
+/// Scripts that package managers run when installing a package.
+const INSTALL_SCRIPT_NAMES: [&str; 6] = [
+    "preinstall",
+    "install",
+    "postinstall",
+    "preprepare",
+    "prepare",
+    "postprepare",
+];
+
+/// The arguments of a package's install scripts that may be files it runs, like
+/// `scripts/setup.js` in `node scripts/setup.js && husky`. They aren't checked
+/// to exist, so bin names like `husky` are returned too.
+pub fn get_install_script_args(scripts: &ScriptsMap) -> Vec<&str> {
+    INSTALL_SCRIPT_NAMES
+        .iter()
+        .filter_map(|name| scripts.get(*name))
+        .flat_map(|script| {
+            script.split(|ch: char| ch.is_whitespace() || matches!(ch, ';' | '|' | '&' | '(' | ')'))
+        })
+        .map(|arg| arg.trim_matches(['"', '\'']))
+        .filter(|arg| !arg.is_empty() && !arg.starts_with('-'))
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn gets_install_script_args() {
+        let scripts = ScriptsMap::from_iter([
+            ("build".into(), "node build.js".into()),
+            (
+                "postinstall".into(),
+                "node --experimental-strip-types scripts/setup.ts && husky".into(),
+            ),
+            (
+                "prepare".into(),
+                "node 'tools/prepare.mjs';patch-package".into(),
+            ),
+        ]);
+
+        assert_eq!(
+            get_install_script_args(&scripts),
+            [
+                "node",
+                "scripts/setup.ts",
+                "husky",
+                "node",
+                "tools/prepare.mjs",
+                "patch-package"
+            ]
+        );
+    }
 }

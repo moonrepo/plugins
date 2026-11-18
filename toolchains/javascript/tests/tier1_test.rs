@@ -395,6 +395,84 @@ mod javascript_toolchain_tier1 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn copies_files_that_install_scripts_run() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "package.json",
+                json!({
+                    "workspaces": ["apps/*"],
+                    "scripts": { "prepare": "node scripts/prepare.js; husky" }
+                })
+                .to_string(),
+            );
+            sandbox.create_file(
+                "apps/a/package.json",
+                json!({
+                    "name": "a",
+                    "scripts": {
+                        "build": "node build.js",
+                        "install": "node node_modules/z/install.js",
+                        "postinstall": "node scripts/setup.ts && node ../../tools/shared.mjs"
+                    }
+                })
+                .to_string(),
+            );
+            sandbox.create_file("scripts/prepare.js", "");
+            sandbox.create_file("apps/a/build.js", "");
+            sandbox.create_file("apps/a/node_modules/z/install.js", "");
+            sandbox.create_file("apps/a/scripts/setup.ts", "");
+            sandbox.create_file("tools/shared.mjs", "");
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let mut output = plugin
+                .scaffold_docker(ScaffoldDockerInput {
+                    input_dir: VirtualPath::new("/workspace/apps/a"),
+                    output_dir: VirtualPath::new("/workspace/.moon/docker/configs/apps/a"),
+                    phase: ScaffoldDockerPhase::Configs,
+                    project: Some(ProjectFragment {
+                        id: Id::raw("a"),
+                        source: "apps/a".into(),
+                        ..Default::default()
+                    }),
+                    toolchain_config: json!({ "packageManager": "npm" }),
+                    ..Default::default()
+                })
+                .await;
+
+            output.copied_files.sort_by_key(|path| path.to_string());
+
+            assert_eq!(
+                output.copied_files,
+                [
+                    VirtualPath::new("/workspace/.moon/docker/configs/apps/a/scripts/setup.ts"),
+                    VirtualPath::new("/workspace/.moon/docker/configs/tools/shared.mjs"),
+                ]
+            );
+
+            // The member's scripts were copied by the project's pass
+            let mut output = plugin
+                .scaffold_docker(ScaffoldDockerInput {
+                    input_dir: VirtualPath::new("/workspace"),
+                    output_dir: VirtualPath::new("/workspace/.moon/docker/configs"),
+                    phase: ScaffoldDockerPhase::Configs,
+                    toolchain_config: json!({ "packageManager": "npm" }),
+                    ..Default::default()
+                })
+                .await;
+
+            output.copied_files.sort_by_key(|path| path.to_string());
+
+            assert_eq!(
+                output.copied_files,
+                [
+                    VirtualPath::new("/workspace/.moon/docker/configs/apps/a/package.json"),
+                    VirtualPath::new("/workspace/.moon/docker/configs/scripts/prepare.js"),
+                ]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn does_nothing_in_the_sources_phase() {
             let sandbox = create_workspace();
             let plugin = sandbox.create_toolchain("javascript").await;
