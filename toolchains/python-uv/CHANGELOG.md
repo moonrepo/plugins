@@ -4,6 +4,7 @@
 
 #### 🚀 Updates
 
+- Task commands that run `uvx` are now detected.
 - Panics now report their message, instead of an `unreachable` WASM trap error.
 
 ## 0.1.6

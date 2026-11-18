@@ -14,16 +14,6 @@ derive_enum!(
     }
 );
 
-derive_enum!(
-    /// The location in which to create the Python virtual environment.
-    #[derive(ConfigEnum, Copy, Default)]
-    pub enum PythonVenvLocation {
-        #[default]
-        Project,
-        Workspace,
-    }
-);
-
 config_struct!(
     /// Configures and enables the Python toolchain.
     /// Docs: https://moonrepo.dev/docs/config/toolchain#python
@@ -32,10 +22,6 @@ config_struct!(
         /// The package manager to use for installing dependencies,
         /// running inferred tasks, and much more.
         pub package_manager: Option<PythonPackageManager>,
-
-        /// The location where to create the virtual environment,
-        /// in which dependencies will be installed into.
-        // pub venv_location: PythonVenvLocation,
 
         /// The name of virtual environment folder name.
         #[setting(default = ".venv")]
