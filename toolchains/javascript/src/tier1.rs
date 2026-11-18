@@ -9,7 +9,7 @@ use moon_pdk::{
     parse_toolchain_config_schema, plugin_err,
 };
 use moon_pdk_api::*;
-use nodejs_package_json::{Version, VersionProtocol, WorkspaceProtocol};
+use nodejs_package_json::{MatchesVersion, Version, VersionProtocol, WorkspaceProtocol};
 use schematic::SchemaBuilder;
 use starbase_utils::{fs, glob, json::JsonValue};
 use std::str::FromStr;
@@ -320,7 +320,7 @@ fn load_dependency_packages(input: &SyncProjectInput) -> AnyResult<Vec<Dependenc
 fn is_stale_range(current: Option<&VersionProtocol>, version: &Version) -> bool {
     match current {
         Some(VersionProtocol::Requirement(req)) => !req.matches(version),
-        Some(VersionProtocol::Range(reqs)) => !reqs.iter().any(|req| req.matches(version)),
+        Some(VersionProtocol::Range(range)) => !range.matches(version),
         Some(VersionProtocol::Version(current)) => current != version,
         _ => false,
     }
@@ -519,6 +519,7 @@ pub fn scaffold_docker(
                 let path = match version {
                     VersionProtocol::File(path)
                     | VersionProtocol::Link(path)
+                    | VersionProtocol::Path(path)
                     | VersionProtocol::Portal(path)
                     | VersionProtocol::Workspace(WorkspaceProtocol::File(path)) => path,
                     _ => continue,

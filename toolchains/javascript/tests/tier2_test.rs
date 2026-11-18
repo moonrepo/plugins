@@ -464,6 +464,21 @@ mod javascript_toolchain_tier2 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn links_local_paths() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "a/package.json",
+                r#"{ "name": "a", "dependencies": { "b": "../b", "c": "file:../c" } }"#,
+            );
+            sandbox.create_file("b/package.json", r#"{ "name": "b" }"#);
+            sandbox.create_file("c/package.json", r#"{ "name": "c" }"#);
+
+            let output = extend_graph(&sandbox, &["a", "b", "c"], json!({})).await;
+
+            assert_eq!(get_dep_ids(&output, "a"), ["b", "c"]);
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn links_ranges_that_the_version_satisfies() {
             let sandbox = create_empty_moon_sandbox();
             sandbox.create_file(
@@ -2770,7 +2785,7 @@ mod javascript_toolchain_tier2 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
-        async fn hashes_aliases_tags_and_workspace_ranges() {
+        async fn hashes_aliases_tags_paths_and_workspace_ranges() {
             let sandbox = create_empty_moon_sandbox();
             sandbox.create_file(
                 "package.json",
@@ -2779,8 +2794,10 @@ mod javascript_toolchain_tier2 {
                         "sw": "npm:string-width@^4.2.0",
                         "path": "jsr:@std/path@^1.0.0",
                         "bare": "npm:left-pad",
+                        "local": "../local",
                         "tag": "latest",
-                        "ws": "workspace:^1"
+                        "ws": "workspace:^1",
+                        "ws-range": "workspace:>=1 <2"
                     }
                 })
                 .to_string(),
@@ -2803,10 +2820,12 @@ mod javascript_toolchain_tier2 {
                 output.dependencies,
                 BTreeMap::from_iter([
                     ("bare".into(), version("*")),
+                    ("local".into(), ManifestDependency::path("../local".into())),
                     ("path".into(), version("^1.0.0")),
                     ("sw".into(), version("^4.2.0")),
                     ("tag".into(), version("*")),
                     ("ws".into(), version("^1")),
+                    ("ws-range".into(), version(">=1 <2")),
                 ])
             );
         }

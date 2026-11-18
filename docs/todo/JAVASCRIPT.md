@@ -87,13 +87,13 @@ tasks (#5) and `runInCI: false` on the lint task (#3) reproduced the same way.
 
 ## Decisions
 
-| Decision                                                                    | Outcome                                                               |
-| --------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| D1 (#15): link a range that a workspace package's version satisfies?        | **Decided:** yes, for npm, Yarn and Bun                               |
-| D2 (#16): hash the root `package.json`'s dependencies for every project?    | **Decided:** no, moon v3's inheritable dependencies will cover it     |
-| D3 (#17): what may `rootPackageDependenciesOnly` allow in projects?         | **Decided:** local workspace dependencies                             |
-| D4 (#18): update synced entries whose range no longer matches?              | **Decided:** yes, for the `version*` formats and peers                |
-| D5 (#19): install projects that the root's `workspaces` don't cover?        | **Decided:** no, not in this pass                                     |
+| Decision                                                                 | Outcome                                                           |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| D1 (#15): link a range that a workspace package's version satisfies?     | **Decided:** yes, for npm, Yarn and Bun                           |
+| D2 (#16): hash the root `package.json`'s dependencies for every project? | **Decided:** no, moon v3's inheritable dependencies will cover it |
+| D3 (#17): what may `rootPackageDependenciesOnly` allow in projects?      | **Decided:** local workspace dependencies                         |
+| D4 (#18): update synced entries whose range no longer matches?           | **Decided:** yes, for the `version*` formats and peers            |
+| D5 (#19): install projects that the root's `workspaces` don't cover?     | **Decided:** no, not in this pass                                 |
 
 #1 is fixed upstream in `nodejs_package_json` instead of with local types (decided 2026-11-17), so
 the same fix covers `PNPM.md` #2 and `NODE.md` #1.
@@ -105,9 +105,10 @@ the same fix covers `PNPM.md` #2 and `NODE.md` #1.
 **Done (2026-11-17):** fixed upstream instead of with local types. `nodejs_package_json` now
 skips any field it can't parse (`lenient`), deserializes a dependency it can't parse as
 `VersionProtocol::Unknown`, and accepts `workspace:` ranges (`WorkspaceProtocol::Requirement`), so
-this also fixes `PNPM.md` #2 and `NODE.md` #1. Until 0.5.0 is published, the root `Cargo.toml`
-patches it to `../../rust-js-ecosystem/crates/package-json`. Tests are in the upstream crate and
-`tier2_test.rs` (`loads_manifests_with_fields_it_doesnt_read`).
+this also fixes `PNPM.md` #2 and `NODE.md` #1. It shipped in 0.5.0, which also moved its versions
+and ranges from `semver` to `version_spec` 0.12, and parses a bare local path like `../b` as
+`VersionProtocol::Path`, which the toolchain handles like `file:`. Tests are in the upstream crate
+and `tier2_test.rs` (`loads_manifests_with_fields_it_doesnt_read`, `links_local_paths`).
 
 - [x] Parse `package.json` into our own types
 - [x] Skip values that can't be parsed
@@ -428,8 +429,8 @@ as v1 did, and report them in `changed_files`.
 
 Found while implementing #18. `PackageJson::save_field` wrote every entry of a dirty dependency
 field back through `VersionProtocol`'s `Display` (`package_json.rs:36-45`), so adding one workspace
-dependency re-formatted the rest. `nodejs_package_json` normalizes ranges into Cargo's syntax:
-`>=1.0.0 <2.0.0` becomes `>=1.0.0, <2.0.0`, and `18.x` becomes `~18`. npm's own `semver` rejects the
+dependency re-formatted the rest. `nodejs_package_json` 0.4 normalized ranges into Cargo's syntax:
+`>=1.0.0 <2.0.0` became `>=1.0.0, <2.0.0`, and `18.x` became `~18`. npm's own `semver` rejects the
 comma form (`validRange` returns `null`), so the next install fails.
 
 **Change:** dependencies are marked dirty one at a time (`dependencies:<name>`), and `save_field`
@@ -629,9 +630,13 @@ website docs.
 
 ## Release
 
-- **Before merging:** publish `nodejs_package_json` 0.5.0 (the new `WorkspaceProtocol::Requirement`
-  variant is breaking), bump the workspace dependency to it, and remove the `[patch.crates-io]`
-  entry from the root `Cargo.toml`.
+- **Done (2026-11-17):** `nodejs_package_json` 0.5.0 is published, the workspace depends on it,
+  and the `[patch.crates-io]` entry is gone.
+- The proto and warpgate patches on `version_spec` 0.12 (`proto_pdk_api` 0.36.2, `warpgate_api`
+  0.21.2) are held back, as they also move to schematic 0.21, while `moon_pdk_api` 2.3.0 and
+  `moon_config` 2.2.2 are still on schematic 0.20 and `version_spec` 0.11. Until moon's crates
+  move, the JavaScript tools and toolchains carry both `version_spec` versions, and convert
+  between them through strings, like `parse_manifest_version`.
 - `javascript_toolchain` embeds no proto tool, so it isn't blocked by moon's proto 0.64 release (a
   `master` build loads in moon 2.6.4). Phase 1 changes which tasks are inferred and how (#3–#6),
   what the sync writes (#7, #9), task hashes (#4, #11) and Docker output (#12, #13), so ship it as

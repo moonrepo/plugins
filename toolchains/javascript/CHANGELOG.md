@@ -9,7 +9,10 @@
 - Workspace dependencies declared with a version range, like `"b": "^1.0.0"`, are now project
   dependencies for npm, Yarn and Bun when the workspace package's version satisfies the range, as
   those package managers link them. These new edges can expose dependency cycles.
-- `workspace:` ranges like `workspace:^1` and `workspace:>=1.0.0` are now supported.
+- `workspace:` ranges like `workspace:^1`, `workspace:>=1.0.0` and `workspace:>=1 <2` are now
+  supported.
+- Local path dependencies without a protocol, like `"b": "../b"`, are now project dependencies,
+  hashed by their path, and copied by `docker scaffold`, like `file:` ones.
 - `syncProjectWorkspaceDependencies` now replaces a synced `version`, `version-caret`,
   `version-tilde` or peer range once the workspace package's version no longer satisfies it.
 - `syncProjectWorkspaceDependencies` now syncs packages without a `version` for the formats that
@@ -58,6 +61,10 @@
 - Fixed a full plugin cache failing `locate_dependencies_root`.
 - Fixed `initialize_toolchain` failing on an unknown `packageManager`, and linking to a page that
   doesn't exist.
+
+#### ⚙️ Internal
+
+- Updated `nodejs_package_json` to v0.5.
 - Fixed lockfile parse errors showing a virtual path instead of the real one.
 
 - Fixed an empty workspace entry in `bun.lock` panicking while parsing the lockfile.

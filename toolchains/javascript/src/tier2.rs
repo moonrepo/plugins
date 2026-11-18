@@ -10,7 +10,9 @@ use moon_pdk::{
     locate_root_many, locate_root_many_with_check, parse_toolchain_config_schema,
 };
 use moon_pdk_api::*;
-use nodejs_package_json::{Version as PackageVersion, VersionProtocol, WorkspaceProtocol};
+use nodejs_package_json::{
+    MatchesVersion, Op, Version as PackageVersion, VersionProtocol, WorkspaceProtocol,
+};
 use rustc_hash::FxHashMap;
 use starbase_utils::yaml;
 use std::collections::BTreeMap;
@@ -98,14 +100,18 @@ pub fn extend_project_graph(
                     let is_local = match dep_version {
                         VersionProtocol::File(rel_path)
                         | VersionProtocol::Link(rel_path)
+                        | VersionProtocol::Path(rel_path)
                         | VersionProtocol::Portal(rel_path) => {
                             paths_are_equal(dep_root, project_root.join(rel_path))
                         }
-                        VersionProtocol::Requirement(req) if req.comparators.is_empty() => true,
-                        VersionProtocol::Requirement(req) => satisfies(&|ver| req.matches(ver)),
-                        VersionProtocol::Range(reqs) => {
-                            satisfies(&|ver| reqs.iter().any(|req| req.matches(ver)))
+                        // *
+                        VersionProtocol::Requirement(req)
+                            if req.op == Op::Wildcard && req.major.is_none() =>
+                        {
+                            true
                         }
+                        VersionProtocol::Requirement(req) => satisfies(&|ver| req.matches(ver)),
+                        VersionProtocol::Range(range) => satisfies(&|ver| range.matches(ver)),
                         VersionProtocol::Version(version) => satisfies(&|ver| ver == version),
                         VersionProtocol::Workspace(_) => true,
                         _ => false,
@@ -807,6 +813,7 @@ fn create_manifest_dependency(
         }
         VersionProtocol::File(path)
         | VersionProtocol::Link(path)
+        | VersionProtocol::Path(path)
         | VersionProtocol::Portal(path) => ManifestDependency::path(path.to_owned()),
         VersionProtocol::Git { url, .. } => ManifestDependency::url(url.to_owned()),
         VersionProtocol::GitHub {
@@ -817,15 +824,8 @@ fn create_manifest_dependency(
             "https://github.com/{owner}/{repo}.git#{}",
             reference.as_deref().unwrap_or("master")
         )),
-        VersionProtocol::Range(version_reqs) => {
-            return parse_manifest_version(
-                name,
-                version_reqs
-                    .iter()
-                    .map(|req| req.to_string())
-                    .collect::<Vec<_>>()
-                    .join(" || "),
-            );
+        VersionProtocol::Range(range) => {
+            return parse_manifest_version(name, range.to_string());
         }
         VersionProtocol::Requirement(version_req) => {
             return parse_manifest_version(name, version_req.to_string());
@@ -841,10 +841,13 @@ fn create_manifest_dependency(
         }
         VersionProtocol::Workspace(ws) => match ws {
             WorkspaceProtocol::File(path) => ManifestDependency::path(path.to_owned()),
+            WorkspaceProtocol::Range { range, .. } => {
+                return parse_manifest_version(name, range.to_string());
+            }
             WorkspaceProtocol::Requirement { req, .. } => {
                 return parse_manifest_version(name, req.to_string());
             }
-            WorkspaceProtocol::Version(version) => {
+            WorkspaceProtocol::Version { version, .. } => {
                 return parse_manifest_version(name, version.to_string());
             }
             _ => {
