@@ -9,6 +9,9 @@
   fields are now skipped.
 - Fixed a cycle in `volta.extends` overflowing the stack.
 - Fixed a `packageManager` URL, which Corepack accepts, being cut off at its first `@`.
+- Fixed a Bun in `~/.bun/bin`, where Bun's installer and `setup-bun` put it, running instead of the
+  configured version in moon. Activating the environment now puts the tool's directory first on
+  `PATH`.
 
 ## 0.17.0
 

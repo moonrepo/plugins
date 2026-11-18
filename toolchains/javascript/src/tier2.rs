@@ -459,23 +459,19 @@ pub fn install_dependencies(
     // Install
     let mut command = match package_manager {
         JavaScriptPackageManager::Bun => {
-            // Unlike other package managers, bun does not enable frozen
-            // lockfiles in CI automatically. `bun ci` (an alias for
-            // `bun install --frozen-lockfile`) was introduced in v1.2.20,
-            // while `--production` implies frozen already.
-            let use_ci = env.ci
-                && !input.production
-                && input.root.join("bun.lock").exists()
-                && package_manager_config.version_satisfies(">=1.2.20");
+            let mut cmd = ExecCommandInput::new("bun", ["install"]);
 
-            let mut cmd = if use_ci {
-                ExecCommandInput::new("bun", ["ci"])
-            } else {
-                ExecCommandInput::new("bun", ["install"])
-            };
-
+            // Unlike other package managers, Bun doesn't freeze the lockfile
+            // in CI. Every Bun has `--frozen-lockfile` (`bun ci` is an alias),
+            // which also works with `bun.lockb`, and `--production` implies it
             if input.production {
                 cmd.args.push("--production".into());
+            } else if env.ci
+                && ["bun.lock", "bun.lockb"]
+                    .iter()
+                    .any(|name| input.root.join(name).exists())
+            {
+                cmd.args.push("--frozen-lockfile".into());
             }
 
             for package_name in input.packages {
@@ -630,8 +626,8 @@ pub fn install_dependencies(
     if config.dedupe_on_lockfile_change {
         match package_manager {
             JavaScriptPackageManager::Bun => {
-                // `bun dedupe` was introduced in v1.4
-                if package_manager_config.version_satisfies(">=1.4.0") {
+                // `bun dedupe` was introduced in v1.4, but v1.4.0's can't read `bun.lockb`
+                if package_manager_config.version_satisfies(">=1.4.1") {
                     output.dedupe_command = Some(
                         ExecCommandInput::new("bun", ["dedupe"])
                             .cwd(input.root)

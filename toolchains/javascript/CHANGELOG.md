@@ -29,6 +29,14 @@
 - `npm:` and `jsr:` alias dependencies are now hashed by their range, and dist tags like `latest`
   by the first locked version.
 - Package manager detection now also reads `devEngines.packageManager`.
+- Bun installs in CI now run `bun install --frozen-lockfile` whenever `bun.lock` or `bun.lockb`
+  exists, so a stale lockfile now fails CI installs when `bun.version` is unset, an alias, or below
+  1.2.20. Before, only Bun 1.2.20 or later with `bun.lock` ran `bun ci`.
+- For Bun, `syncProjectWorkspaceDependencies` now keeps the `workspace-caret` and `workspace-tilde`
+  formats, instead of writing `workspace:*`, and writes `link` as `file:`, as Bun before 1.4.4
+  can't install `link:` paths. Synced specs change once.
+- `docker scaffold` now copies `patches/`, where `bun patch`, `npm patch`, `pnpm patch` and
+  patch-package write patches, into the configs skeleton.
 - Version-gated behavior now treats a `latest` or `stable` version as the newest release, and a
   prerelease, like `6.0.0-rc.1`, like its release.
 
@@ -61,20 +69,25 @@
 - Fixed a full plugin cache failing `locate_dependencies_root`.
 - Fixed `initialize_toolchain` failing on an unknown `packageManager`, and linking to a page that
   doesn't exist.
-
-#### ⚙️ Internal
-
-- Updated `nodejs_package_json` to v0.5.
 - Fixed lockfile parse errors showing a virtual path instead of the real one.
-
 - Fixed an empty workspace entry in `bun.lock` panicking while parsing the lockfile.
-- Fixed a failed `bun bun.lockb` being parsed as an empty lockfile. It now returns an error.
+- Fixed a `bun.lockb` that `bun` can't read, or a missing `bun`, failing every task hash. It's now
+  skipped with a warning, and `bun` runs with the `bun` toolchain's version, instead of whichever
+  one moon's own `PATH` finds.
 - Fixed a version that can't be parsed in `bun.lock`, `deno.lock`, `package-lock.json`,
   `pnpm-lock.yaml`, `yarn.lock` or `package.json` failing every task hash. The version is now
   skipped.
 - Fixed `bun.lock` entries with an unknown shape failing to parse the lockfile. They're now skipped.
+- Fixed `bun.lock` packages without an integrity being hashed by an empty string, so their upgrades
+  never changed a task hash.
 - Fixed `package-lock.json` files with a `lockfileVersion` above 3 returning no dependencies.
   They're now parsed like version 3.
+- Fixed `bun dedupe` failing every run after an install on Bun 1.4.0 with `bun.lockb`. It now
+  requires Bun 1.4.1.
+
+#### ⚙️ Internal
+
+- Updated `nodejs_package_json` to v0.5.
 
 ## 1.3.2
 

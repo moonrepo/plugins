@@ -188,8 +188,9 @@ not a realistic use. `legacy-peer-deps=true` in `.npmrc` already reached both.
 
 ### #4 `docker setup` without npm 12's patch files
 
-- [ ] Fixed by `PNPM.md` #1
-- [ ] Add an npm 12 case to its test
+- [x] Fixed by `PNPM.md` #1 (Bun pass, 2026-11-18)
+- [x] Add an npm 12 case to its test: not needed, as the plugin only returns the glob, and moon
+      copies the files
 
 **Problem:** `npm patch` (npm 12) records patches in the root `package.json`, like
 `"patchedDependencies": { "ms@2.1.3": "patches/ms@2.1.3.patch" }`, and a missing patch file is a

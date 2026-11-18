@@ -14,7 +14,7 @@ pub fn register_toolchain(
     Ok(Json(RegisterToolchainOutput {
         name: "Bun".into(),
         plugin_version: env!("CARGO_PKG_VERSION").into(),
-        config_file_globs: vec!["bunfig.toml".into()],
+        config_file_globs: vec![".bumrc".into(), ".bun-version".into(), "bunfig.toml".into()],
         exe_names: vec!["bun".into(), "bunx".into()],
         manifest_file_names: vec!["package.json".into()],
         lock_file_names: vec!["bun.lock".into(), "bun.lockb".into()],
@@ -47,15 +47,16 @@ pub fn define_docker_metadata(
 ) -> FnResult<Json<DefineDockerMetadataOutput>> {
     let config = parse_toolchain_config::<BunToolchainConfig>(input.toolchain_config)?;
 
+    let tag = match &config.version {
+        // A bound would pick the oldest image, like `1.2.0` for `>=1.2.0`,
+        // or one that doesn't exist, like `2` for `<2`
+        Some(version) if version.to_string().starts_with(['<', '>']) => "latest".into(),
+        Some(version) => version.to_partial_string(),
+        None => "latest".into(),
+    };
+
     Ok(Json(DefineDockerMetadataOutput {
-        default_image: Some(format!(
-            "oven/bun:{}",
-            config
-                .version
-                .as_ref()
-                .map(|version| version.to_partial_string())
-                .unwrap_or_else(|| "latest".into())
-        )),
+        default_image: Some(format!("oven/bun:{tag}")),
         scaffold_globs: vec![
             // postinstall scripts, etc
             "*.{js,cjs,mjs}".into(),

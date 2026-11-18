@@ -261,6 +261,23 @@ mod javascript_toolchain_tier1 {
         }
     }
 
+    mod define_docker_metadata {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn copies_patches() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .define_docker_metadata(DefineDockerMetadataInput::default())
+                .await;
+
+            assert_eq!(output.default_image, None);
+            assert_eq!(output.scaffold_globs, ["patches/**/*"]);
+        }
+    }
+
     mod scaffold_docker {
         use super::*;
 

@@ -437,6 +437,18 @@ fn sync_project_workspace_dependencies(
 }
 
 #[plugin_fn]
+pub fn define_docker_metadata(
+    Json(_): Json<DefineDockerMetadataInput>,
+) -> FnResult<Json<DefineDockerMetadataOutput>> {
+    Ok(Json(DefineDockerMetadataOutput {
+        // Installs read patches, which `bun patch`, `npm patch`, `pnpm patch`
+        // and patch-package write here by default
+        scaffold_globs: vec!["patches/**/*".into()],
+        ..Default::default()
+    }))
+}
+
+#[plugin_fn]
 pub fn scaffold_docker(
     Json(input): Json<ScaffoldDockerInput>,
 ) -> FnResult<Json<ScaffoldDockerOutput>> {

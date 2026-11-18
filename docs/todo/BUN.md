@@ -30,9 +30,9 @@ cargo nextest run -p bun_tool -p bun_toolchain -p javascript_toolchain --no-defa
 
 In agent sessions, unset `AI_AGENT` and `CLAUDECODE` first, or wrapper banners can break JSON tests.
 
-The Bun install tests mock `load_toolchain_config` with `|_, _|`, which ignores the requested ID
-(`toolchains/javascript/tests/tier2_test.rs:1071`, `:1113`, `:1170`, `:1206`, `:1245`). That's how
-Python #1 slipped through. New tests should assert the ID is `bun`.
+The Bun install mocks of `load_toolchain_config` used `|_, _|`, which ignores the requested ID. That's
+how Python #1 slipped through. They now assert the ID is `bun` (JavaScript pass), and new tests
+should too.
 
 Findings marked **Live** were reproduced with `~/.proto/tools/moon/2.6.4/moon` in a scratch git repo,
 which loads the released `bun_toolchain` 1.0.5 and `javascript_toolchain` 1.3.2 by default (moon
@@ -98,18 +98,21 @@ emulated by copying `.moon/docker/configs` to a fresh git repo.
 
 ## Decisions needed
 
-| Decision                                                                    | Recommendation                                                     |
-| --------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| D1 (#8): when `bun bun.lockb` can't run, fail every task hash or skip it?   | Skip with a warning, as the lockfile only refines the hash         |
-| D2 (#9): should `bun` require the `javascript` toolchain?                   | No. Have `moon toolchain add bun` add `javascript` instead (moon)  |
+| Decision                                                                  | Outcome                                                     |
+| ------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| D1 (#8): when `bun bun.lockb` can't run, fail every task hash or skip it? | **Decided:** skip with a warning                            |
+| D2 (#9): should `bun` require the `javascript` toolchain?                 | **Decided:** no, `moon toolchain add bun` adds it (in moon) |
+
+Decided and implemented on 2026-11-18, on the `js-audit` branch with `JAVASCRIPT.md`. The pass also
+did `PNPM.md` #1, which fixes #4.
 
 ## Phase 1: clear-cut fixes
 
 ### #1 A Bun in `~/.bun/bin` replaces the configured version
 
-- [ ] Add `activate_environment` to `tools/bun`, returning the tool directory
-- [ ] Tests
-- [ ] Changelog (tool and toolchain)
+- [x] Add `activate_environment` to `tools/bun`, returning the tool directory
+- [x] Tests
+- [x] Changelog (tool and toolchain)
 
 **Problem:** `locate_executables` lists `$BUN_INSTALL_BIN`, `$BUN_INSTALL/bin`,
 `$XDG_CACHE_HOME/.bun/bin` and `$HOME/.bun/bin` as globals directories
@@ -139,13 +142,14 @@ lockfile was untouched, the task printed `1.4.0`, and `~/.bun/bin` stayed on PAT
 A moon change that orders each toolchain's executable directory first would also work (see
 `MOON_COMPACT.md`).
 
-**Tests** (`tools/bun/tests`): `activate_environment` returns the tool directory.
+**Tests** (`tools/bun/tests/activate_test.rs`): `activate_environment` returns the tool directory.
+It's a real path, as proto adds the paths to `PATH` as they are, while moon converts virtual ones.
 
 ### #2 Frozen installs in CI without a version, or with `bun.lockb`
 
-- [ ] Add `--frozen-lockfile` in CI whenever a Bun lockfile exists
-- [ ] Tests
-- [ ] Changelog
+- [x] Add `--frozen-lockfile` in CI whenever a Bun lockfile exists
+- [x] Tests
+- [x] Changelog
 
 **Problem:** `install_dependencies` only uses `bun ci` when `env.ci` is set, the install isn't for
 production, `bun.lock` exists, and `bun.version` satisfies `>=1.2.20`
@@ -163,15 +167,16 @@ exists, run `bun install --frozen-lockfile`. Every Bun 1.x has the flag, and it 
 can go. Production installs are unchanged, since `--production` already implies it. A second
 `--frozen-lockfile` from `installArgs` is accepted.
 
-**Tests:** update `switches_to_ci_in_ci` and `skips_ci_on_older_versions_and_production`
-(`tier2_test.rs:1107-1237`), and add an unset `version` and a `bun.lockb` case.
+**Tests:** `freezes_the_lockfile_in_ci` (an unset, old and alias `version`, and `bun.lockb`) and
+`production_implies_frozen_in_ci` replace `switches_to_ci_in_ci` and
+`skips_ci_on_older_versions_and_production`.
 
 **Changelog:** a stale lockfile now fails CI installs when `bun.version` is unset or below 1.2.20.
 
 ### #3 `bun bun.lockb` runs whichever `bun` moon itself finds
 
-- [ ] Pass `PROTO_BUN_VERSION` from the `bun` toolchain's `version`
-- [ ] Re-enable the `bun.lockb` test
+- [x] Pass `PROTO_BUN_VERSION` from the `bun` toolchain's `version`
+- [x] Re-enable the `bun.lockb` test
 
 **Problem:** `parse_bun_lockb` runs `bun bun.lockb` and parses the Yarn-format output
 (`lockfiles/bun.rs:178-193`). A command run from inside a plugin function gets moon's own process
@@ -195,12 +200,13 @@ with `bun.lockb`):
 pnpm repo with a stray `bun.lockb` has no `bun` toolchain. This fixes the proto shim case. A `bun`
 that comes first on moon's own PATH, or no `bun` at all, still fails; #8 covers those.
 
-**Tests:** re-enable `parses_bun_classic` (`tier2_test.rs:2640-2665`), skipping it when `bun` isn't
-on PATH, as CI runners may not have it.
+**Tests:** `parses_bun_classic` is re-enabled, and skipped when `bun` isn't on PATH, as CI runners
+may not have it. The test sandbox runs real commands, so the `PROTO_BUN_VERSION` env var itself isn't
+covered.
 
 ### #4 Docker scaffold doesn't copy `bun patch` files
 
-- [ ] Fixed by `PNPM.md` #1
+- [x] Fixed by `PNPM.md` #1, done in this pass
 
 **Problem:** `bun patch --commit` writes `patches/<name>@<version>.patch` and records it in the root
 `package.json`'s `patchedDependencies` and in `bun.lock`. `bun install` reads the file.
@@ -217,8 +223,8 @@ package manager. That covers Bun, and it ships sooner, since `bun_toolchain` is 
 
 ### #5 `bun dedupe` fails on Bun 1.4.0 with `bun.lockb`
 
-- [ ] Gate dedupe on `>=1.4.1`
-- [ ] Tests
+- [x] Gate dedupe on `>=1.4.1`
+- [x] Tests
 
 **Problem:** the dedupe command is returned for `>=1.4.0` (`tier2.rs:598-607`). moon runs it after
 every install outside CI except the first, and fails the run when it fails
@@ -230,14 +236,14 @@ dedupes a `bun.lock` one.
 
 **Change:** require `>=1.4.1`.
 
-**Tests:** `focused_commands_v140` (`tier2_test.rs:1064-1105`) expects no dedupe; add a 1.4.1 case.
+**Tests:** `focused_commands_v140` expects no dedupe, and `dedupes_on_v141` does.
 
 ### #6 Dependency version formats for Bun
 
-- [ ] Map `link` to `file`
-- [ ] Keep `workspace-caret` and `workspace-tilde`
-- [ ] Unit tests in `config.rs`
-- [ ] Changelog
+- [x] Map `link` to `file`
+- [x] Keep `workspace-caret` and `workspace-tilde`
+- [x] Unit tests in `config.rs`
+- [x] Changelog
 
 **Problem:** `get_supported_for` (`toolchains/javascript/src/config.rs:77-83`) turns `workspace:^`
 and `workspace:~` into `workspace:*` for Bun, and passes `link:` through. Confirmed by installing the
@@ -258,7 +264,7 @@ workspace with each spec for `a`'s dependency on `b`:
 
 ### #7 Small fixes
 
-- [ ] `parse_bun_lock` passes npm and git or github integrities through as they are
+- [x] `parse_bun_lock` passes npm and git or github integrities through as they are
       (`lockfiles/bun.rs:125-138`). Bun writes `""` when the registry sent no integrity or shasum,
       as `Integrity` displays nothing for an unknown tag (bun-v1.4.4 `src/install/integrity.rs:245-249`,
       written at `bun.lock.rs:849`). moon records a hash in preference to the version
@@ -271,15 +277,15 @@ workspace with each spec for `a`'s dependency on `b`:
       struct that `NODE.md` #1 adds to `lang-javascript-common` (handed over by `NODE.md`, which
       reproduced it for `node_tool`).
       Done in the JavaScript pass: `nodejs_package_json` now skips fields it can't parse.
-- [ ] Remove the unused `exec_command` host function (`tools/bun/src/proto.rs:15-18`), left over since
+- [x] Remove the unused `exec_command` host function (`tools/bun/src/proto.rs:15-18`), left over since
       0.17.0 took the baseline build from proto's CPU level.
 
 ## Phase 2: after decisions
 
 ### #8 Don't fail every task hash when `bun bun.lockb` can't run (D1)
 
-- [ ] Warn and return no locked dependencies
-- [ ] Tests
+- [x] Warn and return no locked dependencies
+- [x] Tests
 
 **Problem:** after #3, `parse_lock` still fails every task when the `bun` first on moon's PATH can't
 read the file, when there's no `bun` on PATH, or for a stray `bun.lockb` in a repo that doesn't use
@@ -296,11 +302,12 @@ and log later ones with `debug!`.
 
 **Alternative:** keep `master`'s error. It's loud, but blocks every task until the user fixes PATH.
 
-**Tests:** a `bun.lockb` with no `bun` on PATH returns no dependencies.
+**Tests:** `skips_a_bun_lockb_that_bun_cant_read` returns no dependencies for a file that isn't a
+lockfile, which `bun` exits 1 on ("InvalidLockfile"), or that the host can't run `bun` for.
 
 ### #9 `moon toolchain add bun` leaves out `javascript` (D2)
 
-- [ ] Decide where to fix it
+- [x] Decide where to fix it: in moon (`MOON_COMPACT.md`), nothing in this repo
 
 **Problem:** moon's docs say the `bun` toolchain requires `javascript` (`website/docs/config/toolchain.mdx`,
 `## bun`), but nothing enforces it: the toolchain has no `define_requirements`, and
@@ -321,7 +328,7 @@ allows, as it skips requirements already in the cycle.
 
 ### #10 Docker image for lower bounds
 
-- [ ] Use `latest` for `>`, `>=`, `<` and `<=` requirements
+- [x] Use `latest` for `>`, `>=`, `<` and `<=` requirements
 
 `define_docker_metadata` uses `to_partial_string` (`tier1.rs:51-58`), which keeps the version for
 every operator except `!=` (version_spec 0.11.8 `unresolved_spec.rs:125-147`). `moon toolchain add`
@@ -330,14 +337,14 @@ the oldest version allowed. `<2` would give `oven/bun:2`, which doesn't exist.
 
 ### #11 Test gaps
 
-- [ ] Assert the requested ID in the Bun install mocks (see Testing)
-- [ ] Unit tests in `lockfiles/bun.rs` for the shapes the fixture lacks: remote and local tarballs,
+- [x] Assert the requested ID in the Bun install mocks (see Testing), done in the JavaScript pass
+- [x] Unit tests in `lockfiles/bun.rs` for the shapes the fixture lacks: remote and local tarballs,
       `file:`, `root:`, git with and without integrity, and an aliased key like
       `"my-ms": ["ms@2.1.2", …]`
 
 ### #12 Detection names
 
-- [ ] `config_file_globs` (`toolchains/bun/src/tier1.rs:17`): add `.bun-version` and `.bumrc`, which
+- [x] `config_file_globs` (`toolchains/bun/src/tier1.rs:17`): add `.bun-version` and `.bumrc`, which
       the tool reads (`tools/bun/src/proto.rs:46-50`). This also copies them into the configs
       skeleton.
 
@@ -376,13 +383,14 @@ Bun plugin with identifier bun, as it requires a minimum proto version of 0.64.0
 ship now. moon's default locators then need a bump (`toolchains_config_ext.rs:16`, `:19`) for users
 to get either release.
 
-- `javascript_toolchain`: #2, #3, #5, #6, #7's integrity check and #8 as 1.4.0, with callouts for
-  CI installs that now fail on stale lockfiles (#2) and synced specs (#6). It also ships the
+- `javascript_toolchain`: #2, #3, #4, #5, #6, #7's integrity check and #8, in 1.4.0 with
+  `JAVASCRIPT.md`, with callouts for CI installs that now fail on stale lockfiles (#2) and synced
+  specs (#6). It also ships the
   unreleased lockfile fixes on `master`, which fix the live 1.3.2 failure on a local tarball's
   version.
 - `bun_tool`: #1 and #7's `package.json` parse and cleanup are a patch (0.17.1), which proto 0.64
   users get right away.
-- `bun_toolchain`: #12, plus the `bun_tool` re-export, as 1.0.6. #4 ships in `javascript_toolchain`
+- `bun_toolchain`: #10, #12, plus the `bun_tool` re-export, as 1.0.6. #4 ships in `javascript_toolchain`
   with `PNPM.md` #1.
 
 ## Handed to other plans

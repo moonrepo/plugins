@@ -5,6 +5,16 @@
 #### 🚀 Updates
 
 - Panics now report their message, instead of an `unreachable` WASM trap error.
+- `.bumrc` and `.bun-version` are now config files, so they're copied into the Docker configs
+  skeleton.
+
+#### 🐞 Fixes
+
+- Fixed a Bun in `~/.bun/bin`, where Bun's installer and `setup-bun` put it, running moon's
+  installs and tasks instead of the configured `version`.
+- Fixed the default Docker image for a version bound being the oldest allowed version, like
+  `oven/bun:1.2.0` for `>=1.2.0`, or one that doesn't exist, like `oven/bun:2` for `<2`. It's now
+  `oven/bun:latest`.
 
 ## 1.0.5
 

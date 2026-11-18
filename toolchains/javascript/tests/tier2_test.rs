@@ -1368,6 +1368,33 @@ mod javascript_toolchain_tier2 {
                         .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                     )
                 );
+
+                // v1.4.0's dedupe can't read `bun.lockb`
+                assert!(output.dedupe_command.is_none());
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn dedupes_on_v141() {
+                let mut sandbox = create_empty_moon_sandbox();
+
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "bun");
+                    json!({ "version": "1.4.1" })
+                });
+
+                let plugin = sandbox.create_toolchain("javascript").await;
+
+                let output = plugin
+                    .install_dependencies(InstallDependenciesInput {
+                        root: VirtualPath::new(sandbox.path()),
+                        toolchain_config: json!({
+                            "packageManager": "bun",
+                            "dedupeOnLockfileChange": true
+                        }),
+                        ..Default::default()
+                    })
+                    .await;
+
                 assert_eq!(
                     output.dedupe_command.unwrap(),
                     ExecCommand::new(
@@ -1378,109 +1405,66 @@ mod javascript_toolchain_tier2 {
             }
 
             #[tokio::test(flavor = "multi_thread")]
-            async fn switches_to_ci_in_ci() {
-                let mut sandbox = create_empty_moon_sandbox();
+            async fn freezes_the_lockfile_in_ci() {
+                for (version, lockfile) in [
+                    (None, "bun.lock"),
+                    (None, "bun.lockb"),
+                    (Some("1.2.19"), "bun.lock"),
+                    (Some("latest"), "bun.lock"),
+                ] {
+                    let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
-                    assert_eq!(id, "bun");
-                    json!({ "version": "1.4.0" })
-                });
+                    sandbox.host_funcs.mock_load_toolchain_config(move |id, _| {
+                        assert_eq!(id, "bun");
+                        json!({ "version": version })
+                    });
 
-                let plugin = sandbox
-                    .create_toolchain_with_config("javascript", |cfg| {
-                        cfg.host_environment(HostEnvironment {
-                            ci: true,
-                            ..Default::default()
-                        });
-                    })
-                    .await;
+                    let plugin = sandbox
+                        .create_toolchain_with_config("javascript", |cfg| {
+                            cfg.host_environment(HostEnvironment {
+                                ci: true,
+                                ..Default::default()
+                            });
+                        })
+                        .await;
 
-                // No lockfile — stays as `bun install`
-                let output = plugin
-                    .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::new(sandbox.path()),
-                        toolchain_config: json!({
-                            "packageManager": "bun",
-                        }),
-                        ..Default::default()
-                    })
-                    .await;
+                    // Nothing to freeze without a lockfile
+                    for has_lockfile in [false, true] {
+                        if has_lockfile {
+                            sandbox.create_file(lockfile, "{}");
+                        }
 
-                assert_eq!(
-                    output.install_command.unwrap(),
-                    ExecCommand::new(
-                        ExecCommandInput::new("bun", ["install"])
-                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
-                );
+                        let output = plugin
+                            .install_dependencies(InstallDependenciesInput {
+                                root: VirtualPath::new(sandbox.path()),
+                                toolchain_config: json!({
+                                    "packageManager": "bun",
+                                }),
+                                ..Default::default()
+                            })
+                            .await;
 
-                sandbox.create_file("bun.lock", "{}");
+                        let mut args = vec!["install"];
 
-                let output = plugin
-                    .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::new(sandbox.path()),
-                        toolchain_config: json!({
-                            "packageManager": "bun",
-                        }),
-                        ..Default::default()
-                    })
-                    .await;
+                        if has_lockfile {
+                            args.push("--frozen-lockfile");
+                        }
 
-                assert_eq!(
-                    output.install_command.unwrap(),
-                    ExecCommand::new(
-                        ExecCommandInput::new("bun", ["ci"])
-                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
-                );
+                        assert_eq!(
+                            output.install_command.unwrap(),
+                            ExecCommand::new(
+                                ExecCommandInput::new("bun", args)
+                                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                            ),
+                            "{version:?} {lockfile}"
+                        );
+                    }
+                }
             }
 
             #[tokio::test(flavor = "multi_thread")]
-            async fn skips_ci_on_older_versions_and_production() {
-                let mut sandbox = create_empty_moon_sandbox();
-
-                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
-                    assert_eq!(id, "bun");
-                    json!({ "version": "1.2.19" })
-                });
-
-                let plugin = sandbox
-                    .create_toolchain_with_config("javascript", |cfg| {
-                        cfg.host_environment(HostEnvironment {
-                            ci: true,
-                            ..Default::default()
-                        });
-                    })
-                    .await;
-
-                sandbox.create_file("bun.lock", "{}");
-
-                let output = plugin
-                    .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::new(sandbox.path()),
-                        toolchain_config: json!({
-                            "packageManager": "bun",
-                        }),
-                        ..Default::default()
-                    })
-                    .await;
-
-                assert_eq!(
-                    output.install_command.unwrap(),
-                    ExecCommand::new(
-                        ExecCommandInput::new("bun", ["install"])
-                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
-                );
-
-                // `--production` implies `--frozen-lockfile`
-                let mut sandbox = create_empty_moon_sandbox();
-
-                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
-                    assert_eq!(id, "bun");
-                    json!({ "version": "1.4.0" })
-                });
-
+            async fn production_implies_frozen_in_ci() {
+                let sandbox = create_empty_moon_sandbox();
                 let plugin = sandbox
                     .create_toolchain_with_config("javascript", |cfg| {
                         cfg.host_environment(HostEnvironment {
@@ -3012,34 +2996,47 @@ mod javascript_toolchain_tier2 {
             assert_eq!(output.dependencies, expected);
         }
 
-        // #[tokio::test(flavor = "multi_thread")]
-        // async fn parses_bun_classic() {
-        //     let sandbox = create_lockfile_sandbox("bun-classic");
-        //     let plugin = sandbox.create_toolchain("javascript").await;
+        #[tokio::test(flavor = "multi_thread")]
+        async fn parses_bun_classic() {
+            // Reading `bun.lockb` runs `bun`, which CI may not have
+            #[allow(clippy::disallowed_methods)] // Runs natively, on the host
+            if std::process::Command::new("bun")
+                .arg("--version")
+                .output()
+                .is_err()
+            {
+                return;
+            }
 
-        //     let output = plugin
-        //         .parse_lock(ParseLockInput {
-        //             path: VirtualPath::new(sandbox.path().join("bun.lockb")),
-        //             ..Default::default()
-        //         })
-        //         .await;
+            let sandbox = create_lockfile_sandbox("bun-classic");
+            let plugin = sandbox.create_toolchain("javascript").await;
 
-        //     // Workspaces packages have `workspace:` in their version
-        //     assert_eq!(
-        //         output.packages,
-        //         BTreeMap::from_iter([("a".into(), None), ("b".into(), None), ("c".into(), None)])
-        //     );
+            let output = plugin
+                .parse_lock(ParseLockInput {
+                    path: VirtualPath::new(sandbox.path().join("bun.lockb")),
+                    ..Default::default()
+                })
+                .await;
 
-        //     assert_eq!(output.dependencies, {
-        //         let mut deps = BTreeMap::from_iter([
-        //             ("a".into(), vec![LockDependency::default()]),
-        //             ("b".into(), vec![LockDependency::default()]),
-        //             ("c".into(), vec![LockDependency::default()]),
-        //         ]);
-        //         deps.extend(expected_base_dependencies());
-        //         deps
-        //     });
-        // }
+            assert_eq!(output.dependencies, expected_base_dependencies());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn skips_a_bun_lockb_that_bun_cant_read() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("bun.lockb", "not a lockfile");
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .parse_lock(ParseLockInput {
+                    path: VirtualPath::new(sandbox.path().join("bun.lockb")),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.dependencies.is_empty());
+        }
 
         #[tokio::test(flavor = "multi_thread")]
         async fn parses_deno() {

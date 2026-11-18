@@ -1,14 +1,24 @@
 use super::yarn::parse_yarn_lock_content;
 use super::{parse_name_and_version, parse_version_spec};
 #[cfg(feature = "wasm")]
-use moon_pdk::{ExecCommandInput, exec};
+use crate::config::SharedPackageManagerConfig;
 #[cfg(feature = "wasm")]
-use moon_pdk_api::anyhow;
+use extism_pdk::*;
+#[cfg(feature = "wasm")]
+use moon_pdk::{
+    ExecCommandInput, HostLogInput, HostLogTarget, exec, host_log, load_toolchain_config,
+};
 use moon_pdk_api::{AnyResult, LockDependency, ParseLockOutput, VirtualPath};
 use serde::Deserialize;
 use starbase_utils::{fs, json, json::JsonValue};
 use std::collections::BTreeMap;
 use toolchain_common::debug;
+
+#[cfg(feature = "wasm")]
+#[host_fn]
+extern "ExtismHost" {
+    fn host_log(input: Json<HostLogInput>);
+}
 
 #[derive(Debug, Deserialize, Default)]
 #[serde(default, rename_all = "camelCase")]
@@ -90,9 +100,17 @@ fn is_integrity_hash(value: &str) -> bool {
         .any(|algorithm| value.starts_with(algorithm))
 }
 
+// Bun writes `""` when the registry sent no integrity
+fn get_integrity(value: &String) -> Option<&String> {
+    is_integrity_hash(value).then_some(value)
+}
+
 pub fn parse_bun_lock(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyResult<()> {
-    let content = fs::read_file(path)?;
-    let lock: BunLock = json::parse(&content)?; // JSON5
+    parse_bun_lock_content(&fs::read_file(path)?, output)
+}
+
+pub fn parse_bun_lock_content(content: &str, output: &mut ParseLockOutput) -> AnyResult<()> {
+    let lock: BunLock = json::parse(content)?; // JSON5
 
     for (key, package) in lock.packages {
         let (name, version, integrity) = match &package {
@@ -127,14 +145,14 @@ pub fn parse_bun_lock(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyRe
                     continue;
                 };
 
-                (name, version, Some(integrity))
+                (name, version, get_integrity(integrity))
             }
             BunLockPackage::Dependency2(id, _data, _tag, integrity) => {
                 let Some((name, version)) = parse_name_and_version(id, "") else {
                     continue;
                 };
 
-                (name, version, Some(integrity))
+                (name, version, get_integrity(integrity))
             }
             // Tarballs store an integrity hash, while git/github store a bun tag
             BunLockPackage::Dependency3(id, _data, integrity_or_tag) => {
@@ -142,15 +160,7 @@ pub fn parse_bun_lock(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyRe
                     continue;
                 };
 
-                (
-                    name,
-                    version,
-                    if is_integrity_hash(integrity_or_tag) {
-                        Some(integrity_or_tag)
-                    } else {
-                        None
-                    },
-                )
+                (name, version, get_integrity(integrity_or_tag))
             }
             BunLockPackage::Dependency4(id, _data) => {
                 let Some((name, version)) = parse_name_and_version(id, "") else {
@@ -177,19 +187,44 @@ pub fn parse_bun_lock(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyRe
 
 #[cfg(feature = "wasm")]
 pub fn parse_bun_lockb(path: &VirtualPath, output: &mut ParseLockOutput) -> AnyResult<()> {
-    let content = exec(
-        ExecCommandInput::pipe("bun", ["bun.lockb"])
-            .cwd(path.parent().expect("file path should have a parent")),
-    )?;
+    let mut command = ExecCommandInput::pipe("bun", ["bun.lockb"])
+        .cwd(path.parent().expect("file path should have a parent"));
 
-    if content.exit_code != 0 {
-        return Err(anyhow!(
-            "Failed to read <file>bun.lockb</file> with <shell>bun</shell>: {}",
-            content.stderr.trim()
-        ));
+    // Commands run with moon's environment, not the toolchain's, so pin
+    // proto's shim to the configured Bun. Repos without the `bun` toolchain
+    // can't load its config, so ignore the error
+    if let Ok(config) = load_toolchain_config::<SharedPackageManagerConfig>("bun")
+        && let Some(version) = config.version
+    {
+        command
+            .env
+            .insert("PROTO_BUN_VERSION".into(), version.to_string());
     }
 
-    parse_yarn_lock_content(content.stdout.trim(), output)
+    let error = match exec(command) {
+        Ok(result) if result.exit_code == 0 => {
+            return parse_yarn_lock_content(result.stdout.trim(), output);
+        }
+        Ok(result) => result.stderr.trim().to_owned(),
+        Err(error) => error.to_string(),
+    };
+
+    // ADR-0007.3: The lockfile only refines task hashes, so skip it instead
+    // of failing every task, and only warn once, as this runs for every task
+    if var::get::<bool>("bun-lockb-warned")?.is_some() {
+        debug!("Skipping bun.lockb, as bun couldn't read it: {error}");
+    } else {
+        host_log!(
+            warn,
+            "Skipping <file>bun.lockb</file> in task hashes, as <shell>bun bun.lockb</shell> failed: {error}"
+        );
+
+        if let Err(error) = var::set("bun-lockb-warned", true) {
+            debug!("Failed to cache the bun.lockb warning: {error}");
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -244,6 +279,75 @@ mod tests {
             parse(r#"["a@workspace:packages/a"]"#),
             BunLockPackage::Workspace(..)
         ));
+    }
+
+    #[test]
+    fn parses_git_entries() {
+        assert!(matches!(
+            parse(
+                r#"["is-odd@git+https://github.com/jonschlinkert/is-odd.git#4f2a8ac", {}, "jonschlinkert-is-odd-4f2a8ac", "sha512-Ab3d=="]"#
+            ),
+            BunLockPackage::Dependency2(..)
+        ));
+        assert!(matches!(
+            parse(
+                r#"["is-odd@git+https://github.com/jonschlinkert/is-odd.git#4f2a8ac", {}, "jonschlinkert-is-odd-4f2a8ac"]"#
+            ),
+            BunLockPackage::Dependency3(..)
+        ));
+    }
+
+    #[test]
+    fn parses_tarball_entries() {
+        assert!(matches!(
+            parse(r#"["mri@https://example.com/mri-1.2.0.tgz", {}, "sha512-Ab3d=="]"#),
+            BunLockPackage::Dependency3(..)
+        ));
+        assert!(matches!(
+            parse(r#"["mri@./vendor/mri-1.2.0.tgz", {}, "sha512-Ab3d=="]"#),
+            BunLockPackage::Dependency3(..)
+        ));
+    }
+
+    #[test]
+    fn parses_folder_and_root_entries() {
+        assert!(matches!(
+            parse(r#"["c@file:packages/c", {}]"#),
+            BunLockPackage::Dependency4(..)
+        ));
+        assert!(matches!(
+            parse(r#"["root@root:", {}]"#),
+            BunLockPackage::Dependency4(..)
+        ));
+    }
+
+    fn parse_content(content: &str) -> BTreeMap<String, Vec<LockDependency>> {
+        let mut output = ParseLockOutput::default();
+        parse_bun_lock_content(content, &mut output).unwrap();
+        output.dependencies
+    }
+
+    #[test]
+    fn records_aliases_under_the_real_name() {
+        let deps =
+            parse_content(r#"{ "packages": { "my-ms": ["ms@2.1.2", "", {}, "sha512-Ab3d=="] } }"#);
+
+        assert_eq!(deps["ms"][0].hash.as_deref(), Some("sha512-Ab3d=="));
+        assert!(!deps.contains_key("my-ms"));
+    }
+
+    #[test]
+    fn skips_integrities_that_arent_hashes() {
+        let deps = parse_content(
+            r#"{ "packages": {
+                "ms": ["ms@2.1.2", "", {}, ""],
+                "is-odd": ["is-odd@github:jonschlinkert/is-odd#4f2a8ac", {}, "jonschlinkert-is-odd-4f2a8ac"]
+            } }"#,
+        );
+
+        assert_eq!(deps["ms"][0].hash, None);
+        assert!(deps["ms"][0].version.is_some());
+        assert_eq!(deps["is-odd"][0].hash, None);
     }
 
     #[test]

@@ -105,8 +105,12 @@ None are decided yet.
 
 ### #1 Docker: copy pnpm patches into the skeleton
 
-- [ ] Add `define_docker_metadata` with `patches/**/*`
-- [ ] Test
+- [x] Add `define_docker_metadata` with `patches/**/*`
+- [x] Test
+
+**Done (2026-11-18, Bun pass):** `define_docker_metadata` in `toolchains/javascript/src/tier1.rs`
+returns the glob, which moon copies in both phases. The test (`copies_patches` in `tier1_test.rs`)
+only checks the glob, as moon does the copying.
 
 **Problem:** `pnpm patch-commit` writes `patches/<name>@<version>.patch` and records it in
 `patchedDependencies` (in `pnpm-workspace.yaml` since pnpm 10, in `package.json`'s `pnpm` field

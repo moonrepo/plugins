@@ -86,9 +86,10 @@ impl JavaScriptDependencyVersionFormat {
 
     pub fn get_supported_for(&self, pm: &JavaScriptPackageManager) -> Self {
         match pm {
+            // Before v1.4.4, `link:` only named a package registered with `bun link`
             JavaScriptPackageManager::Bun => {
-                if matches!(self, Self::WorkspaceCaret | Self::WorkspaceTilde) {
-                    Self::Workspace
+                if matches!(self, Self::Link) {
+                    Self::File
                 } else {
                     *self
                 }
@@ -225,6 +226,29 @@ mod tests {
         assert!(config("6.0.0-rc.23").version_satisfies(">=2.0.0"));
         assert!(config("1.4.0-canary.1").version_satisfies(">=1.4.0"));
         assert!(!config("1.3.0-rc.1").version_satisfies(">=1.4.0"));
+    }
+
+    #[test]
+    fn maps_version_formats_for_bun() {
+        use JavaScriptDependencyVersionFormat::*;
+
+        for (format, expected) in [
+            (File, File),
+            (Link, File),
+            (Star, Star),
+            (Version, Version),
+            (VersionCaret, VersionCaret),
+            (VersionTilde, VersionTilde),
+            (Workspace, Workspace),
+            (WorkspaceCaret, WorkspaceCaret),
+            (WorkspaceTilde, WorkspaceTilde),
+        ] {
+            assert_eq!(
+                format.get_supported_for(&JavaScriptPackageManager::Bun),
+                expected,
+                "{format:?}"
+            );
+        }
     }
 
     #[test]
