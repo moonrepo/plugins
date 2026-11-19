@@ -124,6 +124,11 @@
     "macos": "ruby-3.3.13.macos.tar.gz",
     "x86_64_linux": "ruby-3.3.13.x86_64_linux.tar.gz"
   },
+  "3.3.14": {
+    "arm64_linux": "ruby-3.3.14.arm64_linux.tar.gz",
+    "macos": "ruby-3.3.14.macos.tar.gz",
+    "x86_64_linux": "ruby-3.3.14.x86_64_linux.tar.gz"
+  },
   "3.4.0": {
     "arm64_linux": "ruby-3.4.0.arm64_linux.tar.gz",
     "macos": "ruby-3.4.0.macos.tar.gz",
@@ -189,6 +194,11 @@
     "macos": "ruby-3.4.12.macos.tar.gz",
     "x86_64_linux": "ruby-3.4.12.x86_64_linux.tar.gz"
   },
+  "3.4.13": {
+    "arm64_linux": "ruby-3.4.13.arm64_linux.tar.gz",
+    "macos": "ruby-3.4.13.macos.tar.gz",
+    "x86_64_linux": "ruby-3.4.13.x86_64_linux.tar.gz"
+  },
   "3.5.0-preview1": {
     "arm64_linux": "ruby-3.5.0-preview1.arm64_linux.tar.gz",
     "macos": "ruby-3.5.0-preview1.macos.tar.gz",
@@ -253,6 +263,11 @@
     "arm64_linux": "ruby-4.0.9.arm64_linux.tar.gz",
     "macos": "ruby-4.0.9.macos.tar.gz",
     "x86_64_linux": "ruby-4.0.9.x86_64_linux.tar.gz"
+  },
+  "4.0.10": {
+    "arm64_linux": "ruby-4.0.10.arm64_linux.tar.gz",
+    "macos": "ruby-4.0.10.macos.tar.gz",
+    "x86_64_linux": "ruby-4.0.10.x86_64_linux.tar.gz"
   },
   "4.1.0-preview1": {
     "arm64_linux": "ruby-4.1.0-preview1.arm64_linux.tar.gz",
