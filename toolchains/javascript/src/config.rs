@@ -104,6 +104,14 @@ impl JavaScriptDependencyVersionFormat {
                     *self
                 }
             }
+            // Since v9, only `workspace:` links a workspace package, and others resolve
+            // from the registry. `pnpm publish` replaces them with versions.
+            JavaScriptPackageManager::Pnpm => match self {
+                Self::Star | Self::Version => Self::Workspace,
+                Self::VersionCaret => Self::WorkspaceCaret,
+                Self::VersionTilde => Self::WorkspaceTilde,
+                _ => *self,
+            },
             _ => *self,
         }
     }
@@ -245,6 +253,29 @@ mod tests {
         ] {
             assert_eq!(
                 format.get_supported_for(&JavaScriptPackageManager::Bun),
+                expected,
+                "{format:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn maps_version_formats_for_pnpm() {
+        use JavaScriptDependencyVersionFormat::*;
+
+        for (format, expected) in [
+            (File, File),
+            (Link, Link),
+            (Star, Workspace),
+            (Version, Workspace),
+            (VersionCaret, WorkspaceCaret),
+            (VersionTilde, WorkspaceTilde),
+            (Workspace, Workspace),
+            (WorkspaceCaret, WorkspaceCaret),
+            (WorkspaceTilde, WorkspaceTilde),
+        ] {
+            assert_eq!(
+                format.get_supported_for(&JavaScriptPackageManager::Pnpm),
                 expected,
                 "{format:?}"
             );

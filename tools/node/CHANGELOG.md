@@ -8,6 +8,8 @@
   dependency range, losing its `engines.node`, `devEngines.runtime` or `volta.node` pin. Those
   fields are now skipped.
 - Fixed a cycle in `volta.extends` overflowing the stack.
+- Fixed pinning a version to `package.json` replacing a `devEngines.runtime` list, like one for
+  Node.js and Bun, with only the pinned tool's entry.
 - Fixed an entry in nodejs.org's index that can't be parsed failing version loading and canary
   installs. It's now skipped.
 

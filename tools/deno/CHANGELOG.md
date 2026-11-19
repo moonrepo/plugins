@@ -9,6 +9,8 @@
 - Fixed a Deno in `~/.deno/bin`, where Deno's installer puts it, running instead of the configured
   version in moon. Activating the environment now puts the tool's directory first on `PATH`.
 - Removed `DENO_HOME` from the globals directories, as Deno doesn't read it.
+- Fixed pinning a version to `package.json` replacing a `devEngines.runtime` list, like one for
+  Node.js and Bun, with only the pinned tool's entry.
 
 ## 0.16.0
 

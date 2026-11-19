@@ -162,7 +162,11 @@ pub fn insert_dev_engine_version(
         }
 
         if let Some(JsonValue::Object(dev_engines)) = root.get_mut("devEngines") {
-            if dev_engines.get(&kind).is_none_or(|node| !node.is_object()) {
+            // A list holds one entry per tool, like Node.js and Bun
+            if dev_engines
+                .get(&kind)
+                .is_none_or(|node| !node.is_object() && !node.is_array())
+            {
                 dev_engines.insert(kind.clone(), JsonValue::Object(JsonMap::default()));
             }
 
@@ -286,6 +290,42 @@ pub fn remove_dev_engine(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn inserts_dev_engine_versions_into_lists() {
+        let mut package_json = serde_json::json!({
+            "devEngines": {
+                "packageManager": [
+                    { "name": "npm", "version": "^11.0.0" },
+                    { "name": "pnpm", "version": "^10.0.0", "onFail": "warn" }
+                ]
+            }
+        });
+
+        insert_dev_engine_version(
+            &mut package_json,
+            "packageManager".into(),
+            "pnpm".into(),
+            "10.33.4".into(),
+        )
+        .unwrap();
+        insert_dev_engine_version(
+            &mut package_json,
+            "packageManager".into(),
+            "yarn".into(),
+            "4.9.0".into(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            package_json["devEngines"]["packageManager"],
+            serde_json::json!([
+                { "name": "npm", "version": "^11.0.0" },
+                { "name": "pnpm", "version": "10.33.4", "onFail": "warn" },
+                { "name": "yarn", "version": "4.9.0" }
+            ])
+        );
+    }
 
     #[test]
     fn extracts_node_versions_when_other_fields_are_invalid() {

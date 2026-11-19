@@ -259,5 +259,110 @@ mod javascript_toolchain_tier2 {
                     .contains(r#""packageManager": "npm@1.2.3""#)
             );
         }
+
+        async fn sync_with_dev_engines(
+            package_manager: &str,
+            package: serde_json::Value,
+        ) -> String {
+            let mut sandbox = create_moon_sandbox("files");
+            sandbox.create_file("package.json", package.to_string());
+
+            let id = package_manager.to_owned();
+
+            sandbox
+                .host_funcs
+                .mock_load_toolchain_config(move |toolchain, _| {
+                    assert_eq!(toolchain, id);
+                    json!({ "version": "10.33.4" })
+                });
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            plugin
+                .setup_environment(SetupEnvironmentInput {
+                    root: VirtualPath::new(sandbox.path()),
+                    toolchain_config: json!({
+                        "syncPackageManagerField": true,
+                        "packageManager": package_manager
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            fs::read_to_string(sandbox.path().join("package.json")).unwrap()
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn sets_dev_engines_instead_of_adding_field() {
+            let content = sync_with_dev_engines(
+                "pnpm",
+                json!({
+                    "devEngines": {
+                        "packageManager": { "name": "pnpm", "version": "^10.0.0", "onFail": "error" }
+                    }
+                }),
+            )
+            .await;
+            let package: serde_json::Value = serde_json::from_str(&content).unwrap();
+
+            assert_eq!(
+                package["devEngines"]["packageManager"],
+                json!({ "name": "pnpm", "version": "10.33.4", "onFail": "error" })
+            );
+            assert!(package.get("packageManager").is_none());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn sets_dev_engines_and_an_existing_field() {
+            let content = sync_with_dev_engines(
+                "pnpm",
+                json!({
+                    "packageManager": "pnpm@10.0.0",
+                    "devEngines": {
+                        "packageManager": [
+                            { "name": "npm", "version": "^11.0.0" },
+                            { "name": "pnpm", "version": "^10.0.0" }
+                        ]
+                    }
+                }),
+            )
+            .await;
+            let package: serde_json::Value = serde_json::from_str(&content).unwrap();
+
+            assert_eq!(
+                package["devEngines"]["packageManager"][1]["version"],
+                "10.33.4"
+            );
+            assert_eq!(package["packageManager"], "pnpm@10.33.4");
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn sets_field_when_dev_engines_names_another() {
+            let content = sync_with_dev_engines(
+                "pnpm",
+                json!({
+                    "devEngines": { "packageManager": { "name": "npm", "version": "^11.0.0" } }
+                }),
+            )
+            .await;
+
+            assert!(content.contains(r#""packageManager": "pnpm@10.33.4""#));
+            assert!(content.contains(r#""version": "^11.0.0""#));
+        }
+
+        // Yarn Switch only reads `packageManager`
+        #[tokio::test(flavor = "multi_thread")]
+        async fn sets_field_for_yarn() {
+            let content = sync_with_dev_engines(
+                "yarn",
+                json!({
+                    "devEngines": { "packageManager": { "name": "yarn", "version": "^4.0.0" } }
+                }),
+            )
+            .await;
+
+            assert!(content.contains(r#""packageManager": "yarn@10.33.4""#));
+            assert!(content.contains(r#""version": "^4.0.0""#));
+        }
     }
 }

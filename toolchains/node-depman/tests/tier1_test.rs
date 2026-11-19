@@ -62,7 +62,7 @@ mod node_depman_toolchain_tier1 {
             );
             assert_eq!(output.manifest_file_names, ["package.json"]);
             assert_eq!(output.lock_file_names, ["pnpm-lock.yaml"]);
-            assert_eq!(output.exe_names, ["pnpm", "pnpx"]);
+            assert_eq!(output.exe_names, ["pnpm", "pnpx", "pn", "pnx"]);
             assert_eq!(output.vendor_dir_name.unwrap(), "node_modules");
         }
 

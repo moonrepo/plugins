@@ -36,7 +36,9 @@ config_struct!(
     #[derive(Config)]
     pub struct PnpmToolchainConfig {
         /// List of arguments to append to `pnpm install` commands.
-        /// These arguments are inherited by the JavaScript toolchain.
+        /// These arguments are inherited by the JavaScript toolchain, but not
+        /// by `pnpm dedupe`, so layout settings like `nodeLinker` and
+        /// `shamefullyHoist` belong in `pnpm-workspace.yaml`.
         pub install_args: Vec<String>,
 
         /// Configured version to download and install.

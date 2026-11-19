@@ -700,6 +700,10 @@ pub fn install_dependencies(
 
             if input.production {
                 cmd.args.push("--prod".into());
+
+                // When dev dependencies are installed, pnpm asks before purging
+                // `node_modules`, which aborts without a TTY, like in Docker
+                cmd.args.push("--config.confirmModulesPurge=false".into());
             }
 
             for package_name in input.packages {
@@ -917,9 +921,10 @@ fn create_manifest_dependency(
             return None;
         }
         VersionProtocol::Catalog(key) => {
+            // `catalog:default` is the default catalog, like `catalog:`
             let catalog = match key {
-                Some(key) => catalogs.get(key),
-                None => catalogs.get("__default__"),
+                Some(key) if key != "default" => catalogs.get(key),
+                _ => catalogs.get("__default__"),
             };
 
             if let Some(catalog) = catalog
@@ -1055,7 +1060,23 @@ pub fn setup_environment(
         {
             let (op, file) = Operation::track("sync-package-manager", || {
                 let mut package = PackageJson::load(package_path)?;
-                package.set_package_manager(format!("{package_manager}@{version}"))?;
+
+                // pnpm 11+ prefers `devEngines.packageManager`, and warns when `packageManager`
+                // differs, so only update `packageManager` beside it. Yarn Switch only reads
+                // `packageManager`.
+                if package_manager != JavaScriptPackageManager::Yarn
+                    && package.set_dev_engine_package_manager(
+                        &package_manager.to_string(),
+                        &version.to_string(),
+                    )
+                {
+                    if package.data.package_manager.is_some() {
+                        package.set_package_manager(format!("{package_manager}@{version}"))?;
+                    }
+                } else {
+                    package.set_package_manager(format!("{package_manager}@{version}"))?;
+                }
+
                 package.save()
             })?;
 

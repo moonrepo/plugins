@@ -3,6 +3,7 @@
 use crate::config::CatalogsMap;
 #[cfg(feature = "wasm")]
 use extism_pdk::*;
+use lang_javascript_common::insert_dev_engine_version;
 #[cfg(feature = "wasm")]
 use moon_pdk::{HostLogInput, host_log};
 use moon_pdk_api::{AnyResult, json_config};
@@ -23,10 +24,6 @@ json_config!(PackageJson, BasePackageJson);
 
 impl PackageJson {
     fn save_field(&self, field: &str, config: &mut JsonValue) -> AnyResult<()> {
-        let Some(root) = config.as_object_mut() else {
-            return Ok(());
-        };
-
         #[cfg(feature = "wasm")]
         {
             host_log!(
@@ -34,6 +31,23 @@ impl PackageJson {
                 self.path,
             );
         }
+
+        // `devEngines.packageManager` is marked dirty as `devEngines:<name>@<version>`,
+        // and only its version is replaced, keeping fields like `onFail`
+        if let Some(entry) = field.strip_prefix("devEngines:")
+            && let Some((name, version)) = entry.rsplit_once('@')
+        {
+            return insert_dev_engine_version(
+                config,
+                "packageManager".into(),
+                name.into(),
+                version.into(),
+            );
+        }
+
+        let Some(root) = config.as_object_mut() else {
+            return Ok(());
+        };
 
         // Dependencies are marked dirty one at a time (`dependencies:<name>`), so
         // that entries we didn't change keep their original text. Re-formatting
@@ -209,6 +223,30 @@ impl PackageJson {
             WorkspacesField::Globs(globs) => globs.clone(),
             WorkspacesField::Config { packages, .. } => packages.clone(),
         })
+    }
+
+    /// Set the version of the package manager's entry in `devEngines.packageManager`.
+    /// Return false when it has no entry for the package manager.
+    pub fn set_dev_engine_package_manager(&mut self, name: &str, version: &str) -> bool {
+        let Some(item) = self
+            .data
+            .dev_engines
+            .as_ref()
+            .and_then(|engines| engines.package_manager.as_ref())
+            .and_then(|engine| engine.list().into_iter().find(|item| item.name == name))
+        else {
+            return false;
+        };
+
+        if item
+            .version
+            .as_ref()
+            .is_none_or(|current| current.to_string() != version)
+        {
+            self.dirty.push(format!("devEngines:{name}@{version}"));
+        }
+
+        true
     }
 
     /// Set the `packageManager` field.

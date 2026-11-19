@@ -5,6 +5,7 @@
 #### 🚀 Updates
 
 - Panics now report their message, instead of an `unreachable` WASM trap error.
+- `pn` and `pnx`, which pnpm 11 and 12 ship, are now pnpm executables.
 
 #### 🐞 Fixes
 

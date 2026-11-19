@@ -34,7 +34,7 @@ pub fn register_toolchain(
                     "pnpm-workspace.yaml".into(),
                     ".pnpmfile.*".into(),
                 ],
-                exe_names: vec!["pnpm".into(), "pnpx".into()],
+                exe_names: vec!["pnpm".into(), "pnpx".into(), "pn".into(), "pnx".into()],
                 lock_file_names: vec!["pnpm-lock.yaml".into()],
                 ..Default::default()
             }

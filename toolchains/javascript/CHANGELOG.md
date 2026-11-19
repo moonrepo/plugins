@@ -58,6 +58,15 @@
   warns on npm 12.
 - Focused npm installs, like `docker prune`'s, now pass `--include-workspace-root`, so the root
   package's own dependencies are installed too.
+- For pnpm, `syncProjectWorkspaceDependencies` now writes the `star` and `version` formats as
+  `workspace:*`, `version-caret` as `workspace:^` and `version-tilde` as `workspace:~`, as pnpm 9+
+  only links workspace packages through `workspace:`, and installed others from the registry.
+  Synced specs change once.
+- `syncPackageManagerField` now updates the version in `devEngines.packageManager` when it names the
+  package manager, and only updates `packageManager` beside it when it already exists, as pnpm 11+
+  prefers `devEngines.packageManager` and warns when they differ. Yarn still gets `packageManager`,
+  which is all Yarn Switch reads.
+- pnpm patches are now part of a locked dependency's hash, so editing a patch changes task hashes.
 
 #### 🐞 Fixes
 
@@ -114,6 +123,13 @@
   single-package repo, as `--workspace` only accepts members. The root package is now left out.
 - Fixed `npm dedupe` failing with `ERESOLVE` when the install needs `installArgs`, like
   `--legacy-peer-deps`. It now gets the npm toolchain's `installArgs` too.
+- Fixed pnpm production installs, like `docker prune`'s, aborting without a TTY when `node_modules`
+  has dev dependencies. They now pass `--config.confirmModulesPurge=false`.
+- Fixed pnpm's default catalog being left out of task hashes when it's defined as
+  `catalogs.default`, or referenced as `catalog:default`.
+- Fixed pnpm 8 lockfiles (v6), whose keys start with `/`, giving task hashes no locked versions.
+  Task hashes change once for them.
+- Fixed pnpm 12's experimental v13 lockfiles giving task hashes versions instead of integrities.
 
 #### ⚙️ Internal
 

@@ -2413,6 +2413,7 @@ mod javascript_toolchain_tier2 {
                             [
                                 "install",
                                 "--prod",
+                                "--config.confirmModulesPurge=false",
                                 "--filter-prod",
                                 "foo...",
                                 "--filter-prod",
@@ -2910,6 +2911,56 @@ mod javascript_toolchain_tier2 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn supports_the_default_catalog_named_default_pnpm() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("package.json", r#"{ "name": "root" }"#);
+            sandbox.create_file(
+                "pnpm-workspace.yaml",
+                "packages:\n  - '*'\ncatalogs:\n  default:\n    react: '>=19'\n    react-dom: '>=19'\n",
+            );
+            sandbox.create_file(
+                "package/package.json",
+                json!({
+                    "name": "package",
+                    "dependencies": { "react": "catalog:", "react-dom": "catalog:default" }
+                })
+                .to_string(),
+            );
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            plugin
+                .locate_dependencies_root(LocateDependenciesRootInput {
+                    starting_dir: VirtualPath::new(sandbox.path().join("package")),
+                    toolchain_config: json!({ "packageManager": "pnpm" }),
+                    ..Default::default()
+                })
+                .await;
+
+            let output = plugin
+                .parse_manifest(ParseManifestInput {
+                    path: VirtualPath::new(sandbox.path().join("package/package.json")),
+                    root: VirtualPath::new(sandbox.path()),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.dependencies,
+                BTreeMap::from_iter([
+                    (
+                        "react".into(),
+                        ManifestDependency::Version(UnresolvedVersionSpec::parse(">=19").unwrap())
+                    ),
+                    (
+                        "react-dom".into(),
+                        ManifestDependency::Version(UnresolvedVersionSpec::parse(">=19").unwrap())
+                    ),
+                ])
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn supports_catalogs_yarn() {
             let sandbox = create_moon_sandbox("catalogs");
             let plugin = sandbox.create_toolchain("javascript").await;
@@ -3264,17 +3315,25 @@ mod javascript_toolchain_tier2 {
 
         #[tokio::test(flavor = "multi_thread")]
         async fn parses_bun_classic() {
-            // Reading `bun.lockb` runs `bun`, which CI may not have
+            // Reading `bun.lockb` runs `bun`, which may not be installed
             #[allow(clippy::disallowed_methods)] // Runs natively, on the host
-            if std::process::Command::new("bun")
-                .arg("--version")
-                .output()
-                .is_err()
-            {
+            let Ok(result) = std::process::Command::new("bun").arg("--version").output() else {
+                return;
+            };
+
+            if !result.status.success() {
                 return;
             }
 
-            let sandbox = create_lockfile_sandbox("bun-classic");
+            // A proto shim, like CI's, can't detect a version in the sandbox,
+            // so pin it through the `bun` toolchain, as moon would
+            let version = String::from_utf8_lossy(&result.stdout).trim().to_owned();
+            let mut sandbox = create_lockfile_sandbox("bun-classic");
+
+            sandbox
+                .host_funcs
+                .mock_load_toolchain_config(move |_, _| json!({ "version": version }));
+
             let plugin = sandbox.create_toolchain("javascript").await;
 
             let output = plugin
@@ -3411,6 +3470,97 @@ mod javascript_toolchain_tier2 {
                 .await;
 
             assert_eq!(output.dependencies, expected_base_dependencies());
+        }
+
+        // pnpm 8's keys start with `/`
+        #[tokio::test(flavor = "multi_thread")]
+        async fn parses_pnpm_v6() {
+            let sandbox = create_lockfile_sandbox("pnpm-v6");
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .parse_lock(ParseLockInput {
+                    path: VirtualPath::new(sandbox.path().join("pnpm-lock.yaml")),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.dependencies, expected_base_dependencies());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn hashes_pnpm_patches() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "pnpm-lock.yaml",
+                r#"lockfileVersion: '9.0'
+
+patchedDependencies:
+  is-number@7.0.0:
+    hash: 0a2bcd01
+    path: patches/is-number@7.0.0.patch
+
+packages:
+
+  is-number@7.0.0:
+    resolution: {integrity: sha512-isnumber==}
+
+  is-odd@3.0.1:
+    resolution: {integrity: sha512-isodd==}
+
+snapshots:
+
+  is-number@7.0.0(patch_hash=0a2bcd01): {}
+
+  is-odd@3.0.1: {}
+"#,
+            );
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .parse_lock(ParseLockInput {
+                    path: VirtualPath::new(sandbox.path().join("pnpm-lock.yaml")),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.dependencies["is-number"][0].hash.as_deref(),
+                Some("sha512-isnumber==+patch.0a2bcd01")
+            );
+            assert_eq!(
+                output.dependencies["is-odd"][0].hash.as_deref(),
+                Some("sha512-isodd==")
+            );
+        }
+
+        // pnpm 12's experimental `lockfile.format: v13`
+        #[tokio::test(flavor = "multi_thread")]
+        async fn parses_pnpm_v13_integrities() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "pnpm-lock.yaml",
+                "{\n\tlockfileVersion: '13.0',\n\tpackages: {\n\t\t'react@18.3.1': {\n\t\t\tintegrity: 'sha512-react==',\n\t\t},\n\t},\n}\n",
+            );
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .parse_lock(ParseLockInput {
+                    path: VirtualPath::new(sandbox.path().join("pnpm-lock.yaml")),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.dependencies["react"],
+                [LockDependency {
+                    hash: Some("sha512-react==".into()),
+                    version: Some(VersionSpec::parse("18.3.1").unwrap()),
+                    ..Default::default()
+                }]
+            );
         }
 
         // pnpm v10 with `managePackageManagerVersions` writes a multi-document

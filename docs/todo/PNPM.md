@@ -93,13 +93,11 @@ build.
 
 ## Decisions needed
 
-| Decision                                                                                                | Recommendation                                                                  |
-| ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| D1 (#8): write `workspace:` specifiers for pnpm when `dependencyVersionFormat` is `star` or `version*`? | Yes. pnpm 9+ only links `workspace:` specifiers by default                      |
-| D2 (#9): with `devEngines.packageManager` present, sync its version instead of `packageManager`?        | Yes, with `insert_dev_engine_version`, and never add `packageManager` beside it |
-| D3 (#10): fix installs that don't re-run after `pnpm-workspace.yaml` or `pnpm.*` changes in moon?       | Yes, in moon's install fingerprint. The plugin can't add to it                  |
-
-None are decided yet.
+| Decision                                                                                                | Outcome                                                                                   |
+| ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| D1 (#8): write `workspace:` specifiers for pnpm when `dependencyVersionFormat` is `star` or `version*`? | **Decided:** yes. pnpm 9+ only links `workspace:` specifiers by default                   |
+| D2 (#9): with `devEngines.packageManager` present, sync its version instead of `packageManager`?        | **Decided:** yes, and only update `packageManager` beside it when it already exists       |
+| D3 (#10): fix installs that don't re-run after `pnpm-workspace.yaml` or `pnpm.*` changes in moon?       | **Decided:** yes, in moon's install fingerprint (`MOON_COMPACT.md`)                       |
 
 ## Phase 1: clear-cut fixes
 
@@ -142,8 +140,8 @@ an npm 12 and a Bun `patchedDependencies` entry copies each patch in the configs
 ### #2 `workspace:` ranges fail the whole project graph
 
 **Done (2026-11-17, JavaScript pass):** upstream as `WorkspaceProtocol::Requirement { alias, req }`,
-with `VersionProtocol` deserializing anything else to `Unknown`. Until `nodejs_package_json` 0.5.0 is
-published, the root `Cargo.toml` patches it locally (`JAVASCRIPT.md` "Release").
+with `VersionProtocol` deserializing anything else to `Unknown`, published in `nodejs_package_json`
+0.5.0.
 
 - [x] Accept any range after `workspace:` in `nodejs_package_json`
 - [x] Bump the crate and map the new variant
@@ -175,8 +173,8 @@ and `parse_manifest` reports its requirement.
 
 ### #3 Production installs fail without a TTY when `node_modules` is kept
 
-- [ ] Pass `--config.confirmModulesPurge=false` to production installs
-- [ ] Tests
+- [x] Pass `--config.confirmModulesPurge=false` to production installs
+- [x] Tests
 
 **Problem:** `docker prune` calls `prune_docker`, which deletes the root `node_modules` only when
 `docker.prune.deleteVendorDirectories` is on, and then runs
@@ -202,8 +200,9 @@ doesn't get it.
 
 ### #4 Editing a patch doesn't change task hashes
 
-- [ ] Add each package's patch hash to its lock entry
-- [ ] Fixture and test
+- [x] Add each package's patch hash to its lock entry, as `<integrity>+patch.<hash>`, from v9
+      `snapshots` keys and v6 `packages` keys
+- [x] Tests: `hashes_pnpm_patches` (inline lockfile) and `extracts_patch_hashes`
 
 **Problem:** moon records a dependency's locked `hash`, the integrity, in task hashes (moon
 `crates/task-hasher/src/task_hashing.rs:456-468`). A patch doesn't change the integrity. pnpm
@@ -226,8 +225,9 @@ unpatched one, whose hash stays the integrity. `nub.lock` gets this too.
 
 ### #5 The default catalog is dropped from hashes when it's named `default`
 
-- [ ] Map `catalogs.default` and `catalog:default` to the default catalog
-- [ ] Tests
+- [x] Map `catalogs.default` and `catalog:default` to the default catalog. `catalog:default` maps for
+      Bun's and Yarn's catalogs too, as the lookup is shared.
+- [x] Tests: `supports_the_default_catalog_named_default_pnpm` and `maps_the_default_catalog`
 
 **Problem:** pnpm's default catalog can be defined as the top-level `catalog` or as
 `catalogs.default`, and referenced as `catalog:` or `catalog:default`. The plugin stores the
@@ -248,8 +248,10 @@ dependency, and add a fixture that defines `catalogs.default`.
 
 ### #6 pnpm 8 lockfiles give task hashes no locked versions
 
-- [ ] Strip the leading `/` from v6 keys
-- [ ] v6 fixture and test
+- [x] Strip the leading `/` from v6 keys
+- [x] v6 fixture and test (`parses_pnpm_v6`). pnpm 8 wasn't installed, so `lockfiles/pnpm-v6` was
+      written by hand from the `pnpm` fixture in v6's shape (`/`-prefixed keys, peer suffixes in
+      `packages`, no `snapshots`).
 
 **Problem:** lockfile v6 (pnpm 8) keys start with `/`: `/react@18.3.1`, `/@babel/core@7.22.5`,
 `/react-dom@18.3.1(react@18.3.1)`. `parse_name_and_version` (`lockfiles/mod.rs:34-67`) then returns
@@ -271,21 +273,22 @@ fixture, expecting the same dependencies.
 
 ### #7 Small fixes
 
-- [ ] `register_toolchain` (`toolchains/node-depman/src/tier1.rs:37`): add `pn` and `pnx` to pnpm's
+- [x] `register_toolchain` (`toolchains/node-depman/src/tier1.rs:37`): add `pn` and `pnx` to pnpm's
       `exe_names`. pnpm 11 and 12 ship them (pnpm 11.28.12's `bin` maps `pn` to `bin/pnpm.mjs`), the
       tool creates shims for them, and the JavaScript toolchain already lists them
       (`toolchains/javascript/src/tier1.rs:89-92`). Update `handles_pnpm` in `tier1_test.rs`.
-- [ ] `initialize_toolchain`'s `config_url` (`toolchains/node-depman/src/tier1.rs:65`) is
+- [x] `initialize_toolchain`'s `config_url` (`toolchains/node-depman/src/tier1.rs:65`) is
       `https://moonrepo.dev/docs/guides/javascript`, which returns 404, as moon v2.6.5 has no
       `guides/javascript` index page. Point it at `guides/javascript/node-handbook`, which exists.
-      npm, Yarn and Nub share this line, and `NPM.md` #5 has the same fix; make it once.
+      npm, Yarn and Nub share this line, and `NPM.md` #5 has the same fix; make it once. Done in
+      the npm pass.
 
 ## Phase 2: after decisions
 
 ### #8 `star` and `version` formats break pnpm installs (D1)
 
-- [ ] Map them to `workspace:` formats for pnpm
-- [ ] Tests
+- [x] Map them to `workspace:` formats for pnpm (D1)
+- [x] Tests: `maps_version_formats_for_pnpm`, a unit test of `get_supported_for`
 
 **Problem:** `dependencyVersionFormat` picks the specifier `sync_project` writes for project
 dependencies, and `get_supported_for` passes every format through for pnpm
@@ -313,8 +316,13 @@ dependency doesn't update.
 
 ### #9 `packageManager` is synced beside `devEngines.packageManager` (D2)
 
-- [ ] Sync `devEngines.packageManager` when it names the package manager
-- [ ] Tests
+- [x] Sync `devEngines.packageManager` when it names the package manager (D2), through a
+      `devEngines:<name>@<version>` dirty field that `insert_dev_engine_version` saves
+- [x] Tests: four cases in `tier2_env_test.rs`, including Yarn keeping `packageManager`
+- [x] **Found while implementing:** `insert_dev_engine_version` (`lang-javascript-common`) replaced a
+      `devEngines` list with an empty object before its list code ran, so pinning into
+      `package.json` with the Node.js, Bun, Deno or node-depman tool dropped every other entry. It
+      now keeps lists (`inserts_dev_engine_versions_into_lists`).
 
 **Problem:** `setup_environment` writes `packageManager: pnpm@<version>` whenever `version` is exact
 (`toolchains/javascript/src/tier2.rs:843-873`). Since pnpm 11, `pnpm init` writes
@@ -373,7 +381,7 @@ and updates the lockfile itself.
 
 ### #11 Read integrities from v13 lockfiles
 
-- [ ] Fall back to a top-level `integrity`
+- [x] Fall back to a top-level `integrity` (`parses_pnpm_v13_integrities`)
 
 pnpm 12.19 added an experimental `lockfile.format: v13`: JSON-style YAML (tabs, trailing commas)
 with `lockfileVersion: "13.0"`, one `packages` entry per version, and `integrity` at the entry's top
@@ -386,7 +394,7 @@ the format may still change.
 
 ### #12 Document that `installArgs` don't reach `pnpm dedupe`
 
-- [ ] Update the `installArgs` description
+- [x] Update the `installArgs` description
 
 The dedupe command is a bare `pnpm dedupe` (`tier2.rs:625-645`). With a layout flag like
 `--shamefully-hoist` in `installArgs`, pnpm 11.28.12's `dedupe` has to purge `node_modules`, and
@@ -432,8 +440,8 @@ toolchain key with no value loads no toolchains".
 
 **nodejs_package_json** (`milesj/rust-js-ecosystem`):
 
-- [ ] Accept any range after `workspace:`, and fall back to `Unknown` instead of failing the file
-      (#2, live).
+- [x] Accept any range after `workspace:`, and fall back to `Unknown` instead of failing the file
+      (#2, live). Released in 0.5.0.
 
 ## Release
 
