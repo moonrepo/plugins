@@ -78,19 +78,18 @@ fresh git repo, and then the sources (without `.moon/cache`).
 
 ## Decisions needed
 
-| Decision                                                                    | Recommendation                                                       |
-| --------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| D1 (#6): should focused `docker prune` installs keep the root's deps?       | Yes: add `--include-workspace-root` whenever `--workspace` is passed |
-| D2 (#7): link npm workspace dependencies declared by version range?         | Moved to `JAVASCRIPT.md` D1, which also covers Yarn and Bun          |
+| Decision                                                              | Outcome                                                                         |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| D1 (#6): should focused `docker prune` installs keep the root's deps? | **Decided:** yes, `--include-workspace-root` whenever `--workspace` is passed   |
+| D2 (#7): link npm workspace dependencies declared by version range?   | Moved to `JAVASCRIPT.md` D1, which also covers Yarn and Bun                     |
 
 ## Phase 1: clear-cut fixes
 
 ### #1 Parse `package-lock.json` with our own types
 
-- [ ] Replace `package-lock-json-parser` with types in `lockfiles/npm.rs`
-- [ ] Keep nested entries, and name members by package name
-- [ ] Unit tests with v1–v4 fixtures (ADR-0006)
-- [ ] Changelog
+**Not planned (2026-11-18):** the maintainer decided to keep `package-lock-json-parser`, which
+handles npm's scenarios, rather than maintain a parser here. The problems below go upstream (see
+"Outside this repo").
 
 **Problem:** `parse_package_lock_json` (`lockfiles/npm.rs:67-78`) uses `package-lock-json-parser`
 0.4.0, which gets three things wrong:
@@ -144,8 +143,8 @@ or workspace members.
 
 ### #2 `docker prune` fails for a package at the root
 
-- [ ] Leave the root package out of `--workspace`
-- [ ] Tests
+- [x] Leave the root package out of `--workspace`
+- [x] Tests: `leaves_the_root_package_out_of_focused_installs`
 
 **Problem:** moon passes each focused project's JavaScript alias (its package name) as `packages`,
 including a project at the dependencies root (moon `prune.rs:177`, `:225`). The npm arm turns every
@@ -165,8 +164,8 @@ the member).
 
 ### #3 `npm dedupe` ignores `installArgs`
 
-- [ ] Pass the install args to `npm dedupe`
-- [ ] Tests
+- [x] Pass the install args to `npm dedupe`
+- [x] Tests
 
 **Problem:** `installArgs` are only appended to the install command (`tier2.rs:585-589`), not to
 `npm dedupe` (`:611-617`). Dedupe re-resolves the whole tree, so a repo that needs
@@ -208,11 +207,11 @@ directories come up.
 
 ### #5 Small fixes
 
-- [ ] `tier2.rs:503-505`: emit `--omit=dev` instead of `--production`. npm 12.2.2 still accepts it,
+- [x] `tier2.rs:503-505`: emit `--omit=dev` instead of `--production`. npm 12.2.2 still accepts it,
       but prints "npm warn config production Use `--omit=dev` instead." on every production
       install, and npm 12 now throws on unknown flags, so a later removal would fail them. `--omit`
       exists since npm 7.
-- [ ] `toolchains/node-depman/src/tier1.rs:65` (shared): `initialize_toolchain`'s `config_url` is
+- [x] `toolchains/node-depman/src/tier1.rs:65` (shared): `initialize_toolchain`'s `config_url` is
       `https://moonrepo.dev/docs/guides/javascript`, which returns 404. Use
       `https://moonrepo.dev/docs/guides/javascript/node-handbook`, which exists.
 - [x] `tools/node-depman/src/proto.rs:78` (shared): `parse_version_file` parses the whole
@@ -221,7 +220,7 @@ directories come up.
       that `NODE.md` #1 adds to `lang-javascript-common` (handed over by `NODE.md`; reproduced there
       for `node_tool`, not for this tool).
       Done in the JavaScript pass: `nodejs_package_json` now skips fields it can't parse.
-- [ ] `toolchains/node-depman/src/config.rs:10`: `installArgs` says "`npm install` commands". Say
+- [x] `toolchains/node-depman/src/config.rs:10`: `installArgs` says "`npm install` commands". Say
       it also applies to `npm ci` and, after #3, `npm dedupe`.
 
 **Tests:** update the production expectations in `tier2_test.rs` (`focused_commands`).
@@ -230,8 +229,8 @@ directories come up.
 
 ### #6 Focused production installs drop the root's dependencies (D1)
 
-- [ ] Add `--include-workspace-root` with `--workspace`
-- [ ] Tests
+- [x] Add `--include-workspace-root` with `--workspace` (D1)
+- [x] Tests
 
 **Problem:** `npm install --workspace a` installs `a` and its dependencies, including other
 workspaces, but not the root package's own dependencies unless `--include-workspace-root` is passed
@@ -252,7 +251,7 @@ since npm 8.1 (checked in the published config definitions; 8.0.0 lacks it).
 
 ### #7 Workspace dependencies declared by version range get no edge (D2)
 
-- [ ] Fixed by `JAVASCRIPT.md` #15
+- [x] Fixed by `JAVASCRIPT.md` #15
 
 **Merged into `JAVASCRIPT.md` #15 (D1)**, which applies the same rule to npm, Yarn and Bun and
 keeps pnpm out. The npm evidence: `npm install b -w a` writes `"b": "^1.0.0"`, npm links
@@ -264,7 +263,8 @@ changelog callout.
 
 ### #8 Hash npm 12 patches
 
-- [ ] Include `patched.integrity` in the locked hash
+- [ ] Include `patched.integrity` in the locked hash. **Blocked** with #1: the crate's
+      `V2Dependency` has no `patched` field.
 
 npm 12 records a patched entry as
 `"patched": { "integrity": "sha512-…", "path": "patches/ms@2.1.3.patch" }` next to the tarball's own
@@ -292,6 +292,15 @@ when it's present.
 
 ## Outside this repo
 
+**`package-lock-json-parser`** (robertohuertasm/package-lock-json-parser, 0.4.0 is the latest
+release), from #1 and #8:
+
+- [ ] Make `PackageLockJson.name` optional, as npm 12's v4 lockfiles may leave it out.
+- [ ] Keep nested `node_modules/x/node_modules/y` entries, and name workspace members by their
+      package name, or their folder when npm leaves `name` out.
+- [ ] Don't `unwrap` non-string `engines` array entries.
+- [ ] Expose `patched` (npm 12's `npm patch`).
+
 moon changes are tracked in [`MOON_COMPACT.md`](MOON_COMPACT.md). This audit added "Store the
 install fingerprint after the install", the root project in "Focus `docker prune` installs by
 package name, without the root" (a moon-side alternative to #2), npm's case in "Let plugins report
@@ -299,8 +308,8 @@ whether dependencies are installed", and the npm website docs.
 
 ## Release
 
-- `javascript_toolchain`: #1–#3, #5's `--omit=dev`, #6 and #8 change task hashes (#1, #8) and
-  installs (#2, #3, #6), so ship them as 1.4.0 with a callout for #1. #4 and #7 ship with
+- `javascript_toolchain`: #2, #3, #5's `--omit=dev` and #6 change installs, so ship them as 1.4.0.
+  #1 and #8 wait for `package-lock-json-parser`. #4 and #7 ship with
   `PNPM.md` #1 and `JAVASCRIPT.md` #15. The toolchain embeds no proto tool, so a `master` build
   loads in moon 2.6.4 (live), and it isn't blocked on proto 0.64.
 - `node_depman_toolchain`: #5's `config_url` and description are a patch. It re-exports

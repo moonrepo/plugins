@@ -62,7 +62,7 @@ pub fn initialize_toolchain(
     Json(_): Json<InitializeToolchainInput>,
 ) -> FnResult<Json<InitializeToolchainOutput>> {
     Ok(Json(InitializeToolchainOutput {
-        config_url: Some("https://moonrepo.dev/docs/guides/javascript".into()),
+        config_url: Some("https://moonrepo.dev/docs/guides/javascript/node-handbook".into()),
         docs_url: Some(format!(
             "https://moonrepo.dev/docs/config/toolchain#{}",
             get_plugin_id()?

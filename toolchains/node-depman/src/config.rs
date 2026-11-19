@@ -7,8 +7,8 @@ config_struct!(
     /// Docs: https://moonrepo.dev/docs/config/toolchain#npm
     #[derive(Config)]
     pub struct NpmToolchainConfig {
-        /// List of arguments to append to `npm install` commands.
-        /// These arguments are inherited by the JavaScript toolchain.
+        /// List of arguments to append to `npm install`, `npm ci` and `npm dedupe`
+        /// commands. These arguments are inherited by the JavaScript toolchain.
         pub install_args: Vec<String>,
 
         /// Configured version to download and install.

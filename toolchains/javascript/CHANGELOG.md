@@ -54,6 +54,10 @@
 - Package manager detection now picks Deno from a `deno.json` or `deno.jsonc`, after every lockfile.
 - Version-gated behavior now treats a `latest` or `stable` version as the newest release, and a
   prerelease, like `6.0.0-rc.1`, like its release.
+- npm production installs now pass `--omit=dev` instead of `--production`, which is deprecated and
+  warns on npm 12.
+- Focused npm installs, like `docker prune`'s, now pass `--include-workspace-root`, so the root
+  package's own dependencies are installed too.
 
 #### 🐞 Fixes
 
@@ -106,6 +110,10 @@
 - Fixed `deno.lock` npm packages being keyed as `npm:<name>`, so task hashes recorded the
   `package.json` requirement instead of the locked version. Deno task hashes change once.
 - Fixed `deno.lock` packages with a `_` in their name, like `string_decoder`, being dropped.
+- Fixed `docker prune` failing with npm for a project at the workspace root, like in a
+  single-package repo, as `--workspace` only accepts members. The root package is now left out.
+- Fixed `npm dedupe` failing with `ERESOLVE` when the install needs `installArgs`, like
+  `--legacy-peer-deps`. It now gets the npm toolchain's `installArgs` too.
 
 #### ⚙️ Internal
 

@@ -1981,11 +1981,12 @@ mod javascript_toolchain_tier2 {
                             "npm",
                             [
                                 "install",
-                                "--production",
+                                "--omit=dev",
                                 "--workspace",
                                 "foo",
                                 "--workspace",
-                                "@scope/bar"
+                                "@scope/bar",
+                                "--include-workspace-root"
                             ]
                         )
                         .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
@@ -2032,8 +2033,63 @@ mod javascript_toolchain_tier2 {
                 assert_eq!(
                     output.dedupe_command.unwrap(),
                     ExecCommand::new(
-                        ExecCommandInput::new("npm", ["dedupe"])
+                        ExecCommandInput::new("npm", ["dedupe", "-a", "b", "--c"])
                             .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
+                );
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn leaves_the_root_package_out_of_focused_installs() {
+                let sandbox = create_empty_moon_sandbox();
+                sandbox.create_file("package.json", r#"{ "name": "root" }"#);
+
+                let plugin = sandbox.create_toolchain("javascript").await;
+
+                // Only the root
+                let output = plugin
+                    .install_dependencies(InstallDependenciesInput {
+                        root: VirtualPath::new(sandbox.path()),
+                        toolchain_config: json!({ "packageManager": "npm" }),
+                        packages: vec!["root".into()],
+                        production: true,
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert_eq!(
+                    output.install_command.unwrap(),
+                    ExecCommand::new(
+                        ExecCommandInput::new("npm", ["install", "--omit=dev"])
+                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
+                );
+
+                // The root and a member
+                let output = plugin
+                    .install_dependencies(InstallDependenciesInput {
+                        root: VirtualPath::new(sandbox.path()),
+                        toolchain_config: json!({ "packageManager": "npm" }),
+                        packages: vec!["root".into(), "a".into()],
+                        production: true,
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert_eq!(
+                    output.install_command.unwrap(),
+                    ExecCommand::new(
+                        ExecCommandInput::new(
+                            "npm",
+                            [
+                                "install",
+                                "--omit=dev",
+                                "--workspace",
+                                "a",
+                                "--include-workspace-root"
+                            ]
+                        )
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                     )
                 );
             }

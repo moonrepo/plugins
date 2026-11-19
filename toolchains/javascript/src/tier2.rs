@@ -632,13 +632,32 @@ pub fn install_dependencies(
                 },
             );
 
+            // `--production` is deprecated, and warns since npm 12
             if input.production {
-                cmd.args.push("--production".into());
+                cmd.args.push("--omit=dev".into());
             }
 
+            // `--workspace` only accepts members, so a project at the root fails it
+            let root_name = if input.packages.is_empty() {
+                None
+            } else {
+                PackageJson::load(input.root.join("package.json"))?
+                    .data
+                    .name
+            };
+            let mut has_workspace = false;
+
             for package_name in input.packages {
-                cmd.args.push("--workspace".into());
-                cmd.args.push(package_name);
+                if root_name.as_ref() != Some(&package_name) {
+                    cmd.args.push("--workspace".into());
+                    cmd.args.push(package_name);
+                    has_workspace = true;
+                }
+            }
+
+            // Otherwise the root package's own dependencies aren't installed
+            if has_workspace {
+                cmd.args.push("--include-workspace-root".into());
             }
 
             cmd
@@ -741,11 +760,13 @@ pub fn install_dependencies(
                 // N/A
             }
             JavaScriptPackageManager::Npm => {
-                output.dedupe_command = Some(
-                    ExecCommandInput::new("npm", ["dedupe"])
-                        .cwd(input.root)
-                        .into(),
-                );
+                let mut cmd = ExecCommandInput::new("npm", ["dedupe"]);
+
+                // Dedupe re-resolves the tree, so it needs flags like `--legacy-peer-deps`
+                cmd.args.extend(package_manager_config.install_args.clone());
+                cmd.cwd = Some(input.root);
+
+                output.dedupe_command = Some(cmd.into());
             }
             JavaScriptPackageManager::Nub => {
                 output.dedupe_command = Some(

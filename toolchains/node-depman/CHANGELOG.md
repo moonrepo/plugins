@@ -6,6 +6,10 @@
 
 - Panics now report their message, instead of an `unreachable` WASM trap error.
 
+#### 🐞 Fixes
+
+- Fixed `initialize_toolchain` linking to a page that doesn't exist.
+
 ## 1.1.1
 
 #### 🚀 Updates
