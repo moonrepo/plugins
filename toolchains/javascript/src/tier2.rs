@@ -7,7 +7,7 @@ use moon_common::path::paths_are_equal;
 use moon_config::DependencyScope;
 use moon_pdk::{
     VirtualPathExt, get_host_environment, load_project_toolchain_config, load_toolchain_config,
-    locate_root_many, locate_root_many_with_check, parse_toolchain_config_schema,
+    parse_toolchain_config_schema,
 };
 use moon_pdk_api::*;
 use nodejs_package_json::{VersionProtocol, WorkspaceProtocol};
@@ -15,6 +15,7 @@ use rustc_hash::FxHashMap;
 use starbase_utils::yaml;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
+use toolchain_common::{DirCache, RootLocator};
 
 #[plugin_fn]
 pub fn extend_project_graph(
@@ -203,17 +204,25 @@ pub fn define_requirements(
 ) -> FnResult<Json<DefineRequirementsOutput>> {
     let config =
         parse_toolchain_config_schema::<JavaScriptToolchainConfig>(input.toolchain_config)?;
-    let mut output = DefineRequirementsOutput {
-        for_setup_toolchain: true,
-        ..Default::default()
-    };
+    let mut output = DefineRequirementsOutput::default();
 
     if let Some(package_manager) = config.package_manager {
+        let mut ids = vec![];
+
         if !package_manager.is_standalone() {
-            output.requires.push("node".into());
+            ids.push("node".to_string());
         }
 
-        output.requires.push(format!("{package_manager}"));
+        ids.push(package_manager.to_string());
+
+        output.requires = ids
+            .into_iter()
+            .map(|id| ToolchainRequirement {
+                id,
+                setup_toolchain: Some(RequirementPhase::After),
+                setup_environment: Some(RequirementPhase::After),
+            })
+            .collect();
     }
 
     Ok(Json(output))
@@ -321,12 +330,31 @@ fn extract_workspace_members_and_catalogs(
 pub fn locate_dependencies_root(
     Json(input): Json<LocateDependenciesRootInput>,
 ) -> FnResult<Json<LocateDependenciesRootOutput>> {
-    let config =
-        parse_toolchain_config_schema::<JavaScriptToolchainConfig>(input.toolchain_config)?;
-    let mut output = LocateDependenciesRootOutput::default();
+    let mut roots = locate_roots(&[input.starting_dir], input.toolchain_config)?;
+
+    Ok(Json(roots.pop().unwrap_or_default()))
+}
+
+#[plugin_fn]
+pub fn locate_dependencies_roots(
+    Json(input): Json<LocateDependenciesRootsInput>,
+) -> FnResult<Json<LocateDependenciesRootsOutput>> {
+    Ok(Json(LocateDependenciesRootsOutput {
+        roots: locate_roots(&input.starting_dirs, input.toolchain_config)?,
+    }))
+}
+
+fn locate_roots(
+    starting_dirs: &[VirtualPath],
+    toolchain_config: json::Value,
+) -> AnyResult<Vec<LocateDependenciesRootOutput>> {
+    let config = parse_toolchain_config_schema::<JavaScriptToolchainConfig>(toolchain_config)?;
 
     let Some(package_manager) = config.package_manager else {
-        return Ok(Json(output));
+        return Ok(starting_dirs
+            .iter()
+            .map(|_| LocateDependenciesRootOutput::default())
+            .collect());
     };
 
     let package_manager_config: SharedPackageManagerConfig =
@@ -369,37 +397,42 @@ pub fn locate_dependencies_root(
         JavaScriptPackageManager::Yarn => vec!["yarn.lock"],
     };
 
-    // First attempt: find lock files
-    if let Some(root) = locate_root_many(&input.starting_dir, &lock_names) {
-        output.members = extract_workspace_members_and_catalogs(package_manager, &root)?;
-        output.root = Some(root);
+    let mut locator = RootLocator::default();
+    let mut workspace_members = DirCache::default();
+    let mut roots = vec![];
+
+    let load_members =
+        |dir: &VirtualPath| extract_workspace_members_and_catalogs(package_manager, dir);
+
+    for starting_dir in starting_dirs {
+        let mut output = LocateDependenciesRootOutput::default();
+
+        // First attempt: find lock files
+        if let Some(root) = locator.locate(starting_dir, &lock_names) {
+            output.members = workspace_members.get_or_load(&root, load_members)?.clone();
+            output.root = Some(root);
+        }
+        // Second attempt: find workspace-compatible manifest files
+        else if let Some((root, members)) =
+            locator.locate_with_check(starting_dir, &workspace_manifest_names, |dir| {
+                Ok(workspace_members.get_or_load(dir, load_members)?.clone())
+            })?
+        {
+            output.members = Some(members);
+            output.root = Some(root);
+        }
+        // Last attempt: find a manifest file (project only)
+        else if let Some(root) = locator.locate(starting_dir, &manifest_names) {
+            // Caches its catalogs, if the second attempt didn't already
+            workspace_members.get_or_load(&root, load_members)?;
+
+            output.root = Some(root);
+        }
+
+        roots.push(output);
     }
 
-    // Second attempt: find workspace-compatible manifest files
-    if output.root.is_none() {
-        locate_root_many_with_check(&input.starting_dir, &workspace_manifest_names, |root| {
-            let mut found = false;
-
-            if let Some(members) = extract_workspace_members_and_catalogs(package_manager, root)? {
-                output.root = Some(root.to_owned());
-                output.members = Some(members);
-                found = true;
-            }
-
-            Ok(found)
-        })?;
-    }
-
-    // Last attempt: find a manifest file (project only)
-    if output.root.is_none()
-        && let Some(root) = locate_root_many(&input.starting_dir, &manifest_names)
-    {
-        extract_workspace_members_and_catalogs(package_manager, &root)?;
-
-        output.root = Some(root);
-    }
-
-    Ok(Json(output))
+    Ok(roots)
 }
 
 #[plugin_fn]

@@ -1,6 +1,10 @@
 use extism_pdk::debug;
-use moon_pdk::{AnyResult, VirtualPath, anyhow, fetch_bytes};
+use moon_pdk::{AnyResult, VirtualPath, anyhow};
 use starbase_utils::fs;
+
+pub fn is_url(value: &str) -> bool {
+    value.starts_with("http://") || value.starts_with("https://")
+}
 
 pub fn download_from_url<U: AsRef<str>, P: AsRef<VirtualPath>>(
     src_url: U,
@@ -12,27 +16,22 @@ pub fn download_from_url<U: AsRef<str>, P: AsRef<VirtualPath>>(
 
     debug!("Downloading file from <url>{}</url>", url);
 
-    // Extract the file name from the URL
+    // Extract the file name from the URL, without the query or fragment
     let file_name = match file_name {
         Some(name) => name,
-        None => match url.rfind('/') {
-            Some(index) => &url[index + 1..],
-            None => {
-                return Err(anyhow!(
-                    "Unable to determine a file name from <url>{url}</url>."
-                ));
-            }
-        },
+        None => url
+            .split(['?', '#'])
+            .next()
+            .and_then(|path| path.rsplit_once('/'))
+            .map(|(_, name)| name)
+            .ok_or_else(|| anyhow!("Unable to determine a file name from <url>{url}</url>."))?,
     };
 
-    // Fetch the bytes of the URL
-    let bytes = fetch_bytes(url)?;
-
-    // Write the to the provided file
+    // Download on the host, so the file isn't loaded into memory
     let file = dir.join(file_name);
 
     fs::create_dir_all(dir)?;
-    fs::write_file(&file, bytes)?;
+    moon_pdk::download_from_url(url, &file)?;
 
     debug!("Downloaded to <path>{file}</path>");
 

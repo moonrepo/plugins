@@ -2,6 +2,7 @@
 
 use rustc_hash::FxHashMap;
 use serde::Deserialize;
+use starbase_utils::json::JsonValue;
 
 #[derive(Debug, Default, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -14,7 +15,7 @@ pub enum TurboEnvMode {
     Unknown,
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub enum TurboOutputMode {
     #[default]
@@ -33,29 +34,75 @@ pub enum TurboOutputMode {
 pub enum TurboUi {
     #[default]
     Stream,
+    StreamWithExperimentalTimestamps,
     Tui,
     // ADR-0008.4: Values from newer Turborepo versions
     #[serde(other)]
     Unknown,
 }
 
-// Future: interruptible, with
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub enum TurboInputMode {
+    Startup,
+    Jit,
+    DependencyOutputs,
+    // ADR-0008.4: Modes from newer Turborepo versions, which are skipped
+    #[serde(other)]
+    Unknown,
+}
+
+#[derive(Debug, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct TurboStructuredInput {
+    pub from: Option<Vec<String>>,
+    pub globs: Option<Vec<String>>,
+    pub mode: TurboInputMode,
+    pub with_defaults: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, PartialEq)]
+#[serde(untagged)]
+pub enum TurboTaskInput {
+    Glob(String),
+    Structured(TurboStructuredInput),
+    // ADR-0008.4: Shapes from newer Turborepo versions, which are skipped
+    Unknown(JsonValue),
+}
+
+#[derive(Debug, Default, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct TurboTask {
     pub cache: Option<bool>,
     pub depends_on: Option<Vec<String>>,
     pub env: Option<Vec<String>>,
-    pub inputs: Option<Vec<String>>,
+    pub inputs: Option<Vec<TurboTaskInput>>,
     pub outputs: Option<Vec<String>>,
     pub pass_through_env: Option<Vec<String>>,
     pub persistent: Option<bool>,
     // v2
+    pub description: Option<String>,
+    pub extends: Option<bool>,
     pub interactive: Option<bool>,
+    pub interruptible: Option<bool>,
     pub output_logs: Option<TurboOutputMode>,
+    pub tags: Option<Vec<String>>,
+    pub with: Option<Vec<String>>,
     // v1 (removed)
     pub dot_env: Option<Vec<String>>,
     pub output_mode: Option<TurboOutputMode>,
+}
+
+// Requires `futureFlags.globalConfiguration`
+#[derive(Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TurboGlobal {
+    pub cache_dir: Option<String>,
+    pub env: Option<Vec<String>>,
+    pub env_mode: Option<TurboEnvMode>,
+    pub inputs: Option<Vec<String>>,
+    pub pass_through_env: Option<Vec<String>>,
+    pub ui: Option<TurboUi>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -70,6 +117,7 @@ pub struct TurboJson {
     pub daemon: Option<bool>,
     pub dangerously_disable_package_manager_check: Option<bool>,
     pub env_mode: Option<TurboEnvMode>,
+    pub global: Option<TurboGlobal>,
     pub no_update_notifier: Option<bool>,
     pub tags: Option<Vec<String>>,
     pub tasks: Option<FxHashMap<String, TurboTask>>,
@@ -94,5 +142,26 @@ mod tests {
         let task: TurboTask = json::parse(r#"{ "outputLogs": "something-new" }"#).unwrap();
 
         assert!(matches!(task.output_logs, Some(TurboOutputMode::Unknown)));
+    }
+
+    #[test]
+    fn parses_unknown_input_modes() {
+        let input: TurboTaskInput =
+            json::parse(r#"{ "mode": "something-new", "globs": ["src/**"] }"#).unwrap();
+
+        assert!(matches!(
+            input,
+            TurboTaskInput::Structured(TurboStructuredInput {
+                mode: TurboInputMode::Unknown,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn parses_unknown_inputs() {
+        let input: TurboTaskInput = json::parse(r#"{ "globs": ["src/**"] }"#).unwrap();
+
+        assert!(matches!(input, TurboTaskInput::Unknown(..)));
     }
 }

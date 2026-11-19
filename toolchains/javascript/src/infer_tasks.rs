@@ -194,15 +194,10 @@ impl<'a> TasksInferrer<'a> {
     }
 
     fn is_valid(&self, name: &str, script: &str) -> bool {
-        if self.life_cycles.contains(name)
+        !(self.life_cycles.contains(name)
             || name.starts_with("pre")
             || name.starts_with("post")
-            || script.is_empty()
-        {
-            return false;
-        }
-
-        true
+            || script.is_empty())
     }
 
     fn is_dev_script_name(&self, name: &str) -> bool {

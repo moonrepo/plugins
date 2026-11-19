@@ -567,6 +567,77 @@ mod rust_toolchain_tier2 {
         }
     }
 
+    mod locate_dependencies_roots {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn locates_each_dir_in_order() {
+            let sandbox = create_moon_sandbox("locate");
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            let output = plugin
+                .locate_dependencies_roots(LocateDependenciesRootsInput {
+                    starting_dirs: vec![
+                        VirtualPath::new(
+                            sandbox.path().join("workspace-with-lock/crates/a/nested"),
+                        ),
+                        VirtualPath::new(sandbox.path()),
+                        VirtualPath::new(sandbox.path().join("package/nested")),
+                    ],
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.roots,
+                vec![
+                    LocateDependenciesRootOutput {
+                        members: Some(vec!["crates/*".into()]),
+                        root: Some(VirtualPath::new("/workspace/workspace-with-lock")),
+                    },
+                    LocateDependenciesRootOutput::default(),
+                    LocateDependenciesRootOutput {
+                        members: None,
+                        root: Some(VirtualPath::new("/workspace/package")),
+                    },
+                ]
+            );
+        }
+
+        // Directories that share a root reuse its cached manifest
+        #[tokio::test(flavor = "multi_thread")]
+        async fn shares_roots_between_dirs() {
+            let sandbox = create_moon_sandbox("locate");
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            let output = plugin
+                .locate_dependencies_roots(LocateDependenciesRootsInput {
+                    starting_dirs: vec![
+                        VirtualPath::new(sandbox.path().join("workspace/crates/a/nested")),
+                        VirtualPath::new(sandbox.path().join("workspace")),
+                        VirtualPath::new(sandbox.path().join("package/nested")),
+                        VirtualPath::new(sandbox.path().join("package")),
+                    ],
+                    ..Default::default()
+                })
+                .await;
+
+            let workspace = LocateDependenciesRootOutput {
+                members: Some(vec!["crates/*".into()]),
+                root: Some(VirtualPath::new("/workspace/workspace")),
+            };
+            let package = LocateDependenciesRootOutput {
+                members: None,
+                root: Some(VirtualPath::new("/workspace/package")),
+            };
+
+            assert_eq!(
+                output.roots,
+                [vec![workspace; 2], vec![package; 2]].concat()
+            );
+        }
+    }
+
     mod install_dependencies {
         use super::*;
 
@@ -676,13 +747,14 @@ mod rust_toolchain_tier2 {
                 .await;
 
             assert!(output.version.is_none());
+            assert!(output.dependencies.is_empty());
             assert!(output.dev_dependencies.is_empty());
             assert!(output.build_dependencies.is_empty());
             assert!(output.peer_dependencies.is_empty());
             assert!(!output.publishable);
 
             assert_eq!(
-                output.dependencies,
+                output.inheritable_dependencies,
                 BTreeMap::from_iter([
                     (
                         "a".into(),
@@ -705,6 +777,66 @@ mod rust_toolchain_tier2 {
                             ..Default::default()
                         })
                     )
+                ])
+            );
+        }
+
+        // A workspace root that's also a package, whose own dependencies may
+        // inherit, or share a name with, the workspace's
+        #[tokio::test(flavor = "multi_thread")]
+        async fn separates_workspace_deps_from_a_root_package() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "Cargo.toml",
+                r#"[workspace]
+members = ["member"]
+
+[workspace.dependencies]
+serde = "1"
+foo = "1"
+local = { path = "local" }
+
+[package]
+name = "root"
+version = "1.0.0"
+
+[dependencies]
+serde = { workspace = true }
+foo = "0.5"
+"#,
+            );
+
+            let plugin = sandbox.create_toolchain("rust").await;
+
+            let output = plugin
+                .parse_manifest(ParseManifestInput {
+                    path: VirtualPath::new(sandbox.path().join("Cargo.toml")),
+                    ..Default::default()
+                })
+                .await;
+
+            let version =
+                |req: &str| ManifestDependency::Version(UnresolvedVersionSpec::parse(req).unwrap());
+
+            assert_eq!(
+                output.dependencies,
+                BTreeMap::from_iter([
+                    ("foo".into(), version("^0.5")),
+                    ("serde".into(), ManifestDependency::Inherited(true)),
+                ])
+            );
+            assert_eq!(
+                output.inheritable_dependencies,
+                BTreeMap::from_iter([
+                    ("foo".into(), version("^1")),
+                    (
+                        "local".into(),
+                        ManifestDependency::Config(ManifestDependencyConfig {
+                            path: Some("local".into()),
+                            ..Default::default()
+                        })
+                    ),
+                    ("serde".into(), version("^1")),
                 ])
             );
         }

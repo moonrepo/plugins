@@ -1,4 +1,5 @@
 use moon_pdk_test_utils::{ExecuteExtensionInput, create_empty_moon_sandbox, create_moon_sandbox};
+use std::fs;
 
 mod unpack_extension {
     use super::*;
@@ -13,25 +14,6 @@ mod unpack_extension {
             .execute_extension(ExecuteExtensionInput::default())
             .await;
     }
-
-    // #[tokio::test(flavor = "multi_thread")]
-    // #[should_panic(
-    //     expected = "Invalid source, only .tar, .tar.gz, and .zip archives are supported."
-    // )]
-    // async fn errors_if_unsupported_ext() {
-    //     let sandbox = create_empty_moon_sandbox();
-    //     let plugin = sandbox.create_extension("test").await;
-
-    //     plugin
-    //         .execute_extension(ExecuteExtensionInput {
-    //             args: vec![
-    //                 "--src".into(),
-    //                 "https://raw.githubusercontent.com/moonrepo/moon/master/README.md".into(),
-    //             ],
-    //             ..Default::default()
-    //         })
-    //         .await;
-    // }
 
     #[tokio::test(flavor = "multi_thread")]
     #[should_panic(expected = "must be a valid file")]
@@ -62,6 +44,27 @@ mod unpack_extension {
                     "https://github.com/moonrepo/moon/archive/refs/tags/v1.0.0.zip".into(),
                     "--dest".into(),
                     "./dest".into(),
+                ],
+                ..Default::default()
+            })
+            .await;
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    #[should_panic(expected = "Failed to unpack archive")]
+    async fn errors_if_archive_is_invalid() {
+        let sandbox = create_empty_moon_sandbox();
+        let plugin = sandbox.create_extension("test").await;
+
+        sandbox.create_file("archive.tar.gz", "invalid");
+
+        plugin
+            .execute_extension(ExecuteExtensionInput {
+                args: vec![
+                    "--src".into(),
+                    "./archive.tar.gz".into(),
+                    "--dest".into(),
+                    "./out".into(),
                 ],
                 ..Default::default()
             })
@@ -129,6 +132,134 @@ mod unpack_extension {
     }
 
     #[tokio::test(flavor = "multi_thread")]
+    async fn overwrites_existing_zip_files() {
+        let sandbox = create_moon_sandbox("zip");
+        let plugin = sandbox.create_extension("test").await;
+
+        sandbox.create_file("out/dir/file.txt", "stale");
+
+        plugin
+            .execute_extension(ExecuteExtensionInput {
+                args: vec![
+                    "--src".into(),
+                    "./archive.zip".into(),
+                    "--dest".into(),
+                    "./out".into(),
+                ],
+                ..Default::default()
+            })
+            .await;
+
+        assert_eq!(
+            fs::read_to_string(sandbox.path().join("out/dir/file.txt")).unwrap(),
+            "This is in the archive!\n"
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn strips_tar_components() {
+        let sandbox = create_moon_sandbox("tar");
+        let plugin = sandbox.create_extension("test").await;
+
+        // Entries are prefixed with `./`, which tar counts as a component
+        plugin
+            .execute_extension(ExecuteExtensionInput {
+                args: vec![
+                    "--src".into(),
+                    "./archive.tar.gz".into(),
+                    "--dest".into(),
+                    "./out".into(),
+                    "--components".into(),
+                    "2".into(),
+                ],
+                ..Default::default()
+            })
+            .await;
+
+        assert!(sandbox.path().join("out/file.txt").exists());
+        assert!(!sandbox.path().join("out/dir").exists());
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn strips_zip_components() {
+        let sandbox = create_moon_sandbox("zip");
+        let plugin = sandbox.create_extension("test").await;
+
+        sandbox.create_file("out/file.txt", "stale");
+
+        plugin
+            .execute_extension(ExecuteExtensionInput {
+                args: vec![
+                    "--src".into(),
+                    "./archive.zip".into(),
+                    "--dest".into(),
+                    "./out".into(),
+                    "--components".into(),
+                    "1".into(),
+                ],
+                ..Default::default()
+            })
+            .await;
+
+        assert_eq!(
+            fs::read_to_string(sandbox.path().join("out/file.txt")).unwrap(),
+            "This is in the archive!\n"
+        );
+        assert!(!sandbox.path().join("out/dir").exists());
+        assert!(!sandbox.path().join("out/.moon-unpack").exists());
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn unpacks_file_that_starts_with_http() {
+        let sandbox = create_moon_sandbox("tar");
+        let plugin = sandbox.create_extension("test").await;
+
+        fs::copy(
+            sandbox.path().join("archive.tar"),
+            sandbox.path().join("https-archive.tar"),
+        )
+        .unwrap();
+
+        plugin
+            .execute_extension(ExecuteExtensionInput {
+                args: vec![
+                    "--src".into(),
+                    "https-archive.tar".into(),
+                    "--dest".into(),
+                    "./out".into(),
+                ],
+                ..Default::default()
+            })
+            .await;
+
+        assert!(sandbox.path().join("out/dir/file.txt").exists());
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn supports_absolute_paths() {
+        let sandbox = create_moon_sandbox("tar");
+        let plugin = sandbox.create_extension("test").await;
+
+        plugin
+            .execute_extension(ExecuteExtensionInput {
+                args: vec![
+                    "--src".into(),
+                    sandbox
+                        .path()
+                        .join("archive.tar")
+                        .to_string_lossy()
+                        .to_string(),
+                    "--dest".into(),
+                    sandbox.path().join("out").to_string_lossy().to_string(),
+                ],
+                ..Default::default()
+            })
+            .await;
+
+        assert!(sandbox.path().join("out/dir/file.txt").exists());
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
     async fn downloads_and_unpacks_tar() {
         let sandbox = create_empty_moon_sandbox();
         let plugin = sandbox.create_extension("test").await;
@@ -145,7 +276,7 @@ mod unpack_extension {
             })
             .await;
 
-        assert!(sandbox.path().join(".moon/temp/v1.0.0.tar.gz").exists());
+        assert!(!sandbox.path().join(".moon/temp/v1.0.0.tar.gz").exists());
         assert!(sandbox.path().join("out/moon-1.0.0/README.md").exists());
     }
 
@@ -166,7 +297,7 @@ mod unpack_extension {
             })
             .await;
 
-        assert!(sandbox.path().join(".moon/temp/v1.0.0.zip").exists());
+        assert!(!sandbox.path().join(".moon/temp/v1.0.0.zip").exists());
         assert!(sandbox.path().join("out/moon-1.0.0/README.md").exists());
     }
 }

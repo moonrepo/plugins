@@ -1,0 +1,31 @@
+---
+source: extensions/migrate-turborepo/tests/migrate_turborepo_test.rs
+expression: "fs::read_to_string(sandbox.path().join(\"apps/web/moon.yml\")).unwrap()"
+---
+language: javascript
+tags:
+- frontend
+tasks:
+  build:
+    command: pnpm run build
+    outputs:
+    - glob: .next/**/*
+    - glob: '!.next/cache/**/*'
+    tags:
+    - web
+  dev:
+    command: pnpm run dev
+    deps:
+    - target: api:dev
+      type: wait
+  test:
+    command: pnpm run test
+    inputs:
+    - $CI
+toolchains:
+  default: node
+workspace:
+  inheritedTasks:
+    exclude:
+    - lint
+    - test
