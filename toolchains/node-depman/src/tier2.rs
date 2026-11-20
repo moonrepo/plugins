@@ -11,13 +11,7 @@ pub fn define_requirements(
     Json(_): Json<DefineRequirementsInput>,
 ) -> FnResult<Json<DefineRequirementsOutput>> {
     Ok(Json(DefineRequirementsOutput {
-        // Nub is a standalone binary that can manage Node.js itself,
-        // while the other package managers are Node.js scripts
-        requires: if PackageManager::detect()?.is_nub() {
-            vec![]
-        } else {
-            vec!["node".into()]
-        },
+        requires: vec!["node".into()],
         for_setup_environment: false,
         for_setup_toolchain: true,
     }))

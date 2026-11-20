@@ -1,6 +1,7 @@
 use crate::config::*;
 use crate::infer_tasks::TasksInferrer;
 use crate::lockfiles::*;
+use crate::nub::{NUB_LOCK_NAMES, detect_nub_identity};
 use crate::package_json::PackageJson;
 use extism_pdk::*;
 use moon_common::path::paths_are_equal;
@@ -334,23 +335,13 @@ pub fn define_requirements(
             output.requires.push("node".into());
         }
 
-        output.requires.push(format!("{package_manager}"));
+        output
+            .requires
+            .push(package_manager.get_toolchain_id().to_string());
     }
 
     Ok(Json(output))
 }
-
-// Nub natively uses `nub.lock`, but respects the lockfiles of other
-// package managers (for both resolution and layout), so treat them
-// all as valid dependency roots for migration
-const NUB_LOCK_NAMES: &[&str] = &[
-    "nub.lock",
-    "package-lock.json",
-    "npm-shrinkwrap.json",
-    "pnpm-lock.yaml",
-    "yarn.lock",
-    "bun.lock",
-];
 
 fn get_var_key(prefix: &str, root: &VirtualPath) -> String {
     format!("{prefix}:{}", root.to_string().trim_end_matches('/'))
@@ -381,8 +372,16 @@ pub(crate) fn extract_workspace_members_and_catalogs(
         return Ok(Some(members));
     }
 
+    // Nub only reads the config files of the package manager that owns the repo,
+    // and warns that `pnpm-workspace.yaml` is not read in repos it owns
+    let config_manager = if package_manager == JavaScriptPackageManager::Nub {
+        detect_nub_identity(root)?
+    } else {
+        package_manager
+    };
+
     // Package manager specific files
-    match package_manager {
+    match config_manager {
         // Deno uses the members of both files, while `package.json`'s
         // catalogs replace `deno.json`'s when both define them
         JavaScriptPackageManager::Deno => {
@@ -406,9 +405,7 @@ pub(crate) fn extract_workspace_members_and_catalogs(
 
             members = (!list.is_empty()).then_some(list);
         }
-        // Nub reads `pnpm-workspace.yaml` when operating on a pnpm
-        // workspace, otherwise `package.json` (handled below)
-        JavaScriptPackageManager::Nub | JavaScriptPackageManager::Pnpm => {
+        JavaScriptPackageManager::Pnpm => {
             let workspace_file = root.join("pnpm-workspace.yaml");
 
             if workspace_file.exists() {
@@ -475,7 +472,7 @@ pub fn locate_dependencies_root(
     };
 
     let package_manager_config: SharedPackageManagerConfig =
-        load_toolchain_config(package_manager.to_string())?;
+        load_toolchain_config(package_manager.get_toolchain_id())?;
 
     let manifest_names = match package_manager {
         JavaScriptPackageManager::Deno => vec!["deno.json", "deno.jsonc", "package.json"],
@@ -563,8 +560,10 @@ pub fn install_dependencies(
     let mut inherit_install_args = true;
 
     let package_manager_config: SharedPackageManagerConfig = match &input.project {
-        Some(project) => load_project_toolchain_config(&project.id, package_manager.to_string())?,
-        None => load_toolchain_config(package_manager.to_string())?,
+        Some(project) => {
+            load_project_toolchain_config(&project.id, package_manager.get_toolchain_id())?
+        }
+        None => load_toolchain_config(package_manager.get_toolchain_id())?,
     };
 
     // Install
@@ -663,23 +662,32 @@ pub fn install_dependencies(
             cmd
         }
         JavaScriptPackageManager::Nub => {
-            // `nub ci` installs strictly from the lockfile, but has no
-            // `--prod` flag, so fall back to `nub install` for production
-            // installs, which is frozen by default in CI anyways
-            let use_ci = env.ci
-                && !input.production
+            let mut cmd = ExecCommandInput::new("nub", ["install"]);
+
+            // nub only freezes the lockfile when `CI` is set, and `nub ci` rejects
+            // most install args, like `--prefer-offline`. It also rejects
+            // `--frozen-lockfile` with `--no-frozen-lockfile`.
+            if env.ci
                 && NUB_LOCK_NAMES
                     .iter()
-                    .any(|name| input.root.join(name).exists());
-
-            let mut cmd = if use_ci {
-                ExecCommandInput::new("nub", ["ci"])
-            } else {
-                ExecCommandInput::new("nub", ["install"])
-            };
+                    .any(|name| input.root.join(name).exists())
+                && !package_manager_config
+                    .install_args
+                    .iter()
+                    .any(|arg| arg.ends_with("frozen-lockfile"))
+            {
+                cmd.args.push("--frozen-lockfile".into());
+            }
 
             if input.production {
                 cmd.args.push("--prod".into());
+
+                // Outside CI, nub links packages from a store shared by the machine,
+                // which a Docker image's later stages don't have
+                cmd.env.insert(
+                    "npm_config_enable_global_virtual_store".into(),
+                    "false".into(),
+                );
             }
 
             for package_name in input.packages {
@@ -773,11 +781,14 @@ pub fn install_dependencies(
                 output.dedupe_command = Some(cmd.into());
             }
             JavaScriptPackageManager::Nub => {
-                output.dedupe_command = Some(
-                    ExecCommandInput::new("nub", ["dedupe"])
-                        .cwd(input.root)
-                        .into(),
-                );
+                // nub won't write `yarn.lock`, so `nub dedupe` fails there
+                if detect_nub_identity(&input.root)? != JavaScriptPackageManager::Yarn {
+                    output.dedupe_command = Some(
+                        ExecCommandInput::new("nub", ["dedupe"])
+                            .cwd(input.root)
+                            .into(),
+                    );
+                }
             }
             JavaScriptPackageManager::Pnpm => {
                 output.dedupe_command =
@@ -1047,16 +1058,20 @@ pub fn setup_environment(
     {
         let package_manager_config: SharedPackageManagerConfig = match &input.project {
             Some(project) => {
-                load_project_toolchain_config(&project.id, package_manager.to_string())?
+                load_project_toolchain_config(&project.id, package_manager.get_toolchain_id())?
             }
-            None => load_toolchain_config(package_manager.to_string())?,
+            None => load_toolchain_config(package_manager.get_toolchain_id())?,
         };
 
         let package_path = input.root.join("package.json");
 
+        // Pinning Nub in a repo that another package manager owns would switch nub
+        // to its own format, which ignores that manager's config files
         if package_path.exists()
             && let Some(version) = package_manager_config.version
             && matches!(version, UnresolvedVersionSpec::Version(_))
+            && (package_manager != JavaScriptPackageManager::Nub
+                || detect_nub_identity(&input.root)? == JavaScriptPackageManager::Nub)
         {
             let (op, file) = Operation::track("sync-package-manager", || {
                 let mut package = PackageJson::load(package_path)?;

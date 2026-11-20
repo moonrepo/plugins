@@ -18,7 +18,7 @@ config_struct!(
 
 config_struct!(
     /// Configures and enables the Nub toolchain.
-    /// Docs: https://moonrepo.dev/docs/config/toolchain#nub
+    /// Docs: https://moonrepo.dev/docs/config/toolchain#unstable_nub
     #[derive(Config)]
     pub struct NubToolchainConfig {
         /// List of arguments to append to `nub install` commands.

@@ -19,12 +19,21 @@ derive_enum!(
 );
 
 impl JavaScriptPackageManager {
+    /// The toolchain that runs scripts. nub runs them on the `node` on `PATH`.
     pub fn get_runtime_toolchain(&self) -> Id {
         match self {
             Self::Bun => Id::raw("bun"),
             Self::Deno => Id::raw("deno"),
-            Self::Nub => Id::raw("nub"),
             _ => Id::raw("node"),
+        }
+    }
+
+    /// The ID that moon configures the package manager's toolchain as.
+    /// moon only maps `unstable_nub` to the Nub plugin.
+    pub fn get_toolchain_id(&self) -> Id {
+        match self {
+            Self::Nub => Id::raw("unstable_nub"),
+            _ => Id::raw(self.to_string()),
         }
     }
 

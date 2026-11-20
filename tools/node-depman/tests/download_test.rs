@@ -559,8 +559,20 @@ mod node_depman_tool {
                 .await
                 .globals_lookup_dirs;
 
-            assert!(dirs.contains(&"$XDG_BIN_HOME".into()));
-            assert!(dirs.contains(&"$HOME/.local/bin".into()));
+            // In nub's order
+            let nub_dirs = [
+                "$NPM_CONFIG_GLOBAL_BIN_DIR",
+                "$npm_config_global_bin_dir",
+                "$XDG_BIN_HOME",
+                "$XDG_DATA_HOME/../bin",
+                "$HOME/.local/bin",
+            ];
+
+            assert!(
+                dirs.windows(nub_dirs.len())
+                    .any(|window| window == nub_dirs),
+                "{dirs:?}"
+            );
             assert!(!dirs.iter().any(|dir| dir.contains("pnpm")));
         }
     }

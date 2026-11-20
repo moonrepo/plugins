@@ -13,6 +13,41 @@ use std::collections::BTreeMap;
 mod javascript_toolchain_tier2 {
     use super::*;
 
+    mod define_requirements {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn requires_the_package_manager_toolchains() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            for (package_manager, expected) in [
+                (json!("bun"), vec!["bun"]),
+                (json!("deno"), vec!["deno"]),
+                (json!("npm"), vec!["node", "npm"]),
+                // moon only configures Nub as `unstable_nub`, and nub provisions Node itself
+                (json!("nub"), vec!["unstable_nub"]),
+                (json!("pnpm"), vec!["node", "pnpm"]),
+                (json!("yarn"), vec!["node", "yarn"]),
+                (json!(null), vec![]),
+            ] {
+                let output: DefineRequirementsOutput = plugin
+                    .plugin
+                    .call_func_with(
+                        "define_requirements",
+                        DefineRequirementsInput {
+                            toolchain_config: json!({ "packageManager": package_manager }),
+                            ..Default::default()
+                        },
+                    )
+                    .await
+                    .unwrap();
+
+                assert_eq!(output.requires, expected, "{package_manager}");
+            }
+        }
+    }
+
     mod extend_project_graph {
         use super::*;
 
@@ -323,6 +358,37 @@ mod javascript_toolchain_tier2 {
                     ),
                 ])
             );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn infers_toolchains_for_each_package_manager() {
+            let sandbox = create_moon_sandbox("projects");
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            for (package_manager, expected) in [
+                ("bun", vec!["javascript", "bun"]),
+                ("npm", vec!["javascript", "npm", "node"]),
+                // nub runs scripts on the `node` on `PATH` (NUB.md D1)
+                ("nub", vec!["javascript", "unstable_nub", "node"]),
+                ("pnpm", vec!["javascript", "pnpm", "node"]),
+                ("yarn", vec!["javascript", "yarn", "node"]),
+            ] {
+                let mut input = ExtendProjectGraphInput::default();
+                input.project_sources.insert(Id::raw("a"), "a".into());
+                input.toolchain_config = json!({
+                    "inferTasksFromScripts": true,
+                    "packageManager": package_manager
+                });
+
+                let output = plugin.extend_project_graph(input).await;
+                let project = output.extended_projects.get("a").unwrap();
+
+                assert_eq!(
+                    project.tasks.get("release").unwrap().toolchains,
+                    Some(OneOrMany::Many(expected.into_iter().map(Id::raw).collect())),
+                    "{package_manager}"
+                );
+            }
         }
 
         #[allow(deprecated)]
@@ -1307,6 +1373,7 @@ mod javascript_toolchain_tier2 {
         async fn finds_workspace_with_pnpm_workspace_when_using_nub() {
             let sandbox = create_moon_sandbox("locate");
             sandbox.create_file("workspace/pnpm-workspace.yaml", "packages: ['apps/*']");
+            sandbox.create_file("workspace/pnpm-lock.yaml", "");
 
             let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -1323,6 +1390,34 @@ mod javascript_toolchain_tier2 {
                 .await;
 
             assert_eq!(output.members.unwrap(), ["apps/*"]);
+            assert_eq!(
+                output.root.unwrap(),
+                VirtualPath::new("/workspace/workspace")
+            );
+        }
+
+        // nub only reads `pnpm-workspace.yaml` in repos that pnpm owns
+        #[tokio::test(flavor = "multi_thread")]
+        async fn ignores_pnpm_workspace_when_nub_owns_the_repo() {
+            let sandbox = create_moon_sandbox("locate");
+            sandbox.create_file("workspace/pnpm-workspace.yaml", "packages: ['apps/*']");
+            sandbox.create_file("workspace/nub.lock", "");
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .locate_dependencies_root(LocateDependenciesRootInput {
+                    starting_dir: VirtualPath::new(
+                        sandbox.path().join("workspace/packages/a/nested"),
+                    ),
+                    toolchain_config: json!({
+                        "packageManager": "nub"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.members.unwrap(), ["packages/*"]);
             assert_eq!(
                 output.root.unwrap(),
                 VirtualPath::new("/workspace/workspace")
@@ -2202,23 +2297,26 @@ mod javascript_toolchain_tier2 {
                     })
                     .await;
 
-                assert_eq!(
-                    output.install_command.unwrap(),
-                    ExecCommand::new(
-                        ExecCommandInput::new(
-                            "nub",
-                            [
-                                "install",
-                                "--prod",
-                                "--filter-prod",
-                                "foo...",
-                                "--filter-prod",
-                                "@scope/bar..."
-                            ]
-                        )
-                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
+                let mut command = ExecCommandInput::new(
+                    "nub",
+                    [
+                        "install",
+                        "--prod",
+                        "--filter-prod",
+                        "foo...",
+                        "--filter-prod",
+                        "@scope/bar...",
+                    ],
+                )
+                .cwd(plugin.plugin.to_virtual_path(sandbox.path()));
+
+                // A project-local store, as Docker images don't have the machine's
+                command.env.insert(
+                    "npm_config_enable_global_virtual_store".into(),
+                    "false".into(),
                 );
+
+                assert_eq!(output.install_command.unwrap(), ExecCommand::new(command));
             }
 
             #[tokio::test(flavor = "multi_thread")]
@@ -2226,7 +2324,7 @@ mod javascript_toolchain_tier2 {
                 let mut sandbox = create_empty_moon_sandbox();
 
                 sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
-                    assert_eq!(id, "nub");
+                    assert_eq!(id, "unstable_nub");
                     json!({ "installArgs": ["-a", "b", "--c"]})
                 });
 
@@ -2253,7 +2351,7 @@ mod javascript_toolchain_tier2 {
             }
 
             #[tokio::test(flavor = "multi_thread")]
-            async fn switches_to_ci_in_ci() {
+            async fn freezes_the_lockfile_in_ci() {
                 let sandbox = create_empty_moon_sandbox();
                 let plugin = sandbox
                     .create_toolchain_with_config("javascript", |cfg| {
@@ -2299,12 +2397,12 @@ mod javascript_toolchain_tier2 {
                 assert_eq!(
                     output.install_command.unwrap(),
                     ExecCommand::new(
-                        ExecCommandInput::new("nub", ["ci"])
+                        ExecCommandInput::new("nub", ["install", "--frozen-lockfile"])
                             .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                     )
                 );
 
-                // But not for production, since `nub ci` has no `--prod`
+                // Production installs too
                 let output = plugin
                     .install_dependencies(InstallDependenciesInput {
                         root: VirtualPath::new(sandbox.path()),
@@ -2317,16 +2415,86 @@ mod javascript_toolchain_tier2 {
                     .await;
 
                 assert_eq!(
-                    output.install_command.unwrap(),
-                    ExecCommand::new(
-                        ExecCommandInput::new("nub", ["install", "--prod"])
-                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
+                    output.install_command.unwrap().command.args,
+                    ["install", "--frozen-lockfile", "--prod"]
                 );
             }
 
             #[tokio::test(flavor = "multi_thread")]
-            async fn switches_to_ci_with_other_pm_lock() {
+            async fn doesnt_freeze_the_lockfile_against_install_args() {
+                let mut sandbox = create_empty_moon_sandbox();
+                sandbox.create_file("nub.lock", "");
+
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "unstable_nub");
+                    json!({ "installArgs": ["--no-frozen-lockfile"]})
+                });
+
+                let plugin = sandbox
+                    .create_toolchain_with_config("javascript", |cfg| {
+                        cfg.host_environment(HostEnvironment {
+                            ci: true,
+                            ..Default::default()
+                        });
+                    })
+                    .await;
+
+                let output = plugin
+                    .install_dependencies(InstallDependenciesInput {
+                        root: VirtualPath::new(sandbox.path()),
+                        toolchain_config: json!({
+                            "packageManager": "nub",
+                        }),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert_eq!(
+                    output.install_command.unwrap().command.args,
+                    ["install", "--no-frozen-lockfile"]
+                );
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn skips_dedupe_in_yarn_repos() {
+                let sandbox = create_empty_moon_sandbox();
+                sandbox.create_file("yarn.lock", "");
+
+                let plugin = sandbox.create_toolchain("javascript").await;
+
+                let output = plugin
+                    .install_dependencies(InstallDependenciesInput {
+                        root: VirtualPath::new(sandbox.path()),
+                        toolchain_config: json!({
+                            "packageManager": "nub",
+                            "dedupeOnLockfileChange": true
+                        }),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert!(output.install_command.is_some());
+                assert!(output.dedupe_command.is_none());
+
+                // Unless nub owns it
+                sandbox.create_file("package.json", r#"{ "packageManager": "nub@0.11.1" }"#);
+
+                let output = plugin
+                    .install_dependencies(InstallDependenciesInput {
+                        root: VirtualPath::new(sandbox.path()),
+                        toolchain_config: json!({
+                            "packageManager": "nub",
+                            "dedupeOnLockfileChange": true
+                        }),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert!(output.dedupe_command.is_some());
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn freezes_the_lockfile_with_other_pm_lock() {
                 let sandbox = create_empty_moon_sandbox();
                 sandbox.create_file("pnpm-lock.yaml", "");
 
@@ -2352,7 +2520,7 @@ mod javascript_toolchain_tier2 {
                 assert_eq!(
                     output.install_command.unwrap(),
                     ExecCommand::new(
-                        ExecCommandInput::new("nub", ["ci"])
+                        ExecCommandInput::new("nub", ["install", "--frozen-lockfile"])
                             .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                     )
                 );
@@ -3490,10 +3658,12 @@ mod javascript_toolchain_tier2 {
 
         #[tokio::test(flavor = "multi_thread")]
         async fn hashes_pnpm_patches() {
-            let sandbox = create_empty_moon_sandbox();
-            sandbox.create_file(
-                "pnpm-lock.yaml",
-                r#"lockfileVersion: '9.0'
+            // `nub.lock` uses the same format
+            for lock_name in ["pnpm-lock.yaml", "nub.lock"] {
+                let sandbox = create_empty_moon_sandbox();
+                sandbox.create_file(
+                    lock_name,
+                    r#"lockfileVersion: '9.0'
 
 patchedDependencies:
   is-number@7.0.0:
@@ -3514,25 +3684,28 @@ snapshots:
 
   is-odd@3.0.1: {}
 "#,
-            );
+                );
 
-            let plugin = sandbox.create_toolchain("javascript").await;
+                let plugin = sandbox.create_toolchain("javascript").await;
 
-            let output = plugin
-                .parse_lock(ParseLockInput {
-                    path: VirtualPath::new(sandbox.path().join("pnpm-lock.yaml")),
-                    ..Default::default()
-                })
-                .await;
+                let output = plugin
+                    .parse_lock(ParseLockInput {
+                        path: VirtualPath::new(sandbox.path().join(lock_name)),
+                        ..Default::default()
+                    })
+                    .await;
 
-            assert_eq!(
-                output.dependencies["is-number"][0].hash.as_deref(),
-                Some("sha512-isnumber==+patch.0a2bcd01")
-            );
-            assert_eq!(
-                output.dependencies["is-odd"][0].hash.as_deref(),
-                Some("sha512-isodd==")
-            );
+                assert_eq!(
+                    output.dependencies["is-number"][0].hash.as_deref(),
+                    Some("sha512-isnumber==+patch.0a2bcd01"),
+                    "{lock_name}"
+                );
+                assert_eq!(
+                    output.dependencies["is-odd"][0].hash.as_deref(),
+                    Some("sha512-isodd=="),
+                    "{lock_name}"
+                );
+            }
         }
 
         // pnpm 12's experimental `lockfile.format: v13`

@@ -197,9 +197,10 @@ mod javascript_toolchain_tier2 {
         #[tokio::test(flavor = "multi_thread")]
         async fn sets_field_for_nub() {
             let mut sandbox = create_moon_sandbox("files");
+            sandbox.create_file("nub.lock", "");
 
             sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
-                assert_eq!(id, "nub");
+                assert_eq!(id, "unstable_nub");
                 json!({ "version": "1.2.3" })
             });
 
@@ -225,6 +226,44 @@ mod javascript_toolchain_tier2 {
                     .unwrap()
                     .contains(r#""packageManager": "nub@1.2.3""#)
             );
+        }
+
+        // Pinning nub would switch it out of the other manager's format (NUB.md #2)
+        #[tokio::test(flavor = "multi_thread")]
+        async fn doesnt_set_field_for_nub_in_other_managers_repos() {
+            for (file, content) in [
+                ("pnpm-lock.yaml", ""),
+                ("package.json", r#"{ "packageManager": "pnpm@10.0.0" }"#),
+            ] {
+                let mut sandbox = create_moon_sandbox("files");
+                sandbox.create_file(file, content);
+
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "unstable_nub");
+                    json!({ "version": "1.2.3" })
+                });
+
+                let plugin = sandbox.create_toolchain("javascript").await;
+
+                let output = plugin
+                    .setup_environment(SetupEnvironmentInput {
+                        root: VirtualPath::new(sandbox.path()),
+                        toolchain_config: json!({
+                            "syncPackageManagerField": true,
+                            "packageManager": "nub"
+                        }),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert!(output.changed_files.is_empty(), "{file}");
+                assert!(
+                    !fs::read_to_string(sandbox.path().join("package.json"))
+                        .unwrap()
+                        .contains("nub@"),
+                    "{file}"
+                );
+            }
         }
 
         #[tokio::test(flavor = "multi_thread")]

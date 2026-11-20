@@ -23,7 +23,7 @@ pub fn register_toolchain(
         },
         PackageManager::Nub => RegisterToolchainOutput {
             config_file_globs: vec![".npmrc".into(), "nub.jsonc".into()],
-            exe_names: vec!["nub".into(), "nubx".into()],
+            exe_names: vec!["nub".into(), "nubr".into(), "nubx".into()],
             lock_file_names: vec!["nub.lock".into()],
             ..Default::default()
         },

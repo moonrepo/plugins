@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+#### 🚀 Updates
+
+- Nub globals are now also found in its `globalBinDir` setting (`npm_config_global_bin_dir`) and
+  `$XDG_DATA_HOME/../bin`, where nub v0.9+ links them.
+
 #### 🐞 Fixes
 
 - Fixed a `package.json` with a field that can't be parsed, like `"version": "1.0"` or an unusual

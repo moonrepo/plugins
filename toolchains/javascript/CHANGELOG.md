@@ -66,7 +66,25 @@
   package manager, and only updates `packageManager` beside it when it already exists, as pnpm 11+
   prefers `devEngines.packageManager` and warns when they differ. Yarn still gets `packageManager`,
   which is all Yarn Switch reads.
-- pnpm patches are now part of a locked dependency's hash, so editing a patch changes task hashes.
+- pnpm and Nub patches are now part of a locked dependency's hash, so editing a patch changes task
+  hashes.
+- Nub installs in CI now run `nub install --frozen-lockfile` whenever a lockfile exists, production
+  installs included, instead of `nub ci`, which rejected most `installArgs`, like
+  `--prefer-offline`. The flag is left out when `installArgs` has one, like `--no-frozen-lockfile`.
+- Nub production installs, like `docker prune`'s, now use a store inside `node_modules`, instead of
+  one shared by the machine, which a Docker image's later stages don't have.
+- `syncPackageManagerField` no longer pins Nub in a repo that another package manager owns, through
+  `packageManager`, `devEngines.packageManager` or its lockfile. nub then switched to its own
+  format, which ignores that manager's config, like `pnpm-workspace.yaml`.
+- Inferred Nub tasks now also list the `node` toolchain, so they run on its Node.js version when
+  it's enabled, and their task hashes change once. Tasks you write that run `nub` need
+  `toolchains: ['node']` for that.
+- For Nub in a repo that npm owns, `syncProjectWorkspaceDependencies` now writes the formats npm
+  supports, like `file:` instead of `workspace:*`, as nub writes them into `package-lock.json`, which
+  npm can't read. Synced specs change once.
+- Nub workspaces now read `pnpm-workspace.yaml` only in repos that pnpm owns, and `.yarnrc.yml`
+  catalogs in repos that Yarn owns, as nub does.
+- `nubr` is now a Nub executable.
 
 #### 🐞 Fixes
 
@@ -130,6 +148,11 @@
 - Fixed pnpm 8 lockfiles (v6), whose keys start with `/`, giving task hashes no locked versions.
   Task hashes change once for them.
 - Fixed pnpm 12's experimental v13 lockfiles giving task hashes versions instead of integrities.
+- Fixed moon setting up Nub twice, as `nub` and `unstable_nub`, which could fail runs with
+  `proto::store::shim::create_failed`. The toolchain now requires and loads `unstable_nub`, the ID
+  that moon configures.
+- Fixed `nub dedupe` failing installs in Yarn repos, as nub won't write `yarn.lock`. It's now
+  skipped there.
 
 #### ⚙️ Internal
 

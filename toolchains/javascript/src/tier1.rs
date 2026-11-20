@@ -1,11 +1,12 @@
 use crate::config::*;
+use crate::nub::{NUB_LOCK_NAMES, detect_nub_identity};
 use crate::package_json::{PackageJson, get_install_script_args};
 use crate::tier2::extract_workspace_members_and_catalogs;
 use extism_pdk::*;
 use moon_common::path::{is_root_level_source, to_relative_virtual_string};
 use moon_config::{DependencyScope, LanguageType};
 use moon_pdk::{
-    HostLogInput, host_log, is_project_toolchain_enabled, map_miette_error,
+    HostLogInput, host_log, is_project_toolchain_enabled, locate_root_many, map_miette_error,
     parse_toolchain_config_schema, plugin_err,
 };
 use moon_pdk_api::*;
@@ -86,6 +87,7 @@ pub fn register_toolchain(
             "npx".into(),
             // nub
             "nub".into(),
+            "nubr".into(),
             "nubx".into(),
             // pnpm
             "pnpm".into(),
@@ -157,21 +159,7 @@ pub fn initialize_toolchain(
 fn detect_package_manager(root: &VirtualPath) -> AnyResult<Option<JavaScriptPackageManager>> {
     let package = PackageJson::load(root.join("package.json"))?;
 
-    // `pnpm init` (v11+) and nub write `devEngines.packageManager`
-    let declared = package
-        .package_manager
-        .as_ref()
-        .map(|pm| pm.split_once('@').map(|parts| parts.0).unwrap_or(pm))
-        .into_iter()
-        .chain(
-            package
-                .dev_engines
-                .as_ref()
-                .and_then(|engines| engines.package_manager.as_ref())
-                .and_then(|engines| engines.list().first().map(|engine| engine.name.as_str())),
-        );
-
-    for name in declared {
+    for name in package.get_declared_package_managers() {
         match JavaScriptPackageManager::from_str(name) {
             Ok(package_manager) => return Ok(Some(package_manager)),
             Err(error) => debug!("Skipping the package manager {name} in package.json: {error}"),
@@ -339,9 +327,19 @@ fn sync_project_workspace_dependencies(
     dep_packages: &[DependencyPackage],
 ) -> AnyResult<()> {
     let project_root = input.context.get_project_root(&input.project);
+
+    // nub writes `workspace:` into `package-lock.json`, which npm can't read
+    let format_manager = match package_manager {
+        JavaScriptPackageManager::Nub => match locate_root_many(&project_root, NUB_LOCK_NAMES) {
+            Some(root) => detect_nub_identity(&root)?,
+            None => *package_manager,
+        },
+        _ => *package_manager,
+    };
+
     let version_format = config
         .dependency_version_format
-        .get_supported_for(package_manager);
+        .get_supported_for(&format_manager);
     let version_prefix = version_format.get_prefix();
     let is_version_format = matches!(
         version_format,

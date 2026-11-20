@@ -225,6 +225,24 @@ impl PackageJson {
         })
     }
 
+    /// The package manager names from `packageManager`, then the first
+    /// `devEngines.packageManager` entry, which `pnpm init` (v11+) and nub write.
+    pub fn get_declared_package_managers(&self) -> Vec<&str> {
+        self.data
+            .package_manager
+            .as_ref()
+            .map(|pm| pm.split_once('@').map(|parts| parts.0).unwrap_or(pm))
+            .into_iter()
+            .chain(
+                self.data
+                    .dev_engines
+                    .as_ref()
+                    .and_then(|engines| engines.package_manager.as_ref())
+                    .and_then(|engines| engines.list().first().map(|engine| engine.name.as_str())),
+            )
+            .collect()
+    }
+
     /// Set the version of the package manager's entry in `devEngines.packageManager`.
     /// Return false when it has no entry for the package manager.
     pub fn set_dev_engine_package_manager(&mut self, name: &str, version: &str) -> bool {

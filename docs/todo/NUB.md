@@ -92,15 +92,26 @@ check #1–#8. That's how #1's fix was checked.
 
 **Shared with pnpm:** Nub reads `nub.lock` with `parse_pnpm_lock_yaml` and its workspace with
 `PnpmWorkspace`, so `PNPM.md` #4–#6 and #11 (patch hashes, the `default` catalog, pnpm 8 lockfile
-keys and v13 integrities) fix Nub too (handed over by `PNPM.md`). Add a `nub.lock` case to their
-tests where the format applies.
+keys and v13 integrities) fix Nub too (handed over by `PNPM.md`). `hashes_pnpm_patches` has a
+`nub.lock` case. The others don't apply: nub declines v6 lockfiles, v13 is pnpm 12's, and repos Nub
+owns keep catalogs in `package.json`.
+
+**Not covered:** `package.json` catalogs don't map `catalogs.default` to the default catalog, as
+`pnpm-workspace.yaml`'s now do. It's unchecked whether nub treats it as the default, and Bun reads
+the same field.
+
+**Found while implementing:** since `PNPM.md` #12, `syncPackageManagerField` updates the version in
+`devEngines.packageManager` when it names the package manager. In repos Nub owns, nub writes
+`"^0.11.1"` there, so moon now replaces it with the exact version, like `nub pm use nub@<version>`,
+and only updates `packageManager` when it exists. Not checked live.
 
 ## Phase 1: clear-cut fixes
 
 ### #1 Require `unstable_nub`, the ID moon configures
 
-- [ ] Add a toolchain ID helper and use it everywhere
-- [ ] Tests that assert the ID
+- [x] Add a toolchain ID helper and use it everywhere (`get_toolchain_id`)
+- [x] Tests that assert the ID: `requires_the_package_manager_toolchains`, and the Nub mocks in
+      `tier2_test.rs` and `tier2_env_test.rs`
 
 **Problem:** moon only maps `unstable_nub` to `node_depman_toolchain` (moon
 `crates/config-loader/src/toolchains_config_ext.rs:25`), and its docs enable Nub as `unstable_nub`.
@@ -132,9 +143,12 @@ package manager. Make the Nub install tests' `load_toolchain_config` mocks asser
 
 ### #2 Don't rewrite `packageManager` in a repo another manager owns
 
-- [ ] Skip the sync for Nub in compat mode
-- [ ] Tests
-- [ ] Changelog
+- [x] Skip the sync for Nub in compat mode. `nub::detect_nub_identity` follows nub's order
+      (`packageManager`, `devEngines.packageManager`, then the lockfile), and #5, #7 and #8 use it
+      too.
+- [x] Tests: `doesnt_set_field_for_nub_in_other_managers_repos`, and `sets_field_for_nub` with
+      `nub.lock`
+- [x] Changelog
 
 **Problem:** `syncPackageManagerField`, which is on by default, writes
 `"packageManager": "nub@<version>"` whenever `unstable_nub.version` is exact, including a version
@@ -169,9 +183,10 @@ write over `"packageManager": "pnpm@10.0.0"`, and a write with `nub.lock`.
 
 ### #3 Use `nub install --frozen-lockfile` in CI, not `nub ci`
 
-- [ ] Replace `nub ci`
-- [ ] Freeze production installs in CI too
-- [ ] Tests
+- [x] Replace `nub ci`
+- [x] Freeze production installs in CI too
+- [x] Tests: `freezes_the_lockfile_in_ci`, `freezes_the_lockfile_with_other_pm_lock` and
+      `doesnt_freeze_the_lockfile_against_install_args`
 
 **Problem:** in CI, when any lockfile from `NUB_LOCK_NAMES` exists, the plugin runs `nub ci` and
 appends `unstable_nub.installArgs` (`tier2.rs:514-528`, `:585-589`). `nub ci` accepts far fewer
@@ -204,8 +219,8 @@ production install in CI (frozen) and `installArgs` with `--no-frozen-lockfile` 
 
 ### #4 Give production installs a project-local store
 
-- [ ] Set `npm_config_enable_global_virtual_store=false` for production
-- [ ] Test
+- [x] Set `npm_config_enable_global_virtual_store=false` for production
+- [x] Test (`focused_commands`)
 
 **Problem:** outside CI, nub links `node_modules/.store/*` into a store shared by the whole machine,
 `~/.cache/nub/pm/store/v1`, in 0.7.4 and 0.11.1. nub's Docker docs say to install with `nub ci` in
@@ -233,8 +248,8 @@ for caching `node_modules`.
 
 ### #5 Don't run `nub dedupe` in Yarn repos
 
-- [ ] Skip the dedupe on a `yarn.lock`
-- [ ] Test
+- [x] Skip the dedupe when Yarn owns the repo
+- [x] Test (`skips_dedupe_in_yarn_repos`)
 
 **Problem:** the plugin always returns `nub dedupe` as the dedupe command (`tier2.rs:618-624`). nub
 won't write `yarn.lock`, and `nub dedupe` there exits 1: "refusing to modify yarn.lock … Run it with
@@ -251,8 +266,8 @@ yarn directly: yarn dedupe". Outside CI, moon runs the dedupe after every instal
 
 ### #6 Run Nub's inferred tasks on moon's Node (D1)
 
-- [ ] Add `node` to Nub's inferred task toolchains
-- [ ] Docs for hand-written tasks
+- [x] Add `node` to Nub's inferred task toolchains (`infers_toolchains_for_each_package_manager`)
+- [ ] Docs for hand-written tasks: moon's website, tracked in `MOON_COMPACT.md`
 
 **Problem:** nub runs scripts on stock Node. It picks the version from `NODE_EXECUTABLE`,
 `nub.jsonc`, `devEngines.runtime`, `.node-version`, `.nvmrc`, `.tool-versions` or `engines.node`, and
@@ -280,8 +295,8 @@ satisfies the repo's pin, so moon's Node only loses to a pin that disagrees with
 
 ### #7 `workspace:` ranges in npm repos (D2)
 
-- [ ] Sync npm's format for Nub when npm owns the repo
-- [ ] Test
+- [x] Sync npm's format for Nub when npm owns the repo, from the nearest lockfile's root
+- [x] Test (`syncs_npm_format_for_nub_in_npm_repos`)
 
 **Problem:** `get_supported_for` keeps every format for Nub (`config.rs:94`), so the default
 `workspace:*` is synced into each `package.json`. nub accepts it in a repo with `package-lock.json`,
@@ -299,7 +314,7 @@ That only matters to teams that still run npm in the repo.
 
 ### #8 Read workspace config the way Nub does
 
-- [ ] Read `pnpm-workspace.yaml` only in pnpm repos
+- [x] Read `pnpm-workspace.yaml` only in pnpm repos (`ignores_pnpm_workspace_when_nub_owns_the_repo`)
 
 For Nub, `extract_workspace_members_and_catalogs` and `locate_dependencies_root` read
 `pnpm-workspace.yaml` first (`tier2.rs:271-282`, `:342-344`). nub only reads it when pnpm owns the
@@ -307,18 +322,19 @@ repo. In a repo Nub owns, it prints "pnpm-workspace.yaml is not read under nub i
 `package.json` (live), so moon's members and catalogs can differ from nub's. Read it for Nub only
 when `pnpm-lock.yaml` exists and `nub.lock` doesn't.
 
-**Not covered:** catalogs in `.yarnrc.yml`, which nub supports in Yarn repos, aren't read for Nub.
+Nub now reads the config files of whichever manager owns the repo, so `.yarnrc.yml` catalogs are
+read in Yarn repos too.
 
 ### #9 Detection names and docs links
 
-- [ ] `exe_names`: add `nubr`, which nub ships since 0.9.3 (`npm/nub/package.json` `bin`), in
+- [x] `exe_names`: add `nubr`, which nub ships since 0.9.3 (`npm/nub/package.json` `bin`), in
       `toolchains/node-depman/src/tier1.rs:26` and `toolchains/javascript/src/tier1.rs:86-87`.
-- [ ] `NubToolchainConfig`'s docs link (`toolchains/node-depman/src/config.rs:21`) points at `#nub`.
+- [x] `NubToolchainConfig`'s docs link (`toolchains/node-depman/src/config.rs:21`) points at `#nub`.
       moon's heading is `unstable_nub`.
 
 ### #10 Nub's globals lookup directories
 
-- [ ] Add the other directories nub uses
+- [x] Add the other directories nub uses (`locates_globals_in_user_bin_dir`)
 
 `get_global_lookup_dirs` lists `$XDG_BIN_HOME` and `$HOME/.local/bin` for Nub
 (`tools/node-depman/src/package_manager.rs:223-228`). nub 0.11.1 checks the `globalBinDir` setting

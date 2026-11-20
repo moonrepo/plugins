@@ -424,6 +424,38 @@ mod javascript_toolchain_tier1 {
             assert_eq!(app["peerDependencies"]["peer"], "*");
         }
 
+        // nub writes `workspace:` into `package-lock.json`, which npm can't read (NUB.md D2)
+        #[tokio::test(flavor = "multi_thread")]
+        async fn syncs_npm_format_for_nub_in_npm_repos() {
+            for (lock_name, expected) in [
+                ("package-lock.json", "file:../lib"),
+                ("nub.lock", "workspace:*"),
+            ] {
+                let sandbox = create_empty_moon_sandbox();
+                sandbox.create_file(lock_name, "{}");
+                sandbox.create_file("app/package.json", r#"{ "name": "app" }"#);
+                sandbox.create_file(
+                    "lib/package.json",
+                    r#"{ "name": "lib", "version": "1.0.0" }"#,
+                );
+
+                let plugin = sandbox.create_toolchain("javascript").await;
+                let mut input = create_input(
+                    vec![create_dep("lib", DependencyScope::Production)],
+                    JavaScriptDependencyVersionFormat::Workspace,
+                );
+                input.toolchain_config["packageManager"] = json!("nub");
+
+                plugin.sync_project(input).await;
+
+                assert_eq!(
+                    read_app(&sandbox)["dependencies"]["lib"],
+                    expected,
+                    "{lock_name}"
+                );
+            }
+        }
+
         #[tokio::test(flavor = "multi_thread")]
         async fn skips_packages_without_a_version_for_version_formats() {
             let sandbox = create_empty_moon_sandbox();

@@ -207,18 +207,16 @@ impl<'a> TasksInferrer<'a> {
         }
 
         // toolchains
-        if package_manager.is_standalone() {
-            config.toolchains = Some(OneOrMany::Many(vec![
-                Id::raw("javascript"),
-                package_manager.get_runtime_toolchain(),
-            ]));
-        } else {
-            config.toolchains = Some(OneOrMany::Many(vec![
-                Id::raw("javascript"),
-                Id::raw(package_manager.to_string()),
-                package_manager.get_runtime_toolchain(),
-            ]));
+        // Bun and Deno are their own runtime. nub runs scripts on the `node`
+        // on `PATH`, and moon drops `node` when it isn't configured.
+        let mut toolchains = vec![Id::raw("javascript"), package_manager.get_toolchain_id()];
+        let runtime = package_manager.get_runtime_toolchain();
+
+        if !toolchains.contains(&runtime) {
+            toolchains.push(runtime);
         }
+
+        config.toolchains = Some(OneOrMany::Many(toolchains));
 
         // options
         if self.has_help_or_version_option(script_args) || self.has_watch_option(script_args) {
