@@ -2699,6 +2699,57 @@ mod javascript_toolchain_tier2 {
         mod yarn {
             use super::*;
 
+            const CLASSIC_LOCK: &str = "# yarn lockfile v1\n";
+            const BERRY_LOCK: &str = "__metadata:\n  version: 8\n";
+            const ZPM_LOCK: &str = r#"{"__metadata":{"version":10},"entries":{}}"#;
+
+            async fn install(
+                yarn_config: serde_json::Value,
+                files: &[(&str, &str)],
+                ci: bool,
+                packages: &[&str],
+                production: bool,
+            ) -> InstallDependenciesOutput {
+                let mut sandbox = create_empty_moon_sandbox();
+
+                for (name, content) in files {
+                    sandbox.create_file(name, content);
+                }
+
+                sandbox.host_funcs.mock_load_toolchain_config(move |id, _| {
+                    assert_eq!(id, "yarn");
+                    yarn_config.clone()
+                });
+
+                let plugin = sandbox
+                    .create_toolchain_with_config("javascript", |cfg| {
+                        cfg.host_environment(HostEnvironment {
+                            ci,
+                            ..Default::default()
+                        });
+                    })
+                    .await;
+
+                plugin
+                    .install_dependencies(InstallDependenciesInput {
+                        root: VirtualPath::new(sandbox.path()),
+                        toolchain_config: json!({
+                            "packageManager": "yarn",
+                            "dedupeOnLockfileChange": true
+                        }),
+                        packages: packages.iter().map(|name| name.to_string()).collect(),
+                        production,
+                        ..Default::default()
+                    })
+                    .await
+            }
+
+            fn get_args(command: Option<ExecCommand>) -> Vec<String> {
+                let input = command.unwrap().command;
+
+                [input.command].into_iter().chain(input.args).collect()
+            }
+
             #[tokio::test(flavor = "multi_thread")]
             async fn default_commands() {
                 let sandbox = create_empty_moon_sandbox();
@@ -2726,69 +2777,74 @@ mod javascript_toolchain_tier2 {
 
             #[tokio::test(flavor = "multi_thread")]
             async fn focused_commands() {
-                let sandbox = create_empty_moon_sandbox();
-                let plugin = sandbox.create_toolchain("javascript").await;
+                for files in [vec![], vec![("yarn.lock", CLASSIC_LOCK)]] {
+                    let output =
+                        install(json!({}), &files, false, &["foo", "@scope/bar"], true).await;
 
-                let output = plugin
-                    .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::new(sandbox.path()),
-                        toolchain_config: json!({
-                            "packageManager": "yarn",
-                            "dedupeOnLockfileChange": true
-                        }),
-                        packages: vec!["foo".into(), "@scope/bar".into()],
-                        production: true,
-                        ..Default::default()
-                    })
-                    .await;
-
-                assert_eq!(
-                    output.install_command.unwrap(),
-                    ExecCommand::new(
-                        ExecCommandInput::new("yarn", ["install", "--production"])
-                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
-                );
+                    assert_eq!(
+                        get_args(output.install_command),
+                        ["yarn", "install", "--production"],
+                        "{files:?}"
+                    );
+                }
             }
 
+            // Yarn 2+ removed `install --production` (YARN.md #4)
             #[tokio::test(flavor = "multi_thread")]
-            async fn focused_commands_for_berry() {
-                let mut sandbox = create_empty_moon_sandbox();
+            async fn focuses_workspaces_for_berry() {
+                for (config, files) in [
+                    (json!({ "version": "4.18.1" }), vec![]),
+                    (json!({ "version": "latest" }), vec![]),
+                    (json!({ "version": "6.0.0-rc.23" }), vec![]),
+                    (json!({}), vec![("yarn.lock", BERRY_LOCK)]),
+                    (json!({}), vec![("yarn.lock", ZPM_LOCK)]),
+                    (
+                        json!({ "version": "3.6.3", "installArgs": ["--inline-builds"] }),
+                        vec![(".yarn/plugins/@yarnpkg/plugin-workspace-tools.cjs", "")],
+                    ),
+                ] {
+                    let output =
+                        install(config.clone(), &files, false, &["foo", "@scope/bar"], true).await;
 
-                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
-                    assert_eq!(id, "yarn");
-                    json!({ "version": "2" })
-                });
-
-                let plugin = sandbox.create_toolchain("javascript").await;
-
-                let output = plugin
-                    .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::new(sandbox.path()),
-                        toolchain_config: json!({
-                            "packageManager": "yarn",
-                            "dedupeOnLockfileChange": true
-                        }),
-                        packages: vec!["foo".into(), "@scope/bar".into()],
-                        production: true,
-                        ..Default::default()
-                    })
-                    .await;
-
-                assert_eq!(
-                    output.install_command.unwrap(),
-                    ExecCommand::new(
-                        ExecCommandInput::new(
+                    assert_eq!(
+                        get_args(output.install_command),
+                        [
                             "yarn",
-                            ["workspaces", "focus", "foo", "@scope/bar", "--production"]
-                        )
-                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
-                );
+                            "workspaces",
+                            "focus",
+                            "foo",
+                            "@scope/bar",
+                            "--production"
+                        ],
+                        "{config}"
+                    );
+
+                    let output = install(config.clone(), &files, false, &[], true).await;
+
+                    assert_eq!(
+                        get_args(output.install_command),
+                        ["yarn", "workspaces", "focus", "--all", "--production"],
+                        "{config}"
+                    );
+
+                    let output = install(config.clone(), &files, false, &["foo"], false).await;
+
+                    assert_eq!(
+                        get_args(output.install_command),
+                        ["yarn", "workspaces", "focus", "foo"],
+                        "{config}"
+                    );
+                }
             }
 
             #[tokio::test(flavor = "multi_thread")]
-            async fn inherits_args_from_bun_toolchain() {
+            #[should_panic(expected = "needs the workspace-tools plugin")]
+            async fn errors_without_workspace_tools_for_yarn_2_and_3() {
+                install(json!({ "version": "3.6.3" }), &[], false, &[], true).await;
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn inherits_args_from_yarn_toolchain() {
                 let mut sandbox = create_empty_moon_sandbox();
 
                 sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
@@ -2818,75 +2874,130 @@ mod javascript_toolchain_tier2 {
                 );
             }
 
+            // Yarn 2 to 4 freeze it themselves (YARN.md #9)
             #[tokio::test(flavor = "multi_thread")]
-            async fn legacy_dedupe_for_older_versions() {
-                let mut sandbox = create_empty_moon_sandbox();
+            async fn freezes_the_lockfile_in_ci_for_yarn_1_and_6() {
+                for (config, lockfile, expected) in [
+                    (json!({}), CLASSIC_LOCK, Some("--frozen-lockfile")),
+                    (
+                        json!({ "version": "1.22.22" }),
+                        CLASSIC_LOCK,
+                        Some("--frozen-lockfile"),
+                    ),
+                    (json!({}), BERRY_LOCK, None),
+                    (json!({ "version": "4.18.1" }), BERRY_LOCK, None),
+                    (json!({}), ZPM_LOCK, Some("--immutable")),
+                    (
+                        json!({ "version": "6.0.0-rc.23" }),
+                        ZPM_LOCK,
+                        Some("--immutable"),
+                    ),
+                ] {
+                    let files = [("yarn.lock", lockfile)];
+                    let mut args = vec!["yarn", "install"];
+                    args.extend(expected);
 
-                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
-                    assert_eq!(id, "pnpm");
-                    json!({ "version": "1" })
-                });
+                    let output = install(config.clone(), &files, true, &[], false).await;
 
-                let plugin = sandbox.create_toolchain("javascript").await;
+                    assert_eq!(get_args(output.install_command), args, "{config}");
 
-                let output = plugin
-                    .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::new(sandbox.path()),
-                        toolchain_config: json!({
-                            "packageManager": "pnpm",
-                            "dedupeOnLockfileChange": true
-                        }),
-                        ..Default::default()
-                    })
-                    .await;
+                    // Not outside CI
+                    let output = install(config.clone(), &files, false, &[], false).await;
+
+                    assert_eq!(
+                        get_args(output.install_command),
+                        ["yarn", "install"],
+                        "{config}"
+                    );
+                }
+
+                // Nothing to freeze without a lockfile
+                for version in ["1.22.22", "6.0.0-rc.23"] {
+                    let output =
+                        install(json!({ "version": version }), &[], true, &[], false).await;
+
+                    assert_eq!(get_args(output.install_command), ["yarn", "install"]);
+                }
+
+                // Also for Yarn 1's production installs
+                let output = install(
+                    json!({ "version": "1.22.22" }),
+                    &[("yarn.lock", CLASSIC_LOCK)],
+                    true,
+                    &[],
+                    true,
+                )
+                .await;
 
                 assert_eq!(
-                    output.dedupe_command.unwrap(),
-                    ExecCommand::new(
-                        ExecCommandInput::new(
-                            "npx",
-                            [
-                                "--quiet",
-                                "--package",
-                                "pnpm-deduplicate",
-                                "--",
-                                "pnpm-deduplicate"
-                            ]
-                        )
-                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
+                    get_args(output.install_command),
+                    ["yarn", "install", "--production", "--frozen-lockfile"]
                 );
             }
 
             #[tokio::test(flavor = "multi_thread")]
-            async fn modern_dedupe_for_newer_versions() {
-                let mut sandbox = create_empty_moon_sandbox();
-
-                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
-                    assert_eq!(id, "yarn");
-                    json!({ "version": "2" })
-                });
-
-                let plugin = sandbox.create_toolchain("javascript").await;
-
-                let output = plugin
-                    .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::new(sandbox.path()),
-                        toolchain_config: json!({
-                            "packageManager": "yarn",
-                            "dedupeOnLockfileChange": true,
-                        }),
-                        ..Default::default()
-                    })
+            async fn doesnt_freeze_the_lockfile_against_install_args() {
+                for (version, lockfile, arg) in [
+                    ("1.22.22", CLASSIC_LOCK, "--pure-lockfile"),
+                    ("6.0.0-rc.23", ZPM_LOCK, "--no-immutable"),
+                ] {
+                    let output = install(
+                        json!({ "version": version, "installArgs": [arg] }),
+                        &[("yarn.lock", lockfile)],
+                        true,
+                        &[],
+                        false,
+                    )
                     .await;
 
-                assert_eq!(
-                    output.dedupe_command.unwrap(),
-                    ExecCommand::new(
-                        ExecCommandInput::new("yarn", ["dedupe"])
-                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
-                );
+                    assert_eq!(get_args(output.install_command), ["yarn", "install", arg]);
+                }
+            }
+
+            // Yarn 1 fails `yarn dedupe` (YARN.md #3)
+            #[tokio::test(flavor = "multi_thread")]
+            async fn legacy_dedupe_for_yarn_1() {
+                for (config, files) in [
+                    (json!({ "version": "1" }), vec![]),
+                    (json!({ "version": "classic" }), vec![]),
+                    (json!({}), vec![]),
+                    (json!({}), vec![("yarn.lock", CLASSIC_LOCK)]),
+                ] {
+                    let output = install(config.clone(), &files, false, &[], false).await;
+
+                    assert_eq!(
+                        get_args(output.dedupe_command),
+                        [
+                            "npx",
+                            "--quiet",
+                            "--package",
+                            "yarn-deduplicate",
+                            "--",
+                            "yarn-deduplicate",
+                            "yarn.lock"
+                        ],
+                        "{config}"
+                    );
+                }
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn modern_dedupe_for_newer_versions() {
+                for (config, files) in [
+                    (json!({ "version": "2" }), vec![]),
+                    (json!({ "version": "6.0.0-rc.23" }), vec![]),
+                    (json!({ "version": "latest" }), vec![]),
+                    (json!({}), vec![("yarn.lock", BERRY_LOCK)]),
+                    (json!({}), vec![("yarn.lock", ZPM_LOCK)]),
+                ] {
+                    let output = install(config.clone(), &files, false, &[], false).await;
+
+                    assert_eq!(
+                        get_args(output.dedupe_command),
+                        ["yarn", "dedupe"],
+                        "{config}"
+                    );
+                }
             }
         }
     }
@@ -3130,6 +3241,7 @@ mod javascript_toolchain_tier2 {
 
         #[tokio::test(flavor = "multi_thread")]
         async fn supports_catalogs_yarn() {
+            // `.yarnrc.yml`'s catalogs, not `package.json`'s
             let sandbox = create_moon_sandbox("catalogs");
             let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -3157,12 +3269,14 @@ mod javascript_toolchain_tier2 {
                 BTreeMap::from_iter([
                     (
                         "react".into(),
-                        ManifestDependency::Version(UnresolvedVersionSpec::parse(">=19").unwrap())
+                        ManifestDependency::Version(
+                            UnresolvedVersionSpec::parse("^19.2.0").unwrap()
+                        )
                     ),
                     (
                         "react-legacy".into(),
                         ManifestDependency::Version(
-                            UnresolvedVersionSpec::parse("^18.1.0").unwrap()
+                            UnresolvedVersionSpec::parse("~18.3.0").unwrap()
                         ),
                     )
                 ])

@@ -78,7 +78,7 @@ mod node_depman_toolchain_tier1 {
                 .await;
 
             assert_eq!(output.name, "yarn");
-            assert_eq!(output.config_file_globs, [".npmrc", ".yarnrc.*"]);
+            assert_eq!(output.config_file_globs, [".npmrc", ".yarnrc", ".yarnrc.*"]);
             assert_eq!(output.manifest_file_names, ["package.json"]);
             assert_eq!(output.lock_file_names, ["yarn.lock"]);
             assert_eq!(output.exe_names, ["yarn", "yarnpkg"]);

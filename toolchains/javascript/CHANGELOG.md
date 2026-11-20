@@ -85,6 +85,21 @@
 - Nub workspaces now read `pnpm-workspace.yaml` only in repos that pnpm owns, and `.yarnrc.yml`
   catalogs in repos that Yarn owns, as nub does.
 - `nubr` is now a Nub executable.
+- Yarn installs in CI now freeze `yarn.lock` on Yarn 1 (`--frozen-lockfile`) and Yarn 6
+  (`--immutable`), which don't do it themselves, unlike Yarn 2–4. CI installs with a stale
+  `yarn.lock` now fail on Yarn 1 and 6. The flag is left out when `installArgs` has one, like
+  `--no-immutable`.
+- For Yarn 1, which has no `workspace:` protocol, `syncProjectWorkspaceDependencies` now writes the
+  `workspace` format as `*`, `workspace-caret` as `version-caret` and `workspace-tilde` as
+  `version-tilde`. Yarn 1 couldn't install the synced `workspace:` dependencies, and the sync only
+  adds missing ones, so remove those by hand.
+- Yarn's commands now follow its major version from `yarn.lock` when `yarn.version` is unset or a
+  range, instead of taking Yarn 1's commands for Berry and Yarn 2+'s for Yarn 1.
+- Focused and production installs on Yarn 2 and 3 now fail with the command to run when the
+  workspace-tools plugin, which `yarn workspaces focus` needs, isn't in `.yarn/plugins`.
+- `docker scaffold` no longer copies Yarn's install state (`.yarn/install-state.gz`,
+  `.yarn/build-state.yml` and Yarn 6's `.yarn/ignore`) or `.yarn/unplugged`, which holds packages
+  built on the host, over what `docker setup` installed.
 
 #### 🐞 Fixes
 
@@ -153,6 +168,17 @@
   that moon configures.
 - Fixed `nub dedupe` failing installs in Yarn repos, as nub won't write `yarn.lock`. It's now
   skipped there.
+- Fixed Yarn 6's JSON `yarn.lock`, and an empty `yarn.lock`, failing every task hash.
+- Fixed `yarn dedupe` failing every install after the first on Yarn 1 when `yarn.version` is unset
+  or an alias like `classic`. Yarn 1 now gets `yarn-deduplicate`.
+- Fixed production installs, like `docker prune`'s, failing on Yarn 2 and later with `yarn install
+  --production`, which they removed, when `yarn.version` was unset or an alias, for any Yarn 6, and
+  without focused packages. They now run `yarn workspaces focus --production`, with `--all` when no
+  packages are focused.
+- Fixed Berry `yarn.lock` entries that merge an alias, like
+  `alias@npm:is-number@7.0.0, is-number@npm:^7.0.0`, only being recorded under the alias, so the
+  real package's locked version never reached task hashes. Task hashes change once for them.
+- Fixed packages with `root-workspace` in their name being left out of task hashes.
 
 #### ⚙️ Internal
 

@@ -186,6 +186,9 @@ mod javascript_toolchain_tier1 {
 
         async fn test_version_format(format: JavaScriptDependencyVersionFormat) {
             let sandbox = create_moon_sandbox("deps-sync");
+            // Berry, as Yarn 1 has no `workspace:` protocol
+            sandbox.create_file("yarn.lock", "__metadata:\n  version: 8\n");
+
             let plugin = sandbox.create_toolchain("javascript").await;
 
             let output = plugin
@@ -452,6 +455,79 @@ mod javascript_toolchain_tier1 {
                     read_app(&sandbox)["dependencies"]["lib"],
                     expected,
                     "{lock_name}"
+                );
+            }
+        }
+
+        // Yarn 1 has no `workspace:` protocol (YARN.md #5)
+        #[tokio::test(flavor = "multi_thread")]
+        async fn syncs_versions_for_yarn_1() {
+            for (version, lockfile, format, expected) in [
+                (
+                    None,
+                    None,
+                    JavaScriptDependencyVersionFormat::Workspace,
+                    "*",
+                ),
+                (
+                    None,
+                    Some("# yarn lockfile v1\n"),
+                    JavaScriptDependencyVersionFormat::WorkspaceCaret,
+                    "^1.0.0",
+                ),
+                (
+                    Some("1.22.22"),
+                    None,
+                    JavaScriptDependencyVersionFormat::WorkspaceTilde,
+                    "~1.0.0",
+                ),
+                (
+                    Some("1.22.22"),
+                    None,
+                    JavaScriptDependencyVersionFormat::Link,
+                    "link:../lib",
+                ),
+                // Berry keeps them
+                (
+                    None,
+                    Some("__metadata:\n  version: 8\n"),
+                    JavaScriptDependencyVersionFormat::Workspace,
+                    "workspace:*",
+                ),
+                (
+                    Some("4.18.1"),
+                    None,
+                    JavaScriptDependencyVersionFormat::WorkspaceCaret,
+                    "workspace:^",
+                ),
+            ] {
+                let mut sandbox = create_empty_moon_sandbox();
+                sandbox.create_file("app/package.json", r#"{ "name": "app" }"#);
+                sandbox.create_file(
+                    "lib/package.json",
+                    r#"{ "name": "lib", "version": "1.0.0" }"#,
+                );
+
+                if let Some(content) = lockfile {
+                    sandbox.create_file("yarn.lock", content);
+                }
+
+                sandbox.host_funcs.mock_load_toolchain_config(move |id, _| {
+                    assert_eq!(id, "yarn");
+                    json!({ "version": version })
+                });
+
+                let plugin = sandbox.create_toolchain("javascript").await;
+                let mut input =
+                    create_input(vec![create_dep("lib", DependencyScope::Production)], format);
+                input.toolchain_config["packageManager"] = json!("yarn");
+
+                plugin.sync_project(input).await;
+
+                assert_eq!(
+                    read_app(&sandbox)["dependencies"]["lib"],
+                    expected,
+                    "{version:?} {lockfile:?} {format:?}"
                 );
             }
         }

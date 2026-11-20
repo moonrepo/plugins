@@ -3,12 +3,13 @@ use crate::infer_tasks::TasksInferrer;
 use crate::lockfiles::*;
 use crate::nub::{NUB_LOCK_NAMES, detect_nub_identity};
 use crate::package_json::PackageJson;
+use crate::yarn::detect_yarn_major;
 use extism_pdk::*;
 use moon_common::path::paths_are_equal;
 use moon_config::DependencyScope;
 use moon_pdk::{
     VirtualPathExt, get_host_environment, load_project_toolchain_config, load_toolchain_config,
-    locate_root_many, locate_root_many_with_check, parse_toolchain_config_schema,
+    locate_root_many, locate_root_many_with_check, parse_toolchain_config_schema, plugin_err,
 };
 use moon_pdk_api::*;
 use nodejs_package_json::{
@@ -566,6 +567,12 @@ pub fn install_dependencies(
         None => load_toolchain_config(package_manager.get_toolchain_id())?,
     };
 
+    let yarn_major = if package_manager == JavaScriptPackageManager::Yarn {
+        detect_yarn_major(package_manager_config.version.as_ref(), &input.root)?
+    } else {
+        0
+    };
+
     // Install
     let mut command = match package_manager {
         JavaScriptPackageManager::Bun => {
@@ -727,18 +734,62 @@ pub fn install_dependencies(
 
             cmd
         }
-        JavaScriptPackageManager::Yarn => {
-            let mut cmd = ExecCommandInput::new("yarn", ["install"]);
+        // Yarn 2+ removed `install --production`, and focuses workspaces instead
+        JavaScriptPackageManager::Yarn
+            if yarn_major >= 2 && (input.production || !input.packages.is_empty()) =>
+        {
+            if yarn_major < 4
+                && !input
+                    .root
+                    .join(".yarn/plugins/@yarnpkg/plugin-workspace-tools.cjs")
+                    .exists()
+            {
+                return Err(plugin_err!(
+                    "Yarn {yarn_major} needs the workspace-tools plugin for focused and production installs. Run <shell>yarn plugin import workspace-tools</shell>, and commit <file>.yarn/plugins</file> and <file>.yarnrc.yml</file>."
+                ));
+            }
 
-            if !input.packages.is_empty() && package_manager_config.version_satisfies(">=2.0.0") {
-                cmd = ExecCommandInput::new("yarn", ["workspaces", "focus"]);
+            let mut cmd = ExecCommandInput::new("yarn", ["workspaces", "focus"]);
+
+            if input.packages.is_empty() {
+                cmd.args.push("--all".into());
+            } else {
                 cmd.args.extend(input.packages);
-
-                inherit_install_args = false;
-            };
+            }
 
             if input.production {
                 cmd.args.push("--production".into());
+            }
+
+            inherit_install_args = false;
+
+            cmd
+        }
+        JavaScriptPackageManager::Yarn => {
+            let mut cmd = ExecCommandInput::new("yarn", ["install"]);
+
+            if input.production {
+                cmd.args.push("--production".into());
+            }
+
+            // Yarn 2 to 4 freeze the lockfile in CI themselves (`enableImmutableInstalls`)
+            let frozen_arg = match yarn_major {
+                1 => Some("--frozen-lockfile"),
+                2..=4 => None,
+                _ => Some("--immutable"),
+            };
+
+            if let Some(arg) = frozen_arg
+                && env.ci
+                && input.root.join("yarn.lock").exists()
+                && !package_manager_config.install_args.iter().any(|arg| {
+                    matches!(
+                        arg.as_str(),
+                        "--frozen-lockfile" | "--pure-lockfile" | "--immutable" | "--no-immutable"
+                    )
+                })
+            {
+                cmd.args.push(arg.into());
             }
 
             cmd
@@ -812,26 +863,26 @@ pub fn install_dependencies(
                     });
             }
             JavaScriptPackageManager::Yarn => {
-                output.dedupe_command =
-                    Some(if package_manager_config.version_satisfies("<2.0.0") {
-                        ExecCommandInput::new(
-                            "npx",
-                            [
-                                "--quiet",
-                                "--package",
-                                "yarn-deduplicate",
-                                "--",
-                                "yarn-deduplicate",
-                                "yarn.lock",
-                            ],
-                        )
+                // Yarn 1 has no `yarn dedupe`, and fails it
+                output.dedupe_command = Some(if yarn_major == 1 {
+                    ExecCommandInput::new(
+                        "npx",
+                        [
+                            "--quiet",
+                            "--package",
+                            "yarn-deduplicate",
+                            "--",
+                            "yarn-deduplicate",
+                            "yarn.lock",
+                        ],
+                    )
+                    .cwd(input.root)
+                    .into()
+                } else {
+                    ExecCommandInput::new("yarn", ["dedupe"])
                         .cwd(input.root)
                         .into()
-                    } else {
-                        ExecCommandInput::new("yarn", ["dedupe"])
-                            .cwd(input.root)
-                            .into()
-                    });
+                });
             }
         };
     }

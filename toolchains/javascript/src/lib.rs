@@ -10,6 +10,7 @@ pub mod package_json;
 mod tier1;
 #[cfg(feature = "wasm")]
 mod tier2;
+pub mod yarn;
 
 #[cfg(feature = "wasm")]
 pub use tier1::*;

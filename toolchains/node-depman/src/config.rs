@@ -52,10 +52,14 @@ config_struct!(
     #[derive(Config)]
     pub struct YarnToolchainConfig {
         /// List of arguments to append to `yarn install` commands.
-        /// These arguments are inherited by the JavaScript toolchain.
+        /// These arguments are inherited by the JavaScript toolchain, but not
+        /// by `yarn workspaces focus`, which focused and production installs
+        /// run on Yarn 2 and later.
         pub install_args: Vec<String>,
 
-        /// List of plugins to automatically install for Yarn v2 and above.
+        /// Unused. Yarn 4 and later bundle the official plugins. For Yarn 2
+        /// and 3, commit `.yarn/plugins` and `.yarnrc.yml`.
+        #[deprecated]
         pub plugins: Vec<String>,
 
         /// Configured version to download and install.

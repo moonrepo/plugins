@@ -103,9 +103,9 @@ lines) and moon's (17k lines).
 
 ### #1 Yarn 6 runs Yarn Switch, which picks another Yarn
 
-- [ ] Keep Yarn Switch off PATH
-- [ ] Tests
-- [ ] Changelog (tool and toolchain)
+- [x] Keep Yarn Switch off PATH
+- [x] Tests (`removes_yarn_switch`)
+- [x] Changelog (tool and toolchain)
 
 **Problem:** Yarn 6's archive has two binaries: `yarn-bin`, the package manager, and `yarn`, which
 is Yarn Switch. The switch runs whatever `packageManager` in the closest `package.json` asks for,
@@ -140,10 +140,10 @@ so the install directory never reaches PATH. That needs a shim template that doe
 
 ### #2 Yarn 6 lockfiles fail every task hash
 
-- [ ] Parse the JSON `yarn.lock`
-- [ ] Return nothing for an empty `yarn.lock`
-- [ ] Unit tests (ADR-0006)
-- [ ] Changelog
+- [x] Parse the JSON `yarn.lock`
+- [x] Return nothing for an empty `yarn.lock`
+- [x] Unit tests (ADR-0006): `parses_yarn_6_json` and `parses_an_empty_file`
+- [x] Changelog
 
 **Problem:** Yarn 6 writes `yarn.lock` as JSON, like `{"__metadata":{"version":10},"entries":{…}}`
 (zpm `packages/zpm/src/lockfile.rs:543-565`). `parse_yarn_lock_content`
@@ -177,10 +177,10 @@ entry with an unknown shape (skipped); and an empty file.
 
 ### #3 Tell Yarn versions apart, so Yarn 1 doesn't run `yarn dedupe`
 
-- [ ] Add a helper that returns Yarn's major version
-- [ ] Use it for dedupe and focused installs
-- [ ] Unit tests
-- [ ] Fix the Yarn 1 dedupe test
+- [x] Add a helper that returns Yarn's major version (`yarn::detect_yarn_major`)
+- [x] Use it for dedupe and focused installs
+- [x] Unit tests: `detects_from_the_version`, `detects_from_aliases` and `detects_from_the_lockfile`
+- [x] Fix the Yarn 1 dedupe test: `legacy_dedupe_for_yarn_1` and `modern_dedupe_for_newer_versions`
 
 **Problem:** the Yarn arms pick commands with `SharedPackageManagerConfig::version_satisfies`
 (`toolchains/javascript/src/tier2.rs:570`, `:648`). It returns `false` when `version` is unset or an
@@ -216,8 +216,8 @@ so the Yarn 1 command has no test. Point it at Yarn, and add an unset version wi
 
 ### #4 Production installs on Yarn 2+ use a removed flag
 
-- [ ] Use `yarn workspaces focus` for every production install on Yarn 2+
-- [ ] Tests
+- [x] Use `yarn workspaces focus` for every production install on Yarn 2+
+- [x] Tests: `focused_commands` and `focuses_workspaces_for_berry`
 
 **Problem:** `docker prune` installs with `production: true`, and passes the focused projects'
 package names as `packages` (moon `crates/app/src/commands/docker/prune.rs:174-190`, `:225-238`).
@@ -246,8 +246,8 @@ alias.
 
 ### #5 Yarn 1 can't install synced `workspace:*` dependencies
 
-- [ ] Map the workspace formats for Yarn 1
-- [ ] Tests
+- [x] Map the workspace formats for Yarn 1
+- [x] Tests (`syncs_versions_for_yarn_1`)
 
 **Problem:** `syncProjectWorkspaceDependencies`, which is on by default, adds a `package.json`
 dependency for each moon project dependency, in `dependencyVersionFormat`, which defaults to
@@ -271,8 +271,8 @@ and `^1.0.0` (confirmed: `node_modules/b` was a symlink to `packages/b`, with no
 
 ### #6 Aliased lockfile entries hide the real package
 
-- [ ] Record each entry under every descriptor's name
-- [ ] Tests
+- [x] Record each entry under every descriptor's name
+- [x] Tests (`records_merged_aliases_under_every_name`)
 
 **Problem:** Berry merges an alias and the package it points at into one entry when both resolve to
 the same locator. Keys are sorted, so the alias often comes first:
@@ -295,9 +295,9 @@ which most `glob` installs pull in.
 
 ### #7 Tests that miss the Yarn paths
 
-- [ ] Rename the catalogs fixture's `.yarnc.yml`
-- [ ] Assert the requested toolchain ID in mocks
-- [ ] Rename `inherits_args_from_bun_toolchain`
+- [x] Rename the catalogs fixture's `.yarnc.yml`
+- [x] Assert the requested toolchain ID in mocks
+- [x] Rename `inherits_args_from_bun_toolchain`
 
 - The Yarn file in `toolchains/javascript/tests/__fixtures__/catalogs` is named `.yarnc.yml`, so
   `supports_catalogs_yarn` (`tier2_test.rs:2415`) passes with the catalogs from `package.json`, and
@@ -312,11 +312,11 @@ which most `glob` installs pull in.
 
 ### #8 Small fixes
 
-- [ ] `parse_yarn_lock_content` skips entries whose name contains `root-workspace` (`yarn.rs:19`).
+- [x] `parse_yarn_lock_content` skips entries whose name contains `root-workspace` (`yarn.rs:19`).
       The unnamed root's resolution, `root-workspace-0b6124@workspace:.`, is already skipped by the
       `workspace:` check, so drop the name check, which also skips any package with
       `root-workspace` in its name.
-- [ ] `YarnToolchainConfig.install_args` (`toolchains/node-depman/src/config.rs:52-53`) says it's
+- [x] `YarnToolchainConfig.install_args` (`toolchains/node-depman/src/config.rs:52-53`) says it's
       appended to `yarn install`. Say that `yarn workspaces focus` doesn't get it
       (`toolchains/javascript/src/tier2.rs:574`).
 
@@ -324,9 +324,10 @@ which most `glob` installs pull in.
 
 ### #9 Frozen installs in CI for Yarn 1 and Yarn 6 (D1)
 
-- [ ] Pass `--frozen-lockfile` (Yarn 1) or `--immutable` (Yarn 6) in CI
-- [ ] Tests
-- [ ] Changelog
+- [x] Pass `--frozen-lockfile` (Yarn 1) or `--immutable` (Yarn 6) in CI
+- [x] Tests: `freezes_the_lockfile_in_ci_for_yarn_1_and_6` and
+      `doesnt_freeze_the_lockfile_against_install_args`
+- [x] Changelog
 
 **Problem:** the Yarn arm runs a plain `yarn install` in CI (`tier2.rs:567-582`), while npm, Bun,
 Deno and Nub switch to frozen installs (`:432`, `:469`, `:493`, `:518`). Yarn 2–4 freeze the
@@ -345,7 +346,9 @@ Yarn 1 and `--immutable` for Yarn 6 (#3), unless `installArgs` already has `--fr
 
 **Not covered:** Yarn 1's `--frozen-lockfile` misses changes in workspace members
 (yarnpkg/yarn#5840). Confirmed: a new dependency in a member exited 0, while the same change in the
-root or in a single package failed with "Your lockfile needs to be updated".
+root or in a single package failed with "Your lockfile needs to be updated". Yarn 6's production
+installs run `yarn workspaces focus` (#4), which doesn't get `--immutable`, as I didn't check that it
+accepts it.
 
 **Tests:** CI with and without `yarn.lock`, for Yarn 1, 4 (no flag) and 6, and `installArgs` with
 the flag.
@@ -354,8 +357,9 @@ the flag.
 
 ### #10 `yarn.plugins` never runs (D2)
 
-- [ ] Deprecate `plugins`
-- [ ] Remove the unreachable `setup_environment`
+- [x] Deprecate `plugins`
+- [x] Remove the unreachable `setup_environment`. Its tests are replaced by a
+      `define_requirements` test (`requires_node`)
 
 **Problem:** the setting is applied by the Yarn toolchain's `setup_environment`
 (`toolchains/node-depman/src/tier2.rs:26-60`). moon only schedules `SetupEnvironment` for a
@@ -387,9 +391,10 @@ Yarn 2 and 3 only. Return `yarn plugin import <name>` only when
 
 ### #11 `yarnPath` overrides `yarn.version` (D3)
 
-- [ ] Set `YARN_IGNORE_PATH=1` when `version` is set
-- [ ] Tests
-- [ ] Changelog
+- [x] Set `YARN_IGNORE_PATH=1` when `version` is set
+- [x] Tests: `ignores_yarn_path_if_not_configured`, `ignores_yarn_path_if_disabled` and
+      `adds_env_var`
+- [x] Changelog
 
 **Problem:** Berry repos often commit a release in `.yarn/releases` and point `yarnPath` at it,
 which is what `yarn set version` writes. Every Yarn binary hands off to `yarnPath`, so moon installs
@@ -419,8 +424,9 @@ now run Yarn 1. Its `version` is wrong either way.
 
 ### #12 Workspace dependencies declared by version get no edge (D4)
 
-- [ ] Land `JAVASCRIPT.md` #15 with Yarn included
-- [ ] A Yarn 1 test with an exact version
+- [x] Land `JAVASCRIPT.md` #15 with Yarn included (landed with `JAVASCRIPT.md`)
+- [x] A Yarn 1 test with an exact version: `links_ranges_that_the_version_satisfies` already
+      covers Yarn with `"d": "1.0.0"`
 
 **Problem:** `extend_project_graph` only links `*`, `workspace:`, `file:`, `link:` and `portal:`
 (`toolchains/javascript/src/tier2.rs:77-89`). Yarn 1 has no `workspace:` protocol, so its workspaces
@@ -442,7 +448,7 @@ repo with `enableTransparentWorkspaces: false` would get edges that Yarn doesn't
 
 ### #13 PnP tasks can't resolve dependencies (D5)
 
-- [ ] Document how to run tasks under PnP
+- [ ] Document how to run tasks under PnP: a moon website item (D5)
 
 **Problem:** `nodeLinker: pnp` is the default in Yarn 2+ and Yarn 6, and resolves packages through
 `.pnp.cjs` instead of `node_modules`. Tasks get `node_modules/.bin` on PATH (`tier2.rs:139-176`),
@@ -485,7 +491,8 @@ repo, and grows with the repo.
 
 ### #15 Yarn 2 and 3: name the plugin that `focus` needs
 
-- [ ] Return an error when workspace-tools is missing
+- [x] Return an error when workspace-tools is missing
+      (`errors_without_workspace_tools_for_yarn_2_and_3`)
 
 **Problem:** Yarn 2 and 3 only have `yarn workspaces focus` with the workspace-tools plugin, so #4's
 production install fails with "Unknown Syntax Error: Command not found" (confirmed with 3.6.3). moon
@@ -497,7 +504,8 @@ v1 checked for `.yarn/plugins/@yarnpkg/plugin-workspace-tools.cjs` first and nam
 
 ### #16 A Yarn in `~/.yarn/bin` replaces the configured version
 
-- [ ] Return the tool's executable directory from `activate_environment`
+- [x] Return the tool's executable directory from `activate_environment`
+      (`puts_the_shims_dir_on_path`), for Yarn 1–5
 
 **Problem:** the tool lists `$HOME/.yarn/bin` and Node's `bin` as globals directories
 (`tools/node-depman/src/package_manager.rs:199-207`, `:259-268`), and moon puts globals directories
@@ -515,9 +523,14 @@ This is `BUN.md` #1 for Yarn.
 for Yarn 6 after #1) in `activate_environment`'s `paths`, which moon puts ahead of toolchain paths
 (`augmented_command.rs:29-34`). This pairs with #11, in the same function.
 
+**Not covered:** Yarn 6. After #1, its install directory only has `yarn-bin`, so `yarn` comes from
+proto's shims, which globals directories like `~/.yarn/bin` still beat. It would need a `yarn` that
+runs `yarn-bin` in a directory of its own.
+
 ### #17 Keep generated Yarn state out of Docker skeletons
 
-- [ ] Exclude Yarn's install state and unplugged packages
+- [x] Exclude Yarn's install state and unplugged packages (`copies_patches_without_yarn_state`), for
+      every package manager, as the globs only match Yarn's files
 
 **Problem:** the `.yarn/**/*` glob (`toolchains/javascript/src/tier1.rs:51`) copies all of `.yarn`
 into both skeletons, from the workspace root and from each project (moon
@@ -541,7 +554,7 @@ in `.yarn/unplugged`.
 
 ### #18 Detection names
 
-- [ ] `config_file_globs` (`toolchains/node-depman/src/tier1.rs:44`): add `.yarnrc`, Yarn 1's config
+- [x] `config_file_globs` (`toolchains/node-depman/src/tier1.rs:44`): add `.yarnrc`, Yarn 1's config
       file, which `.yarnrc.*` doesn't match. The JavaScript toolchain already lists it
       (`toolchains/javascript/src/tier1.rs:52`).
 

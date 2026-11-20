@@ -2,12 +2,13 @@ use crate::config::*;
 use crate::nub::{NUB_LOCK_NAMES, detect_nub_identity};
 use crate::package_json::{PackageJson, get_install_script_args};
 use crate::tier2::extract_workspace_members_and_catalogs;
+use crate::yarn::detect_yarn_major;
 use extism_pdk::*;
 use moon_common::path::{is_root_level_source, to_relative_virtual_string};
 use moon_config::{DependencyScope, LanguageType};
 use moon_pdk::{
-    HostLogInput, host_log, is_project_toolchain_enabled, locate_root_many, map_miette_error,
-    parse_toolchain_config_schema, plugin_err,
+    HostLogInput, host_log, is_project_toolchain_enabled, load_project_toolchain_config,
+    locate_root, locate_root_many, map_miette_error, parse_toolchain_config_schema, plugin_err,
 };
 use moon_pdk_api::*;
 use nodejs_package_json::{MatchesVersion, Version, VersionProtocol, WorkspaceProtocol};
@@ -337,9 +338,33 @@ fn sync_project_workspace_dependencies(
         _ => *package_manager,
     };
 
-    let version_format = config
+    let mut version_format = config
         .dependency_version_format
         .get_supported_for(&format_manager);
+
+    // Yarn 1 has no `workspace:` protocol, but links a workspace that `*` or a
+    // version range matches
+    if *package_manager == JavaScriptPackageManager::Yarn {
+        let yarn_config: SharedPackageManagerConfig =
+            load_project_toolchain_config(&input.project.id, "yarn")?;
+        let root = locate_root(&project_root, "yarn.lock").unwrap_or_else(|| project_root.clone());
+
+        if detect_yarn_major(yarn_config.version.as_ref(), &root)? == 1 {
+            version_format = match version_format {
+                JavaScriptDependencyVersionFormat::Workspace => {
+                    JavaScriptDependencyVersionFormat::Star
+                }
+                JavaScriptDependencyVersionFormat::WorkspaceCaret => {
+                    JavaScriptDependencyVersionFormat::VersionCaret
+                }
+                JavaScriptDependencyVersionFormat::WorkspaceTilde => {
+                    JavaScriptDependencyVersionFormat::VersionTilde
+                }
+                other => other,
+            };
+        }
+    }
+
     let version_prefix = version_format.get_prefix();
     let is_version_format = matches!(
         version_format,
@@ -444,9 +469,17 @@ pub fn define_docker_metadata(
     Json(_): Json<DefineDockerMetadataInput>,
 ) -> FnResult<Json<DefineDockerMetadataOutput>> {
     Ok(Json(DefineDockerMetadataOutput {
-        // Installs read patches, which `bun patch`, `npm patch`, `pnpm patch`
-        // and patch-package write here by default
-        scaffold_globs: vec!["patches/**/*".into()],
+        scaffold_globs: vec![
+            // Installs read patches, which `bun patch`, `npm patch`, `pnpm patch`
+            // and patch-package write here by default
+            "patches/**/*".into(),
+            // Yarn's install state, which its docs say to ignore, and packages
+            // built on the host
+            "!.yarn/install-state.gz".into(),
+            "!.yarn/build-state.yml".into(),
+            "!.yarn/unplugged/**/*".into(),
+            "!.yarn/ignore/**/*".into(),
+        ],
         ..Default::default()
     }))
 }

@@ -292,7 +292,7 @@ mod javascript_toolchain_tier1 {
         use super::*;
 
         #[tokio::test(flavor = "multi_thread")]
-        async fn copies_patches() {
+        async fn copies_patches_without_yarn_state() {
             let sandbox = create_empty_moon_sandbox();
             let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -301,7 +301,16 @@ mod javascript_toolchain_tier1 {
                 .await;
 
             assert_eq!(output.default_image, None);
-            assert_eq!(output.scaffold_globs, ["patches/**/*"]);
+            assert_eq!(
+                output.scaffold_globs,
+                [
+                    "patches/**/*",
+                    "!.yarn/install-state.gz",
+                    "!.yarn/build-state.yml",
+                    "!.yarn/unplugged/**/*",
+                    "!.yarn/ignore/**/*",
+                ]
+            );
         }
     }
 

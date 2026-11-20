@@ -342,7 +342,7 @@ mod node_depman_tool {
 
             #[tokio::test(flavor = "multi_thread")]
 
-            async fn does_nothing_if_not_configured() {
+            async fn ignores_yarn_path_if_not_configured() {
                 let sandbox = create_empty_proto_sandbox();
                 let plugin = sandbox.create_plugin("yarn-test").await;
 
@@ -350,12 +350,15 @@ mod node_depman_tool {
                     .activate_environment(ActivateEnvironmentInput::default())
                     .await;
 
-                assert!(result.env.is_empty());
+                assert_eq!(
+                    result.env,
+                    HashMap::from_iter([("YARN_IGNORE_PATH".into(), "1".into())])
+                );
             }
 
             #[tokio::test(flavor = "multi_thread")]
 
-            async fn does_nothing_if_disabled() {
+            async fn ignores_yarn_path_if_disabled() {
                 let sandbox = create_empty_proto_sandbox();
                 let plugin = sandbox
                     .create_plugin_with_config("yarn-test", |config| {
@@ -369,7 +372,10 @@ mod node_depman_tool {
                     .activate_environment(ActivateEnvironmentInput::default())
                     .await;
 
-                assert!(result.env.is_empty());
+                assert_eq!(
+                    result.env,
+                    HashMap::from_iter([("YARN_IGNORE_PATH".into(), "1".into())])
+                );
             }
 
             #[tokio::test(flavor = "multi_thread")]
@@ -393,15 +399,57 @@ mod node_depman_tool {
 
                 assert_eq!(
                     result.env,
-                    HashMap::from_iter([(
-                        "PREFIX".into(),
-                        sandbox
-                            .path()
-                            .join(".proto/tools/node/globals")
-                            .to_string_lossy()
-                            .replace('\\', "/")
-                    )])
+                    HashMap::from_iter([
+                        (
+                            "PREFIX".into(),
+                            sandbox
+                                .path()
+                                .join(".proto/tools/node/globals")
+                                .to_string_lossy()
+                                .replace('\\', "/")
+                        ),
+                        ("YARN_IGNORE_PATH".into(), "1".into())
+                    ])
                 );
+            }
+
+            // Ahead of globals like `~/.yarn/bin` (YARN.md #16)
+            #[tokio::test(flavor = "multi_thread")]
+            async fn puts_the_shims_dir_on_path() {
+                let sandbox = create_empty_proto_sandbox();
+                let plugin = sandbox.create_plugin("yarn-test").await;
+
+                for (version, expected) in
+                    [("1.22.22", true), ("4.18.1", true), ("6.0.0-rc.23", false)]
+                {
+                    let tool_dir = sandbox.path().join(".proto/tools/yarn-test").join(version);
+
+                    let result = plugin
+                        .activate_environment(ActivateEnvironmentInput {
+                            context: PluginContext {
+                                tool_dir: VirtualPath::new(&tool_dir),
+                                version: VersionSpec::parse(version).unwrap(),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        })
+                        .await;
+
+                    // Real paths in WASM only use `/`, even on Windows
+                    let paths: Vec<std::path::PathBuf> = if expected {
+                        vec![
+                            tool_dir
+                                .join("shims")
+                                .to_string_lossy()
+                                .replace('\\', "/")
+                                .into(),
+                        ]
+                    } else {
+                        vec![]
+                    };
+
+                    assert_eq!(result.paths, paths, "{version}");
+                }
             }
         }
     }

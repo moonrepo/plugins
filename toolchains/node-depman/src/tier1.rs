@@ -41,7 +41,7 @@ pub fn register_toolchain(
         }
         PackageManager::Yarn1 | PackageManager::Yarn2to5 | PackageManager::Yarn6 => {
             RegisterToolchainOutput {
-                config_file_globs: vec![".npmrc".into(), ".yarnrc.*".into()],
+                config_file_globs: vec![".npmrc".into(), ".yarnrc".into(), ".yarnrc.*".into()],
                 exe_names: vec!["yarn".into(), "yarnpkg".into()],
                 lock_file_names: vec!["yarn.lock".into()],
                 ..Default::default()
