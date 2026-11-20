@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDeepRef>1</EnableDeepRef>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\nested\deep\Deep.csproj" Condition="'$(EnableDeepRef)' == '1'" />
+    <PackageReference Include="ExtraPkg" Version="3.0.0" Condition="'$(EnableDeepRef)' == '1'" />
+    <PackageReference Include="NeverPkg" Version="9.9.9" Condition="'$(TargetFramework)' == 'net472'" />
+  </ItemGroup>
+</Project>
