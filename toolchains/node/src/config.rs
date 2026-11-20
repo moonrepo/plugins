@@ -35,7 +35,7 @@ config_struct!(
         /// purposes, and not always enabled!
         pub profile_execution: Option<NodeProfileType>,
 
-        /// When `version` is defined, syncs the version to the chosen config.
+        /// Unused. moon doesn't write version manager files.
         #[deprecated]
         pub sync_version_manager_config: Option<NodeVersionManager>,
 

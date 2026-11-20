@@ -3,7 +3,7 @@ use extism_pdk::*;
 use moon_pdk::parse_toolchain_config;
 use moon_pdk_api::*;
 use schematic::SchemaBuilder;
-use toolchain_common::enable_tracing;
+use toolchain_common::{enable_tracing, get_docker_image_tag};
 
 #[plugin_fn]
 pub fn register_toolchain(
@@ -14,7 +14,8 @@ pub fn register_toolchain(
     Ok(Json(RegisterToolchainOutput {
         name: "Deno".into(),
         plugin_version: env!("CARGO_PKG_VERSION").into(),
-        exe_names: vec!["deno".into()],
+        // `deno x --install-alias` creates `dx`
+        exe_names: vec!["deno".into(), "dx".into()],
         manifest_file_names: vec!["deno.json".into(), "deno.jsonc".into()],
         lock_file_names: vec!["deno.lock".into()],
         vendor_dir_name: Some("node_modules".into()),
@@ -46,18 +47,19 @@ pub fn define_docker_metadata(
 ) -> FnResult<Json<DefineDockerMetadataOutput>> {
     let config = parse_toolchain_config::<DenoToolchainConfig>(input.toolchain_config)?;
 
+    // Deno only tags full versions, like `2.9.8`, and `latest`
+    let tag = match &config.version {
+        version @ Some(UnresolvedVersionSpec::Version(_)) => {
+            get_docker_image_tag(version.as_ref(), |_| None)
+        }
+        _ => "latest".into(),
+    };
+
     Ok(Json(DefineDockerMetadataOutput {
-        default_image: Some(format!(
-            "denoland/deno:{}",
-            config
-                .version
-                .as_ref()
-                .map(|version| version.to_partial_string())
-                .unwrap_or_else(|| "latest".into())
-        )),
+        default_image: Some(format!("denoland/deno:{tag}")),
         scaffold_globs: vec![
             // postinstall scripts, etc
-            "*.{js,cjs,mjs,ts}".into(),
+            "*.{js,cjs,mjs}".into(),
         ],
     }))
 }

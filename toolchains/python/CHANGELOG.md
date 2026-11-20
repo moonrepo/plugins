@@ -58,6 +58,9 @@
 
 #### 🐞 Fixes
 
+- Fixed the default Docker image for a version bound being the oldest allowed version, like
+  `python:3.10` for `>=3.10`, or one outside the range, like `python:3.13` for `<3.13`. It's now
+  `python:latest`.
 - Fixed `uv-pip` requiring a toolchain named `unstable_uv-pip`, so it could never be used. It now
   requires `unstable_uv` for the venv and `unstable_pip` for its install args.
 - Fixed `requirements.txt` files with hashes, continuation lines or comments, like those from

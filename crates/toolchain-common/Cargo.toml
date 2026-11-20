@@ -7,6 +7,7 @@ publish = false
 
 [dependencies]
 common = { path = "../common" }
+moon_pdk_api = { workspace = true }
 
 [features]
 # moon doesn't provide proto's `load_tool_versions` host function, so tools

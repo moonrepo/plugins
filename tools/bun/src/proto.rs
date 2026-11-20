@@ -12,11 +12,6 @@ use starbase_utils::fs;
 use std::collections::HashMap;
 use tool_common::{append_env_bin_dir, enable_tracing, load_git_tags};
 
-#[host_fn]
-extern "ExtismHost" {
-    fn exec_command(input: Json<ExecCommandInput>) -> Json<ExecCommandOutput>;
-}
-
 static NAME: &str = "Bun";
 
 #[plugin_fn]
@@ -356,4 +351,20 @@ pub fn locate_executables(
         ],
         ..Default::default()
     }))
+}
+
+// Bun's installer and setup-bun put `bun` itself in `~/.bun/bin`, a globals
+// directory, which moon puts ahead of the tool's own directory, so put the
+// tool's directory first. proto adds these paths as they are, so use real paths
+#[plugin_fn]
+pub fn activate_environment(
+    Json(input): Json<ActivateEnvironmentInput>,
+) -> FnResult<Json<ActivateEnvironmentOutput>> {
+    let mut output = ActivateEnvironmentOutput::default();
+
+    if let Some(dir) = input.context.tool_dir.to_real_path()? {
+        output.paths.push(dir.to_path_buf());
+    }
+
+    Ok(Json(output))
 }

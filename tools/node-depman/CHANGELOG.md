@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Nub globals are now also found in its `globalBinDir` setting (`npm_config_global_bin_dir`) and
+  `$XDG_DATA_HOME/../bin`, where nub v0.9+ links them.
+
+#### 🐞 Fixes
+
+- Fixed a `package.json` with a field that can't be parsed, like `"version": "1.0"` or an unusual
+  dependency range, losing its `packageManager` or `devEngines.packageManager` pin. Those fields are
+  now skipped.
+- Fixed a cycle in `volta.extends` overflowing the stack.
+- Fixed pinning a version to `package.json` replacing a `devEngines.packageManager` list, like one
+  for npm and pnpm, with only the pinned package manager's entry.
+- Fixed a `packageManager` URL, which Corepack accepts, being cut off at its first `@`.
+- Fixed an entry in nodejs.org's index that can't be parsed failing the npm `bundled` alias. It's
+  now skipped.
+
 ## 0.21.0
 
 #### 💥 Breaking

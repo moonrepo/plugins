@@ -3325,6 +3325,7 @@ dependencies = [
 name = "lang_javascript_common"
 version = "0.1.0"
 dependencies = [
+ "common",
  "nodejs_package_json",
  "proto_pdk_api 0.36.1",
  "serde",
@@ -3739,7 +3740,7 @@ dependencies = [
  "schematic",
  "serde",
  "serde_json",
- "version_spec",
+ "version_spec 0.11.8",
  "warpgate_api 0.19.4",
 ]
 
@@ -3997,17 +3998,17 @@ dependencies = [
 
 [[package]]
 name = "nodejs_package_json"
-version = "0.4.11"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d924e58beb1fb9f5ac29e91c5430c3e41a630a225355c3b57f951951d411eed4"
+checksum = "39a5dd9216ca01ff1992a4716f89ef0e823031ea382db0d92f425218953d2222"
 dependencies = [
  "indexmap",
  "regex",
  "rustc-hash",
- "semver",
  "serde",
  "serde_json",
  "thiserror 2.0.21",
+ "version_spec 0.12.0",
 ]
 
 [[package]]
@@ -4938,7 +4939,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b570b25f7617e43d59005d0990ccb79e950a423952cea19671b7a876da390adf"
 dependencies = [
  "anyhow",
- "itertools 0.13.0",
+ "itertools 0.14.0",
  "proc-macro2",
  "quote",
  "syn 2.0.119",
@@ -4983,7 +4984,7 @@ dependencies = [
  "tracing",
  "url",
  "uuid",
- "version_spec",
+ "version_spec 0.11.8",
  "warpgate 0.36.4",
 ]
 
@@ -5028,7 +5029,7 @@ dependencies = [
  "tracing",
  "url",
  "uuid",
- "version_spec",
+ "version_spec 0.11.8",
  "warpgate 0.38.0",
 ]
 
@@ -5058,7 +5059,7 @@ dependencies = [
  "serde_json",
  "system_env",
  "thiserror 2.0.21",
- "version_spec",
+ "version_spec 0.11.8",
  "warpgate_api 0.19.4",
 ]
 
@@ -5075,7 +5076,7 @@ dependencies = [
  "serde_json",
  "system_env",
  "thiserror 2.0.21",
- "version_spec",
+ "version_spec 0.11.8",
  "warpgate_api 0.21.1",
 ]
 
@@ -7270,6 +7271,7 @@ name = "toolchain_common"
 version = "0.0.0"
 dependencies = [
  "common",
+ "moon_pdk_api",
 ]
 
 [[package]]
@@ -7430,9 +7432,9 @@ dependencies = [
 
 [[package]]
 name = "typescript_tsconfig_json"
-version = "0.5.7"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c1e760d802e5f7de73e7cf47fc3ee1deaf49b54b6452b816b620a7a19ca96ca6"
+checksum = "c4313d14da57ad0c7ed7917c35872b55d7cd5f4e38ed54f76f699c5d08f28a77"
 dependencies = [
  "clean-path",
  "indexmap",
@@ -7651,6 +7653,20 @@ dependencies = [
  "pest_derive",
  "regex",
  "schematic",
+ "serde",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "version_spec"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "71ba8417c6a64906d42c22deb23b015888aa55419a7b300bf1cfb2e72e1a5e79"
+dependencies = [
+ "compact_str 0.10.0",
+ "pest",
+ "pest_derive",
+ "regex",
  "serde",
  "thiserror 2.0.21",
 ]

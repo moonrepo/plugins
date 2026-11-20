@@ -5,6 +5,13 @@
 #### 🚀 Updates
 
 - Panics now report their message, instead of an `unreachable` WASM trap error.
+- `pn` and `pnx`, which pnpm 11 and 12 ship, are now pnpm executables.
+- `nubr`, which nub ships since v0.9.3, is now a Nub executable.
+
+#### 🐞 Fixes
+
+- Fixed `initialize_toolchain` linking to a page that doesn't exist.
+- Fixed the Nub config's docs link.
 
 ## 1.1.1
 

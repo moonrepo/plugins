@@ -220,10 +220,14 @@ impl PackageManager {
 
                 dirs.push("$TOOL_DIR/shims".into());
             }
-            // Since v0.9, nub links bins into the shared user bin directory
+            // Since v0.9, nub links bins into the `globalBinDir` setting,
+            // or else the shared user bin directory
             // https://github.com/nubjs/nub/blob/main/vendor/aube/crates/aube/src/commands/global.rs
             Self::Nub => {
+                dirs.push("$NPM_CONFIG_GLOBAL_BIN_DIR".into());
+                dirs.push("$npm_config_global_bin_dir".into());
                 dirs.push("$XDG_BIN_HOME".into());
+                dirs.push("$XDG_DATA_HOME/../bin".into());
                 dirs.push("$HOME/.local/bin".into());
             }
             // https://pnpm.io/npmrc#global-bin-dir

@@ -50,19 +50,81 @@ mod deno_toolchain_tier2 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
-        async fn doesnt_inherit_paths_if_globals_dir() {
+        async fn inserts_exec_args_after_runtime_subcommands() {
             let sandbox = create_empty_moon_sandbox();
             let plugin = sandbox.create_toolchain("deno").await;
+
+            let extend = |args: &[&str]| {
+                plugin.extend_task_command(ExtendTaskCommandInput {
+                    command: "deno".into(),
+                    args: args.iter().map(|arg| arg.to_string()).collect(),
+                    toolchain_config: json!({
+                        "executeArgs": ["--allow-env"]
+                    }),
+                    ..Default::default()
+                })
+            };
+            let args = |args: &[&str]| args.iter().map(|arg| arg.to_string()).collect::<Vec<_>>();
+
+            assert_eq!(
+                extend(&["run", "-A", "main.ts"]).await.args.unwrap(),
+                Extend::Replace(args(&["run", "--allow-env", "-A", "main.ts"]))
+            );
+            assert_eq!(
+                extend(&["test"]).await.args.unwrap(),
+                Extend::Replace(args(&["test", "--allow-env"]))
+            );
+            assert_eq!(
+                extend(&["-q", "run", "main.ts"]).await.args.unwrap(),
+                Extend::Replace(args(&["-q", "run", "--allow-env", "main.ts"]))
+            );
+            assert_eq!(
+                extend(&["main.ts"]).await.args.unwrap(),
+                Extend::Prepend(args(&["--allow-env"]))
+            );
+
+            // Other subcommands reject runtime flags
+            assert!(extend(&["task", "build"]).await.args.is_none());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn uses_the_globals_dir() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("deno").await;
+            let globals_dir = sandbox.path().join("globals");
+
+            unsafe { env::remove_var("DENO_INSTALL_ROOT") };
 
             let output = plugin
                 .extend_task_command(ExtendTaskCommandInput {
                     command: "unknown".into(),
-                    globals_dir: Some(VirtualPath::new(sandbox.path())),
+                    globals_dir: Some(VirtualPath::new(&globals_dir)),
                     ..Default::default()
                 })
                 .await;
 
-            assert!(output.paths.is_empty());
+            assert_eq!(output.paths, [globals_dir]);
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn prefers_the_install_root_over_the_globals_dir() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("deno").await;
+            let root = sandbox.path().join("deno");
+
+            unsafe { env::set_var("DENO_INSTALL_ROOT", &root) };
+
+            let output = plugin
+                .extend_task_script(ExtendTaskScriptInput {
+                    script: "unknown".into(),
+                    globals_dir: Some(VirtualPath::new(sandbox.path().join("globals"))),
+                    ..Default::default()
+                })
+                .await;
+
+            unsafe { env::remove_var("DENO_INSTALL_ROOT") };
+
+            assert_eq!(output.paths, [root.join("bin")]);
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -70,10 +132,7 @@ mod deno_toolchain_tier2 {
             let sandbox = create_empty_moon_sandbox();
             let plugin = sandbox.create_toolchain("deno").await;
 
-            unsafe {
-                env::remove_var("DENO_INSTALL_ROOT");
-                env::remove_var("DENO_HOME");
-            }
+            unsafe { env::remove_var("DENO_INSTALL_ROOT") };
 
             let output = plugin
                 .extend_task_command(ExtendTaskCommandInput {
@@ -115,12 +174,9 @@ mod deno_toolchain_tier2 {
         #[tokio::test(flavor = "multi_thread")]
         async fn fallsback_to_deno_dir_when_no_globals_dir() {
             let sandbox = create_empty_moon_sandbox();
-            let plugin = sandbox.create_toolchain("rust").await;
+            let plugin = sandbox.create_toolchain("deno").await;
 
-            unsafe {
-                env::remove_var("DENO_INSTALL_ROOT");
-                env::remove_var("DENO_HOME");
-            }
+            unsafe { env::remove_var("DENO_INSTALL_ROOT") };
 
             let output = plugin
                 .extend_task_script(ExtendTaskScriptInput {
@@ -142,7 +198,7 @@ mod deno_toolchain_tier2 {
         #[tokio::test(flavor = "multi_thread")]
         async fn parses_package() {
             let sandbox = create_moon_sandbox("files");
-            let plugin = sandbox.create_toolchain("rust").await;
+            let plugin = sandbox.create_toolchain("deno").await;
 
             let output = plugin
                 .parse_manifest(ParseManifestInput {
@@ -197,7 +253,7 @@ mod deno_toolchain_tier2 {
         #[tokio::test(flavor = "multi_thread")]
         async fn can_mark_as_publishable() {
             let sandbox = create_moon_sandbox("files");
-            let plugin = sandbox.create_toolchain("rust").await;
+            let plugin = sandbox.create_toolchain("deno").await;
 
             let output = plugin
                 .parse_manifest(ParseManifestInput {
@@ -260,6 +316,7 @@ mod deno_toolchain_tier2 {
                             [
                                 "install",
                                 "--global",
+                                "--force",
                                 "--allow-net",
                                 "--allow-read",
                                 "jsr:@std/http/file-server"
@@ -275,6 +332,7 @@ mod deno_toolchain_tier2 {
                             [
                                 "install",
                                 "--global",
+                                "--force",
                                 "--allow-net",
                                 "--allow-read",
                                 "https://examples.deno.land/color-logging.ts"
@@ -316,51 +374,11 @@ mod deno_toolchain_tier2 {
                         [
                             "install",
                             "--global",
+                            "--force",
                             "--allow-net",
                             "--allow-read",
                             "--name",
                             "fs",
-                            "jsr:@std/http/file-server"
-                        ],
-                    )
-                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                )
-                .cache(CacheStrategy::Memory)
-                .label("deno-bin-jsr:@std/http/file-server")]
-            );
-        }
-
-        #[tokio::test(flavor = "multi_thread")]
-        async fn can_force() {
-            let sandbox = create_empty_moon_sandbox();
-            let plugin = sandbox.create_toolchain("deno").await;
-
-            let output = plugin
-                .setup_environment(SetupEnvironmentInput {
-                    root: VirtualPath::new(sandbox.path()),
-                    toolchain_config: json!({
-                        "bins": [
-                            {
-                                "bin": "jsr:@std/http/file-server",
-                                "force": true
-                            }
-                        ]
-                    }),
-                    ..Default::default()
-                })
-                .await;
-
-            assert_eq!(
-                output.commands,
-                [ExecCommand::new(
-                    ExecCommandInput::new(
-                        "deno",
-                        [
-                            "install",
-                            "--global",
-                            "--allow-net",
-                            "--allow-read",
-                            "--force",
                             "jsr:@std/http/file-server"
                         ],
                     )
@@ -399,6 +417,7 @@ mod deno_toolchain_tier2 {
                         [
                             "install",
                             "--global",
+                            "--force",
                             "--allow-net",
                             "--allow-read",
                             "--allow-env",

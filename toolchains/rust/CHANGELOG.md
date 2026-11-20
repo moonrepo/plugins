@@ -26,6 +26,9 @@
 
 #### 🐞 Fixes
 
+- Fixed the default Docker image for a version bound being the oldest allowed version, like
+  `rust:1.69` for `>=1.69`, or one outside the range, like `rust:2` for `<2`. It's now
+  `rust:latest`.
 - Fixed `addMsrvConstraint` and `syncToolchainConfig` writing values that Cargo and rustup reject,
   like `rust-version = "stable"` or `channel = "~1.80"`. Versions that can't be written are now
   skipped with a warning, including partial versions like `1.80` for `syncToolchainConfig`, as

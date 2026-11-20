@@ -48,6 +48,9 @@
 
 #### 🐞 Fixes
 
+- Fixed the default Docker image for a version bound being the oldest allowed version, like
+  `ruby:3.3` for `>=3.3`, or one outside the range, like `ruby:3.4` for `<3.4`. It's now
+  `ruby:latest`.
 - Fixed `bundlePath` changes never being applied once `.bundle/config` exists. The `path` setting is
   now compared against the local config, and updated when it differs.
 - Fixed `moon init` pre-filling an invalid `version` from a `.ruby-version` for another engine, like

@@ -49,6 +49,7 @@ mod rust_toolchain_tier1 {
                 ("nightly", "rustlang/rust:nightly"),
                 ("nightly-2024-01-01", "rustlang/rust:nightly"),
                 ("1.69", "rust:1.69"),
+                (">=1.69", "rust:latest"),
             ] {
                 let output = plugin
                     .define_docker_metadata(DefineDockerMetadataInput {

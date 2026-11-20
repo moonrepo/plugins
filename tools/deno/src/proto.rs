@@ -327,9 +327,24 @@ pub fn locate_executables(
         // Bins go in the root's `bin` dir, unless the root already is one (v2.2.11+)
         globals_lookup_dirs: vec![
             append_env_bin_dir("DENO_INSTALL_ROOT")?,
-            append_env_bin_dir("DENO_HOME")?,
             "$HOME/.deno/bin".into(),
         ],
         ..Default::default()
     }))
+}
+
+// Deno's installer puts `deno` itself in `~/.deno/bin`, a globals directory,
+// which moon puts ahead of the tool's own directory, so put the tool's
+// directory first. proto adds these paths as they are, so use real paths
+#[plugin_fn]
+pub fn activate_environment(
+    Json(input): Json<ActivateEnvironmentInput>,
+) -> FnResult<Json<ActivateEnvironmentOutput>> {
+    let mut output = ActivateEnvironmentOutput::default();
+
+    if let Some(dir) = input.context.tool_dir.to_real_path()? {
+        output.paths.push(dir.to_path_buf());
+    }
+
+    Ok(Json(output))
 }

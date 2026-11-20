@@ -6,17 +6,157 @@
 
 - Panics now report their message, instead of an `unreachable` WASM trap error.
 - Lockfile parse errors now name the lockfile.
+- Workspace dependencies declared with a version range, like `"b": "^1.0.0"`, are now project
+  dependencies for npm, Yarn and Bun when the workspace package's version satisfies the range, as
+  those package managers link them. These new edges can expose dependency cycles.
+- `workspace:` ranges like `workspace:^1`, `workspace:>=1.0.0` and `workspace:>=1 <2` are now
+  supported.
+- Local path dependencies without a protocol, like `"b": "../b"`, are now project dependencies,
+  hashed by their path, and copied by `docker scaffold`, like `file:` ones.
+- `syncProjectWorkspaceDependencies` now replaces a synced `version`, `version-caret`,
+  `version-tilde` or peer range once the workspace package's version no longer satisfies it.
+- `syncProjectWorkspaceDependencies` now syncs packages without a `version` for the formats that
+  don't need one, and syncs their peers as `*`.
+- `rootPackageDependenciesOnly` now allows local workspace dependencies in projects, like the ones
+  that `syncProjectWorkspaceDependencies` writes.
+- `docker scaffold` now copies the `package.json` of workspace members that aren't moon projects,
+  and of local `file:`, `link:` and `portal:` dependencies (or the tarball), into the configs
+  skeleton.
+- `docker prune` now also deletes the `node_modules` of the focused projects and their dependencies,
+  as moon v1 did, when `deleteVendorDirectories` is enabled.
+- Inferred npm tasks now end with `--`, so passthrough arguments reach the script instead of npm.
+  This changes their task hashes once.
+- `npm:` and `jsr:` alias dependencies are now hashed by their range, and dist tags like `latest`
+  by the first locked version.
+- Package manager detection now also reads `devEngines.packageManager`.
+- Bun installs in CI now run `bun install --frozen-lockfile` whenever `bun.lock` or `bun.lockb`
+  exists, so a stale lockfile now fails CI installs when `bun.version` is unset, an alias, or below
+  1.2.20. Before, only Bun 1.2.20 or later with `bun.lock` ran `bun ci`.
+- For Bun, `syncProjectWorkspaceDependencies` now keeps the `workspace-caret` and `workspace-tilde`
+  formats, instead of writing `workspace:*`, and writes `link` as `file:`, as Bun before 1.4.4
+  can't install `link:` paths. Synced specs change once.
+- `docker scaffold` now copies `patches/`, where `bun patch`, `npm patch`, `pnpm patch` and
+  patch-package write patches, into the configs skeleton.
+- `docker scaffold` now copies the files that install scripts run, like `scripts/setup.js` in
+  `"postinstall": "node scripts/setup.js"`, into the configs skeleton, for the `preinstall`,
+  `install`, `postinstall`, `preprepare`, `prepare` and `postprepare` scripts of the workspace root
+  and each member. Before, `docker setup` failed when the script wasn't at a project root.
+- Deno installs in CI now run `deno install --frozen` whenever `deno.lock` exists, so a stale
+  lockfile now fails CI installs when `deno.version` is unset or an alias. Before, Deno 2.8 or later
+  ran `deno ci`, which rejected `installArgs` like `--allow-scripts`. Production installs in CI now
+  also pass `--prod` on 2.8 or later.
+- With Deno, projects with only a `deno.json` or `deno.jsonc` are now in the project graph, aliased
+  by its `name`, with edges from `jsr:` and `npm:` imports that name another project. Their tasks
+  are inferred too, and so are `package.json` scripts, as `deno task <name>`, unless `deno.json`
+  has a task with the same name.
+- Deno workspaces now use the members of both `deno.json` and the root `package.json`, and
+  `package.json`'s catalogs when both define them, as Deno does.
+- Package manager detection now picks Deno from a `deno.json` or `deno.jsonc`, after every lockfile.
+- Version-gated behavior now treats a `latest` or `stable` version as the newest release, and a
+  prerelease, like `6.0.0-rc.1`, like its release.
+- npm production installs now pass `--omit=dev` instead of `--production`, which is deprecated and
+  warns on npm 12.
+- Focused npm installs, like `docker prune`'s, now pass `--include-workspace-root`, so the root
+  package's own dependencies are installed too.
+- For pnpm, `syncProjectWorkspaceDependencies` now writes the `star` and `version` formats as
+  `workspace:*`, `version-caret` as `workspace:^` and `version-tilde` as `workspace:~`, as pnpm 9+
+  only links workspace packages through `workspace:`, and installed others from the registry.
+  Synced specs change once.
+- `syncPackageManagerField` now updates the version in `devEngines.packageManager` when it names the
+  package manager, and only updates `packageManager` beside it when it already exists, as pnpm 11+
+  prefers `devEngines.packageManager` and warns when they differ. Yarn still gets `packageManager`,
+  which is all Yarn Switch reads.
+- pnpm and Nub patches are now part of a locked dependency's hash, so editing a patch changes task
+  hashes.
+- Nub installs in CI now run `nub install --frozen-lockfile` whenever a lockfile exists, production
+  installs included, instead of `nub ci`, which rejected most `installArgs`, like
+  `--prefer-offline`. The flag is left out when `installArgs` has one, like `--no-frozen-lockfile`.
+- Nub production installs, like `docker prune`'s, now use a store inside `node_modules`, instead of
+  one shared by the machine, which a Docker image's later stages don't have.
+- `syncPackageManagerField` no longer pins Nub in a repo that another package manager owns, through
+  `packageManager`, `devEngines.packageManager` or its lockfile. nub then switched to its own
+  format, which ignores that manager's config, like `pnpm-workspace.yaml`.
+- Inferred Nub tasks now also list the `node` toolchain, so they run on its Node.js version when
+  it's enabled, and their task hashes change once. Tasks you write that run `nub` need
+  `toolchains: ['node']` for that.
+- For Nub in a repo that npm owns, `syncProjectWorkspaceDependencies` now writes the formats npm
+  supports, like `file:` instead of `workspace:*`, as nub writes them into `package-lock.json`, which
+  npm can't read. Synced specs change once.
+- Nub workspaces now read `pnpm-workspace.yaml` only in repos that pnpm owns, and `.yarnrc.yml`
+  catalogs in repos that Yarn owns, as nub does.
+- `nubr` is now a Nub executable.
 
 #### 🐞 Fixes
 
+- Fixed `package.json` fields that npm accepts but the toolchain couldn't parse failing every moon
+  command, like `"version": "1.0"`, `"bundleDependencies": true` or an `engines` array. Those
+  fields are now skipped.
+- Fixed `sync_project` rewriting every dependency in a field it changed, which could turn a range
+  like `>=1.0.0 <2.0.0` into `>=1.0.0, <2.0.0`, which npm rejects. Only the synced entries are now
+  written.
+- Fixed `sync_project` failing every task in a JavaScript project without a `package.json`.
+- Fixed synced peer ranges for 0.x packages being `^0.0.0`. They're now `^<version>`.
+- Fixed `rootPackageDependenciesOnly` failing on empty dependency fields.
+- Fixed inferred tasks failing the project graph for a script that can't be a task ID, like a
+  `"//"` comment, or that a shell couldn't split. They're now skipped, or split on whitespace.
+- Fixed inferred tasks being disabled in CI when the script contained `-w` anywhere, like in
+  `--max-warnings`, `--write` or `build-web.js`. Watch, help and version options are now matched
+  as whole arguments, and `-w` is ignored for package managers, where it selects a workspace.
+- Fixed scripts named like lifecycle hooks, such as `prettier`, `preview` and `postcss`, not being
+  inferred. Only `pre<name>` and `post<name>` scripts with a `<name>` script are skipped, and
+  `deno.json` tasks, which have no hooks, are no longer filtered by prefix.
+- Fixed root scripts that run `moon` being inferred, which made moon run itself recursively.
+- Fixed scripts whose names clean to the same task ID, like `build:js` and `build-js`, replacing
+  each other. The first one is kept.
+- Fixed projects that share a package name, like examples, being left out of the project graph
+  except for one. The first one is still the target for dependencies.
+- Fixed a leftover lockfile from another package manager overriding the configured one's in task
+  hashes. It's now ignored when the configured package manager's own lockfile exists.
+- Fixed a full plugin cache failing `locate_dependencies_root`.
+- Fixed `initialize_toolchain` failing on an unknown `packageManager`, and linking to a page that
+  doesn't exist.
+- Fixed lockfile parse errors showing a virtual path instead of the real one.
 - Fixed an empty workspace entry in `bun.lock` panicking while parsing the lockfile.
-- Fixed a failed `bun bun.lockb` being parsed as an empty lockfile. It now returns an error.
+- Fixed a `bun.lockb` that `bun` can't read, or a missing `bun`, failing every task hash. It's now
+  skipped with a warning, and `bun` runs with the `bun` toolchain's version, instead of whichever
+  one moon's own `PATH` finds.
 - Fixed a version that can't be parsed in `bun.lock`, `deno.lock`, `package-lock.json`,
   `pnpm-lock.yaml`, `yarn.lock` or `package.json` failing every task hash. The version is now
   skipped.
 - Fixed `bun.lock` entries with an unknown shape failing to parse the lockfile. They're now skipped.
+- Fixed `bun.lock` packages without an integrity being hashed by an empty string, so their upgrades
+  never changed a task hash.
 - Fixed `package-lock.json` files with a `lockfileVersion` above 3 returning no dependencies.
   They're now parsed like version 3.
+- Fixed `bun dedupe` failing every run after an install on Bun 1.4.0 with `bun.lockb`. It now
+  requires Bun 1.4.1.
+- Fixed inferred `deno.json` tasks with `dependencies` running them twice, once as moon tasks and
+  again in `deno task`. They now run `deno task --eval "<command>"`, and tasks with only
+  `dependencies` are `noop`.
+- Fixed `deno.json` tasks named like npm lifecycle scripts, like `install`, not being inferred.
+- Fixed `deno.lock` npm packages being keyed as `npm:<name>`, so task hashes recorded the
+  `package.json` requirement instead of the locked version. Deno task hashes change once.
+- Fixed `deno.lock` packages with a `_` in their name, like `string_decoder`, being dropped.
+- Fixed `docker prune` failing with npm for a project at the workspace root, like in a
+  single-package repo, as `--workspace` only accepts members. The root package is now left out.
+- Fixed `npm dedupe` failing with `ERESOLVE` when the install needs `installArgs`, like
+  `--legacy-peer-deps`. It now gets the npm toolchain's `installArgs` too.
+- Fixed pnpm production installs, like `docker prune`'s, aborting without a TTY when `node_modules`
+  has dev dependencies. They now pass `--config.confirmModulesPurge=false`.
+- Fixed pnpm's default catalog being left out of task hashes when it's defined as
+  `catalogs.default`, or referenced as `catalog:default`.
+- Fixed pnpm 8 lockfiles (v6), whose keys start with `/`, giving task hashes no locked versions.
+  Task hashes change once for them.
+- Fixed pnpm 12's experimental v13 lockfiles giving task hashes versions instead of integrities.
+- Fixed moon setting up Nub twice, as `nub` and `unstable_nub`, which could fail runs with
+  `proto::store::shim::create_failed`. The toolchain now requires and loads `unstable_nub`, the ID
+  that moon configures.
+- Fixed `nub dedupe` failing installs in Yarn repos, as nub won't write `yarn.lock`. It's now
+  skipped there.
+
+#### ⚙️ Internal
+
+- Updated `nodejs_package_json` to v0.5.
 
 ## 1.3.2
 

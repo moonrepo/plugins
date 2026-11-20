@@ -23,7 +23,7 @@ pub fn register_toolchain(
         },
         PackageManager::Nub => RegisterToolchainOutput {
             config_file_globs: vec![".npmrc".into(), "nub.jsonc".into()],
-            exe_names: vec!["nub".into(), "nubx".into()],
+            exe_names: vec!["nub".into(), "nubr".into(), "nubx".into()],
             lock_file_names: vec!["nub.lock".into()],
             ..Default::default()
         },
@@ -34,7 +34,7 @@ pub fn register_toolchain(
                     "pnpm-workspace.yaml".into(),
                     ".pnpmfile.*".into(),
                 ],
-                exe_names: vec!["pnpm".into(), "pnpx".into()],
+                exe_names: vec!["pnpm".into(), "pnpx".into(), "pn".into(), "pnx".into()],
                 lock_file_names: vec!["pnpm-lock.yaml".into()],
                 ..Default::default()
             }
@@ -62,7 +62,7 @@ pub fn initialize_toolchain(
     Json(_): Json<InitializeToolchainInput>,
 ) -> FnResult<Json<InitializeToolchainOutput>> {
     Ok(Json(InitializeToolchainOutput {
-        config_url: Some("https://moonrepo.dev/docs/guides/javascript".into()),
+        config_url: Some("https://moonrepo.dev/docs/guides/javascript/node-handbook".into()),
         docs_url: Some(format!(
             "https://moonrepo.dev/docs/config/toolchain#{}",
             get_plugin_id()?
