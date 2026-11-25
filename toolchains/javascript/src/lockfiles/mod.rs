@@ -35,35 +35,28 @@ pub(super) fn parse_name_and_version<'a>(
     value: &'a str,
     delimiter: &str,
 ) -> Option<(&'a str, &'a str)> {
-    // Remove parents:
+    // Split on the version's `@`, skipping the first character, so that
+    // a scope's `@` isn't one, like in `@babel/core@7.28.3`
+    let index = value.get(1..)?.find('@')? + 1;
+    let name = &value[0..index];
+    let mut version = &value[index + 1..];
+
+    // Remove parents, which follow the version, as names may contain the
+    // delimiter, like Deno's `string_decoder@1.3.0`:
     //  @babel/preset-react@7.27.1_@babel+core@7.28.3
     //  @jest/core@29.7.0(@babel/types@7.26.10)
-    let value = if delimiter.is_empty() {
-        value
-    } else {
-        match value.find(delimiter) {
-            Some(index) => &value[0..index],
-            None => value,
-        }
-    };
-
-    // Split on @ but preserve scope (skip the leading character so a scope's
-    // `@` isn't treated as the name/version separator):
-    //  @babel/preset-react@7.27.1
-    //  @jest/core@29.7.0
-    if let Some(rest) = value.get(1..)
-        && let Some(index) = rest.find('@')
+    if !delimiter.is_empty()
+        && let Some(end) = version.find(delimiter)
     {
-        let name = &value[0..=index];
-        let version = &value[index + 2..];
-
-        // Ignore values that use URLs
-        if !version.contains("://") {
-            return Some((name, version));
-        }
+        version = &version[0..end];
     }
 
-    None
+    // Ignore values that use URLs
+    if version.contains("://") {
+        return None;
+    }
+
+    Some((name, version))
 }
 
 #[cfg(test)]
@@ -138,6 +131,21 @@ mod tests {
                 assert_eq!(
                     parse_name_and_version("@babel/preset-react@7.27.1_@babel+core@7.28.3", "_"),
                     Some(("@babel/preset-react", "7.27.1"))
+                );
+                assert_eq!(
+                    parse_name_and_version(
+                        "ts-node@10.9.2_@types+node@26.6.6_typescript@7.0.2",
+                        "_"
+                    ),
+                    Some(("ts-node", "10.9.2"))
+                );
+            }
+
+            #[test]
+            fn keeps_names_with_the_delimiter() {
+                assert_eq!(
+                    parse_name_and_version("string_decoder@1.3.0", "_"),
+                    Some(("string_decoder", "1.3.0"))
                 );
             }
         }

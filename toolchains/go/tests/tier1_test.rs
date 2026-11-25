@@ -36,6 +36,8 @@ mod go_toolchain_tier1 {
                 (json!("1.24"), "golang:1.24"),
                 (json!("~1.24"), "golang:1.24"),
                 (json!("^1.22.0"), "golang:1.22.0"),
+                (json!(">=1.22.0"), "golang:latest"),
+                (json!("<1.25"), "golang:latest"),
             ] {
                 let output = plugin
                     .define_docker_metadata(DefineDockerMetadataInput {

@@ -11,6 +11,7 @@ outside moon, like proto and the registry, stay in their plans.
 ### Ship proto 0.64
 
 - [ ] Update `proto_core` to 0.64 in a moon 2.x release
+- [ ] Bump the default locators for the toolchains released with it
 
 **Problem:** the tools on plugins' `master` set `minimum_proto_version` to 0.64 (plugins#227), and
 toolchains embed them as tier 3. moon 2.6.5 still embeds proto_core 0.62.1, so it refuses to load
@@ -19,7 +20,13 @@ the Python plugin with identifier python, as it requires a minimum proto version
 but found 0.62.2 instead". No toolchain has been released since, so users aren't affected yet, but
 none can be. moon_pdk_test_utils doesn't check the minimum, so the plugins' tests pass.
 
-**Source:** found while checking `PYTHON.md` Phase 1 live.
+The JavaScript audits hit the same for `bun_toolchain` (**live**), `deno_toolchain`,
+`node_toolchain` and `node_depman_toolchain`. `javascript_toolchain` embeds no tool, so a `master`
+build loads in moon 2.6.4 and can ship now. Users only get new toolchain releases once the default
+locators move (`crates/config-loader/src/toolchains_config_ext.rs:12-38`).
+
+**Source:** found while checking `PYTHON.md` Phase 1 live. Also blocks the releases in `BUN.md`,
+`DENO.md`, `NODE.md`, `NPM.md`, `PNPM.md`, `YARN.md` and `NUB.md`.
 
 ## Action pipeline
 
@@ -70,24 +77,36 @@ that isn't empty skips the install (`:124-133`). Python can't set `vendor_dir_na
 - When a venv is recreated (deleted by hand, or by `PYTHON.md` #3 on a version change), the install
   fingerprint hasn't changed, so the new venv gets no packages. The previous item doesn't fix this.
 
+The opposite case, where `vendor_dir_name` is set but the directory never exists, makes every run a
+first install: it bypasses the fingerprint and the affected-mode skip, and dedupe never runs.
+JavaScript has three of them, as its `vendor_dir_name` is `node_modules`:
+
+- Yarn Plug'n'Play (`nodeLinker: pnp`, the default for Yarn 2+ and Yarn 6) creates no
+  `node_modules` (`YARN.md` #14, **live**).
+- A Deno workspace with only `deno.json` files never gets one (`DENO.md` #14, **live**).
+- `npm install` creates none in a project without dependencies (`NPM.md`, confirmed).
+
+**Solution:** How should we solve this?
+
 **Change:** let a toolchain say whether its dependencies are installed, for example through a field
 on `SetupEnvironmentOutput` or a separate function. moon treats "not installed" like a first
 install: it bypasses the fingerprint and the affected-mode skip, and doesn't take the CI skip.
 
-**Source:** `PYTHON.md` #3 and "Outside this repo".
+**Source:** `PYTHON.md` #3 and "Outside this repo", `YARN.md` #14, `DENO.md` #14 and `NPM.md`.
 
-### Hash every lockfile in the install fingerprint
+### Store the install fingerprint after the install
 
-- [ ] Hash every lockfile that exists
+- [ ] Hash the lockfile after the install runs
 
-**Problem:** the fingerprint only hashes the first lockfile in `lock_file_names` that exists
-(`install_dependencies.rs:282-297`). **Live:** `constraints.txt` comes before `requirements.txt` in
-the Python toolchain's list, so editing `requirements.txt` next to a `constraints.txt` never re-ran
-the install.
+**Problem:** the fingerprint is computed and stored before the install runs
+(`install_dependencies.rs:162`, lockfile hash at `:282-297`), so an install that rewrites the
+lockfile, like `npm install` after a manifest edit or `npm dedupe`, runs again on the next run.
+**Live** (npm, twice): after editing a dependency, two runs in a row each installed, and the third
+skipped.
 
-**Change:** hash every lockfile that exists. The order of `lock_file_names` then stops mattering.
+**Change:** compute the stored fingerprint once the install and dedupe have finished.
 
-**Source:** `PYTHON.md` #5.
+**Source:** `NPM.md` and `JAVASCRIPT.md`.
 
 ### Tell `install_dependencies` when it runs in Docker
 
@@ -114,19 +133,38 @@ installed before the build.
 
 ## Tasks
 
-### Fix `detect_task_usage`
+### Put a toolchain's executable directory before its globals directories
 
-- [ ] Match proto's versioned binaries
-- [ ] Match relative paths by file name
+- [ ] Reorder `get_command_paths`, or leave it to the plugins
 
-**Problem:** `detect_task_usage` (`crates/toolchain-plugin/src/toolchain_plugin.rs:375-391`):
+**Problem:** `get_command_paths` (`crates/toolchain-plugin/src/toolchain_plugin.rs:219-241`) puts
+a toolchain's globals directories ahead of its own executable directory. Bun's installer and
+setup-bun put `bun` itself in `~/.bun/bin`, so with `bun.version` set, that Bun ran moon's
+installs and tasks (**live**: 1.2.20 instead of 1.4.0, and it downgraded `bun.lock`). Deno's
+`~/.deno/bin` and Yarn's `~/.yarn/bin` can hold the tool the same way.
 
-- The proto-binary branch splits each `exe` name and requires `name == exe`, so it can never match.
-  Tasks running `node-20` or `python-3.12` aren't detected. It should split `command`.
-- It compares the whole command, so `bin/rails` and `./bin/rspec` aren't detected as Ruby tasks.
-  Match the file name when the command is a relative path.
+**Change:** optional. `BUN.md` #1 fixes Bun in the tool with an `activate_environment` that
+returns the tool directory, which moon applies first. Reordering here would cover every tool at
+once, but changes which `npm` wins over one installed with `npm i -g npm`.
 
-**Source:** `RUST.md`, `GO.md`, `RUBY.md` and `PYTHON.md`.
+**Source:** `BUN.md` #1, `DENO.md` #3 and `YARN.md` #16.
+
+
+### Don't fail every task on a lockfile that can't be parsed
+
+- [ ] Log the error and hash without the lockfile
+
+**Problem:** `hasher.optimization` defaults to `accuracy`
+(`crates/config/src/workspace/hasher_config.rs:8-11`), and then any `parse_lock` error fails every
+task that hashes the toolchain (`crates/task-hasher/src/task_hashing.rs:269-285`). A new lockfile
+format breaks every task until the plugin ships a parser. **Live:** Yarn 6's JSON `yarn.lock`
+(`YARN.md` #2) and npm 12's v4 `package-lock.json` (`NPM.md` #1) each failed every task in the
+workspace.
+
+**Change:** log the error and hash the task without that lockfile's versions. `BUN.md` #8 (D1)
+proposes the same in the plugin, for a `bun.lockb` that `bun` can't read.
+
+**Source:** `YARN.md` #2, `NPM.md` #1 and `BUN.md` #8.
 
 ### Port moonrepo/moon#2799 to `develop-3.0`
 
@@ -155,48 +193,14 @@ infers edges from source files, so its graph goes stale until a manifest changes
 
 ## PDK
 
-### Preserve TOML formatting in `toml_config!`
+### Run host function commands with the toolchain's environment
 
-- [ ] Save through `toml_edit` (v3)
+- [ ] Give `exec_command` the toolchain's PATH and version env
 
-**Problem:** `toml_config!` (`crates/pdk-api/src/macros.rs`) saves through serde `toml`, which
-strips comments, sorts keys and expands inline tables. The Rust toolchain works around it with its
-own `toml_edit` save (`RUST.md` #2).
+**Problem:** `exec_command` comes from warpgate's shared host functions
+(`crates/plugin/src/host.rs:42`), so a command a plugin runs gets moon's own environment. **Live:**
+`bun bun.lockb`, which the JavaScript toolchain runs to read a binary lockfile, used the proto
+shim's default Bun ("Outdated lockfile version"), and failed with "Command or script bun does
+not exist" when proto wasn't on PATH. `BUN.md` #3 sets `PROTO_BUN_VERSION` as a workaround.
 
-**Change:** switch the macro to `toml_edit`. This also fixes
-`toolchains/python/src/pyproject_toml.rs`, but changes `save_field`'s signature for every caller, so
-it's for v3.
-
-**Source:** `RUST.md` D1 option B.
-
-## Website docs
-
-- [ ] Rust (`RUST.md` #3, landed): revise the claim in `website/docs/guides/rust/handbook.mdx`
-      that every task runs "using the exact version". Explain that tasks now get
-      `RUSTUP_TOOLCHAIN`, which overrides `rust-toolchain.toml`.
-- [ ] Go (`GO.md` #13, #15):
-  - `__partials__/create-task/go/inputs.mdx` uses `src/**/*`, which isn't a Go convention. Use
-    `**/*.go`, and mention `/go.mod` and `/go.sum` for single-module repos until #15 lands.
-  - The Go section of `config/toolchain.mdx` only says to run `moon toolchain info go`. Document
-    `GOTOOLCHAIN`, `go tool`, and that `bins` installs into `GOBIN`.
-- [ ] Ruby (`RUBY.md` #12):
-  - `__partials__/setup-toolchain/ruby/tier3.mdx` says tier 3 builds Ruby from source, which hasn't
-    been true since `ruby_tool` 0.2.9.
-  - The `create-task/ruby` partials should use `bundle exec` or binstubs.
-- [ ] Python (`PYTHON.md` #1, #14):
-  - There's no Python guide, and the toolchain docs say nothing about venvs, `venvName` or Docker.
-  - Once #1 lands, `__partials__/setup-toolchain/python/tier2.mdx` should say that `uv-pip` needs
-    both `unstable_uv` and `unstable_pip`.
-  - Document what the toolchain now does for you (`PYTHON.md` #15, #16, #18, #21): `version` sets
-    `UV_PYTHON`, which wins over `.python-version`; `uv sync` runs with `--locked` in CI; the
-    configs skeleton gets stub `__init__.py`, readme and license files; and pip installs the `dev`
-    group.
-
-## Done
-
-- **plugins#118**, fixed in moon v2.5.0: `AugmentedCommand::get_toolchain_ids` now returns every
-  configured toolchain for commands with no project or task
-  (`crates/process-augment/src/augmented_command.rs:126`), so workspace-level setup and install
-  commands get the toolchains' PATH and env. `RUBY.md` still listed it as live.
-- **moonrepo/moon#2799**, on `master`: inherited dev and build dependency versions are hashed. This
-  replaced the `apply_toolchain_dependencies_by_scope` item in `RUST.md`.
+**Source:** `BUN.md` #3 and #8.

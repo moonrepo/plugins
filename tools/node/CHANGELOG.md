@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed a `package.json` with a field that can't be parsed, like `"version": "1.0"` or an unusual
+  dependency range, losing its `engines.node`, `devEngines.runtime` or `volta.node` pin. Those
+  fields are now skipped.
+- Fixed a cycle in `volta.extends` overflowing the stack.
+- Fixed pinning a version to `package.json` replacing a `devEngines.runtime` list, like one for
+  Node.js and Bun, with only the pinned tool's entry.
+- Fixed an entry in nodejs.org's index that can't be parsed failing version loading and canary
+  installs. It's now skipped.
+
 ## 0.18.0
 
 #### 💥 Breaking

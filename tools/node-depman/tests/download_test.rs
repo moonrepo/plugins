@@ -559,8 +559,20 @@ mod node_depman_tool {
                 .await
                 .globals_lookup_dirs;
 
-            assert!(dirs.contains(&"$XDG_BIN_HOME".into()));
-            assert!(dirs.contains(&"$HOME/.local/bin".into()));
+            // In nub's order
+            let nub_dirs = [
+                "$NPM_CONFIG_GLOBAL_BIN_DIR",
+                "$npm_config_global_bin_dir",
+                "$XDG_BIN_HOME",
+                "$XDG_DATA_HOME/../bin",
+                "$HOME/.local/bin",
+            ];
+
+            assert!(
+                dirs.windows(nub_dirs.len())
+                    .any(|window| window == nub_dirs),
+                "{dirs:?}"
+            );
             assert!(!dirs.iter().any(|dir| dir.contains("pnpm")));
         }
     }
@@ -1774,6 +1786,47 @@ npmRegistries:
                 exes.get("yarn").unwrap().exe_path,
                 Some("yarn-bin.exe".into())
             );
+        }
+
+        // Yarn Switch runs another Yarn than the installed one (YARN.md #1)
+        #[tokio::test(flavor = "multi_thread")]
+        async fn removes_yarn_switch() {
+            for (os, switch_name, bin_name) in [
+                (HostOS::MacOS, "yarn", "yarn-bin"),
+                (HostOS::Windows, "yarn.exe", "yarn-bin.exe"),
+            ] {
+                for has_bin in [false, true] {
+                    let sandbox = create_empty_proto_sandbox();
+                    let plugin = sandbox
+                        .create_plugin_with_config("yarn-test", |config| {
+                            config.host(HostPlatform::new(os, HostArch::X64));
+                        })
+                        .await;
+
+                    sandbox.create_file(switch_name, "");
+
+                    if has_bin {
+                        sandbox.create_file(bin_name, "");
+                    }
+
+                    plugin
+                        .locate_executables(LocateExecutablesInput {
+                            context: PluginContext {
+                                version: VersionSpec::parse("6.0.0-rc.23").unwrap(),
+                                ..Default::default()
+                            },
+                            install_dir: plugin.tool.to_virtual_path(sandbox.path()),
+                        })
+                        .await;
+
+                    // Only once the real binary is there
+                    assert_eq!(
+                        sandbox.path().join(switch_name).exists(),
+                        !has_bin,
+                        "{switch_name}"
+                    );
+                }
+            }
         }
     }
 }

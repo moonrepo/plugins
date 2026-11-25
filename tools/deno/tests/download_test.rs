@@ -336,11 +336,7 @@ mod deno_tool {
 
             assert_eq!(
                 output.globals_lookup_dirs,
-                [
-                    "$DENO_INSTALL_ROOT/bin",
-                    "$DENO_HOME/bin",
-                    "$HOME/.deno/bin"
-                ]
+                ["$DENO_INSTALL_ROOT/bin", "$HOME/.deno/bin"]
             );
         }
 
@@ -359,7 +355,7 @@ mod deno_tool {
 
             assert_eq!(
                 output.globals_lookup_dirs,
-                ["$DENO_INSTALL_ROOT", "$DENO_HOME/bin", "$HOME/.deno/bin"]
+                ["$DENO_INSTALL_ROOT", "$HOME/.deno/bin"]
             );
         }
     }

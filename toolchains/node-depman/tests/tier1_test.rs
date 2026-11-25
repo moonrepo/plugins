@@ -40,7 +40,7 @@ mod node_depman_toolchain_tier1 {
             assert_eq!(output.config_file_globs, [".npmrc", "nub.jsonc"]);
             assert_eq!(output.manifest_file_names, ["package.json"]);
             assert_eq!(output.lock_file_names, ["nub.lock"]);
-            assert_eq!(output.exe_names, ["nub", "nubx"]);
+            assert_eq!(output.exe_names, ["nub", "nubr", "nubx"]);
             assert_eq!(output.vendor_dir_name.unwrap(), "node_modules");
         }
 
@@ -62,7 +62,7 @@ mod node_depman_toolchain_tier1 {
             );
             assert_eq!(output.manifest_file_names, ["package.json"]);
             assert_eq!(output.lock_file_names, ["pnpm-lock.yaml"]);
-            assert_eq!(output.exe_names, ["pnpm", "pnpx"]);
+            assert_eq!(output.exe_names, ["pnpm", "pnpx", "pn", "pnx"]);
             assert_eq!(output.vendor_dir_name.unwrap(), "node_modules");
         }
 
@@ -78,7 +78,7 @@ mod node_depman_toolchain_tier1 {
                 .await;
 
             assert_eq!(output.name, "yarn");
-            assert_eq!(output.config_file_globs, [".npmrc", ".yarnrc.*"]);
+            assert_eq!(output.config_file_globs, [".npmrc", ".yarnrc", ".yarnrc.*"]);
             assert_eq!(output.manifest_file_names, ["package.json"]);
             assert_eq!(output.lock_file_names, ["yarn.lock"]);
             assert_eq!(output.exe_names, ["yarn", "yarnpkg"]);

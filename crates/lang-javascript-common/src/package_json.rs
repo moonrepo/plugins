@@ -63,7 +63,8 @@ pub fn extract_engine_version(package_json: &PackageJson, key: &str) -> Option<S
 
 pub fn extract_package_manager_version(package_json: &PackageJson, key: &str) -> Option<String> {
     if let Some(pm) = &package_json.package_manager {
-        let mut parts = pm.split('@');
+        // Only split once, as Corepack also accepts a URL, like `yarn@https://…/@yarnpkg/…`
+        let mut parts = pm.splitn(2, '@');
         let name = parts.next().unwrap_or_default();
 
         if name == key {
@@ -90,6 +91,22 @@ pub fn extract_volta_version(
     package_path: &VirtualPath,
     key: &str,
 ) -> AnyResult<Option<String>> {
+    extract_volta_version_with_depth(package_json, package_path, key, 0)
+}
+
+// `extends` can form a cycle, which would overflow the stack
+const VOLTA_MAX_EXTENDS: usize = 10;
+
+fn extract_volta_version_with_depth(
+    package_json: &PackageJson,
+    package_path: &VirtualPath,
+    key: &str,
+    depth: usize,
+) -> AnyResult<Option<String>> {
+    if depth > VOLTA_MAX_EXTENDS {
+        return Ok(None);
+    }
+
     if let Some(volta) = package_json.other_fields.get("volta") {
         if let Some(json::JsonValue::String(inner)) = volta.get(key) {
             return Ok(Some(inner.into()));
@@ -105,7 +122,12 @@ pub fn extract_volta_version(
                 let content = fs::read_file(&extends_path)?;
 
                 if let Ok(other_package_json) = json::parse::<PackageJson>(&content) {
-                    return extract_volta_version(&other_package_json, &extends_path, key);
+                    return extract_volta_version_with_depth(
+                        &other_package_json,
+                        &extends_path,
+                        key,
+                        depth + 1,
+                    );
                 }
             }
         }
@@ -140,7 +162,11 @@ pub fn insert_dev_engine_version(
         }
 
         if let Some(JsonValue::Object(dev_engines)) = root.get_mut("devEngines") {
-            if dev_engines.get(&kind).is_none_or(|node| !node.is_object()) {
+            // A list holds one entry per tool, like Node.js and Bun
+            if dev_engines
+                .get(&kind)
+                .is_none_or(|node| !node.is_object() && !node.is_array())
+            {
                 dev_engines.insert(kind.clone(), JsonValue::Object(JsonMap::default()));
             }
 
@@ -264,6 +290,72 @@ pub fn remove_dev_engine(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn inserts_dev_engine_versions_into_lists() {
+        let mut package_json = serde_json::json!({
+            "devEngines": {
+                "packageManager": [
+                    { "name": "npm", "version": "^11.0.0" },
+                    { "name": "pnpm", "version": "^10.0.0", "onFail": "warn" }
+                ]
+            }
+        });
+
+        insert_dev_engine_version(
+            &mut package_json,
+            "packageManager".into(),
+            "pnpm".into(),
+            "10.33.4".into(),
+        )
+        .unwrap();
+        insert_dev_engine_version(
+            &mut package_json,
+            "packageManager".into(),
+            "yarn".into(),
+            "4.9.0".into(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            package_json["devEngines"]["packageManager"],
+            serde_json::json!([
+                { "name": "npm", "version": "^11.0.0" },
+                { "name": "pnpm", "version": "10.33.4", "onFail": "warn" },
+                { "name": "yarn", "version": "4.9.0" }
+            ])
+        );
+    }
+
+    #[test]
+    fn extracts_node_versions_when_other_fields_are_invalid() {
+        let package_json: PackageJson = json::parse(
+            r#"{
+                "version": "1.0",
+                "bundleDependencies": true,
+                "dependencies": { "foo": "^v1.2.3", "bar": ">=1.0.0-" },
+                "engines": { "npm": "not a version", "node": ">=22" },
+                "devEngines": { "runtime": { "name": "node", "version": "^24" } },
+                "volta": { "node": "22.22.3" }
+            }"#,
+        )
+        .unwrap();
+
+        assert_eq!(
+            extract_engine_version(&package_json, "node").as_deref(),
+            Some(">=22")
+        );
+        assert_eq!(
+            extract_dev_engine_runtime_version(&package_json, "node").as_deref(),
+            Some("^24")
+        );
+        assert_eq!(
+            extract_volta_version(&package_json, &VirtualPath::new("/package.json"), "node")
+                .unwrap()
+                .as_deref(),
+            Some("22.22.3")
+        );
+    }
 
     #[test]
     fn errors_for_dev_engine_aliases() {

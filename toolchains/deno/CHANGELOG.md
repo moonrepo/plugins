@@ -5,12 +5,27 @@
 #### 🚀 Updates
 
 - Panics now report their message, instead of an `unreachable` WASM trap error.
+- `dx`, which `deno x --install-alias` creates, is now a Deno executable.
+- `deno.bins` installs now always pass `--force`, as `deno install --global` fails on an existing
+  install. moon v2 doesn't run them yet, as the Deno toolchain has no dependencies root.
 
 #### 🐞 Fixes
 
-- Fixed the globals directory not being on `PATH` for tasks when `DENO_INSTALL_ROOT` ends with
-  `bin`, which Deno v2.2.11+ uses as-is instead of its `bin` subdirectory. The same applies to
-  `DENO_HOME`.
+- Fixed the default Docker image not existing for a partial version, like `2.9` or `~2.9.0`, an
+  alias, `canary`, or a version bound, as Deno only publishes full versions, like `2.9.8`. It's now
+  `denoland/deno:latest`.
+- Fixed Deno's bin directory, where `deno install --global` writes, not being on `PATH` for tasks
+  without `version`, and `$DENO_INSTALL_ROOT/bin` being left out when it's set. When
+  `DENO_INSTALL_ROOT` ends with `bin`, Deno v2.2.11+ uses it as-is, and so does the toolchain.
+  `DENO_HOME`, which Deno doesn't read, is no longer used.
+- Fixed `executeArgs` failing every `deno run` and `deno task` task, as they were placed before the
+  subcommand. They now follow `run`, `test`, `bench`, `serve`, `eval`, `repl`, `compile` and `x`,
+  come before a script, like `deno main.ts`, and are left out for other subcommands, which reject
+  them.
+- Fixed a Deno in `~/.deno/bin`, where Deno's installer puts it, running moon's tasks instead of
+  the configured `version`.
+- Fixed `docker scaffold` copying `.ts` files at project roots, like `main.ts`, into the configs
+  skeleton, so every source edit rebuilt the dependency layer.
 - Fixed a version that can't be parsed in `deno.json` failing every task hash. The version is now
   skipped.
 

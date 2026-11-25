@@ -13,6 +13,41 @@ use std::collections::BTreeMap;
 mod javascript_toolchain_tier2 {
     use super::*;
 
+    mod define_requirements {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn requires_the_package_manager_toolchains() {
+            let sandbox = create_empty_moon_sandbox();
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            for (package_manager, expected) in [
+                (json!("bun"), vec!["bun"]),
+                (json!("deno"), vec!["deno"]),
+                (json!("npm"), vec!["node", "npm"]),
+                // moon only configures Nub as `unstable_nub`, and nub provisions Node itself
+                (json!("nub"), vec!["unstable_nub"]),
+                (json!("pnpm"), vec!["node", "pnpm"]),
+                (json!("yarn"), vec!["node", "yarn"]),
+                (json!(null), vec![]),
+            ] {
+                let output: DefineRequirementsOutput = plugin
+                    .plugin
+                    .call_func_with(
+                        "define_requirements",
+                        DefineRequirementsInput {
+                            toolchain_config: json!({ "packageManager": package_manager }),
+                            ..Default::default()
+                        },
+                    )
+                    .await
+                    .unwrap();
+
+                assert_eq!(output.requires, expected, "{package_manager}");
+            }
+        }
+    }
+
     mod extend_project_graph {
         use super::*;
 
@@ -171,6 +206,7 @@ mod javascript_toolchain_tier2 {
                             "npm".into(),
                             "run".into(),
                             "release".into(),
+                            "--".into(),
                         ])),
                         toolchains: Some(OneOrMany::Many(vec![
                             Id::raw("javascript"),
@@ -193,6 +229,7 @@ mod javascript_toolchain_tier2 {
                                 "npm".into(),
                                 "run".into(),
                                 "build".into(),
+                                "--".into(),
                             ])),
                             outputs: Some(vec![Output::parse("build").unwrap()]),
                             toolchains: Some(OneOrMany::Many(vec![
@@ -213,6 +250,7 @@ mod javascript_toolchain_tier2 {
                                 "npm".into(),
                                 "run".into(),
                                 "build:vite".into(),
+                                "--".into(),
                             ])),
                             outputs: Some(vec![Output::parse("out").unwrap()]),
                             toolchains: Some(OneOrMany::Many(vec![
@@ -231,6 +269,7 @@ mod javascript_toolchain_tier2 {
                                 "npm".into(),
                                 "run".into(),
                                 "info".into(),
+                                "--".into(),
                             ])),
                             toolchains: Some(OneOrMany::Many(vec![
                                 Id::raw("javascript"),
@@ -260,6 +299,7 @@ mod javascript_toolchain_tier2 {
                                 "npm".into(),
                                 "run".into(),
                                 "astro:serve".into(),
+                                "--".into(),
                             ])),
                             preset: Some(TaskPreset::Server),
                             toolchains: Some(OneOrMany::Many(vec![
@@ -278,6 +318,7 @@ mod javascript_toolchain_tier2 {
                                 "npm".into(),
                                 "run".into(),
                                 "dev".into(),
+                                "--".into(),
                             ])),
                             preset: None,
                             toolchains: Some(OneOrMany::Many(vec![
@@ -304,6 +345,7 @@ mod javascript_toolchain_tier2 {
                                 "npm".into(),
                                 "run".into(),
                                 "start:vite".into(),
+                                "--".into(),
                             ])),
                             preset: Some(TaskPreset::Server),
                             toolchains: Some(OneOrMany::Many(vec![
@@ -316,6 +358,37 @@ mod javascript_toolchain_tier2 {
                     ),
                 ])
             );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn infers_toolchains_for_each_package_manager() {
+            let sandbox = create_moon_sandbox("projects");
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            for (package_manager, expected) in [
+                ("bun", vec!["javascript", "bun"]),
+                ("npm", vec!["javascript", "npm", "node"]),
+                // nub runs scripts on the `node` on `PATH` (NUB.md D1)
+                ("nub", vec!["javascript", "unstable_nub", "node"]),
+                ("pnpm", vec!["javascript", "pnpm", "node"]),
+                ("yarn", vec!["javascript", "yarn", "node"]),
+            ] {
+                let mut input = ExtendProjectGraphInput::default();
+                input.project_sources.insert(Id::raw("a"), "a".into());
+                input.toolchain_config = json!({
+                    "inferTasksFromScripts": true,
+                    "packageManager": package_manager
+                });
+
+                let output = plugin.extend_project_graph(input).await;
+                let project = output.extended_projects.get("a").unwrap();
+
+                assert_eq!(
+                    project.tasks.get("release").unwrap().toolchains,
+                    Some(OneOrMany::Many(expected.into_iter().map(Id::raw).collect())),
+                    "{package_manager}"
+                );
+            }
         }
 
         #[allow(deprecated)]
@@ -357,13 +430,33 @@ mod javascript_toolchain_tier2 {
                         }
                     ),
                     (
-                        Id::raw("start"),
+                        Id::raw("release"),
                         PartialTaskConfig {
-                            description: Some("Inherited from `start` deno.json task.".into()),
+                            description: Some(
+                                "Inherited from `release` package.json script.".into()
+                            ),
                             command: Some(PartialTaskArgs::List(vec![
                                 "deno".into(),
                                 "task".into(),
-                                "start".into(),
+                                "release".into(),
+                            ])),
+                            toolchains: Some(OneOrMany::Many(vec![
+                                Id::raw("javascript"),
+                                Id::raw("deno"),
+                            ])),
+                            ..Default::default()
+                        }
+                    ),
+                    (
+                        Id::raw("start"),
+                        PartialTaskConfig {
+                            description: Some("Inherited from `start` deno.json task.".into()),
+                            // moon runs `build`, which `deno task start` would run again
+                            command: Some(PartialTaskArgs::List(vec![
+                                "deno".into(),
+                                "task".into(),
+                                "--eval".into(),
+                                "deno run -RN server.ts".into(),
                             ])),
                             deps: Some(vec![PartialTaskDependency::Target(
                                 Target::parse("~:build").unwrap()
@@ -379,6 +472,390 @@ mod javascript_toolchain_tier2 {
                     )
                 ])
             );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn includes_deno_json_projects() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "app/deno.json",
+                json!({
+                    "name": "@x/app",
+                    "imports": {
+                        "@x/lib": "jsr:@x/lib@^1.0.0",
+                        "@std/path": "jsr:@std/path@^1.0.0",
+                        "self": "jsr:@x/app"
+                    },
+                    "tasks": { "start": "deno run main.ts" }
+                })
+                .to_string(),
+            );
+            sandbox.create_file(
+                "lib/deno.jsonc",
+                "// Comments are allowed\n{ \"name\": \"@x/lib\", \"exports\": \"./mod.ts\" }",
+            );
+            sandbox.create_file(
+                "web/package.json",
+                r#"{ "name": "web", "scripts": { "build": "vite build", "start": "vite" } }"#,
+            );
+            sandbox.create_file(
+                "web/deno.json",
+                r#"{ "tasks": { "start": "deno run dev.ts" } }"#,
+            );
+
+            let output = extend_graph(
+                &sandbox,
+                &["app", "lib", "web"],
+                json!({ "inferTasksFromScripts": true, "packageManager": "deno" }),
+            )
+            .await;
+
+            assert_eq!(
+                output.extended_projects["app"].alias.as_deref(),
+                Some("@x/app")
+            );
+            assert_eq!(
+                output.extended_projects["lib"].alias.as_deref(),
+                Some("@x/lib")
+            );
+            assert_eq!(
+                output.extended_projects["web"].alias.as_deref(),
+                Some("web")
+            );
+            assert_eq!(get_dep_ids(&output, "app"), ["lib"]);
+            assert_eq!(get_task_ids(&output, "app"), ["start"]);
+
+            // `deno.json` tasks win over `package.json` scripts with the same name
+            let web = &output.extended_projects["web"].tasks;
+
+            assert_eq!(get_task_ids(&output, "web"), ["build", "start"]);
+            assert_eq!(
+                web["build"].description.as_deref(),
+                Some("Inherited from `build` package.json script.")
+            );
+            assert_eq!(
+                web["start"].description.as_deref(),
+                Some("Inherited from `start` deno.json task.")
+            );
+
+            // Other package managers only use `package.json`
+            let output = extend_graph(
+                &sandbox,
+                &["app", "lib", "web"],
+                json!({ "packageManager": "npm" }),
+            )
+            .await;
+
+            assert_eq!(
+                output
+                    .extended_projects
+                    .keys()
+                    .map(|id| id.as_str())
+                    .collect::<Vec<_>>(),
+                ["web"]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn infers_deno_tasks_named_like_hooks_and_without_commands() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "a/deno.json",
+                json!({
+                    "tasks": {
+                        "build": "deno run build.ts",
+                        "prebuild": "deno run clean.ts",
+                        "preview": "deno run preview.ts",
+                        "install": "deno run setup.ts",
+                        "all": { "dependencies": ["build", "preview"] }
+                    }
+                })
+                .to_string(),
+            );
+            sandbox.create_file("a/package.json", r#"{ "name": "a" }"#);
+
+            let output = extend_graph(
+                &sandbox,
+                &["a"],
+                json!({ "inferTasksFromScripts": true, "packageManager": "deno" }),
+            )
+            .await;
+
+            let tasks = &output.extended_projects["a"].tasks;
+
+            assert_eq!(
+                tasks.keys().map(|id| id.as_str()).collect::<Vec<_>>(),
+                ["all", "build", "install", "prebuild", "preview"]
+            );
+            assert_eq!(
+                tasks["all"].command,
+                Some(PartialTaskArgs::String("noop".into()))
+            );
+            assert_eq!(tasks["all"].deps.as_ref().map(|deps| deps.len()), Some(2));
+        }
+
+        async fn extend_graph(
+            sandbox: &MoonWasmSandbox,
+            ids: &[&str],
+            config: serde_json::Value,
+        ) -> ExtendProjectGraphOutput {
+            let plugin = sandbox.create_toolchain("javascript").await;
+            let mut input = ExtendProjectGraphInput::default();
+
+            for id in ids {
+                input.project_sources.insert(Id::raw(*id), (*id).into());
+            }
+
+            input.toolchain_config = config;
+
+            plugin.extend_project_graph(input).await
+        }
+
+        fn get_dep_ids(output: &ExtendProjectGraphOutput, id: &str) -> Vec<String> {
+            output.extended_projects[id]
+                .dependencies
+                .iter()
+                .map(|dep| dep.id.to_string())
+                .collect()
+        }
+
+        fn get_task_ids(output: &ExtendProjectGraphOutput, id: &str) -> Vec<String> {
+            output.extended_projects[id]
+                .tasks
+                .keys()
+                .map(|id| id.to_string())
+                .collect()
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn loads_manifests_with_fields_it_doesnt_read() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "a/package.json",
+                json!({
+                    "name": "a",
+                    "version": "1.0",
+                    "bundleDependencies": true,
+                    "engines": ["node >= 0.10"],
+                    "dependencies": { "b": "workspace:^1", "c": "workspace:^not-a-range" }
+                })
+                .to_string(),
+            );
+            sandbox.create_file("b/package.json", r#"{ "name": "b", "version": "1.2.0" }"#);
+
+            let output = extend_graph(&sandbox, &["a", "b"], json!({})).await;
+
+            assert_eq!(output.extended_projects["a"].alias.as_deref(), Some("a"));
+            assert_eq!(get_dep_ids(&output, "a"), ["b"]);
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn keeps_projects_with_the_same_name() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "ex1/package.json",
+                r#"{ "name": "example", "dependencies": { "b": "*" } }"#,
+            );
+            sandbox.create_file(
+                "ex2/package.json",
+                r#"{ "name": "example", "dependencies": { "b": "*" } }"#,
+            );
+            sandbox.create_file("b/package.json", r#"{ "name": "b" }"#);
+
+            let output = extend_graph(&sandbox, &["b", "ex1", "ex2"], json!({})).await;
+
+            assert_eq!(get_dep_ids(&output, "ex1"), ["b"]);
+            assert_eq!(get_dep_ids(&output, "ex2"), ["b"]);
+            assert_eq!(output.input_files.len(), 3);
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn links_local_paths() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "a/package.json",
+                r#"{ "name": "a", "dependencies": { "b": "../b", "c": "file:../c" } }"#,
+            );
+            sandbox.create_file("b/package.json", r#"{ "name": "b" }"#);
+            sandbox.create_file("c/package.json", r#"{ "name": "c" }"#);
+
+            let output = extend_graph(&sandbox, &["a", "b", "c"], json!({})).await;
+
+            assert_eq!(get_dep_ids(&output, "a"), ["b", "c"]);
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn links_ranges_that_the_version_satisfies() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "a/package.json",
+                r#"{ "name": "a", "dependencies": { "b": "^1.0.0", "c": "^2.0.0", "d": "1.0.0" } }"#,
+            );
+            sandbox.create_file("b/package.json", r#"{ "name": "b", "version": "1.2.0" }"#);
+            sandbox.create_file("c/package.json", r#"{ "name": "c", "version": "1.0.0" }"#);
+            sandbox.create_file("d/package.json", r#"{ "name": "d", "version": "1.0.0" }"#);
+
+            for pm in ["bun", "npm", "yarn"] {
+                let output = extend_graph(
+                    &sandbox,
+                    &["a", "b", "c", "d"],
+                    json!({ "packageManager": pm }),
+                )
+                .await;
+
+                assert_eq!(get_dep_ids(&output, "a"), ["b", "d"], "{pm}");
+            }
+
+            let output = extend_graph(
+                &sandbox,
+                &["a", "b", "c", "d"],
+                json!({ "packageManager": "pnpm" }),
+            )
+            .await;
+
+            assert!(get_dep_ids(&output, "a").is_empty());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn skips_scripts_that_cant_be_tasks() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "a/package.json",
+                json!({
+                    "name": "a",
+                    "scripts": {
+                        "//": "Run build before test",
+                        "build": "tsc --outDir dist",
+                        "clean": "echo 'unbalanced",
+                        "build:js": "babel src",
+                        "build-js": "esbuild src"
+                    }
+                })
+                .to_string(),
+            );
+
+            let output = extend_graph(
+                &sandbox,
+                &["a"],
+                json!({ "inferTasksFromScripts": true, "packageManager": "pnpm" }),
+            )
+            .await;
+
+            assert_eq!(get_task_ids(&output, "a"), ["build", "build-js", "clean"]);
+
+            // The first script wins when IDs collide
+            assert_eq!(
+                output.extended_projects["a"].tasks[&Id::raw("build-js")].command,
+                Some(PartialTaskArgs::List(vec![
+                    "pnpm".into(),
+                    "run".into(),
+                    "build-js".into(),
+                ]))
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn detects_watch_options_as_arguments() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "a/package.json",
+                json!({
+                    "name": "a",
+                    "scripts": {
+                        "lint": "eslint . --max-warnings 0",
+                        "format": "prettier --write .",
+                        "web": "node build-web.js",
+                        "test-ci": "jest --watchAll=false",
+                        "build-ui": "npm run build -w ui",
+                        "helpers": "node --helpers",
+                        "types": "tsc -w",
+                        "bundle": "npm run build && vite build --watch",
+                        "test": "jest --watchAll",
+                        "info": "node --version"
+                    }
+                })
+                .to_string(),
+            );
+
+            let output = extend_graph(
+                &sandbox,
+                &["a"],
+                json!({ "inferTasksFromScripts": true, "packageManager": "npm" }),
+            )
+            .await;
+            let tasks = &output.extended_projects["a"].tasks;
+
+            for id in ["lint", "format", "web", "test-ci", "build-ui", "helpers"] {
+                assert_eq!(tasks[&Id::raw(id)].options, None, "{id}");
+            }
+
+            for id in ["types", "bundle", "test", "info"] {
+                assert_eq!(
+                    tasks[&Id::raw(id)].options.as_ref().unwrap().run_in_ci,
+                    Some(TaskOptionRunInCI::Enabled(false)),
+                    "{id}"
+                );
+            }
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn only_skips_hooks_of_existing_scripts() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "a/package.json",
+                json!({
+                    "name": "a",
+                    "scripts": {
+                        "build": "tsc",
+                        "prebuild": "rimraf dist",
+                        "postinstall": "patch-package",
+                        "prepare": "husky",
+                        "prettier": "prettier --check .",
+                        "preview": "vite preview",
+                        "postcss": "postcss src -d dist"
+                    }
+                })
+                .to_string(),
+            );
+
+            let output = extend_graph(
+                &sandbox,
+                &["a"],
+                json!({ "inferTasksFromScripts": true, "packageManager": "npm" }),
+            )
+            .await;
+
+            assert_eq!(
+                get_task_ids(&output, "a"),
+                ["build", "postcss", "prettier", "preview"]
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn skips_scripts_that_run_moon() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "package.json",
+                json!({
+                    "name": "root",
+                    "scripts": {
+                        "check": "moon run :check",
+                        "ci": "CI=1 moonx ci",
+                        "beam": "moonbeam build"
+                    }
+                })
+                .to_string(),
+            );
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+            let mut input = ExtendProjectGraphInput::default();
+            input.project_sources.insert(Id::raw("root"), ".".into());
+            input.toolchain_config =
+                json!({ "inferTasksFromScripts": true, "packageManager": "npm" });
+
+            let output = plugin.extend_project_graph(input).await;
+
+            assert_eq!(get_task_ids(&output, "root"), ["beam"]);
         }
     }
 
@@ -555,9 +1032,10 @@ mod javascript_toolchain_tier2 {
             sandbox.create_file("package/package.json", "{}");
             sandbox.create_file("package/nested/app/package.json", "{}");
 
-            sandbox
-                .host_funcs
-                .mock_load_toolchain_config(|_, _| json!({ "version": "2.9.0" }));
+            sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                assert_eq!(id, "deno");
+                json!({ "version": "2.9.0" })
+            });
 
             let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -757,6 +1235,29 @@ mod javascript_toolchain_tier2 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn merges_deno_and_package_json_members() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("deno.json", r#"{ "workspace": ["./a", "c"] }"#);
+            sandbox.create_file("package.json", r#"{ "workspaces": ["b", "c"] }"#);
+            sandbox.create_file("b/package.json", "{}");
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .locate_dependencies_root(LocateDependenciesRootInput {
+                    starting_dir: VirtualPath::new(sandbox.path().join("b")),
+                    toolchain_config: json!({
+                        "packageManager": "deno"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.members.unwrap(), ["./a", "c", "b"]);
+            assert_eq!(output.root.unwrap(), VirtualPath::new("/workspace"));
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn finds_workspace_with_deno_jsonc() {
             let sandbox = create_moon_sandbox("locate");
             sandbox.create_file(
@@ -872,6 +1373,7 @@ mod javascript_toolchain_tier2 {
         async fn finds_workspace_with_pnpm_workspace_when_using_nub() {
             let sandbox = create_moon_sandbox("locate");
             sandbox.create_file("workspace/pnpm-workspace.yaml", "packages: ['apps/*']");
+            sandbox.create_file("workspace/pnpm-lock.yaml", "");
 
             let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -888,6 +1390,34 @@ mod javascript_toolchain_tier2 {
                 .await;
 
             assert_eq!(output.members.unwrap(), ["apps/*"]);
+            assert_eq!(
+                output.root.unwrap(),
+                VirtualPath::new("/workspace/workspace")
+            );
+        }
+
+        // nub only reads `pnpm-workspace.yaml` in repos that pnpm owns
+        #[tokio::test(flavor = "multi_thread")]
+        async fn ignores_pnpm_workspace_when_nub_owns_the_repo() {
+            let sandbox = create_moon_sandbox("locate");
+            sandbox.create_file("workspace/pnpm-workspace.yaml", "packages: ['apps/*']");
+            sandbox.create_file("workspace/nub.lock", "");
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .locate_dependencies_root(LocateDependenciesRootInput {
+                    starting_dir: VirtualPath::new(
+                        sandbox.path().join("workspace/packages/a/nested"),
+                    ),
+                    toolchain_config: json!({
+                        "packageManager": "nub"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.members.unwrap(), ["packages/*"]);
             assert_eq!(
                 output.root.unwrap(),
                 VirtualPath::new("/workspace/workspace")
@@ -1066,9 +1596,10 @@ mod javascript_toolchain_tier2 {
             async fn focused_commands_v140() {
                 let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "version": "1.4.0" }));
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "bun");
+                    json!({ "version": "1.4.0" })
+                });
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -1095,6 +1626,33 @@ mod javascript_toolchain_tier2 {
                         .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                     )
                 );
+
+                // v1.4.0's dedupe can't read `bun.lockb`
+                assert!(output.dedupe_command.is_none());
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn dedupes_on_v141() {
+                let mut sandbox = create_empty_moon_sandbox();
+
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "bun");
+                    json!({ "version": "1.4.1" })
+                });
+
+                let plugin = sandbox.create_toolchain("javascript").await;
+
+                let output = plugin
+                    .install_dependencies(InstallDependenciesInput {
+                        root: VirtualPath::new(sandbox.path()),
+                        toolchain_config: json!({
+                            "packageManager": "bun",
+                            "dedupeOnLockfileChange": true
+                        }),
+                        ..Default::default()
+                    })
+                    .await;
+
                 assert_eq!(
                     output.dedupe_command.unwrap(),
                     ExecCommand::new(
@@ -1105,106 +1663,66 @@ mod javascript_toolchain_tier2 {
             }
 
             #[tokio::test(flavor = "multi_thread")]
-            async fn switches_to_ci_in_ci() {
-                let mut sandbox = create_empty_moon_sandbox();
+            async fn freezes_the_lockfile_in_ci() {
+                for (version, lockfile) in [
+                    (None, "bun.lock"),
+                    (None, "bun.lockb"),
+                    (Some("1.2.19"), "bun.lock"),
+                    (Some("latest"), "bun.lock"),
+                ] {
+                    let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "version": "1.4.0" }));
+                    sandbox.host_funcs.mock_load_toolchain_config(move |id, _| {
+                        assert_eq!(id, "bun");
+                        json!({ "version": version })
+                    });
 
-                let plugin = sandbox
-                    .create_toolchain_with_config("javascript", |cfg| {
-                        cfg.host_environment(HostEnvironment {
-                            ci: true,
-                            ..Default::default()
-                        });
-                    })
-                    .await;
+                    let plugin = sandbox
+                        .create_toolchain_with_config("javascript", |cfg| {
+                            cfg.host_environment(HostEnvironment {
+                                ci: true,
+                                ..Default::default()
+                            });
+                        })
+                        .await;
 
-                // No lockfile — stays as `bun install`
-                let output = plugin
-                    .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::new(sandbox.path()),
-                        toolchain_config: json!({
-                            "packageManager": "bun",
-                        }),
-                        ..Default::default()
-                    })
-                    .await;
+                    // Nothing to freeze without a lockfile
+                    for has_lockfile in [false, true] {
+                        if has_lockfile {
+                            sandbox.create_file(lockfile, "{}");
+                        }
 
-                assert_eq!(
-                    output.install_command.unwrap(),
-                    ExecCommand::new(
-                        ExecCommandInput::new("bun", ["install"])
-                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
-                );
+                        let output = plugin
+                            .install_dependencies(InstallDependenciesInput {
+                                root: VirtualPath::new(sandbox.path()),
+                                toolchain_config: json!({
+                                    "packageManager": "bun",
+                                }),
+                                ..Default::default()
+                            })
+                            .await;
 
-                sandbox.create_file("bun.lock", "{}");
+                        let mut args = vec!["install"];
 
-                let output = plugin
-                    .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::new(sandbox.path()),
-                        toolchain_config: json!({
-                            "packageManager": "bun",
-                        }),
-                        ..Default::default()
-                    })
-                    .await;
+                        if has_lockfile {
+                            args.push("--frozen-lockfile");
+                        }
 
-                assert_eq!(
-                    output.install_command.unwrap(),
-                    ExecCommand::new(
-                        ExecCommandInput::new("bun", ["ci"])
-                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
-                );
+                        assert_eq!(
+                            output.install_command.unwrap(),
+                            ExecCommand::new(
+                                ExecCommandInput::new("bun", args)
+                                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                            ),
+                            "{version:?} {lockfile}"
+                        );
+                    }
+                }
             }
 
             #[tokio::test(flavor = "multi_thread")]
-            async fn skips_ci_on_older_versions_and_production() {
-                let mut sandbox = create_empty_moon_sandbox();
-
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "version": "1.2.19" }));
-
-                let plugin = sandbox
-                    .create_toolchain_with_config("javascript", |cfg| {
-                        cfg.host_environment(HostEnvironment {
-                            ci: true,
-                            ..Default::default()
-                        });
-                    })
-                    .await;
-
-                sandbox.create_file("bun.lock", "{}");
-
-                let output = plugin
-                    .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::new(sandbox.path()),
-                        toolchain_config: json!({
-                            "packageManager": "bun",
-                        }),
-                        ..Default::default()
-                    })
-                    .await;
-
-                assert_eq!(
-                    output.install_command.unwrap(),
-                    ExecCommand::new(
-                        ExecCommandInput::new("bun", ["install"])
-                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
-                );
-
-                // `--production` implies `--frozen-lockfile`
-                let mut sandbox = create_empty_moon_sandbox();
-
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "version": "1.4.0" }));
-
+            async fn production_implies_frozen_in_ci() {
+                let sandbox = create_empty_moon_sandbox();
                 let plugin = sandbox
                     .create_toolchain_with_config("javascript", |cfg| {
                         cfg.host_environment(HostEnvironment {
@@ -1240,9 +1758,10 @@ mod javascript_toolchain_tier2 {
             async fn inherits_args_from_bun_toolchain() {
                 let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "installArgs": ["-a", "b", "--c"]}));
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "bun");
+                    json!({ "installArgs": ["-a", "b", "--c"]})
+                });
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -1301,9 +1820,10 @@ mod javascript_toolchain_tier2 {
             async fn focused_commands() {
                 let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "version": "2.8.0" }));
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "deno");
+                    json!({ "version": "2.8.0" })
+                });
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -1335,9 +1855,10 @@ mod javascript_toolchain_tier2 {
             async fn skips_prod_flag_on_older_versions() {
                 let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "version": "2.7.0" }));
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "deno");
+                    json!({ "version": "2.7.0" })
+                });
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -1362,107 +1883,114 @@ mod javascript_toolchain_tier2 {
             }
 
             #[tokio::test(flavor = "multi_thread")]
-            async fn switches_to_ci_in_ci() {
-                let mut sandbox = create_empty_moon_sandbox();
+            async fn freezes_the_lockfile_in_ci() {
+                for version in [None, Some("2.7.0"), Some("2.8.0"), Some("latest")] {
+                    let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "version": "2.8.0" }));
+                    sandbox.host_funcs.mock_load_toolchain_config(move |id, _| {
+                        assert_eq!(id, "deno");
+                        json!({ "version": version, "installArgs": ["--allow-scripts"] })
+                    });
 
-                let plugin = sandbox
-                    .create_toolchain_with_config("javascript", |cfg| {
-                        cfg.host_environment(HostEnvironment {
-                            ci: true,
-                            ..Default::default()
-                        });
-                    })
-                    .await;
+                    let plugin = sandbox
+                        .create_toolchain_with_config("javascript", |cfg| {
+                            cfg.host_environment(HostEnvironment {
+                                ci: true,
+                                ..Default::default()
+                            });
+                        })
+                        .await;
 
-                // No lockfile — stays as `deno install`
-                let output = plugin
-                    .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::new(sandbox.path()),
-                        toolchain_config: json!({
-                            "packageManager": "deno",
-                        }),
-                        ..Default::default()
-                    })
-                    .await;
+                    // Nothing to freeze without a lockfile
+                    for has_lockfile in [false, true] {
+                        if has_lockfile {
+                            sandbox.create_file("deno.lock", "{}");
+                        }
 
-                assert_eq!(
-                    output.install_command.unwrap(),
-                    ExecCommand::new(
-                        ExecCommandInput::new("deno", ["install"])
-                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
-                );
+                        let output = plugin
+                            .install_dependencies(InstallDependenciesInput {
+                                root: VirtualPath::new(sandbox.path()),
+                                toolchain_config: json!({
+                                    "packageManager": "deno",
+                                }),
+                                ..Default::default()
+                            })
+                            .await;
 
-                sandbox.create_file("deno.lock", "{}");
+                        let mut args = vec!["install"];
 
-                let output = plugin
-                    .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::new(sandbox.path()),
-                        toolchain_config: json!({
-                            "packageManager": "deno",
-                        }),
-                        ..Default::default()
-                    })
-                    .await;
+                        if has_lockfile {
+                            args.push("--frozen");
+                        }
 
-                assert_eq!(
-                    output.install_command.unwrap(),
-                    ExecCommand::new(
-                        ExecCommandInput::new("deno", ["ci"])
-                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
-                );
+                        args.push("--allow-scripts");
+
+                        assert_eq!(
+                            output.install_command.unwrap(),
+                            ExecCommand::new(
+                                ExecCommandInput::new("deno", args)
+                                    .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                            ),
+                            "{version:?}"
+                        );
+                    }
+                }
             }
 
             #[tokio::test(flavor = "multi_thread")]
-            async fn skips_ci_on_older_versions() {
-                let mut sandbox = create_empty_moon_sandbox();
+            async fn freezes_production_installs_in_ci() {
+                for (version, expected) in [
+                    ("2.8.0", vec!["install", "--frozen", "--prod"]),
+                    ("2.7.0", vec!["install", "--frozen"]),
+                ] {
+                    let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "version": "2.7.0" }));
+                    sandbox.host_funcs.mock_load_toolchain_config(move |id, _| {
+                        assert_eq!(id, "deno");
+                        json!({ "version": version })
+                    });
 
-                let plugin = sandbox
-                    .create_toolchain_with_config("javascript", |cfg| {
-                        cfg.host_environment(HostEnvironment {
-                            ci: true,
+                    let plugin = sandbox
+                        .create_toolchain_with_config("javascript", |cfg| {
+                            cfg.host_environment(HostEnvironment {
+                                ci: true,
+                                ..Default::default()
+                            });
+                        })
+                        .await;
+
+                    sandbox.create_file("deno.lock", "{}");
+
+                    let output = plugin
+                        .install_dependencies(InstallDependenciesInput {
+                            root: VirtualPath::new(sandbox.path()),
+                            toolchain_config: json!({
+                                "packageManager": "deno",
+                            }),
+                            production: true,
                             ..Default::default()
-                        });
-                    })
-                    .await;
+                        })
+                        .await;
 
-                sandbox.create_file("deno.lock", "{}");
-
-                let output = plugin
-                    .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::new(sandbox.path()),
-                        toolchain_config: json!({
-                            "packageManager": "deno",
-                        }),
-                        ..Default::default()
-                    })
-                    .await;
-
-                assert_eq!(
-                    output.install_command.unwrap(),
-                    ExecCommand::new(
-                        ExecCommandInput::new("deno", ["install"])
-                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
-                );
+                    assert_eq!(
+                        output.install_command.unwrap(),
+                        ExecCommand::new(
+                            ExecCommandInput::new("deno", expected)
+                                .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                        ),
+                        "{version}"
+                    );
+                }
             }
 
             #[tokio::test(flavor = "multi_thread")]
             async fn inherits_args_from_deno_toolchain() {
                 let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "installArgs": ["-a", "b", "--c"]}));
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "deno");
+                    json!({ "installArgs": ["-a", "b", "--c"]})
+                });
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -1548,11 +2076,12 @@ mod javascript_toolchain_tier2 {
                             "npm",
                             [
                                 "install",
-                                "--production",
+                                "--omit=dev",
                                 "--workspace",
                                 "foo",
                                 "--workspace",
-                                "@scope/bar"
+                                "@scope/bar",
+                                "--include-workspace-root"
                             ]
                         )
                         .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
@@ -1571,9 +2100,10 @@ mod javascript_toolchain_tier2 {
             async fn inherits_args_from_npm_toolchain() {
                 let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "installArgs": ["-a", "b", "--c"]}));
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "npm");
+                    json!({ "installArgs": ["-a", "b", "--c"]})
+                });
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -1598,8 +2128,63 @@ mod javascript_toolchain_tier2 {
                 assert_eq!(
                     output.dedupe_command.unwrap(),
                     ExecCommand::new(
-                        ExecCommandInput::new("npm", ["dedupe"])
+                        ExecCommandInput::new("npm", ["dedupe", "-a", "b", "--c"])
                             .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
+                );
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn leaves_the_root_package_out_of_focused_installs() {
+                let sandbox = create_empty_moon_sandbox();
+                sandbox.create_file("package.json", r#"{ "name": "root" }"#);
+
+                let plugin = sandbox.create_toolchain("javascript").await;
+
+                // Only the root
+                let output = plugin
+                    .install_dependencies(InstallDependenciesInput {
+                        root: VirtualPath::new(sandbox.path()),
+                        toolchain_config: json!({ "packageManager": "npm" }),
+                        packages: vec!["root".into()],
+                        production: true,
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert_eq!(
+                    output.install_command.unwrap(),
+                    ExecCommand::new(
+                        ExecCommandInput::new("npm", ["install", "--omit=dev"])
+                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
+                    )
+                );
+
+                // The root and a member
+                let output = plugin
+                    .install_dependencies(InstallDependenciesInput {
+                        root: VirtualPath::new(sandbox.path()),
+                        toolchain_config: json!({ "packageManager": "npm" }),
+                        packages: vec!["root".into(), "a".into()],
+                        production: true,
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert_eq!(
+                    output.install_command.unwrap(),
+                    ExecCommand::new(
+                        ExecCommandInput::new(
+                            "npm",
+                            [
+                                "install",
+                                "--omit=dev",
+                                "--workspace",
+                                "a",
+                                "--include-workspace-root"
+                            ]
+                        )
+                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                     )
                 );
             }
@@ -1712,32 +2297,36 @@ mod javascript_toolchain_tier2 {
                     })
                     .await;
 
-                assert_eq!(
-                    output.install_command.unwrap(),
-                    ExecCommand::new(
-                        ExecCommandInput::new(
-                            "nub",
-                            [
-                                "install",
-                                "--prod",
-                                "--filter-prod",
-                                "foo...",
-                                "--filter-prod",
-                                "@scope/bar..."
-                            ]
-                        )
-                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
+                let mut command = ExecCommandInput::new(
+                    "nub",
+                    [
+                        "install",
+                        "--prod",
+                        "--filter-prod",
+                        "foo...",
+                        "--filter-prod",
+                        "@scope/bar...",
+                    ],
+                )
+                .cwd(plugin.plugin.to_virtual_path(sandbox.path()));
+
+                // A project-local store, as Docker images don't have the machine's
+                command.env.insert(
+                    "npm_config_enable_global_virtual_store".into(),
+                    "false".into(),
                 );
+
+                assert_eq!(output.install_command.unwrap(), ExecCommand::new(command));
             }
 
             #[tokio::test(flavor = "multi_thread")]
             async fn inherits_args_from_nub_toolchain() {
                 let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "installArgs": ["-a", "b", "--c"]}));
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "unstable_nub");
+                    json!({ "installArgs": ["-a", "b", "--c"]})
+                });
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -1762,7 +2351,7 @@ mod javascript_toolchain_tier2 {
             }
 
             #[tokio::test(flavor = "multi_thread")]
-            async fn switches_to_ci_in_ci() {
+            async fn freezes_the_lockfile_in_ci() {
                 let sandbox = create_empty_moon_sandbox();
                 let plugin = sandbox
                     .create_toolchain_with_config("javascript", |cfg| {
@@ -1808,12 +2397,12 @@ mod javascript_toolchain_tier2 {
                 assert_eq!(
                     output.install_command.unwrap(),
                     ExecCommand::new(
-                        ExecCommandInput::new("nub", ["ci"])
+                        ExecCommandInput::new("nub", ["install", "--frozen-lockfile"])
                             .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                     )
                 );
 
-                // But not for production, since `nub ci` has no `--prod`
+                // Production installs too
                 let output = plugin
                     .install_dependencies(InstallDependenciesInput {
                         root: VirtualPath::new(sandbox.path()),
@@ -1826,16 +2415,86 @@ mod javascript_toolchain_tier2 {
                     .await;
 
                 assert_eq!(
-                    output.install_command.unwrap(),
-                    ExecCommand::new(
-                        ExecCommandInput::new("nub", ["install", "--prod"])
-                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
+                    output.install_command.unwrap().command.args,
+                    ["install", "--frozen-lockfile", "--prod"]
                 );
             }
 
             #[tokio::test(flavor = "multi_thread")]
-            async fn switches_to_ci_with_other_pm_lock() {
+            async fn doesnt_freeze_the_lockfile_against_install_args() {
+                let mut sandbox = create_empty_moon_sandbox();
+                sandbox.create_file("nub.lock", "");
+
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "unstable_nub");
+                    json!({ "installArgs": ["--no-frozen-lockfile"]})
+                });
+
+                let plugin = sandbox
+                    .create_toolchain_with_config("javascript", |cfg| {
+                        cfg.host_environment(HostEnvironment {
+                            ci: true,
+                            ..Default::default()
+                        });
+                    })
+                    .await;
+
+                let output = plugin
+                    .install_dependencies(InstallDependenciesInput {
+                        root: VirtualPath::new(sandbox.path()),
+                        toolchain_config: json!({
+                            "packageManager": "nub",
+                        }),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert_eq!(
+                    output.install_command.unwrap().command.args,
+                    ["install", "--no-frozen-lockfile"]
+                );
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn skips_dedupe_in_yarn_repos() {
+                let sandbox = create_empty_moon_sandbox();
+                sandbox.create_file("yarn.lock", "");
+
+                let plugin = sandbox.create_toolchain("javascript").await;
+
+                let output = plugin
+                    .install_dependencies(InstallDependenciesInput {
+                        root: VirtualPath::new(sandbox.path()),
+                        toolchain_config: json!({
+                            "packageManager": "nub",
+                            "dedupeOnLockfileChange": true
+                        }),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert!(output.install_command.is_some());
+                assert!(output.dedupe_command.is_none());
+
+                // Unless nub owns it
+                sandbox.create_file("package.json", r#"{ "packageManager": "nub@0.11.1" }"#);
+
+                let output = plugin
+                    .install_dependencies(InstallDependenciesInput {
+                        root: VirtualPath::new(sandbox.path()),
+                        toolchain_config: json!({
+                            "packageManager": "nub",
+                            "dedupeOnLockfileChange": true
+                        }),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert!(output.dedupe_command.is_some());
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn freezes_the_lockfile_with_other_pm_lock() {
                 let sandbox = create_empty_moon_sandbox();
                 sandbox.create_file("pnpm-lock.yaml", "");
 
@@ -1861,7 +2520,7 @@ mod javascript_toolchain_tier2 {
                 assert_eq!(
                     output.install_command.unwrap(),
                     ExecCommand::new(
-                        ExecCommandInput::new("nub", ["ci"])
+                        ExecCommandInput::new("nub", ["install", "--frozen-lockfile"])
                             .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
                     )
                 );
@@ -1922,6 +2581,7 @@ mod javascript_toolchain_tier2 {
                             [
                                 "install",
                                 "--prod",
+                                "--config.confirmModulesPurge=false",
                                 "--filter-prod",
                                 "foo...",
                                 "--filter-prod",
@@ -1937,9 +2597,10 @@ mod javascript_toolchain_tier2 {
             async fn inherits_args_from_pnpm_toolchain() {
                 let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "installArgs": ["-a", "b", "--c"]}));
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "pnpm");
+                    json!({ "installArgs": ["-a", "b", "--c"]})
+                });
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -1967,9 +2628,10 @@ mod javascript_toolchain_tier2 {
             async fn legacy_dedupe_for_older_versions() {
                 let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "version": "6" }));
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "pnpm");
+                    json!({ "version": "6" })
+                });
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -2006,9 +2668,10 @@ mod javascript_toolchain_tier2 {
             async fn modern_dedupe_for_newer_versions() {
                 let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "version": "8" }));
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "pnpm");
+                    json!({ "version": "8" })
+                });
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -2035,6 +2698,57 @@ mod javascript_toolchain_tier2 {
 
         mod yarn {
             use super::*;
+
+            const CLASSIC_LOCK: &str = "# yarn lockfile v1\n";
+            const BERRY_LOCK: &str = "__metadata:\n  version: 8\n";
+            const ZPM_LOCK: &str = r#"{"__metadata":{"version":10},"entries":{}}"#;
+
+            async fn install(
+                yarn_config: serde_json::Value,
+                files: &[(&str, &str)],
+                ci: bool,
+                packages: &[&str],
+                production: bool,
+            ) -> InstallDependenciesOutput {
+                let mut sandbox = create_empty_moon_sandbox();
+
+                for (name, content) in files {
+                    sandbox.create_file(name, content);
+                }
+
+                sandbox.host_funcs.mock_load_toolchain_config(move |id, _| {
+                    assert_eq!(id, "yarn");
+                    yarn_config.clone()
+                });
+
+                let plugin = sandbox
+                    .create_toolchain_with_config("javascript", |cfg| {
+                        cfg.host_environment(HostEnvironment {
+                            ci,
+                            ..Default::default()
+                        });
+                    })
+                    .await;
+
+                plugin
+                    .install_dependencies(InstallDependenciesInput {
+                        root: VirtualPath::new(sandbox.path()),
+                        toolchain_config: json!({
+                            "packageManager": "yarn",
+                            "dedupeOnLockfileChange": true
+                        }),
+                        packages: packages.iter().map(|name| name.to_string()).collect(),
+                        production,
+                        ..Default::default()
+                    })
+                    .await
+            }
+
+            fn get_args(command: Option<ExecCommand>) -> Vec<String> {
+                let input = command.unwrap().command;
+
+                [input.command].into_iter().chain(input.args).collect()
+            }
 
             #[tokio::test(flavor = "multi_thread")]
             async fn default_commands() {
@@ -2063,73 +2777,80 @@ mod javascript_toolchain_tier2 {
 
             #[tokio::test(flavor = "multi_thread")]
             async fn focused_commands() {
-                let sandbox = create_empty_moon_sandbox();
-                let plugin = sandbox.create_toolchain("javascript").await;
+                for files in [vec![], vec![("yarn.lock", CLASSIC_LOCK)]] {
+                    let output =
+                        install(json!({}), &files, false, &["foo", "@scope/bar"], true).await;
 
-                let output = plugin
-                    .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::new(sandbox.path()),
-                        toolchain_config: json!({
-                            "packageManager": "yarn",
-                            "dedupeOnLockfileChange": true
-                        }),
-                        packages: vec!["foo".into(), "@scope/bar".into()],
-                        production: true,
-                        ..Default::default()
-                    })
-                    .await;
-
-                assert_eq!(
-                    output.install_command.unwrap(),
-                    ExecCommand::new(
-                        ExecCommandInput::new("yarn", ["install", "--production"])
-                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
-                );
+                    assert_eq!(
+                        get_args(output.install_command),
+                        ["yarn", "install", "--production"],
+                        "{files:?}"
+                    );
+                }
             }
 
+            // Yarn 2+ removed `install --production` (YARN.md #4)
             #[tokio::test(flavor = "multi_thread")]
-            async fn focused_commands_for_berry() {
-                let mut sandbox = create_empty_moon_sandbox();
+            async fn focuses_workspaces_for_berry() {
+                for (config, files) in [
+                    (json!({ "version": "4.18.1" }), vec![]),
+                    (json!({ "version": "latest" }), vec![]),
+                    (json!({ "version": "6.0.0-rc.23" }), vec![]),
+                    (json!({}), vec![("yarn.lock", BERRY_LOCK)]),
+                    (json!({}), vec![("yarn.lock", ZPM_LOCK)]),
+                    (
+                        json!({ "version": "3.6.3", "installArgs": ["--inline-builds"] }),
+                        vec![(".yarn/plugins/@yarnpkg/plugin-workspace-tools.cjs", "")],
+                    ),
+                ] {
+                    let output =
+                        install(config.clone(), &files, false, &["foo", "@scope/bar"], true).await;
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "version": "2" }));
-
-                let plugin = sandbox.create_toolchain("javascript").await;
-
-                let output = plugin
-                    .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::new(sandbox.path()),
-                        toolchain_config: json!({
-                            "packageManager": "yarn",
-                            "dedupeOnLockfileChange": true
-                        }),
-                        packages: vec!["foo".into(), "@scope/bar".into()],
-                        production: true,
-                        ..Default::default()
-                    })
-                    .await;
-
-                assert_eq!(
-                    output.install_command.unwrap(),
-                    ExecCommand::new(
-                        ExecCommandInput::new(
+                    assert_eq!(
+                        get_args(output.install_command),
+                        [
                             "yarn",
-                            ["workspaces", "focus", "foo", "@scope/bar", "--production"]
-                        )
-                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
-                );
+                            "workspaces",
+                            "focus",
+                            "foo",
+                            "@scope/bar",
+                            "--production"
+                        ],
+                        "{config}"
+                    );
+
+                    let output = install(config.clone(), &files, false, &[], true).await;
+
+                    assert_eq!(
+                        get_args(output.install_command),
+                        ["yarn", "workspaces", "focus", "--all", "--production"],
+                        "{config}"
+                    );
+
+                    let output = install(config.clone(), &files, false, &["foo"], false).await;
+
+                    assert_eq!(
+                        get_args(output.install_command),
+                        ["yarn", "workspaces", "focus", "foo"],
+                        "{config}"
+                    );
+                }
             }
 
             #[tokio::test(flavor = "multi_thread")]
-            async fn inherits_args_from_bun_toolchain() {
+            #[should_panic(expected = "needs the workspace-tools plugin")]
+            async fn errors_without_workspace_tools_for_yarn_2_and_3() {
+                install(json!({ "version": "3.6.3" }), &[], false, &[], true).await;
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn inherits_args_from_yarn_toolchain() {
                 let mut sandbox = create_empty_moon_sandbox();
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "installArgs": ["-a", "b", "--c"]}));
+                sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                    assert_eq!(id, "yarn");
+                    json!({ "installArgs": ["-a", "b", "--c"]})
+                });
 
                 let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -2153,73 +2874,130 @@ mod javascript_toolchain_tier2 {
                 );
             }
 
+            // Yarn 2 to 4 freeze it themselves (YARN.md #9)
             #[tokio::test(flavor = "multi_thread")]
-            async fn legacy_dedupe_for_older_versions() {
-                let mut sandbox = create_empty_moon_sandbox();
+            async fn freezes_the_lockfile_in_ci_for_yarn_1_and_6() {
+                for (config, lockfile, expected) in [
+                    (json!({}), CLASSIC_LOCK, Some("--frozen-lockfile")),
+                    (
+                        json!({ "version": "1.22.22" }),
+                        CLASSIC_LOCK,
+                        Some("--frozen-lockfile"),
+                    ),
+                    (json!({}), BERRY_LOCK, None),
+                    (json!({ "version": "4.18.1" }), BERRY_LOCK, None),
+                    (json!({}), ZPM_LOCK, Some("--immutable")),
+                    (
+                        json!({ "version": "6.0.0-rc.23" }),
+                        ZPM_LOCK,
+                        Some("--immutable"),
+                    ),
+                ] {
+                    let files = [("yarn.lock", lockfile)];
+                    let mut args = vec!["yarn", "install"];
+                    args.extend(expected);
 
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "version": "1" }));
+                    let output = install(config.clone(), &files, true, &[], false).await;
 
-                let plugin = sandbox.create_toolchain("javascript").await;
+                    assert_eq!(get_args(output.install_command), args, "{config}");
 
-                let output = plugin
-                    .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::new(sandbox.path()),
-                        toolchain_config: json!({
-                            "packageManager": "pnpm",
-                            "dedupeOnLockfileChange": true
-                        }),
-                        ..Default::default()
-                    })
-                    .await;
+                    // Not outside CI
+                    let output = install(config.clone(), &files, false, &[], false).await;
+
+                    assert_eq!(
+                        get_args(output.install_command),
+                        ["yarn", "install"],
+                        "{config}"
+                    );
+                }
+
+                // Nothing to freeze without a lockfile
+                for version in ["1.22.22", "6.0.0-rc.23"] {
+                    let output =
+                        install(json!({ "version": version }), &[], true, &[], false).await;
+
+                    assert_eq!(get_args(output.install_command), ["yarn", "install"]);
+                }
+
+                // Also for Yarn 1's production installs
+                let output = install(
+                    json!({ "version": "1.22.22" }),
+                    &[("yarn.lock", CLASSIC_LOCK)],
+                    true,
+                    &[],
+                    true,
+                )
+                .await;
 
                 assert_eq!(
-                    output.dedupe_command.unwrap(),
-                    ExecCommand::new(
-                        ExecCommandInput::new(
-                            "npx",
-                            [
-                                "--quiet",
-                                "--package",
-                                "pnpm-deduplicate",
-                                "--",
-                                "pnpm-deduplicate"
-                            ]
-                        )
-                        .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
+                    get_args(output.install_command),
+                    ["yarn", "install", "--production", "--frozen-lockfile"]
                 );
             }
 
             #[tokio::test(flavor = "multi_thread")]
-            async fn modern_dedupe_for_newer_versions() {
-                let mut sandbox = create_empty_moon_sandbox();
-
-                sandbox
-                    .host_funcs
-                    .mock_load_toolchain_config(|_, _| json!({ "version": "2" }));
-
-                let plugin = sandbox.create_toolchain("javascript").await;
-
-                let output = plugin
-                    .install_dependencies(InstallDependenciesInput {
-                        root: VirtualPath::new(sandbox.path()),
-                        toolchain_config: json!({
-                            "packageManager": "yarn",
-                            "dedupeOnLockfileChange": true,
-                        }),
-                        ..Default::default()
-                    })
+            async fn doesnt_freeze_the_lockfile_against_install_args() {
+                for (version, lockfile, arg) in [
+                    ("1.22.22", CLASSIC_LOCK, "--pure-lockfile"),
+                    ("6.0.0-rc.23", ZPM_LOCK, "--no-immutable"),
+                ] {
+                    let output = install(
+                        json!({ "version": version, "installArgs": [arg] }),
+                        &[("yarn.lock", lockfile)],
+                        true,
+                        &[],
+                        false,
+                    )
                     .await;
 
-                assert_eq!(
-                    output.dedupe_command.unwrap(),
-                    ExecCommand::new(
-                        ExecCommandInput::new("yarn", ["dedupe"])
-                            .cwd(plugin.plugin.to_virtual_path(sandbox.path()))
-                    )
-                );
+                    assert_eq!(get_args(output.install_command), ["yarn", "install", arg]);
+                }
+            }
+
+            // Yarn 1 fails `yarn dedupe` (YARN.md #3)
+            #[tokio::test(flavor = "multi_thread")]
+            async fn legacy_dedupe_for_yarn_1() {
+                for (config, files) in [
+                    (json!({ "version": "1" }), vec![]),
+                    (json!({ "version": "classic" }), vec![]),
+                    (json!({}), vec![]),
+                    (json!({}), vec![("yarn.lock", CLASSIC_LOCK)]),
+                ] {
+                    let output = install(config.clone(), &files, false, &[], false).await;
+
+                    assert_eq!(
+                        get_args(output.dedupe_command),
+                        [
+                            "npx",
+                            "--quiet",
+                            "--package",
+                            "yarn-deduplicate",
+                            "--",
+                            "yarn-deduplicate",
+                            "yarn.lock"
+                        ],
+                        "{config}"
+                    );
+                }
+            }
+
+            #[tokio::test(flavor = "multi_thread")]
+            async fn modern_dedupe_for_newer_versions() {
+                for (config, files) in [
+                    (json!({ "version": "2" }), vec![]),
+                    (json!({ "version": "6.0.0-rc.23" }), vec![]),
+                    (json!({ "version": "latest" }), vec![]),
+                    (json!({}), vec![("yarn.lock", BERRY_LOCK)]),
+                    (json!({}), vec![("yarn.lock", ZPM_LOCK)]),
+                ] {
+                    let output = install(config.clone(), &files, false, &[], false).await;
+
+                    assert_eq!(
+                        get_args(output.dedupe_command),
+                        ["yarn", "dedupe"],
+                        "{config}"
+                    );
+                }
             }
         }
     }
@@ -2412,7 +3190,58 @@ mod javascript_toolchain_tier2 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn supports_the_default_catalog_named_default_pnpm() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("package.json", r#"{ "name": "root" }"#);
+            sandbox.create_file(
+                "pnpm-workspace.yaml",
+                "packages:\n  - '*'\ncatalogs:\n  default:\n    react: '>=19'\n    react-dom: '>=19'\n",
+            );
+            sandbox.create_file(
+                "package/package.json",
+                json!({
+                    "name": "package",
+                    "dependencies": { "react": "catalog:", "react-dom": "catalog:default" }
+                })
+                .to_string(),
+            );
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            plugin
+                .locate_dependencies_root(LocateDependenciesRootInput {
+                    starting_dir: VirtualPath::new(sandbox.path().join("package")),
+                    toolchain_config: json!({ "packageManager": "pnpm" }),
+                    ..Default::default()
+                })
+                .await;
+
+            let output = plugin
+                .parse_manifest(ParseManifestInput {
+                    path: VirtualPath::new(sandbox.path().join("package/package.json")),
+                    root: VirtualPath::new(sandbox.path()),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.dependencies,
+                BTreeMap::from_iter([
+                    (
+                        "react".into(),
+                        ManifestDependency::Version(UnresolvedVersionSpec::parse(">=19").unwrap())
+                    ),
+                    (
+                        "react-dom".into(),
+                        ManifestDependency::Version(UnresolvedVersionSpec::parse(">=19").unwrap())
+                    ),
+                ])
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn supports_catalogs_yarn() {
+            // `.yarnrc.yml`'s catalogs, not `package.json`'s
             let sandbox = create_moon_sandbox("catalogs");
             let plugin = sandbox.create_toolchain("javascript").await;
 
@@ -2440,12 +3269,14 @@ mod javascript_toolchain_tier2 {
                 BTreeMap::from_iter([
                     (
                         "react".into(),
-                        ManifestDependency::Version(UnresolvedVersionSpec::parse(">=19").unwrap())
+                        ManifestDependency::Version(
+                            UnresolvedVersionSpec::parse("^19.2.0").unwrap()
+                        )
                     ),
                     (
                         "react-legacy".into(),
                         ManifestDependency::Version(
-                            UnresolvedVersionSpec::parse("^18.1.0").unwrap()
+                            UnresolvedVersionSpec::parse("~18.3.0").unwrap()
                         ),
                     )
                 ])
@@ -2489,6 +3320,95 @@ mod javascript_toolchain_tier2 {
                             UnresolvedVersionSpec::parse("^18.1.0").unwrap()
                         ),
                     )
+                ])
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn prefers_package_json_catalogs_for_deno() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "deno.json",
+                r#"{ "workspace": ["a"], "catalog": { "ms": "^1.0.0" } }"#,
+            );
+            sandbox.create_file("package.json", r#"{ "catalog": { "ms": "^2.0.0" } }"#);
+            sandbox.create_file(
+                "a/package.json",
+                r#"{ "dependencies": { "ms": "catalog:" } }"#,
+            );
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            // This must be ran to extract the catalogs
+            plugin
+                .locate_dependencies_root(LocateDependenciesRootInput {
+                    starting_dir: VirtualPath::new(sandbox.path().join("a")),
+                    toolchain_config: json!({
+                        "packageManager": "deno"
+                    }),
+                    ..Default::default()
+                })
+                .await;
+
+            let output = plugin
+                .parse_manifest(ParseManifestInput {
+                    path: VirtualPath::new(sandbox.path().join("a/package.json")),
+                    root: VirtualPath::new(sandbox.path()),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.dependencies,
+                BTreeMap::from_iter([(
+                    "ms".into(),
+                    ManifestDependency::Version(UnresolvedVersionSpec::parse("^2.0.0").unwrap())
+                )])
+            );
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn hashes_aliases_tags_paths_and_workspace_ranges() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "package.json",
+                json!({
+                    "dependencies": {
+                        "sw": "npm:string-width@^4.2.0",
+                        "path": "jsr:@std/path@^1.0.0",
+                        "bare": "npm:left-pad",
+                        "local": "../local",
+                        "tag": "latest",
+                        "ws": "workspace:^1",
+                        "ws-range": "workspace:>=1 <2"
+                    }
+                })
+                .to_string(),
+            );
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .parse_manifest(ParseManifestInput {
+                    path: VirtualPath::new(sandbox.path().join("package.json")),
+                    ..Default::default()
+                })
+                .await;
+
+            let version = |value: &str| {
+                ManifestDependency::Version(UnresolvedVersionSpec::parse(value).unwrap())
+            };
+
+            assert_eq!(
+                output.dependencies,
+                BTreeMap::from_iter([
+                    ("bare".into(), version("*")),
+                    ("local".into(), ManifestDependency::path("../local".into())),
+                    ("path".into(), version("^1.0.0")),
+                    ("sw".into(), version("^4.2.0")),
+                    ("tag".into(), version("*")),
+                    ("ws".into(), version("^1")),
+                    ("ws-range".into(), version(">=1 <2")),
                 ])
             );
         }
@@ -2606,6 +3526,45 @@ mod javascript_toolchain_tier2 {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        async fn skips_other_package_managers_lockfiles() {
+            let mut sandbox = create_lockfile_sandbox("bun");
+            let lockfiles = create_moon_sandbox("lockfiles");
+
+            fs::copy_file(
+                lockfiles.path().join("npm/package-lock.json"),
+                sandbox.path().join("package-lock.json"),
+            )
+            .unwrap();
+
+            sandbox.host_funcs.mock_load_toolchain_config(|id, _| {
+                assert_eq!(id, "javascript");
+                json!({ "packageManager": "bun" })
+            });
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let npm = plugin
+                .parse_lock(ParseLockInput {
+                    path: VirtualPath::new(sandbox.path().join("package-lock.json")),
+                    root: VirtualPath::new(sandbox.path()),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(npm.dependencies.is_empty());
+
+            let bun = plugin
+                .parse_lock(ParseLockInput {
+                    path: VirtualPath::new(sandbox.path().join("bun.lock")),
+                    root: VirtualPath::new(sandbox.path()),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(!bun.dependencies.is_empty());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
         async fn parses_bun() {
             let sandbox = create_lockfile_sandbox("bun");
             let plugin = sandbox.create_toolchain("javascript").await;
@@ -2636,34 +3595,55 @@ mod javascript_toolchain_tier2 {
             assert_eq!(output.dependencies, expected);
         }
 
-        // #[tokio::test(flavor = "multi_thread")]
-        // async fn parses_bun_classic() {
-        //     let sandbox = create_lockfile_sandbox("bun-classic");
-        //     let plugin = sandbox.create_toolchain("javascript").await;
+        #[tokio::test(flavor = "multi_thread")]
+        async fn parses_bun_classic() {
+            // Reading `bun.lockb` runs `bun`, which may not be installed
+            #[allow(clippy::disallowed_methods)] // Runs natively, on the host
+            let Ok(result) = std::process::Command::new("bun").arg("--version").output() else {
+                return;
+            };
 
-        //     let output = plugin
-        //         .parse_lock(ParseLockInput {
-        //             path: VirtualPath::new(sandbox.path().join("bun.lockb")),
-        //             ..Default::default()
-        //         })
-        //         .await;
+            if !result.status.success() {
+                return;
+            }
 
-        //     // Workspaces packages have `workspace:` in their version
-        //     assert_eq!(
-        //         output.packages,
-        //         BTreeMap::from_iter([("a".into(), None), ("b".into(), None), ("c".into(), None)])
-        //     );
+            // A proto shim, like CI's, can't detect a version in the sandbox,
+            // so pin it through the `bun` toolchain, as moon would
+            let version = String::from_utf8_lossy(&result.stdout).trim().to_owned();
+            let mut sandbox = create_lockfile_sandbox("bun-classic");
 
-        //     assert_eq!(output.dependencies, {
-        //         let mut deps = BTreeMap::from_iter([
-        //             ("a".into(), vec![LockDependency::default()]),
-        //             ("b".into(), vec![LockDependency::default()]),
-        //             ("c".into(), vec![LockDependency::default()]),
-        //         ]);
-        //         deps.extend(expected_base_dependencies());
-        //         deps
-        //     });
-        // }
+            sandbox
+                .host_funcs
+                .mock_load_toolchain_config(move |_, _| json!({ "version": version }));
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .parse_lock(ParseLockInput {
+                    path: VirtualPath::new(sandbox.path().join("bun.lockb")),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.dependencies, expected_base_dependencies());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn skips_a_bun_lockb_that_bun_cant_read() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file("bun.lockb", "not a lockfile");
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .parse_lock(ParseLockInput {
+                    path: VirtualPath::new(sandbox.path().join("bun.lockb")),
+                    ..Default::default()
+                })
+                .await;
+
+            assert!(output.dependencies.is_empty());
+        }
 
         #[tokio::test(flavor = "multi_thread")]
         async fn parses_deno() {
@@ -2703,7 +3683,7 @@ mod javascript_toolchain_tier2 {
                         }]
                     ),
                     (
-                        "npm:@babel/core".into(),
+                        "@babel/core".into(),
                         vec![LockDependency {
                             hash: Some(
                                 "sha512-yDBHV9kQNcr2/sUr9jghVyz9C3Y5G2zUM2H2lo+9mKv4sFgbA8s8Z9t8D1jiTkGoO/NoIfKMyKWr4s6CN23ZwQ=="
@@ -2714,7 +3694,7 @@ mod javascript_toolchain_tier2 {
                         }]
                     ),
                     (
-                        "npm:@babel/preset-react".into(),
+                        "@babel/preset-react".into(),
                         vec![LockDependency {
                             hash: Some(
                                 "sha512-oJHWh2gLhU9dW9HHr42q0cI0/iHHXTLGe39qvpAZZzagHy0MzYLCnCVV0symeRvzmjHyVU7mw2K06E6u/JwbhA=="
@@ -2772,6 +3752,102 @@ mod javascript_toolchain_tier2 {
                 .await;
 
             assert_eq!(output.dependencies, expected_base_dependencies());
+        }
+
+        // pnpm 8's keys start with `/`
+        #[tokio::test(flavor = "multi_thread")]
+        async fn parses_pnpm_v6() {
+            let sandbox = create_lockfile_sandbox("pnpm-v6");
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .parse_lock(ParseLockInput {
+                    path: VirtualPath::new(sandbox.path().join("pnpm-lock.yaml")),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(output.dependencies, expected_base_dependencies());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn hashes_pnpm_patches() {
+            // `nub.lock` uses the same format
+            for lock_name in ["pnpm-lock.yaml", "nub.lock"] {
+                let sandbox = create_empty_moon_sandbox();
+                sandbox.create_file(
+                    lock_name,
+                    r#"lockfileVersion: '9.0'
+
+patchedDependencies:
+  is-number@7.0.0:
+    hash: 0a2bcd01
+    path: patches/is-number@7.0.0.patch
+
+packages:
+
+  is-number@7.0.0:
+    resolution: {integrity: sha512-isnumber==}
+
+  is-odd@3.0.1:
+    resolution: {integrity: sha512-isodd==}
+
+snapshots:
+
+  is-number@7.0.0(patch_hash=0a2bcd01): {}
+
+  is-odd@3.0.1: {}
+"#,
+                );
+
+                let plugin = sandbox.create_toolchain("javascript").await;
+
+                let output = plugin
+                    .parse_lock(ParseLockInput {
+                        path: VirtualPath::new(sandbox.path().join(lock_name)),
+                        ..Default::default()
+                    })
+                    .await;
+
+                assert_eq!(
+                    output.dependencies["is-number"][0].hash.as_deref(),
+                    Some("sha512-isnumber==+patch.0a2bcd01"),
+                    "{lock_name}"
+                );
+                assert_eq!(
+                    output.dependencies["is-odd"][0].hash.as_deref(),
+                    Some("sha512-isodd=="),
+                    "{lock_name}"
+                );
+            }
+        }
+
+        // pnpm 12's experimental `lockfile.format: v13`
+        #[tokio::test(flavor = "multi_thread")]
+        async fn parses_pnpm_v13_integrities() {
+            let sandbox = create_empty_moon_sandbox();
+            sandbox.create_file(
+                "pnpm-lock.yaml",
+                "{\n\tlockfileVersion: '13.0',\n\tpackages: {\n\t\t'react@18.3.1': {\n\t\t\tintegrity: 'sha512-react==',\n\t\t},\n\t},\n}\n",
+            );
+
+            let plugin = sandbox.create_toolchain("javascript").await;
+
+            let output = plugin
+                .parse_lock(ParseLockInput {
+                    path: VirtualPath::new(sandbox.path().join("pnpm-lock.yaml")),
+                    ..Default::default()
+                })
+                .await;
+
+            assert_eq!(
+                output.dependencies["react"],
+                [LockDependency {
+                    hash: Some("sha512-react==".into()),
+                    version: Some(VersionSpec::parse("18.3.1").unwrap()),
+                    ..Default::default()
+                }]
+            );
         }
 
         // pnpm v10 with `managePackageManagerVersions` writes a multi-document

@@ -34,9 +34,48 @@ pub fn append_env_bin_dir(name: &str) -> proto_pdk::AnyResult<String> {
     )
 }
 
+/// Lexically resolve a relative path (`./`, `../`) against a workspace
+/// relative source, returning `None` when it escapes the workspace
+pub fn resolve_source_path(base: &str, path: &str) -> Option<String> {
+    if path.starts_with('/') {
+        return None;
+    }
+
+    let mut segments = base
+        .split('/')
+        .filter(|segment| !segment.is_empty() && *segment != ".")
+        .collect::<Vec<_>>();
+
+    for segment in path.split('/') {
+        match segment {
+            "" | "." => {}
+            ".." => {
+                segments.pop()?;
+            }
+            _ => segments.push(segment),
+        }
+    }
+
+    Some(segments.join("/"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn resolves_source_paths() {
+        assert_eq!(
+            resolve_source_path("apps/a", "../../libs/b").as_deref(),
+            Some("libs/b")
+        );
+        assert_eq!(
+            resolve_source_path("", "./libs/b").as_deref(),
+            Some("libs/b")
+        );
+        assert_eq!(resolve_source_path("apps/a", "../../../outside"), None);
+        assert_eq!(resolve_source_path("apps/a", "/abs"), None);
+    }
 
     #[test]
     fn appends_bin() {

@@ -7,6 +7,7 @@ use moon_pdk_api::*;
 use serde::Deserialize;
 use starbase_utils::fs;
 use std::collections::{BTreeMap, BTreeSet};
+use toolchain_common::resolve_source_path;
 
 #[host_fn]
 extern "ExtismHost" {
@@ -615,31 +616,6 @@ impl GoPackageGraph {
 
         dependencies
     }
-}
-
-// Lexically resolve a relative path (`./`, `../`) against a workspace
-// relative source, returning `None` when it escapes the workspace
-pub fn resolve_source_path(base: &str, path: &str) -> Option<String> {
-    if path.starts_with('/') {
-        return None;
-    }
-
-    let mut segments = base
-        .split('/')
-        .filter(|segment| !segment.is_empty() && *segment != ".")
-        .collect::<Vec<_>>();
-
-    for segment in path.split('/') {
-        match segment {
-            "" | "." => {}
-            ".." => {
-                segments.pop()?;
-            }
-            _ => segments.push(segment),
-        }
-    }
-
-    Some(segments.join("/"))
 }
 
 // A major version suffix segment: v2, v3, etc, but never v0 or v1

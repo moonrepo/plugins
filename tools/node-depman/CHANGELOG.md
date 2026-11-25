@@ -1,5 +1,31 @@
 # Changelog
 
+## Unreleased
+
+#### 🚀 Updates
+
+- Nub globals are now also found in its `globalBinDir` setting (`npm_config_global_bin_dir`) and
+  `$XDG_DATA_HOME/../bin`, where nub v0.9+ links them.
+- Yarn now runs with `YARN_IGNORE_PATH=1`, so the configured version wins over a committed
+  `yarnPath`, which `yarn set version` writes. Repos whose `yarnPath` disagrees with their Yarn
+  version now run a different Yarn.
+- Yarn 1–5's executable directory now comes first on `PATH`, ahead of globals directories like
+  `~/.yarn/bin` and Node.js's `bin`, which can hold another Yarn, like Corepack's.
+
+#### 🐞 Fixes
+
+- Fixed Yarn 6 running Yarn Switch, which runs the Yarn that `packageManager` asks for, and Yarn 1
+  without one, instead of the installed Yarn. The switch is now removed from the install directory.
+- Fixed a `package.json` with a field that can't be parsed, like `"version": "1.0"` or an unusual
+  dependency range, losing its `packageManager` or `devEngines.packageManager` pin. Those fields are
+  now skipped.
+- Fixed a cycle in `volta.extends` overflowing the stack.
+- Fixed pinning a version to `package.json` replacing a `devEngines.packageManager` list, like one
+  for npm and pnpm, with only the pinned package manager's entry.
+- Fixed a `packageManager` URL, which Corepack accepts, being cut off at its first `@`.
+- Fixed an entry in nodejs.org's index that can't be parsed failing the npm `bundled` alias. It's
+  now skipped.
+
 ## 0.21.0
 
 #### 💥 Breaking

@@ -56,6 +56,9 @@
 
 #### 🐞 Fixes
 
+- Fixed the default Docker image for a version bound being the oldest allowed version, like
+  `golang:1.22.0` for `>=1.22.0`, or one outside the range, like `golang:1.25` for `<1.25`. It's
+  now `golang:latest`.
 - Fixed inferred relationships going stale when imports changed. moon caches the project graph by
   its configs, manifests and the plugin's input files, which were only `go.mod` and `go.sum`, so a
   new import between projects in one module wasn't seen until `go.mod` changed. The Go files that

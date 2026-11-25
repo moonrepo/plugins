@@ -178,6 +178,8 @@ mod python_toolchain_tier1 {
                 ("3.15.0-alpha.5", "python:3.15.0a5"),
                 ("stable", "python:latest"),
                 ("^3.12", "python:3.12"),
+                (">=3.10", "python:latest"),
+                ("<3.13", "python:latest"),
             ] {
                 let output = plugin
                     .define_docker_metadata(DefineDockerMetadataInput {

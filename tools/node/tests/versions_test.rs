@@ -193,6 +193,42 @@ mod node_tool {
     }
 
     #[tokio::test(flavor = "multi_thread")]
+    async fn parses_engines_when_other_fields_are_invalid() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("node-test").await;
+
+        for content in [
+            r#"{ "version": "1.0", "engines": { "node": "24.22.3" } }"#,
+            r#"{ "dependencies": { "foo": "^v1.2.3" }, "engines": { "node": "24.22.3" } }"#,
+            r#"{ "engines": { "npm": "not a version", "node": "24.22.3" } }"#,
+        ] {
+            assert_eq!(
+                plugin
+                    .parse_version_file(version_file(&sandbox, "package.json", content))
+                    .await,
+                ParseVersionFileOutput {
+                    version: Some(UnresolvedVersionSpec::parse("24.22.3").unwrap()),
+                    ..Default::default()
+                },
+                "{content}"
+            );
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn skips_package_json_that_isnt_json() {
+        let sandbox = create_empty_proto_sandbox();
+        let plugin = sandbox.create_plugin("node-test").await;
+
+        assert_eq!(
+            plugin
+                .parse_version_file(version_file(&sandbox, "package.json", "{ engines: "))
+                .await,
+            ParseVersionFileOutput::default()
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
     #[should_panic(expected = "Failed to parse a version requirement.")]
     async fn errors_if_no_field_is_valid() {
         let sandbox = create_empty_proto_sandbox();

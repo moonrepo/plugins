@@ -108,3 +108,4 @@ defines the process.
 | [0008](docs/adr/0008-parse-other-tools-formats-leniently.md)           | accepted | All crates    | Skip what can't be parsed in other tools' formats, instead of failing    |
 | [draft](docs/adr/draft-cache-expensive-work-in-memory.md)              | proposed | All crates    | Cache expensive work in memory, and never fail on a var write            |
 | [draft](docs/adr/draft-virtual-paths-in-wasm-real-paths-in-strings.md) | proposed | All crates    | Virtual paths inside WASM, real paths only in strings the host passes on |
+| [draft](docs/adr/draft-default-docker-image-tags.md)                   | proposed | Toolchains    | Default Docker images are published tags inside the configured version   |

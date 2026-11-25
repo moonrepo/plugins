@@ -275,8 +275,9 @@ pub fn resolve_version(
         PackageManager::Npm if input.initial.is_alias("bundled") => {
             debug!("Received the bundled alias, attempting to find a version");
 
-            let response: Vec<NodeDistVersion> =
-                fetch_json("https://nodejs.org/download/release/index.json")?;
+            let response = NodeDistVersion::parse_index(fetch_json(
+                "https://nodejs.org/download/release/index.json",
+            )?);
             let mut found_version = false;
 
             // Infer from proto's environment variable
@@ -536,7 +537,18 @@ pub fn locate_executables(
             secondary.insert("yarnpkg".into(), ExecutableConfig::new("shims/yarn"));
         }
         PackageManager::Yarn6 => {
-            primary = ExecutableConfig::new_primary(env.os.get_exe_name("yarn-bin"));
+            let exe_name = env.os.get_exe_name("yarn-bin");
+
+            // The archive's `yarn` is Yarn Switch, which runs the Yarn that
+            // `packageManager` asks for, and Yarn 1 without one. moon puts this
+            // directory on `PATH`, so remove it while proto manages the version.
+            let switch_path = input.install_dir.join(env.os.get_exe_name("yarn"));
+
+            if switch_path.exists() && input.install_dir.join(&exe_name).exists() {
+                fs::remove_file(switch_path)?;
+            }
+
+            primary = ExecutableConfig::new_primary(exe_name);
         }
     };
 
@@ -593,6 +605,21 @@ pub fn activate_environment(
 ) -> FnResult<Json<ActivateEnvironmentOutput>> {
     let mut output = ActivateEnvironmentOutput::default();
     let config = get_tool_config::<NodeDepmanToolConfig>()?;
+    let manager = PackageManager::detect_from_version(&input.context.version)?;
+
+    if manager.is_yarn() {
+        // Every Yarn hands off to a committed `yarnPath`, which `yarn set version`
+        // writes, so the configured version would never run
+        output.env.insert("YARN_IGNORE_PATH".into(), "1".into());
+
+        // Ahead of the globals directories, like `~/.yarn/bin`, which can hold
+        // another Yarn. Yarn 6's directory only has `yarn-bin`.
+        if manager != PackageManager::Yarn6
+            && let Some(dir) = input.context.tool_dir.join("shims").to_real_path()?
+        {
+            output.paths.push(dir.to_path_buf());
+        }
+    }
 
     if config.shared_globals_dir
         && let Some(globals_dir) = &input.globals_dir
@@ -607,7 +634,6 @@ pub fn activate_environment(
             .to_string();
 
         let env = get_host_environment()?;
-        let manager = PackageManager::detect_from_version(&input.context.version)?;
 
         match manager {
             // Unix will create a /bin directory when installing into the root,
