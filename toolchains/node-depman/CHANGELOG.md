@@ -7,6 +7,7 @@
 - Panics now report their message, instead of an `unreachable` WASM trap error.
 - `pn` and `pnx`, which pnpm 11 and 12 ship, are now pnpm executables.
 - `nubr`, which nub ships since v0.9.3, is now a Nub executable.
+- Nub now requires the `node` toolchain, like the other package managers.
 - `.yarnrc`, Yarn 1's config file, is now a Yarn config file.
 - Deprecated the Yarn `plugins` setting, which never ran in moon v2. Yarn 4 and later bundle the
   official plugins. For Yarn 2 and 3, commit `.yarn/plugins` and `.yarnrc.yml`.
