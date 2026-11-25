@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+#### 🐞 Fixes
+
+- Fixed a toolchain without `rustc` and `cargo` counting as installed. In a folder with a
+  `rust-toolchain.toml`, `rustup toolchain list` filled the folder that proto creates with only that
+  file's components and targets.
+
 ## 0.14.0
 
 #### 💥 Breaking

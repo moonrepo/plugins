@@ -1,3 +1,4 @@
+use crate::toolchain::has_cargo;
 use crate::toolchain_toml::ToolchainToml;
 use extism_pdk::*;
 use lang_rust_common::*;
@@ -214,13 +215,13 @@ pub fn native_install(
         .lines()
         .any(|line| line.starts_with(&triple))
     {
-        // Ensure the bins exist and that this isn't just an empty folder
-        if input.install_dir.join("bin").exists() {
+        // Ensure the toolchain is complete, and not just an empty or partial folder
+        if has_cargo(&input.install_dir, &env.os.get_exe_name("cargo")) {
             debug!("Target already installed in toolchain");
 
             do_install = false;
 
-        // Otherwise empty folders cause issues with rustup, so force uninstall it
+        // Otherwise empty or partial folders cause issues with rustup, so force uninstall it
         } else {
             debug!("Detected a broken toolchain, uninstalling it");
 
