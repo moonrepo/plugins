@@ -1,0 +1,48 @@
+---
+source: extensions/migrate-turborepo/tests/migrate_turborepo_test.rs
+expression: "fs::read_to_string(sandbox.path().join(\".moon/tasks/node.yml\")).unwrap()"
+---
+implicitInputs:
+- file: /tsconfig.json
+- glob: '!/.env.example'
+  cache: true
+- $NODE_ENV
+- $MY_API_*
+tasks:
+  build:
+    description: Builds the package
+    command: pnpm run build
+    deps:
+    - ^:build
+    inputs:
+    - glob: '**/*'
+      cache: true
+    - file: /tsconfig.base.json
+    - glob: src/generated/**
+      cache: true
+    outputs:
+    - glob: dist/**/*
+    - glob: '!dist/cache/**/*'
+    - glob: /reports/**/*
+    tags:
+    - ci
+  check-types:
+    command: pnpm run check-types
+    deps:
+    - ^:check-types
+    inputs:
+    - glob: '**/*'
+      cache: true
+    - glob: src/**/*.ts
+      cache: true
+  dev:
+    command: pnpm run dev
+    options:
+      cache: false
+    preset: server
+  lint:
+    command: pnpm run lint
+  test:
+    command: pnpm run test
+    outputs:
+    - glob: coverage/**/*

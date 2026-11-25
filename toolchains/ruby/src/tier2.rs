@@ -11,6 +11,7 @@ use rubund::parser::{SourceType, parse_lockfile};
 use starbase_utils::fs;
 use std::collections::HashMap;
 use std::path::{Component, Path, PathBuf};
+use toolchain_common::{DirCache, RootLocator};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -37,27 +38,54 @@ fn find_manifest(dir: &VirtualPath) -> Option<VirtualPath> {
 pub fn locate_dependencies_root(
     Json(input): Json<LocateDependenciesRootInput>,
 ) -> FnResult<Json<LocateDependenciesRootOutput>> {
-    let mut output = LocateDependenciesRootOutput::default();
+    let mut roots = locate_roots(&[input.starting_dir])?;
 
-    // Walk upward for the nearest Gemfile/Gemfile.lock. If none is found, `root`
-    // stays `None` and moon skips install steps for this project.
-    if let Some(root) = locate_root_many(&input.starting_dir, &ROOT_FILES) {
-        // Bundler has no workspaces, but local gems in subdirectories, like
-        // `libs/billing` in a shared Gemfile, use the root's bundle. Report them
-        // as members, otherwise moon never installs it for their projects.
-        let members = match find_manifest(&root) {
-            Some(manifest) => gemfile::parse_gems(&fs::read_file(manifest)?)
-                .into_iter()
-                .filter_map(|gem| get_member_dir(gem.path.as_deref()?))
-                .collect::<Vec<_>>(),
-            None => vec![],
-        };
+    Ok(Json(roots.pop().unwrap_or_default()))
+}
 
-        output.members = (!members.is_empty()).then_some(members);
-        output.root = Some(root);
+#[plugin_fn]
+pub fn locate_dependencies_roots(
+    Json(input): Json<LocateDependenciesRootsInput>,
+) -> FnResult<Json<LocateDependenciesRootsOutput>> {
+    Ok(Json(LocateDependenciesRootsOutput {
+        roots: locate_roots(&input.starting_dirs)?,
+    }))
+}
+
+fn locate_roots(starting_dirs: &[VirtualPath]) -> AnyResult<Vec<LocateDependenciesRootOutput>> {
+    let mut locator = RootLocator::default();
+    let mut root_members = DirCache::default();
+    let mut roots = vec![];
+
+    for starting_dir in starting_dirs {
+        let mut output = LocateDependenciesRootOutput::default();
+
+        // Walk upward for the nearest Gemfile/Gemfile.lock. If none is found, `root`
+        // stays `None` and moon skips install steps for this project.
+        if let Some(root) = locator.locate(starting_dir, &ROOT_FILES) {
+            // Bundler has no workspaces, but local gems in subdirectories, like
+            // `libs/billing` in a shared Gemfile, use the root's bundle. Report them
+            // as members, otherwise moon never installs it for their projects.
+            output.members = root_members
+                .get_or_load(&root, |root| {
+                    let members = match find_manifest(root) {
+                        Some(manifest) => gemfile::parse_gems(&fs::read_file(manifest)?)
+                            .into_iter()
+                            .filter_map(|gem| get_member_dir(gem.path.as_deref()?))
+                            .collect::<Vec<_>>(),
+                        None => vec![],
+                    };
+
+                    Ok((!members.is_empty()).then_some(members))
+                })?
+                .clone();
+            output.root = Some(root);
+        }
+
+        roots.push(output);
     }
 
-    Ok(Json(output))
+    Ok(roots)
 }
 
 /// A local gem's directory, when it's within the dependency root.

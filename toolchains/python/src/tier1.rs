@@ -33,6 +33,7 @@ pub fn register_toolchain(
             // Read by proto
             ".python-versions".into(),
             ".venv".into(),
+            "uv.toml".into(),
         ],
         manifest_file_names: vec![
             "pyproject.toml".into(),
@@ -41,8 +42,6 @@ pub fn register_toolchain(
             "Pipfile".into(),
             // poetry
             "poetry.toml".into(),
-            // uv
-            "uv.toml".into(),
         ],
         lock_file_names: vec![
             // uv
@@ -71,6 +70,7 @@ pub fn register_toolchain(
             "uv".into(),
             "uvx".into(),
         ],
+        inject_task_inputs: false,
         ..Default::default()
     }))
 }
